@@ -39,8 +39,13 @@ def _write_json(path: Path, value) -> None:
 
 
 def code_state() -> dict:
-    """A pilot seals its complete judging segment plus not-yet-mounted semantic modules."""
-    from .anchor import judging_fingerprint, world_fingerprint
+    """A pilot seals its complete judging segment plus not-yet-mounted semantic modules.
+
+    `files` (raw bytes) and `world_sha` are provenance; `semantic` (comments and
+    docstrings excluded, INFRA files left out) with `judging_sha16` is what
+    `same_judging_code` compares.
+    """
+    from .anchor import infra_files, judging_fingerprint, semantic_bytes, world_fingerprint
     from tools.make_freeze import JUDGING
     files = sorted(set(JUDGING) | {
         "haenv/semantic_judge.py",
@@ -50,8 +55,28 @@ def code_state() -> dict:
         "registry/semantic_judging_why.yaml", "registry/semantic_judging_why_lean.yaml",
         "registry/semantic_judging_source.yaml",
     })
+    infra = set(infra_files())
     return {"files": {name: digest(ROOT / name) for name in files},
+            "semantic": {name: hashlib.sha256(semantic_bytes(ROOT / name)).hexdigest()
+                         for name in files if name not in infra},
             "judging_sha16": judging_fingerprint(), "world_sha": world_fingerprint()}
+
+
+def same_judging_code(recorded: dict, current: dict | None = None) -> bool:
+    """Whether the code that decides a score is unchanged since `recorded`.
+
+    A comment, an INFRA module or a generation-side change does not stop a run: the
+    world stamp is not compared because a reconstructed slice is checked against its
+    saved canonical payload (`_context_for_cell`). A state recorded before `semantic`
+    existed compares raw bytes and the world stamp, as it did when it was sealed.
+    """
+    current = code_state() if current is None else current
+    if "files" not in recorded:                  # a state of another shape: exact comparison
+        return recorded == current
+    if "semantic" not in recorded:
+        return all(current[k] == recorded[k] for k in ("files", "judging_sha16", "world_sha"))
+    return (current.get("semantic") == recorded["semantic"]
+            and current["judging_sha16"] == recorded["judging_sha16"])
 
 
 def _context_for_cell(row: dict, raw_cases: dict, payloads: dict,
@@ -248,7 +273,7 @@ def seal_run(out: Path) -> dict:
     if "correction" in manifest:
         from .semantic_corrections import validate_correction
         validate_correction(out)
-    if manifest["code"] != code_state() or manifest["tasks_sha256"] != digest(out / "tasks.jsonl"):
+    if not same_judging_code(manifest["code"]) or manifest["tasks_sha256"] != digest(out / "tasks.jsonl"):
         raise ValueError("Prepared inputs or judging code changed; create a new run")
     dirty = subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"],
                                     cwd=ROOT, text=True)
@@ -267,7 +292,7 @@ def validate_run(out: Path) -> dict:
         validate_correction(out)
     if manifest.get("sealed") is not True:
         raise ValueError("Paid judging requires a sealed, tested version")
-    if manifest["code"] != code_state() or manifest["tasks_sha256"] != digest(out / "tasks.jsonl"):
+    if not same_judging_code(manifest["code"]) or manifest["tasks_sha256"] != digest(out / "tasks.jsonl"):
         raise ValueError("Sealed code or tasks drifted; do not mix judging versions")
     for source in manifest["sources"]:
         for name, expected in source["files"].items():
@@ -322,10 +347,10 @@ def _execute_run(out: Path, cfg: dict, ledger_path: Path, *, limit_usd: str,
         raise ValueError("max_cells must be positive")
     manifest = validate_run(out)
     policy = manifest["policy"]
-    ceiling = policy["judge"]["max_concurrency"]
-    concurrency = ceiling if concurrency is None else concurrency
-    if type(concurrency) is not int or not 1 <= concurrency <= ceiling <= MAX_JUDGE_LANES:
-        raise ValueError("Concurrency must be within the sealed policy limit and at most %d" % MAX_JUDGE_LANES)
+    from .semantic_rubric import default_lanes
+    concurrency = default_lanes(policy) if concurrency is None else concurrency
+    if type(concurrency) is not int or not 1 <= concurrency <= MAX_JUDGE_LANES:
+        raise ValueError("Concurrency must be between 1 and %d" % MAX_JUDGE_LANES)
     metadata = fetch_prices(cfg, policy)
     if not {"response_format", "structured_outputs"} <= set(metadata.get("supported_parameters", [])):
         raise ValueError("Judge metadata does not advertise the required structured output support")

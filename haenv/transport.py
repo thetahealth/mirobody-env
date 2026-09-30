@@ -13,11 +13,27 @@ Two views of one request:
 send (`WireMismatch`) when its messages or answer fields differ from what was accounted.
 It judges bytes, not file lists: code that changes what the model is sent is stopped at
 its first request, before a reservation.
+
+Importing this module makes `urllib.request.urlopen` follow two connection rules
+(`config.transport`):
+
+* new connections are paced by one token bucket per process (`connect_per_s`,
+  `connect_burst`), so a burst of cells does not open dozens of proxy tunnels at once;
+* a failure inside the connect phase (TCP connect, proxy `CONNECT` tunnel, TLS
+  handshake) is retried up to `connect_retries` times with backoff. No request byte has
+  left the process at that point, so nothing can have been billed. A failure after the
+  request was written (a disconnect before the response) is never retried here.
 """
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
+import random
+import threading
+import time
+import urllib.error
+import urllib.request
 
 from .semantic_budget import BudgetExceeded
 
@@ -142,3 +158,133 @@ def verify_wire(solver, body: bytes, prompt: str) -> None:
     if problems:
         raise WireMismatch("request body differs from the accounted request ("
                            + "; ".join(problems) + "); not sent")
+
+
+# ---------------------------------------------------------------- connections
+
+#: Defaults when `config.transport` is not set.
+CONNECT_PER_S, CONNECT_BURST, CONNECT_RETRIES = 8.0, 8, 3
+
+
+class PreSendFailure(OSError):
+    """The connection failed before any request byte was written."""
+
+    def __init__(self, cause: BaseException):
+        super().__init__(f"{type(cause).__name__} while connecting; the request was not sent")
+        self.cause = cause
+
+
+class ConnectBucket:
+    """Token bucket for new connections; `take` blocks until a token is free."""
+
+    def __init__(self, rate: float, burst: int, clock=time.monotonic, sleep=time.sleep):
+        if rate <= 0 or burst < 1:
+            raise ValueError("config.transport.connect_per_s and connect_burst must be positive")
+        self.rate, self.burst, self.clock, self.sleep = float(rate), int(burst), clock, sleep
+        self.tokens, self.at = float(burst), clock()
+        self.lock = threading.Lock()
+
+    def take(self) -> float:
+        with self.lock:
+            now = self.clock()
+            self.tokens = min(self.burst, self.tokens + (now - self.at) * self.rate)
+            self.at = now
+            self.tokens -= 1.0
+            wait = max(0.0, -self.tokens / self.rate)
+        if wait:
+            self.sleep(wait)
+        return wait
+
+
+_SETTINGS: list = [None]
+
+
+def _settings() -> dict:
+    if _SETTINGS[0] is not None:
+        return _SETTINGS[0]
+    try:
+        from .cli import load_cfg
+        got = (load_cfg() or {}).get("transport") or {}
+    except Exception:                                        # noqa: BLE001
+        got = {}
+    _SETTINGS[0] = {"connect_per_s": float(got.get("connect_per_s", CONNECT_PER_S)),
+                    "connect_burst": int(got.get("connect_burst", CONNECT_BURST)),
+                    "connect_retries": int(got.get("connect_retries", CONNECT_RETRIES))}
+    return _SETTINGS[0]
+
+
+_BUCKET: list = [None]
+_BUCKET_LOCK = threading.Lock()
+
+
+def connect_bucket() -> ConnectBucket:
+    with _BUCKET_LOCK:
+        if _BUCKET[0] is None:
+            cfg = _settings()
+            _BUCKET[0] = ConnectBucket(cfg["connect_per_s"], cfg["connect_burst"])
+        return _BUCKET[0]
+
+
+def _paced(base):
+    class Paced(base):
+        def connect(self):
+            connect_bucket().take()
+            try:
+                super().connect()
+            except Exception as error:                       # noqa: BLE001
+                self.close()
+                raise PreSendFailure(error) from error
+    Paced.__name__ = f"Paced{base.__name__}"
+    return Paced
+
+
+_HTTPConnection = _paced(http.client.HTTPConnection)
+_HTTPSConnection = _paced(http.client.HTTPSConnection)
+
+
+_RETRIES = threading.local()
+
+
+def connect_retries_taken() -> int:
+    """Connect-phase retries of the calling thread's last request."""
+    return getattr(_RETRIES, "n", 0)
+
+
+def _open_retrying(handler, conn, req, **kw):
+    retries = _settings()["connect_retries"]
+    _RETRIES.n = 0
+    for attempt in range(retries + 1):
+        try:
+            return handler.do_open(conn, req, **kw)
+        except urllib.error.URLError as error:
+            if (isinstance(error, urllib.error.HTTPError)
+                    or not isinstance(error.reason, PreSendFailure) or attempt == retries):
+                raise
+            _RETRIES.n = attempt + 1
+            _SLEEP[0](min(8.0, 0.5 * 2 ** attempt) * (0.5 + random.random()))
+
+
+_SLEEP = [time.sleep]
+
+
+class PacedHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return _open_retrying(self, _HTTPConnection, req)
+
+
+class PacedHTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, req):
+        extra = {"check_hostname": self._check_hostname} if hasattr(self, "_check_hostname") else {}
+        return _open_retrying(self, _HTTPSConnection, req, context=self._context, **extra)
+
+
+def install() -> None:
+    """Make `urllib.request.urlopen` pace connections and retry connect-phase failures.
+
+    Environment proxies apply as before (the opener keeps urllib's default handlers).
+    Runs on import; a caller passing its own `context` to `urlopen` bypasses it.
+    """
+    urllib.request.install_opener(urllib.request.build_opener(PacedHTTPHandler(), PacedHTTPSHandler()))
+
+
+install()

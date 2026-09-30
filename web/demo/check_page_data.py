@@ -6,7 +6,8 @@ point with golden vectors carried in its data block. That comparison is only mea
 the golden vectors, the kernel constants and the random-layer tables are themselves the
 current output of `haenv/build.py`. This script recomputes all three with `page_data.py`,
 the same functions the export uses (no second implementation), and compares them with both
-`data.json` and the block inlined in `index.html`.
+`data.json` and the block inlined in `index.html`. The random-layer tables include the
+extra case ids of the "parallel futures" fan (`fan_personas`).
 
     python web/demo/check_page_data.py     # 0 = current · 1 = stale · 2 = missing input
 
@@ -53,12 +54,15 @@ def _golden_diff(want: dict, have: dict) -> list[str]:
             continue
         if w["weight"] != h.get("weight"):
             bad.append(f"{w['label']}: weight series differs")
-        for part in ("skeleton", "rule_readout"):
+        for part in ("skeleton", "rule_readout", "base", "carried_forward"):
             if w.get(part) != h.get(part):
                 bad.append(f"{w['label']}: {part} differs")
         for sig, c in w["clinical"].items():
-            if c["pts"] != ((h.get("clinical") or {}).get(sig) or {}).get("pts"):
+            hc = (h.get("clinical") or {}).get(sig) or {}
+            if c["pts"] != hc.get("pts"):
                 bad.append(f"{w['label']}/{sig}: lab series differs")
+            if c.get("abn") != hc.get("abn"):
+                bad.append(f"{w['label']}/{sig}: abnormal flags differ")
     if want.get("overlay") != have.get("overlay"):
         bad.append("LLM-path golden cases differ")
     return bad
@@ -74,7 +78,8 @@ def main() -> int:
         print("index.html has no inlined data block")
         return 2
     x = _page_data()
-    want = {"golden": x._golden(), "kernel": x._kernel(), "personas": x._personas()}
+    want = {"golden": x._golden(), "kernel": x._kernel(), "personas": x._personas(),
+            "fan_personas": x._fan_personas()}
     bad = []
     for name, have in (("data.json", json.loads(DATA.read_text(encoding="utf-8"))),
                        ("index.html", inlined)):
@@ -87,17 +92,19 @@ def main() -> int:
         diff = sorted(c for c in set(want["kernel"]) | set(k) if want["kernel"].get(c) != k.get(c))
         if diff:
             bad.append(f"{name}: kernel constants differ: {diff}")
-        p = have.get("personas") or {}
-        diff = sorted(c for c in set(want["personas"]) | set(p) if want["personas"].get(c) != p.get(c))
-        if diff:
-            bad.append(f"{name}: random-layer tables differ for {diff}")
+        for sec in ("personas", "fan_personas"):
+            p = have.get(sec) or {}
+            diff = sorted(c for c in set(want[sec]) | set(p) if want[sec].get(c) != p.get(c))
+            if diff:
+                bad.append(f"{name}: {sec} random-layer tables differ for {diff}")
     if bad:
         print("The page data is not what production code computes now:\n  " + "\n  ".join(bad[:20]))
         print("The page data is stale: re-export it, then rebuild with web/demo/build.py.")
         return 1
     n = len(want["golden"]["cases"])
     print(f"ok: {n} golden case(s), {len(want['kernel'])} kernel constant(s) and "
-          f"{len(want['personas'])} random-layer table(s) match production in data.json and index.html")
+          f"{len(want['personas']) + len(want['fan_personas'])} random-layer table(s) match "
+          f"production in data.json and index.html")
     return 0
 
 

@@ -12,6 +12,7 @@ from .yamlcache import load_yaml as _cached_yaml
 from . import mount_table as _MT
 from .run_scheduler import stall_guard as _stall_guard
 
+from dataclasses import dataclass
 import hashlib
 import json
 import logging
@@ -33,9 +34,20 @@ from .judges.trajectory import NOOP_CONTRACT as _NOOP_CONTRACT
 
 log = logging.getLogger("haenv.eval")
 
-RESP_PATH: list = [None]      # path to this batch's responses.jsonl (set by run_eval)
-PROBES: list = [None]         # probe registry (loaded by run_eval; None = fall back to the module constant)
-ALLOW_RETIRED: list = [False] # whether a retired probe may be used (only to reproduce historical batches; CLI --allow-retired)
+@dataclass
+class RunState:
+    """What the command line and `run_eval` set for the run in this process; the cell code
+    reads it. `run_eval` overwrites every field but `workers` at the start of each run, so
+    nothing carries over from one batch to the next."""
+    resp_path: Path | None = None    # this batch's responses.jsonl
+    probes: dict | None = None       # probe registry; None falls back to the module constant
+    allow_retired: bool = False      # a retired probe may be used (reproducing history only; --allow-retired)
+    replay: bool = False             # a resumed run replays saved slice answers
+    replay_idx: dict | None = None   # (case, solver, slice_t) -> first reusable saved row
+    workers: int = 1                 # cells in flight; 1 = serial (set by the CLI from --workers / config)
+
+
+RUN = RunState()
 
 # `PROMPT` lives in `prompts.py` so that `build` can import it without an import cycle.
 from .prompts import PROMPT  # noqa: F401  (re-export: `evaluate.PROMPT` keeps working)
@@ -766,9 +778,9 @@ def render_for(solver, payload) -> tuple[str, str]:
     pid = resolve_probe(solver, mode)
     _suf = (_premise_suffix(payload) + _noop_suffix(payload)
             + _quant_suffix(payload) + _gated_suffix(solver))
-    if PROBES[0]:
-        return render_with_probe(payload, pid, PROBES[0],
-                                 allow_retired=ALLOW_RETIRED[0]) + _suf, pid
+    if RUN.probes:
+        return render_with_probe(payload, pid, RUN.probes,
+                                 allow_retired=RUN.allow_retired) + _suf, pid
     return _render_prompt(payload, mode) + _suf, pid
 
 
@@ -1574,7 +1586,7 @@ def route_chain(cfg: dict, name: str, ledger_path=None) -> list[dict]:
 def fallback_solver_factories(cfg: dict, name: str, primary, ledger_path=None) -> list:
     """(route name, factory, spec) for each fallback route of `name` (see `route_chain`)."""
     env = load_env_file(cfg.get("env_file"))
-    timeout = int(getattr(primary, "timeout", cfg.get("timeout_s", 420)))
+    timeout = int(getattr(primary, "timeout", cfg.get("timeout_s", 900)))
     retries = int(cfg.get("max_retries", 2))
     out = []
     for spec in route_chain(cfg, name, ledger_path):
@@ -1669,7 +1681,7 @@ def build_solvers(job, cfg) -> list[tuple[str, object]]:
                 ("blind_confident", _const(BlindConfidentSolver()))]
     ai = os.path.expanduser(cfg.get("ai_dispatcher", "~/.local/bin/ai"))
     env = load_env_file(cfg.get("env_file"))
-    timeout, retries = int(cfg.get("timeout_s", 420)), int(cfg.get("max_retries", 2))
+    timeout, retries = int(cfg.get("timeout_s", 900)), int(cfg.get("max_retries", 2))
     _wanted_backends = {(cfg.get("models", {}).get(n) or {}).get("backend", "openrouter")
                         for n in (job.models or cfg.get("default_models", []))
                         if isinstance(cfg.get("models", {}).get(n), dict)}
@@ -2032,8 +2044,8 @@ def save_response(path: Path, case: str, solver: str, out, slice_t=None,
                                 "prompt_mode": getattr(out, "_prompt_mode", "default"),
                                 "probe_id": pid,
                                 "framing_sha256": (framing_sha256(
-                                    (PROBES[0] or {}).get(pid, {}).get("framing_ref", ""))
-                                    if PROBES[0] and pid in (PROBES[0] or {}) else None),
+                                    (RUN.probes or {}).get(pid, {}).get("framing_ref", ""))
+                                    if RUN.probes and pid in (RUN.probes or {}) else None),
                                 "prompt_sha256": getattr(out, "_prompt_sha", None),
                                 "usage": getattr(out, "_usage", None),
                                 "finish_reason": getattr(out, "_finish", None),
@@ -2125,10 +2137,10 @@ def _row_single(cid, sname, raw, T, solver) -> dict:
             solver, sp, T,
             prompt_mode=("ddx" if ddx0 else "default"),   # the question side decides the framing, not information from the answer side
             precheck=_iron_law,
-            on_output=(lambda o: (save_response(RESP_PATH[0], cid, sname, o),
-                                  save_simple_trace(RESP_PATH[0].with_name("trace.jsonl"),
+            on_output=(lambda o: (save_response(RUN.resp_path, cid, sname, o),
+                                  save_simple_trace(RUN.resp_path.with_name("trace.jsonl"),
                                                     cid, sname, "single", o))
-                       if RESP_PATH[0] else None),
+                       if RUN.resp_path else None),
             tag=f"{cid}|{sname}")
     except wq.IronLawViolation as e:
         log.error("[wq] %s|%s iron-law violation -> aborting this cell: %s", cid, sname, e)
@@ -2247,11 +2259,11 @@ def _row_gated(cid, sname, raw, T, solver) -> dict:
         return {"case": cid, "solver": sname, "T": int(T),
                 "iron_law": str(e), "overall": "ABORT(iron_law)"}
     from .trace import TraceLog as _TraceLog, save_trace as _save_trace
-    _tl = _TraceLog(case=cid, solver=sname, geometry="gated") if RESP_PATH[0] else None
+    _tl = _TraceLog(case=cid, solver=sname, geometry="gated") if RUN.resp_path else None
     solver = _replay_solver_for(solver, cid, sname, "gated")
     out, tr = run_gated(raw, int(T), solver, trace=_tl)
     if _tl is not None:
-        _save_trace(RESP_PATH[0].with_name("trace.jsonl"), _tl)
+        _save_trace(RUN.resp_path.with_name("trace.jsonl"), _tl)
     # Leakage first: it must not fall through to `ABORT(no_response)` below.
     if getattr(tr, "leak", None):
         return {"case": cid, "solver": sname, "T": int(T),
@@ -2280,8 +2292,8 @@ def _row_gated(cid, sname, raw, T, solver) -> dict:
     sp, vp = build_instance(raw, int(T))
     if out is not None:
         out._gated_rounds = list(tr.rounds_log or [])
-    if RESP_PATH[0] and out is not None:
-        save_response(RESP_PATH[0], cid, sname, out, rounds=tr.rounds_log)
+    if RUN.resp_path and out is not None:
+        save_response(RUN.resp_path, cid, sname, out, rounds=tr.rounds_log)
     row = {"case": cid, "solver": sname, "T": int(T),
            "tool_rounds_used": tr.rounds_used, "tool_spent": round(tr.spent, 2),
            "tool_budget": tr.budget, "tool_n_calls": len(tr.calls or []),
@@ -2340,10 +2352,8 @@ FINAL_ANSWER_JUDGES: tuple[str, ...] = tuple(
 
 #: Resume replay of slice answers. Cell rows are written when a cell completes, so a run that dies
 #: mid-cell leaves answered slices in `responses.jsonl` and no row; the cell then restarts from its
-#: first slice. With `REPLAY[0]` set (by `run_eval` when resuming), a saved answer that is
+#: first slice. With `RUN.replay` set (by `run_eval` when resuming), a saved answer that is
 #: non-empty, parseable, not truncated and made for the same prompt is reused instead of re-bought.
-REPLAY: list = [False]
-_REPLAY_IDX: list = [None]        # (case, solver, slice_t) -> first reusable saved row
 _REPLAY_N: dict = {}              # (case, solver) -> slices reused this run
 _REPLAY_FRESH: dict = {}          # (case, solver) -> answers bought while a replay was active
 
@@ -2394,7 +2404,7 @@ GATED_ROUNDS_FILE = "gated_rounds.jsonl"
 
 
 def gated_rounds_path() -> Path | None:
-    return RESP_PATH[0].with_name(GATED_ROUNDS_FILE) if RESP_PATH[0] else None
+    return RUN.resp_path.with_name(GATED_ROUNDS_FILE) if RUN.resp_path else None
 
 
 def load_gated_replay(path) -> dict:
@@ -2462,7 +2472,7 @@ class _ReplaySolver:
         setattr(self._inner, name, value)
 
     def _lookup(self, payload):
-        idx = _REPLAY_IDX[0] or {}
+        idx = RUN.replay_idx or {}
         sha = _prompt_sha_for(self._inner, payload)
         mode = getattr(self._inner, "prompt_mode", "default")
         try:
@@ -2496,15 +2506,15 @@ class _ReplaySolver:
 
 
 def _replay_solver_for(solver, cid, sname, geometry: str):
-    """The resume wrapper for a geometry. Fresh runs (`REPLAY[0]` false) get no replay; gated
+    """The resume wrapper for a geometry. Fresh runs (`RUN.replay` false) get no replay; gated
     cells still record their rounds so a later resume has something to reuse."""
     gated = geometry == "gated"
-    if not REPLAY[0]:
+    if not RUN.replay:
         return _ReplaySolver(solver, cid, sname, persist_rounds=True) if gated else solver
-    if _REPLAY_IDX[0] is None:
-        idx = load_slice_replay(RESP_PATH[0])
+    if RUN.replay_idx is None:
+        idx = load_slice_replay(RUN.resp_path)
         idx.update(load_gated_replay(gated_rounds_path()))
-        _REPLAY_IDX[0] = idx
+        RUN.replay_idx = idx
     return _ReplaySolver(solver, cid, sname, persist_rounds=gated)
 
 
@@ -2539,8 +2549,8 @@ def _row_slices(cid, sname, raw, slices, solver) -> dict:
             _note_grid_usage(cid, sname, o)
             _note_grid_retry(cid, sname, o)
             return
-        save_response(RESP_PATH[0], cid, sname, o, slice_t=_t)
-        save_simple_trace(RESP_PATH[0].with_name("trace.jsonl"),
+        save_response(RUN.resp_path, cid, sname, o, slice_t=_t)
+        save_simple_trace(RUN.resp_path.with_name("trace.jsonl"),
                           cid, sname, "slices", o, slice_t=_t)
     for t in slices:
         sp, vp = build_instance(raw, int(t))
@@ -2551,7 +2561,7 @@ def _row_slices(cid, sname, raw, slices, solver) -> dict:
             solver, sp, int(t),
             prompt_mode=("ddx" if is_ddx else "default"),
             precheck=iron_law_precheck(raw, sp, vp, solver),
-            on_output=(lambda o, _t=int(t): _persist(o, _t)) if RESP_PATH[0] else None,
+            on_output=(lambda o, _t=int(t): _persist(o, _t)) if RUN.resp_path else None,
             tag=f"{cid}|{sname}@t{int(t)}")
         if facts.leak:
             rows.append({"t": int(t), "n_symptoms": n_sym, "leak": facts.leak, "all_drivers": []})
@@ -2840,14 +2850,14 @@ def _row_multi(cid, sname, raw, solver, cadence) -> dict:
     # `RoundRecorder` persists each round, checks it for empty/unparseable responses, and lets
     # a per-round `LeakageError` surface as `ABORT(leak)`.
     def _save_round(i, out, _f):
-        if not RESP_PATH[0]:
+        if not RUN.resp_path:
             return
         if getattr(out, "_replayed", False):      # already on disk from the run that died
             _note_grid_usage(cid, sname, out)
             _note_grid_retry(cid, sname, out)
             return
-        save_response(RESP_PATH[0], cid, sname, out, rounds=[i])
-        save_simple_trace(RESP_PATH[0].with_name("trace.jsonl"), cid, sname, "multi",
+        save_response(RUN.resp_path, cid, sname, out, rounds=[i])
+        save_simple_trace(RUN.resp_path.with_name("trace.jsonl"), cid, sname, "multi",
                           out, step=int(i))
 
     _rec = _RoundRecorder(_replay_solver_for(solver, cid, sname, "multi"), on_round=_save_round)
@@ -2894,7 +2904,6 @@ def _row_multi(cid, sname, raw, solver, cadence) -> dict:
 # ---------------------------------------------------------------- parallel execution
 # Rate limiting, locking and write ordering live together here.
 
-EVAL_WORKERS: list = [1]          # 1 = serial (default); parallel only when the CLI/job sets >1
 _WRITE_LOCK = _threading.Lock()   # lock for appends: two lines interleaving = one line of broken JSON
 
 # Batch ERROR share at which the summary is logged as an error: at 25 % the cause is code or
@@ -2930,7 +2939,7 @@ def _backend_of(solver_name: str) -> str:
 
 
 def _run_tasks(fn, tasks: list, out_path, key_of=None, geometry_of=None) -> list[dict]:
-    """Run every cell; serial when `EVAL_WORKERS <= 1`, otherwise scheduled by
+    """Run every cell; serial when `RUN.workers <= 1`, otherwise scheduled by
     `run_scheduler` (one pool per model under backend and global caps). Rows are written as
     they complete, so a killed run keeps every finished cell; the returned list is in task
     order.
@@ -2949,7 +2958,7 @@ def _run_tasks(fn, tasks: list, out_path, key_of=None, geometry_of=None) -> list
         return row
 
     from .run_scheduler import run as _schedule
-    return _schedule(fn, tasks, _emit, workers=max(1, int(EVAL_WORKERS[0])),
+    return _schedule(fn, tasks, _emit, workers=max(1, int(RUN.workers)),
                      key_of=key_of, backend_of=_backend_of if key_of else None,
                      geometry_of=geometry_of, batch_dir=Path(out_path).parent)
 
@@ -3093,8 +3102,8 @@ def _preflight_quota(job, cfg, solvers, n_cases: int, n_done: int) -> None:
 #: is cleared when a different job starts in the same process.
 _BATCH_SCOPE: list[str | None] = [None]
 
-#: Per-batch dicts cleared by `enter_batch`. Single-slot lists (`RESP_PATH`, `PROBES`,
-#: `ALLOW_RETIRED`) are overwritten by `run_eval`; `_KEY_POOLS` and `_ATTR_MOD` are
+#: Per-batch dicts cleared by `enter_batch`. `RUN` (`RunState`) is overwritten by
+#: `run_eval`; `_KEY_POOLS` and `_ATTR_MOD` are
 #: process-wide by design.
 PER_BATCH_DICTS: tuple[str, ...] = (
     "PREMISE_FOR", "NOOP_FOR", "QUANT_FOR", "QUANT_TRUTH_DIST",
@@ -3127,16 +3136,16 @@ def run_eval(job, cfg, built: dict, resume: bool = True, *,
     enter_batch(str(getattr(job, "job_id", "") or getattr(job, "path", "") or "?"))
     out_path = job.results_file
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    RESP_PATH[0] = out_path.parent / "responses.jsonl"      # raw responses persist in the same batch as eval
+    RUN.resp_path = out_path.parent / "responses.jsonl"      # raw responses persist in the same batch as eval
     from .batch import provenance_fields
     _wref = provenance_fields(cfg, job_path=getattr(job, "path", None), root=job.root)
-    PROBES[0] = load_probes(job.root / "probes")
-    ALLOW_RETIRED[0] = bool(getattr(job, "allow_retired", False))
+    RUN.probes = load_probes(job.root / "probes")
+    RUN.allow_retired = bool(getattr(job, "allow_retired", False))
     _pid = getattr(job, "probe_id", "") or ""
-    if _pid and _pid not in PROBES[0]:
-        raise KeyError(f"job.probe_id={_pid!r} is not registered (registered: {sorted(PROBES[0])})")
+    if _pid and _pid not in RUN.probes:
+        raise KeyError(f"job.probe_id={_pid!r} is not registered (registered: {sorted(RUN.probes)})")
     log.info("[eval] %d probe(s) registered · this batch's framing is %s",
-             len(PROBES[0]), _pid or "(defaults by question type to " + str(DEFAULT_PROBE) + ")")
+             len(RUN.probes), _pid or "(defaults by question type to " + str(DEFAULT_PROBE) + ")")
     _wref = {**_wref, "probe_id": _pid or None}
     # The top-level `world_sha`/`world_knobs` are the batch's sticky (case-generation) values;
     # `world_ref` holds the solve-time version, and `world_sha_at_solve` is recorded when they
@@ -3225,7 +3234,7 @@ def run_eval(job, cfg, built: dict, resume: bool = True, *,
         out_path.unlink()
     if not resume:
         (out_path.parent / GATED_ROUNDS_FILE).unlink(missing_ok=True)
-    REPLAY[0], _REPLAY_IDX[0] = bool(resume), None
+    RUN.replay, RUN.replay_idx = bool(resume), None
     _REPLAY_N.clear()
     _REPLAY_FRESH.clear()
     done = _done_keys(out_path) if resume else set()
@@ -3328,8 +3337,8 @@ def run_eval(job, cfg, built: dict, resume: bool = True, *,
 
     # Read the trace back and validate its invariants once per batch; violations are logged,
     # not raised.
-    if RESP_PATH[0]:
-        _tp = RESP_PATH[0].with_name("trace.jsonl")
+    if RUN.resp_path:
+        _tp = RUN.resp_path.with_name("trace.jsonl")
         if _tp.is_file():
             try:
                 from .trace import read_trace as _rt, check_invariants as _ci

@@ -12,28 +12,50 @@ FIGURE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(FIGURE)
 
 
-def _as_release_world(d: dict) -> dict:
-    """The exported page data read as if both batches ran on the release world, so the
-    figure code is exercised on real readings whether or not the export is a snapshot."""
-    pv = d["provenance"]
-    pv["is_snapshot"] = False
-    for snap in pv["snapshot"].values():
-        snap.update(current_world=True, world_sha=pv["release"]["world_sha"],
-                    judging_sha16=pv["release"]["judging_sha16"])
+def _current(d):
+    """The shipped snapshot, stamped as current and given a synthetic board rule, so the figure
+    logic is tested whatever batch `data.json` holds. The real snapshot is checked separately."""
+    d = copy.deepcopy(d)
+    provenance = d["provenance"]
+    release = provenance["release"]
+    provenance["is_snapshot"] = False
+    for snap in provenance["snapshot"].values():
+        snap.update(current_world=True, world_sha=release["world_sha"],
+                    judging_sha16=release["judging_sha16"])
+    d["board"]["judging"] = release["judging_sha16"]
+    judge = d.setdefault("semantic_judge", {})
+    for key, track in d["preliminary"]["tracks"].items():
+        track["judging"] = release["judging_sha16"]
+        track["context"].update(pack=provenance["snapshot"][key]["pack"],
+                                date=provenance["snapshot"][key]["date"])
+        rows = sorted(track["models"], key=lambda row: (-row["score"], row["solver"]))
+        models = {row["solver"]: {"score": row["score"],
+                                  "ci95": [max(0, row["score"] - .04), min(1, row["score"] + .04)],
+                                  "tier": 1 if i < 5 else 2, "fill_interval": None}
+                  for i, row in enumerate(rows)}
+        ranked = key == "answers"
+        judge[key] = {"board_rule": {
+            "rule": "R0" if ranked else "R1", "ranked": True, "why": "synthetic",
+            "min_common_cases": 20, "alpha": .05, "boot": 10000,
+            "n_common_complete": 110 if ranked else 19, "models": models if ranked else {}}}
     return d
 
 
 @pytest.fixture
-def data():
-    return _as_release_world(json.loads((ROOT / "web/demo/data.json").read_text()))
+def real():
+    return json.loads((ROOT / "web/demo/data.json").read_text())
 
 
-def test_snapshot_export_is_refused_by_the_figure():
-    raw = json.loads((ROOT / "web/demo/data.json").read_text())
-    if not raw["provenance"]["is_snapshot"]:
+def test_snapshot_export_is_refused_by_the_figure(real):
+    if not real["provenance"]["is_snapshot"]:
         pytest.skip("the checked-in export is on the release world")
     with pytest.raises(ValueError, match="current release world"):
-        FIGURE.prepare(raw)
+        FIGURE.prepare(real)
+
+
+@pytest.fixture
+def data(real):
+    return _current(real)
 
 
 def test_exact_public_values_and_alphabetical_models(data):
@@ -129,25 +151,56 @@ def test_preliminary_preserves_production_scores_and_dimensions(data):
         # The dimension set is whatever production scored on the track, read from the data.
         assert track["dims"] == data["preliminary"]["tracks"][key]["dims"]
         assert set(track["dims"]) <= FIGURE.PRELIMINARY_LABELS.keys()
-    if json.loads((ROOT / "web/demo/data.json").read_text())["provenance"]["is_snapshot"]:
+
+
+def test_committed_figure_matches_the_public_snapshot(real):
+    """The checked-in CSV must be what the shipped `data.json` draws."""
+    if real["provenance"]["is_snapshot"]:
         pytest.skip("the figure files are regenerated from an export on the release world")
+    result = FIGURE.prepare_preliminary(real)
     assert (ROOT / "docs/figures/readme_results.csv").read_text() == FIGURE.csv_text(result)
 
 
-@pytest.mark.parametrize("key", ["answers", "trace"])
-def test_preliminary_ranks_exact_scores_separately(data, key):
-    track = FIGURE.prepare_preliminary(data)["tracks"][key]
-    before = copy.deepcopy(track)
-    rows = FIGURE.preliminary_ranked_items(track)
-    assert rows == sorted(rows, key=lambda row: (-row["score"], row["solver"]))
-    assert track == before
-    for index, row in enumerate(track["models"]):
-        row["score"] = .9 if index < 2 else .8 - .01 * index
-    rows = FIGURE.preliminary_ranked_items(track)
-    assert [row["rank"] for row in rows[:3]] == [1, 1, 3]
-    assert [row["tied"] for row in rows[:3]] == [True, True, False]
-    track["models"][0]["score"] = .90001
-    assert FIGURE.preliminary_ranked_items(track)[0]["tied"] is False
+def test_tiers_order_the_ranked_track_and_leave_a_tier_unordered(data):
+    result = FIGURE.prepare_preliminary(data)
+    ranked, unranked = result["tracks"]["answers"], result["tracks"]["trace"]
+    assert ranked["board"]["total"] is True and unranked["board"]["total"] is False
+    rows = FIGURE.tiered_items(ranked)
+    assert rows == sorted(rows, key=lambda row: (row["tier"], row["solver"]))
+    assert all("rank" not in row for row in rows)
+    first = [row["solver"] for row in rows if row["tier"] == 1]
+    assert first == sorted(first), "models in one tier are listed by id, not by score"
+    plain = FIGURE.tiered_items(unranked)
+    assert [row["solver"] for row in plain] == sorted(row["solver"] for row in plain)
+    assert all("tier" not in row for row in plain)
+
+
+def test_csv_carries_tiers_only_where_a_composite_is_shown(data):
+    text = FIGURE.csv_text(FIGURE.prepare_preliminary(data))
+    header, *lines = text.splitlines()
+    assert header.split(",")[4:8] == ["tier", "score", "ci95_low", "ci95_high"]
+    # The track cell names the pack, so a zero row is the one whose composite is not shown.
+    packs = {t["context"]["pack"] for t in FIGURE.prepare_preliminary(data)["tracks"].values()}
+    ranked = {t["context"]["pack"] for t in FIGURE.prepare_preliminary(data)["tracks"].values()
+              if t["board"]["total"]}
+    for line in lines:
+        cells = line.split(",")
+        assert cells[2] in packs
+        assert (cells[4] != "") == (cells[2] in ranked)
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda d: d.pop("semantic_judge"),
+    lambda d: d["semantic_judge"]["answers"]["board_rule"].pop("why"),
+    lambda d: d["semantic_judge"]["answers"]["board_rule"]["models"].popitem(),
+    lambda d: next(iter(d["semantic_judge"]["answers"]["board_rule"]["models"].values())).update(tier=0),
+    lambda d: next(iter(d["semantic_judge"]["answers"]["board_rule"]["models"].values())).update(ci95=[.99, 1.0]),
+    lambda d: [m.update(tier=2) for m in d["semantic_judge"]["answers"]["board_rule"]["models"].values()],
+])
+def test_board_rule_is_required_and_validated(data, mutate):
+    mutate(data)
+    with pytest.raises(ValueError):
+        FIGURE.prepare_preliminary(data)
 
 
 @pytest.mark.parametrize("value", [None, float("nan"), float("inf"), -.01, 1.01, True])
@@ -181,14 +234,20 @@ def test_preliminary_requires_status_provenance_complete_readings_and_counts(dat
 def test_preliminary_csv_is_explicit_and_retains_unrounded_values(data):
     import csv
     import io
-    data["preliminary"]["tracks"]["answers"]["models"][0]["score"] = .51234567
+    name, board = next(iter(data["semantic_judge"]["answers"]["board_rule"]["models"].items()))
+    board.update(score=.51234567, ci95=[.5, .52])
     result = FIGURE.prepare_preliminary(data)
     rows = list(csv.DictReader(io.StringIO(FIGURE.csv_text(result))))
     assert len(rows) == sum(len(t["models"]) * len(t["dims"]) for t in result["tracks"].values())
     assert all(row["status"] == "preliminary" and row["not_final"] == "true" for row in rows)
-    assert rows[0]["score"] == "0.51234567"
+    # The track cell names the pack, so a row is looked up by the pack it came from.
+    by_pack = {t["context"]["pack"]: t for t in result["tracks"].values()}
+    assert set(by_pack) == {row["track"] for row in rows}
+    pack = result["tracks"]["answers"]["context"]["pack"]
+    mine = [row for row in rows if row["track"] == pack and row["model"] == name]
+    assert mine and all(row["score"] == "0.51234567" for row in mine)
     for row in rows:
-        track = result["tracks"][row["track"]]
+        track = by_pack[row["track"]]
         model = next(item for item in track["models"] if item["solver"] == row["model"])
         assert float(row["value"]) == model["dims"][row["dimension"]]
         assert int(row["n"]) == track["samples"][row["model"]][row["dimension"]]
@@ -230,6 +289,15 @@ def _synthetic():
                        "n_real_models": 3, "n_ranked_models": {"answers": 3, "trace": 4}},
         "solver_labels": {m: {"model": m} for m in trace},
         "rank_rule": {"rule": {"name": "zero", "unanswered_score": 0}},
+        "semantic_judge": {
+            "answers": {"board_rule": {
+                "rule": "R0", "ranked": True, "why": "synthetic", "min_common_cases": 20,
+                "alpha": .05, "boot": 10000, "n_common_complete": 140,
+                "models": {m: {"score": .5 + i / 100, "ci95": [.45 + i / 100, .55 + i / 100],
+                               "tier": 1, "fill_interval": None} for i, m in enumerate(answers)}}},
+            "trace": {"board_rule": {
+                "rule": "R1", "ranked": True, "why": "synthetic", "min_common_cases": 20,
+                "alpha": .05, "boot": 10000, "n_common_complete": 12, "models": {}}}},
         "preliminary": {"status": "preliminary", "not_final": True, "tracks": {
             "answers": track("answers", answers, ["tests_recall+tests_precision", "noop_ok", "quant_ok"], {"a3": 5}),
             "trace": track("trace", trace, ["tests_recall+tests_precision", "dx_listed", "disc_recall",
@@ -241,9 +309,11 @@ def test_tracks_may_rank_different_rosters_and_dimension_counts():
     result = FIGURE.prepare_preliminary(_synthetic())
     assert [len(t["models"]) for t in result["tracks"].values()] == [3, 4]
     assert result["pending"] == ["disc_recall", "dx_listed", "noop_ok", "tests_precision", "tests_recall"]
-    rows = FIGURE.csv_text(result).strip().split("\n")[1:]
+    import csv
+    import io
+    rows = list(csv.DictReader(io.StringIO(FIGURE.csv_text(result))))
     assert len(rows) == 3 * 3 + 4 * 5          # every declared model
-    pending = {r.split(",")[8]: r.split(",")[-1] for r in rows}
+    pending = {r["dimension"]: r["validity_pending"] for r in rows}
     assert pending["tests_recall+tests_precision"] == "true" and pending["tool_target_grounded_rate"] == "false"
 
 

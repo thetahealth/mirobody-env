@@ -133,7 +133,8 @@ def validate_correction(out: Path):
     original, rows = _source(base)
     if original["tasks_sha256"] != c["base_tasks_sha256"] or m["sources"] != original["sources"]:
         raise ValueError("Correction sources differ from base")
-    if m["policy"] != _policy(original):
+    from .semantic_rubric import judging_policy
+    if judging_policy(m["policy"]) != judging_policy(_policy(original)):
         raise ValueError("Correction changed unrelated judging policy")
     expected = corrected_records(rows, m["policy"], m["run_id"])
     actual = [json.loads(line) for line in (out / "tasks.jsonl").read_text().split("\n") if line.strip()]

@@ -130,6 +130,44 @@ def failure_receipt(receipt: Path, identity: dict, error: BaseException, started
     os.replace(file.name, path)
 
 
+def carry_receipts(source: Path, out: Path) -> dict:
+    """Bring a superseded run's durable receipts into `out/receipts` so its votes replay.
+
+    Never overwrites. A receipt is named by its sample id (task fingerprint and vote), so a
+    changed task never finds a carried receipt and is bought as new; a same-id receipt whose
+    recorded request differs (model, effort, schema, prompt hash) is refused by `PricedJudge`.
+    """
+    source, dest = Path(source).resolve() / "receipts", Path(out).resolve() / "receipts"
+    if not source.is_dir():
+        raise ValueError(f"{source} holds no receipts")
+    if source == dest:
+        raise ValueError("A run cannot carry its own receipts")
+    dest.mkdir(parents=True, exist_ok=True)
+    copied = present = 0
+    for path in sorted(source.glob("*.json")):
+        target = dest / path.name
+        if target.exists():
+            present += 1
+            continue
+        with tempfile.NamedTemporaryFile(mode="wb", dir=dest, delete=False) as file:
+            file.write(path.read_bytes())
+            file.flush()
+            os.fsync(file.fileno())
+        try:
+            os.link(file.name, target)            # fails instead of replacing a receipt written meanwhile
+        except FileExistsError:
+            present += 1
+        else:
+            copied += 1
+        finally:
+            os.unlink(file.name)
+    entry = {"from": str(source.parent), "copied": copied, "already_present": present,
+             "at": datetime.now(timezone.utc).isoformat()}
+    with (Path(out).resolve() / "receipts-carried.jsonl").open("a", encoding="utf-8") as log:
+        log.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    return entry
+
+
 class PricedJudge:
     """One HTTP attempt per independent sample, no cache or hidden key retries.
 

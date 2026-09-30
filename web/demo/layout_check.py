@@ -137,7 +137,7 @@ AUDIT_JS = r"""
   }
 
   // text rectangles, one entry per line box of every visible text node
-  const CHART = ".plot, .strip, .striplab, .legend, .heatlegend, .axticks";
+  const CHART = ".plot, .strip, .striplab, .legend, .heatlegend, .axticks, .tl, .cs, .wf, .gstack";
   const texts = [];
   const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let n = tw.nextNode(); n; n = tw.nextNode()) {
@@ -170,7 +170,7 @@ AUDIT_JS = r"""
   });
   // label-on-data: a chart label drawn over a plotted path or point
   const marks = [];
-  document.querySelectorAll(".plot svg").forEach(svg => {
+  document.querySelectorAll(".plot svg, .tl-plot svg, .cs svg").forEach(svg => {
     if (!shown(svg)) return;
     const pt = svg.createSVGPoint();
     svg.querySelectorAll("path").forEach(p => {
@@ -323,6 +323,21 @@ def audit(browser, page_path: pathlib.Path, width: int, lang: str, scheme: str,
     pg.wait_for_timeout(100)
     fails += [f for f in pg.evaluate(AUDIT_JS) if f not in fails]
     pg.locator("#judge-reset").click()
+    # The v5 blocks in their other states: the truth view, a replay half-way, another answer
+    # day with another model selected, and a zoomed case timeline.
+    pg.evaluate("""() => {
+        const c = (s) => { const n = document.querySelector(s); if (n) n.click(); };
+        c('#cr-view button[data-v="truth"]');
+        const r = document.querySelector('#rp-scrub');
+        if (r){ r.value = String(Math.round(+r.max / 2)); r.dispatchEvent(new Event('input', {bubbles: true})); }
+        c('#mx-slice button');
+        const rows = document.querySelectorAll('#mx tbody tr[data-solver]');
+        if (rows.length > 2) rows[2].click();
+        const t = document.querySelector('#tl-case'); if (t && t._tl) t._tl.zoom(60, 200);
+        document.querySelectorAll('details').forEach(d => d.open = true);
+    }""")
+    pg.wait_for_timeout(250)
+    fails += [f for f in pg.evaluate(AUDIT_JS) if f not in fails]
     ctx.close()
     return fails
 
@@ -361,6 +376,12 @@ DEFECTS = {
         const host = svg.closest('.plot'), h = host.getBoundingClientRect();
         const n = document.createElement('span'); n.className = 'axlab'; n.textContent = 'on the line';
         n.style.left = (s.x - h.left) + 'px'; n.style.top = (s.y - h.top - 7) + 'px'; host.appendChild(n); }""",
+    "label-on-data@timeline": """() => { const pl = document.querySelector('#tl-case .tl-plot[data-lane=weight]');
+        const path = pl.querySelector('path'); const L = path.getTotalLength(), q = path.getPointAtLength(L / 2);
+        const m = path.getScreenCTM(), svg = pl.querySelector('svg'), pt = svg.createSVGPoint(); pt.x = q.x; pt.y = q.y;
+        const s = pt.matrixTransform(m), h = pl.getBoundingClientRect();
+        const n = document.createElement('span'); n.className = 'axlab'; n.textContent = 'on the lane';
+        n.style.left = (s.x - h.left) + 'px'; n.style.top = (s.y - h.top - 7) + 'px'; pl.appendChild(n); }""",
     "axis-misaligned": """() => { const b = document.querySelector('#p-c .plotbox');
         b.style.marginLeft = (parseFloat(b.style.marginLeft) + 24) + 'px'; }""",
     "empty-dd": """() => { const d = document.querySelector('dd'); d.innerHTML = ''; }""",
@@ -408,10 +429,11 @@ def selftest(page_path: pathlib.Path) -> int:
                     src = html.replace("</body>", "") + "\n<script>console.error('injected error')</script>\n"
                 copy.write_text(src, encoding="utf-8")
                 fails = audit(b, copy, 390, "en", "light", inject=js)
-                n = sum(f["kind"] == kind for f in fails)
-                fired = n > base_n.get(kind, 0)
+                want = kind.split("@")[0]
+                n = sum(f["kind"] == want for f in fails)
+                fired = n > base_n.get(want, 0)
                 bad += not fired
-                print(f"{'fires' if fired else 'MISSED'}  {kind:16s} clean {base_n.get(kind, 0)} -> injected {n}")
+                print(f"{'fires' if fired else 'MISSED'}  {kind:24s} clean {base_n.get(want, 0)} -> injected {n}")
             b.close()
     print(f"\n{len(DEFECTS) - bad}/{len(DEFECTS)} injected defects reported")
     return 1 if bad else 0

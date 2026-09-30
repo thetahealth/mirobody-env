@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import threading
 
 from haenv import data_root as _data_root
 ROOT = _data_root()
@@ -124,6 +125,18 @@ def semantic_bytes(path: pathlib.Path) -> bytes:
     return out
 
 
+def _semantic_cached(raw: bytes, suf: str) -> bytes:
+    """`_semantic_of`, memoised on content like `semantic_bytes`."""
+    key = (suf, hashlib.sha256(raw).digest())
+    hit = _SEM_CACHE.get(key)
+    if hit is None:
+        hit = _semantic_of(raw, suf)
+        if len(_SEM_CACHE) > 4096:
+            _SEM_CACHE.clear()
+        _SEM_CACHE[key] = hit
+    return hit
+
+
 def _semantic_of(raw: bytes, suf: str) -> bytes:
     try:
         if suf == ".py":
@@ -192,10 +205,20 @@ class EquivalenceError(ValueError):
 
 
 def _git_blob(rev: str, rel: str) -> bytes | None:
+    import re
     import subprocess
+    immutable = re.fullmatch(r"[0-9a-f]{7,40}", rev) is not None
+    if immutable and (rev, rel) in _BLOBS:
+        return _BLOBS[rev, rel]
     r = subprocess.run(["git", "-C", str(ROOT), "show", f"{rev}:{rel}"],
                        capture_output=True, timeout=60)
-    return r.stdout if r.returncode == 0 else None
+    blob = r.stdout if r.returncode == 0 else None
+    if immutable:                      # a commit id names fixed content; a ref such as HEAD moves
+        _BLOBS[rev, rel] = blob
+    return blob
+
+
+_BLOBS: dict = {}
 
 
 def _segment_at(rev: str, name: str) -> tuple[str, ...]:
@@ -213,7 +236,7 @@ def fingerprint_at(rev: str, rels) -> str:
     for rel in rels:
         blob = _git_blob(rev, rel)
         h.update(rel.encode("utf-8"))
-        h.update(_semantic_of(blob, pathlib.Path(rel).suffix.lower()) if blob is not None
+        h.update(_semantic_cached(blob, pathlib.Path(rel).suffix.lower()) if blob is not None
                  else b"<missing>")
     return h.hexdigest()[:16]
 
@@ -250,16 +273,21 @@ def judging_fingerprint() -> str:
 
 
 _JUDGING_FP: list[str] = []
+_JUDGING_FP_LOCK = threading.Lock()
 
 
 def judging_fp_cached() -> str:
     """In-process cache — the judging code can't change mid-run, so the
-    fingerprint is not recomputed on every row."""
-    if not _JUDGING_FP:
-        try:
-            _JUDGING_FP.append(judging_fingerprint())
-        except Exception:                                       # noqa: BLE001
-            _JUDGING_FP.append("unknown")
+    fingerprint is not recomputed on every row. The lock keeps the first rows of a
+    parallel run from each computing it."""
+    if _JUDGING_FP:
+        return _JUDGING_FP[0]
+    with _JUDGING_FP_LOCK:
+        if not _JUDGING_FP:
+            try:
+                _JUDGING_FP.append(judging_fingerprint())
+            except Exception:                                   # noqa: BLE001
+                _JUDGING_FP.append("unknown")
     return _JUDGING_FP[0]
 
 

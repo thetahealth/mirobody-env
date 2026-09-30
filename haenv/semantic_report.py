@@ -409,12 +409,13 @@ def _subset_chain(tip: Path) -> list[Path]:
         if "subset_of" not in manifest:
             return runs
         from .semantic_runref import subset_base
+        from .semantic_rubric import judging_policy
         base = subset_base(current, manifest)
         base_manifest = json.loads((base / "manifest.json").read_text())
         if (digest(base / "manifest.json") != manifest["sampling"]["base_manifest_sha256"]
                 or base_manifest["tasks_sha256"] != manifest["sampling"]["base_tasks_sha256"]
                 or manifest["sources"] != base_manifest["sources"]
-                or manifest["policy"] != base_manifest["policy"]):
+                or judging_policy(manifest["policy"]) != judging_policy(base_manifest["policy"])):
             raise ValueError("A semantic subset no longer matches the run it was cut from")
         base_rows = {}
         for line in (base / "tasks.jsonl").read_text().split("\n"):

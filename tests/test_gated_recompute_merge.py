@@ -96,7 +96,7 @@ def _live_row(monkeypatch):
     monkeypatch.setattr(_j, "judge_noop_probe", lambda out, spec: {})
     monkeypatch.setattr(_j, "judge_quant_probe", lambda out, spec, t_max=None: {})
     monkeypatch.setattr(_j, "judge_abstention_calibration", lambda out, vp: {})
-    monkeypatch.setattr(EV, "RESP_PATH", [None])
+    monkeypatch.setattr(EV.RUN, "resp_path", None)
     monkeypatch.setattr(EV, "iron_law_precheck", lambda raw, sp, vp, solver: (lambda: (None, [])))
     monkeypatch.setattr(EV.process, "run_process_judges", lambda raw, ev: {})
     row = EV._row_gated("JD-01", "stub", object(), 84, _Solver())

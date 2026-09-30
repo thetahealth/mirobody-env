@@ -2,10 +2,10 @@
 
 [project]
 name = "haenv"
-version = "1.0.0"
+version = "1.0.1"
 description = "A health-agent evaluation harness: author cases with hidden control variables, run models, get a report"
 requires-python = ">=3.10"
-dependencies = ["pyyaml>=6.0"]
+dependencies = ["pyyaml>=6.0", "pydantic>=2.6"]
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE", "LICENSE-DATA", "core/LICENSE"]
@@ -23,7 +23,7 @@ haenv = "haenv.cli:main"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "docs", "core", "results", "reports", "frozen", "raw_cases", "inputs", "derived", "cases", "probes", "registry", "examples"]
-markers = ["world: world-layer contract tests (`tests/contracts/`): single-variable control cases that check each layer does only its own job; run with `pytest -m world`", "disk: fidelity checks that need paid evaluation batches on disk (`results/`, `reports/`, `frozen/`)", "slow: a single test that takes more than 5 s", "internal: repository governance checks (budget ratchets, house rules, migration ratchets)"]
+markers = ["world: world-layer contract tests (`tests/contracts/`): single-variable control cases that check each layer does only its own job; run with `pytest -m world`", "disk: fidelity checks that need paid evaluation batches on disk (`results/`, `reports/`, `frozen/`)", "slow: a single test that takes more than 5 s", "integration: measured slow (tests/_speed_tiers.json) or uses a session-shared offline build; `pytest --fast` leaves these out", "internal: repository governance checks (budget ratchets, house rules, migration ratchets)"]
 addopts = "-m 'not disk and not internal and not world'"
 
 [tool.hatch.build.targets.wheel]
@@ -43,7 +43,7 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 
 [tool.hatch.build.targets.sdist]
 core-metadata-version = "2.3"
-exclude = ["/frozen/*.cases.jsonl", "/frozen/*.W.jsonl", "/results/", "/reports/", "/tests/", "/config.local.yaml", "/docs/anchor/*", "!/docs/anchor/freeze-*.json", "!/docs/anchor/extract-replay/", "!/docs/anchor/clinician-placeholder/", "!/docs/anchor/CANARY.txt", "/.pytest_cache/", "**/__pycache__", "**/*.pyc"]
+exclude = ["/frozen/*.cases.jsonl", "/frozen/*.W.jsonl", "/results/", "/reports/", "/docs/figures/", "/tests/", "/config.local.yaml", "/docs/anchor/*", "!/docs/anchor/freeze-*.json", "!/docs/anchor/extract-replay/", "!/docs/anchor/clinician-placeholder/", "!/docs/anchor/CANARY.txt", "/.pytest_cache/", "**/__pycache__", "**/*.pyc"]
 
 [tool.uv.sources.haenv-plugin-demo]
 path = "examples/plugin_demo"
@@ -58,4 +58,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
-test = ["pytest>=8.0,<10", "haenv-plugin-demo", "haenv-llm-judge-demo", "tomli>=2.0; python_version < '3.11'"]
+test = ["pytest>=8.0,<10", "pytest-xdist>=3.6", "haenv-plugin-demo", "haenv-llm-judge-demo", "tomli>=2.0; python_version < '3.11'"]

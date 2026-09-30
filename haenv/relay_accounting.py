@@ -160,7 +160,7 @@ def preflight_quota(job, cfg, solvers, n_cases: int, n_done: int) -> None:
     (OneAPI-style billing endpoints); other backends are listed in a warning. If the balance
     cannot be read, it warns and continues.
     """
-    from .evaluate import (BACKENDS, RESP_PATH, RELAY_COST_PER_GRID, RELAY_COST_DEFAULT,
+    from .evaluate import (BACKENDS, RUN, RELAY_COST_PER_GRID, RELAY_COST_DEFAULT,
                            RELAY_COST_HEADROOM, RELAY_USD_PER_MTOK, _done_keys, _dr,
                            _measured_tokens_per_grid, log)
     _nb = [n for n, _ in solvers
@@ -184,7 +184,7 @@ def preflight_quota(job, cfg, solvers, n_cases: int, n_done: int) -> None:
         return
     _est, _basis = 0.0, "per-cell constant table (rough)"
     # a resumed batch only needs money for the relay cells it has not answered yet
-    done = _done_keys(RESP_PATH[0].with_name("eval.jsonl")) if RESP_PATH[0] else set()
+    done = _done_keys(RUN.resp_path.with_name("eval.jsonl")) if RUN.resp_path else set()
     _todo = {n: max(0, n_cases - sum(1 for k in done if str(k).rsplit("|", 1)[-1] == n)) for n in _nb}
     n_cases = max(_todo.values())
     _tok = _measured_tokens_per_grid(job, _nb)

@@ -79,7 +79,7 @@ def _install(monkeypatch, per_slice):
     out, leaving only the path this file needs to test."""
     monkeypatch.setattr(EV, "build_instance", lambda raw, T: (_SP(), _VP()))
     monkeypatch.setattr(_wq, "injected_manifest", lambda cid: {})
-    monkeypatch.setattr(EV, "RESP_PATH", [None])
+    monkeypatch.setattr(EV.RUN, "resp_path", None)
     # Note: `guarded_solve` is imported **inside `_row_slices`'s function
     #    body** => it must be stubbed on the `solve_guard` module; stubbing
     #    it on `evaluate` has no effect.

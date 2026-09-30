@@ -93,7 +93,7 @@ def _install(monkeypatch, calls: list):
     """Replace the iron law with a **counter**; stub everything else. The counter
     records "who called it"."""
     monkeypatch.setattr(EV, "build_instance", lambda raw, T: (_SP(), _VP()))
-    monkeypatch.setattr(EV, "RESP_PATH", [None])
+    monkeypatch.setattr(EV.RUN, "resp_path", None)
     monkeypatch.setattr(_wq, "injected_manifest", lambda cid: {})
     monkeypatch.setattr(_sg, "guarded_solve",
                         lambda solver, sp, t, precheck=None, **kw: (

@@ -147,3 +147,79 @@ def test_record_reads_the_current_version_and_returns_a_copy(tmp_path):
     seen["status"] = "tampered"
     assert ledger.record("a")["status"] == "settled"
     assert ledger.record("a") == ledger.snapshot()["requests"]["a"]
+
+
+# ---- storage: snapshot line + appended change lines ----
+
+def _ino(p):
+    return p.stat().st_ino
+
+
+def test_a_write_appends_one_line_and_never_rewrites_the_ledger(tmp_path):
+    from haenv.semantic_budget import read_state
+    path = tmp_path / "budget.json"
+    ledger = BudgetLedger(path, limit_usd="100")
+    for i in range(200):
+        ledger.reserve(f"r{i}", "0.01")
+    ino, lines = _ino(path), path.read_bytes().count(b"\n")
+    ledger.settle("r7", "0.005")
+    assert _ino(path) == ino and path.read_bytes().count(b"\n") == lines + 1
+    assert read_state(path)["requests"]["r7"]["actual_usd"] == "0.005"
+    assert ledger.snapshot()["committed_usd"] == "1.995"
+
+
+def test_a_torn_last_line_is_ignored_and_dropped_by_the_next_write(tmp_path):
+    from haenv.semantic_budget import read_state
+    path = tmp_path / "budget.json"
+    BudgetLedger(path, limit_usd="1").reserve("a", "0.1")
+    with path.open("ab") as handle:
+        handle.write(b'{"r":"b","v":{"reserved_usd":"0.2","act')          # interrupted append
+    fresh = BudgetLedger(path)
+    assert fresh.record("b") is None and fresh.snapshot()["committed_usd"] == "0.1"
+    fresh.reserve("c", "0.3")
+    state = read_state(path)
+    assert set(state["requests"]) == {"a", "c"} and b'"0.2","act' not in path.read_bytes()
+
+
+def test_copying_the_file_copies_the_whole_ledger(tmp_path):
+    import shutil
+    path = tmp_path / "budget.json"
+    ledger = BudgetLedger(path, limit_usd="1")
+    ledger.reserve("a", "0.1"); ledger.settle("a", "0.04")
+    shutil.copy(path, tmp_path / "copy.json")
+    copy = BudgetLedger(tmp_path / "copy.json")
+    assert copy.record("a")["actual_usd"] == "0.04" and copy.snapshot()["committed_usd"] == "0.04"
+
+
+def test_two_ledger_objects_see_each_others_appends_and_a_whole_rewrite(tmp_path):
+    import json
+    path = tmp_path / "budget.json"
+    a, b = BudgetLedger(path, limit_usd="1"), BudgetLedger(path)
+    a.reserve("x", "0.5")
+    with pytest.raises(BudgetExceeded):
+        b.reserve("y", "0.6")                              # b reads a's append before checking the cap
+    assert b.record("x")["status"] == "reserved"
+    path.write_text(json.dumps({"limit_usd": "2", "halt_reason": None, "requests": {}}))   # foreign rewrite
+    assert a.record("x") is None and a.snapshot()["limit_usd"] == "2"
+
+
+def test_compaction_folds_the_lines_into_one_snapshot(tmp_path, monkeypatch):
+    import haenv.semantic_budget as sb
+    monkeypatch.setattr(sb, "COMPACT_EVERY", 5)
+    path = tmp_path / "budget.json"
+    ledger = BudgetLedger(path, limit_usd="10")
+    for i in range(12):
+        ledger.reserve(f"r{i}", "0.1")
+    assert path.read_bytes().count(b"\n") <= 5
+    assert BudgetLedger(path).snapshot()["committed_usd"] == "1.2"
+
+
+def test_a_legacy_indented_ledger_reads_and_takes_appends(tmp_path):
+    import json
+    path = tmp_path / "budget.json"
+    path.write_text(json.dumps({"limit_usd": "1", "halt_reason": None, "requests": {
+        "old": {"reserved_usd": "0.10", "actual_usd": "0.05", "status": "settled"}}}, indent=2))
+    ledger = BudgetLedger(path)
+    ledger.reserve("new", "0.20")
+    assert ledger.snapshot()["committed_usd"] == "0.25"
+    assert BudgetLedger(path).record("old")["actual_usd"] == "0.05"

@@ -5,7 +5,7 @@ cell is scored: every cell runs the same `fn(task)` exactly once, rows are persi
 they complete, and the returned list is in task order. Serial (`workers <= 1`), the old
 per-backend pools and the per-model pools produce the same rows apart from timing fields.
 
-Four mechanisms:
+Five mechanisms:
 
 * **One pool per model.** A model gets `min(workers, backend cap, its cell count)`
   threads (`config.eval.model_workers` replaces `workers` for a named model). The models
@@ -29,6 +29,11 @@ Four mechanisms:
   tighter. A stream that keeps sending tokens is never closed; the solver's retry loop then sends a new request
   under a new request id, and the closed one is counted at its reserved upper bound.
   Every such close is recorded on the cell's row (`stall_timeouts`).
+* **A wall-clock budget per model** (`config.eval.model_wall_budget_s`, off by default).
+  Once a model's first cell has been running that long, the model starts no further
+  cell; cells already in flight finish under the stall deadline. The model, its budget
+  and its unstarted cells are recorded in `scheduler.json` (`wall_budget_stops`), and the
+  board classifies those cells as timed out.
 
 SYNTHETIC, evaluation use only, not medical advice.
 """
@@ -66,8 +71,6 @@ def _default_timing_path() -> Path:
     from . import data_root
     return data_root() / "registry" / "solver_timing.json"
 POOLINGS = ("model", "backend")
-#: `--pooling` on the command line; wins over `config.eval.pooling`.
-POOLING_OVERRIDE: list = [None]
 
 
 def _cfg() -> dict:
@@ -115,8 +118,43 @@ def model_workers(cfg: dict | None = None) -> dict[str, int]:
     return {str(k): int(v) for k, v in got.items()}
 
 
+def wall_budgets(cfg: dict | None = None) -> dict[str, float]:
+    """`config.eval.model_wall_budget_s`: seconds per model; `"*"` applies to every model
+    not named."""
+    got = ((cfg if cfg is not None else _cfg()).get("eval") or {}).get("model_wall_budget_s") or {}
+    if not isinstance(got, dict) or any(isinstance(v, bool) or not isinstance(v, (int, float))
+                                        or v <= 0 for v in got.values()):
+        raise ValueError("config.eval.model_wall_budget_s must map model names to positive seconds")
+    return {str(k): float(v) for k, v in got.items()}
+
+
+class _WallBudget:
+    """Per-model clock from the first cell's start; `admit` refuses once it has run out."""
+
+    def __init__(self, budgets: dict[str, float], clock=time.monotonic):
+        self.budgets, self.clock = budgets, clock
+        self.first: dict[str, float] = {}
+        self.stops: dict[str, dict] = {}
+        self.lock = threading.Lock()
+
+    def admit(self, model: str) -> bool:
+        budget = self.budgets.get(model, self.budgets.get("*"))
+        if budget is None:
+            return True
+        with self.lock:
+            now = self.clock()
+            start = self.first.setdefault(model, now)
+            if model not in self.stops and now - start < budget:
+                return True
+            stop = self.stops.setdefault(model, {"budget_s": budget,
+                                                 "stopped_after_s": round(now - start, 3),
+                                                 "not_started": 0})
+            stop["not_started"] += 1
+            return False
+
+
 def pooling_mode(cfg: dict | None = None) -> str:
-    mode = POOLING_OVERRIDE[0] or str(
+    mode = str(
         ((cfg if cfg is not None else _cfg()).get("eval") or {}).get("pooling") or "model")
     if mode not in POOLINGS:
         raise ValueError(f"config.eval.pooling must be one of {POOLINGS}, got {mode!r}")
@@ -398,19 +436,26 @@ def _shutdown(resp) -> None:
 def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
         geometry_of=None, pooling: str | None = None, backend_limits: dict | None = None,
         timing: dict | None = None, batch_dir: Path | None = None,
-        per_model: dict | None = None) -> list[dict]:
+        per_model: dict | None = None, wall_budget: dict | None = None,
+        clock=time.monotonic) -> list[dict]:
     """Run every task once through `fn`, persist each row with `emit`, return rows in task order.
 
     `key_of(task)` names the model, `backend_of(model)` its backend, `geometry_of(task)`
     the geometry the cell runs on. `workers <= 1` runs serially in task order; otherwise a
     model's pool size is `per_model[model]` (default `config.eval.model_workers`) or
-    `workers`, never more than its backend's cap or its cell count.
+    `workers`, never more than its backend's cap or its cell count. A task whose model has
+    spent its `wall_budget` (default `config.eval.model_wall_budget_s`) is not started and
+    has no row.
     """
     stats: dict = {"started_at": time.time(), "timing_sha16": timing_sha16()}
     _refuse_changed_timing(batch_dir, stats["timing_sha16"])
+    model_of = key_of or (lambda t: "_offline")
+    walls = _WallBudget(wall_budgets() if wall_budget is None else dict(wall_budget), clock)
     if workers <= 1:
         rows = []
         for t in tasks:
+            if not walls.admit(model_of(t)):
+                continue
             _TL.stalls = []
             _TL.in_cell = True
             try:
@@ -419,6 +464,7 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
                 _TL.in_cell = False
             _attach_stalls(row)
             rows.append(emit(row))
+        stats["wall_budget_stops"] = walls.stops
         _write_plan(batch_dir, {"mode": "serial", "cells": len(tasks)}, rows, stats)
         return rows
 
@@ -427,7 +473,6 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
     pooling = pooling or pooling_mode()
     limits = dict(backend_limits if backend_limits is not None else _load_backend_limits())
     timing = load_timing() if timing is None else timing
-    model_of = key_of or (lambda t: "_offline")
     backend_for = backend_of or (lambda m: "_offline")
 
     indexed = list(enumerate(tasks))
@@ -480,6 +525,8 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
             try:
                 if stopped.is_set():
                     return
+                if not walls.admit(model_of(t)):
+                    continue
                 gauges[key].enter()
                 _TL.stalls = []
                 _TL.in_cell = True
@@ -517,7 +564,8 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
         th.join()
 
     stats.update({"peak_backend": {b: s.peak for b, s in slots.items()},
-                  "peak_pool": {k: g.peak for k, g in gauges.items()}})
+                  "peak_pool": {k: g.peak for k, g in gauges.items()},
+                  "wall_budget_stops": walls.stops})
     _write_plan(batch_dir, {"mode": "parallel", "pooling": pooling, "workers": int(workers),
                             "model_workers": overrides,
                             "backend_caps": {b: s.capacity for b, s in slots.items()},
@@ -529,7 +577,7 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
         raise errors[0]
     if stops:
         raise stops[0]
-    return [out[i] for i in range(len(tasks))]
+    return [out[i] for i in sorted(out)]
 
 
 def _attach_stalls(row: dict) -> None:

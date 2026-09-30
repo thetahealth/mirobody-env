@@ -14,7 +14,6 @@ judge:
   reasoning_effort: high
   max_tokens: 72000
   consensus: two_then_third_on_disputed_atoms
-  max_concurrency: 4
   failure_policy: unresolved
   evidence_mode: pointer_ids
 criteria:

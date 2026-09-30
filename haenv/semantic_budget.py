@@ -1,6 +1,7 @@
 """Persistent, process-safe dollar cap for the complete semantic-validation run."""
 from __future__ import annotations
 
+from collections import Counter
 from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
 import fcntl
@@ -35,6 +36,92 @@ def _amount(value, *, positive=False) -> Decimal:
     return number
 
 
+#: Journal lines between two compactions of the ledger into its snapshot file.
+COMPACT_EVERY = 20000
+_TOP = ("limit_usd", "halt_reason", "operator_events")
+#: Leading bytes compared on every refresh to notice a ledger rewritten in place.
+_HEAD = 256
+
+
+class _Tracked(dict):
+    """The requests map of a loaded ledger: remembers which ids a locked block touched, so a
+    write appends those records only, instead of rewriting the whole ledger."""
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.touched = set()
+
+    def __getitem__(self, key):
+        self.touched.add(key)
+        return super().__getitem__(key)
+
+    def get(self, key, default=None):
+        self.touched.add(key)
+        return super().get(key, default)
+
+    def __setitem__(self, key, value):
+        self.touched.add(key)
+        super().__setitem__(key, value)
+
+
+def _contribution(record) -> tuple:
+    """(committed, settled, unknown_n, unknown_usd, tariff_n, tariff_usd, in_flight) of one record."""
+    reserved = _amount(record["reserved_usd"])
+    actual = _amount(record["actual_usd"]) if record.get("actual_usd") is not None else None
+    status = record["status"]
+    zero = Decimal("0")
+    return (actual if actual is not None else reserved, actual if actual is not None else zero,
+            int(status == "unknown_capped"), reserved if status == "unknown_capped" else zero,
+            int(status == "tariff_capped"), reserved if status == "tariff_capped" else zero,
+            reserved if status == "reserved" else zero)
+
+
+def _complete_lines(data: bytes) -> tuple[list[bytes], int]:
+    """Lines that end in a newline, and the byte count they span (a torn last line written by
+    an interrupted append is left out)."""
+    end = data.rfind(b"\n") + 1
+    return [line for line in data[:end].split(b"\n") if line.strip()], end
+
+
+def _parse(data: bytes) -> tuple[dict, list[bytes], int]:
+    """(snapshot, appended change lines, byte offset after the last complete line). A snapshot
+    written without a trailing newline (a legacy ledger) ends at its closing brace."""
+    text = data.decode("utf-8")
+    state, end = json.JSONDecoder().raw_decode(text)
+    start = len(text[:end].encode("utf-8"))
+    newline = data.find(b"\n", start)
+    if newline < 0:
+        return state, [], start
+    start = newline + 1
+    lines, consumed = _complete_lines(data[start:])
+    return state, lines, start + consumed
+
+
+def _apply(state: dict, line: bytes) -> str | None:
+    entry = json.loads(line)
+    if "r" in entry:
+        state["requests"][entry["r"]] = entry["v"]
+        return entry["r"]
+    for key, value in entry["top"].items():
+        state[key] = value
+    return None
+
+
+def _top_json(state: dict) -> str:
+    return json.dumps({k: state[k] for k in _TOP if k in state}, sort_keys=True)
+
+
+def read_state(path: Path) -> dict | None:
+    """The ledger's current state (snapshot plus appended lines), without a lock."""
+    path = Path(path)
+    if not path.exists():
+        return None
+    state, lines, _ = _parse(path.read_bytes())
+    for line in lines:
+        _apply(state, line)
+    return state
+
+
 class BudgetLedger:
     """Reserve a verified upper bound before every HTTP attempt, including retries.
 
@@ -54,7 +141,8 @@ class BudgetLedger:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         #: this process's approved cap when it is below the file's (only tightens)
         self._process_cap = None
-        self._read_lock = threading.Lock(); self._read_key = None; self._read_requests = {}
+        self._mat_lock = threading.RLock()
+        self._mat = None            # the loaded state, reused while the files are unchanged
         with self._locked() as state:
             if state is None:
                 if limit_usd is None:
@@ -99,28 +187,181 @@ class BudgetLedger:
             self._write(state)
         return event
 
+    # ---- storage: one file, a snapshot line followed by appended change lines ----
+    #
+    # The first JSON value in the file is the full state (a legacy ledger's indented JSON
+    # reads the same way); every later line is one changed request record (`{"r": id, "v":
+    # record}`) or top-level change (`{"top": {...}}`), replayed in order as upserts. A write
+    # appends only the records its locked block touched, so its cost does not grow with the
+    # ledger; every COMPACT_EVERY lines the file is rewritten as a single snapshot (atomic
+    # replace). Copying the one file copies the whole ledger. The loaded state and running
+    # totals stay in memory while the file only grows.
+
+    def _inode(self):
+        try:
+            return self.path.stat().st_ino
+        except FileNotFoundError:
+            return None
+
+    def _reload(self):
+        try:
+            with self.path.open("rb") as handle:
+                ino, data = os.fstat(handle.fileno()).st_ino, handle.read()
+        except FileNotFoundError:
+            self._mat = None
+            return
+        state, lines, offset = _parse(data)
+        state["requests"] = _Tracked(state.get("requests") or {})
+        for line in lines:
+            _apply(state, line)
+        state["requests"].touched.clear()
+        self._mat = {"state": state, "contrib": {}, "ino": ino, "offset": offset, "lines": len(lines),
+                     "head": data[:_HEAD],
+                     "totals": [Decimal("0") if i not in (2, 4) else 0 for i in range(7)],
+                     "exps": [Counter() for _ in range(7)]}
+        for rid in state["requests"]:
+            self._account(rid)
+
+    def _refresh(self):
+        """Bring the loaded state up to the file: read only the lines appended since."""
+        mat = self._mat
+        if mat is None or self._inode() != mat["ino"]:
+            self._reload()
+            return
+        try:
+            with self.path.open("rb") as handle:
+                size = os.fstat(handle.fileno())
+                # replaced, shrunk or rewritten in place by another writer: read it whole again
+                if (size.st_ino != mat["ino"] or size.st_size < mat["offset"]
+                        or handle.read(_HEAD) != mat["head"]):
+                    self._reload()
+                    return
+                handle.seek(mat["offset"])
+                lines, consumed = _complete_lines(handle.read())
+        except FileNotFoundError:
+            self._reload()
+            return
+        state = mat["state"]
+        for line in lines:
+            rid = _apply(state, line)
+            if rid is not None:
+                self._account(rid)
+        state["requests"].touched.clear()
+        mat["offset"] += consumed
+        mat["lines"] += len(lines)
+
+    def _account(self, rid):
+        mat = self._mat
+        new = _contribution(mat["state"]["requests"][rid])
+        old = mat["contrib"].get(rid)
+        for i in range(7):
+            if old is not None:
+                mat["totals"][i] -= old[i]
+                if i not in (2, 4):
+                    mat["exps"][i][old[i].as_tuple().exponent] -= 1
+            mat["totals"][i] += new[i]
+            if i not in (2, 4):
+                mat["exps"][i][new[i].as_tuple().exponent] += 1
+        mat["contrib"][rid] = new
+
+    def _total(self, i) -> Decimal:
+        """Running total `i`, written with the decimal places a fresh sum of the records has."""
+        mat = self._mat
+        places = min([0] + [e for e, n in mat["exps"][i].items() if n > 0])
+        return mat["totals"][i].quantize(Decimal(1).scaleb(places))
+
     @contextmanager
     def _locked(self):
-        with self.path.with_suffix(self.path.suffix + ".lock").open("a") as lock:
+        with self._mat_lock, self.path.with_suffix(self.path.suffix + ".lock").open("a") as lock:
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
             try:
-                state = json.loads(self.path.read_text()) if self.path.exists() else None
-                yield state
+                self._refresh()
+                if self._mat is None:
+                    self._written = True
+                    yield None
+                    return
+                state = self._mat["state"]
+                top = _top_json(state)
+                self._written, self._top = False, top
+                try:
+                    yield state
+                except BaseException:
+                    self._mat = None            # a block that raised may have half-mutated the state
+                    raise
+                if (state["requests"].touched or _top_json(state) != top) and not self._written:
+                    self._mat = None            # touched but not written: never trust it again
             finally:
                 fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
     def _write(self, state):
-        with tempfile.NamedTemporaryFile(mode="w", dir=self.path.parent,
+        if self._mat is None or state is not self._mat["state"]:
+            self._write_snapshot(state)          # a new ledger
+            self._mat = None
+            self._written = True
+            return
+        mat = self._mat
+        lines = [json.dumps({"r": rid, "v": state["requests"][rid]}, sort_keys=True,
+                            separators=(",", ":"))
+                 for rid in sorted(state["requests"].touched) if rid in state["requests"]]
+        if _top_json(state) != self._top:
+            lines.append(json.dumps({"top": {k: state[k] for k in _TOP if k in state}},
+                                    sort_keys=True, separators=(",", ":")))
+        if lines:
+            with self.path.open("r+b") as handle:
+                handle.seek(mat["offset"])            # drops a torn line left by an interrupted append
+                handle.truncate()
+                lead = b""
+                if mat["offset"]:
+                    handle.seek(mat["offset"] - 1)
+                    lead = b"" if handle.read(1) == b"\n" else b"\n"
+                handle.write(lead + ("\n".join(lines) + "\n").encode())
+                handle.flush()
+                os.fsync(handle.fileno())
+                mat["offset"] = handle.tell()
+        for rid in list(state["requests"].touched):
+            if rid in state["requests"]:
+                self._account(rid)
+        state["requests"].touched.clear()
+        self._top = _top_json(state)
+        self._written = True
+        mat["lines"] += len(lines)
+        if mat["lines"] >= COMPACT_EVERY:
+            self._compact(state)
+
+    def _write_snapshot(self, state) -> int:
+        plain = {**state, "requests": dict(state.get("requests") or {})}
+        body = (json.dumps(plain, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        with tempfile.NamedTemporaryFile(mode="wb", dir=self.path.parent,
                                          prefix=self.path.name + ".", delete=False) as file:
             temporary = Path(file.name)
-            # compact and in one write: the whole ledger is rewritten under the exclusive lock
-            file.write(json.dumps(state, sort_keys=True, separators=(",", ":")) + "\n")
+            file.write(body)
             file.flush()
             os.fsync(file.fileno())
         os.replace(temporary, self.path)
+        return len(body)
 
-    @staticmethod
-    def _committed(state) -> Decimal:
+    def _compact(self, state):
+        """Rewrite the file as one snapshot line (atomic replace)."""
+        size = self._write_snapshot(state)
+        with self.path.open("rb") as handle:
+            head = handle.read(_HEAD)
+        self._mat.update(ino=self._inode(), offset=size, lines=0, head=head)
+
+    def compact(self) -> None:
+        """Fold the appended lines into the snapshot now."""
+        with self._locked() as state:
+            if state is not None:
+                self._compact(state)
+                self._written = True
+
+    def _committed(self, state) -> Decimal:
+        if self._mat is not None and state is self._mat["state"]:
+            total = self._total(0)
+            for rid in state["requests"].touched:       # records changed inside this block
+                record = dict.get(state["requests"], rid)
+                old = self._mat["contrib"].get(rid)
+                total += (_contribution(record)[0] if record is not None else 0) - (old[0] if old else 0)
+            return total
         return sum((_amount(r["actual_usd"] if r["actual_usd"] is not None else r["reserved_usd"])
                     for r in state["requests"].values()), Decimal("0"))
 
@@ -374,45 +615,24 @@ class BudgetLedger:
         if violated:raise BudgetExceeded('Measured tariff bound exceeded its reservation')
 
     def record(self, request_id: str) -> dict | None:
-        """One request's record, without the ledger lock or the totals.
-
-        Every write replaces the file atomically, so a lock-free read sees one whole version;
-        the parse is reused until the file is replaced. Returns a copy.
-        """
-        try:
-            st = self.path.stat()
-        except FileNotFoundError:
-            return None
-        key = (st.st_ino, st.st_mtime_ns, st.st_size)
-        with self._read_lock:
-            if key != self._read_key:
-                self._read_requests = json.loads(self.path.read_text())["requests"]
-                self._read_key = key
-            found = self._read_requests.get(request_id)
+        """One request's record, without the ledger lock or the totals; a copy."""
+        with self._mat_lock:
+            self._refresh()
+            if self._mat is None:
+                return None
+            found = dict.get(self._mat["state"]["requests"], request_id)
         return dict(found) if found is not None else None
 
     def snapshot(self) -> dict:
+        """State plus running totals. The records are the ledger's own: read them, do not edit."""
         with self._locked() as state:
-            zero = Decimal("0")
-            committed = unknown_usd = in_flight = tariff_usd = settled = zero
-            unknown_n = tariff_n = 0
-            for r in state["requests"].values():
-                reserved = _amount(r["reserved_usd"])
-                actual = _amount(r["actual_usd"]) if r["actual_usd"] is not None else None
-                committed += actual if actual is not None else reserved
-                if actual is not None:
-                    settled += actual
-                status = r["status"]
-                if status == "unknown_capped":
-                    unknown_n += 1; unknown_usd += reserved
-                elif status == "tariff_capped":
-                    tariff_n += 1; tariff_usd += reserved
-                elif status == "reserved":
-                    in_flight += reserved
-            return {**state, "committed_usd": str(committed),
-                    "unknown_capped_n": unknown_n, "unknown_capped_usd": str(unknown_usd),
-                    "tariff_capped_n": tariff_n, "in_flight_usd": str(in_flight),
-                    "tariff_bound_usd": str(tariff_usd), "settled_usd": str(settled)}
+            t, q = self._mat["totals"], self._total
+            top = {k: state[k] for k in _TOP if k in state}
+            return {**top, "halt_reason": state.get("halt_reason"),
+                    "requests": dict(state["requests"]), "committed_usd": str(q(0)),
+                    "unknown_capped_n": t[2], "unknown_capped_usd": str(q(3)),
+                    "tariff_capped_n": t[4], "in_flight_usd": str(q(6)),
+                    "tariff_bound_usd": str(q(5)), "settled_usd": str(q(1))}
 
 def cost_summary(snapshot: dict) -> str:
     """"paid $X + N unknown (counted at bound $Y)", plus tariff bounds and in-flight holds."""

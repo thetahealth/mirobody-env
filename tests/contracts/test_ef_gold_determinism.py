@@ -231,13 +231,25 @@ def test_f2_negative_control_response_ignores_the_person(monkeypatch):
 
 
 def test_f1_negative_control_unseeded_draw(monkeypatch):
-    """Negative control: with the per-case draws perturbed by an unseeded source, two builds
-    of the same spec must differ."""
+    """Negative control for `test_f1_same_spec_same_id_is_byte_identical`: with the per-case
+    draws perturbed by an unseeded source, two emitted builds of the same spec differ.
+    Builds withheld by the emission gate are redrawn (the positive test's precondition is
+    `a.emitted and b.emitted`); the registry self-check runs before the patch, since it
+    samples `rng.unit` itself and must see the unperturbed draws."""
     import random
     from haenv import rng
+    from haenv.overlay import validate_registry
+    validate_registry()                                     # cached; same loader as the build path
     orig = rng.unit
     monkeypatch.setattr(rng, "unit", lambda *p: (orig(*p) + random.random()) % 1.0)
     base = C.spec_of(C.T2D_JOB, "T2G-01")
-    a = C.build_uncached(C.variant(base))
-    b = C.build_uncached(C.variant(base))
-    assert _dump(a) != _dump(b), "F1 passed with unseeded randomness in the pipeline"
+    emitted = []
+    for _ in range(20):
+        b = C.build_uncached(C.variant(base))
+        if b.emitted:
+            emitted.append(b)
+        if len(emitted) == 2:
+            break
+    assert len(emitted) == 2, (
+        f"only {len(emitted)} of the perturbed builds passed the emission gate in 20 attempts")
+    assert _dump(emitted[0]) != _dump(emitted[1]), "F1 passed with unseeded randomness in the pipeline"

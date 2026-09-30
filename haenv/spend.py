@@ -43,8 +43,9 @@ def _dec(value) -> Decimal:
 # --------------------------------------------------------------------------- ledger (read only)
 
 def read_ledger(path: Path) -> dict:
-    """Plain read of the ledger file: no lock, no lock file, no write."""
-    return json.loads(Path(path).read_text())
+    """Plain read of the ledger (snapshot + journal): no lock, no lock file, no write."""
+    from .semantic_budget import read_state
+    return read_state(Path(path))
 
 
 def counted(rec: dict) -> Decimal:
@@ -665,7 +666,7 @@ def plan_reconcile(state: dict, index: dict, lookup=None, *, key_usage_evidence=
 def apply_reconcile(actions: list[Action], ledger_path: Path, evidence_dir: Path) -> dict:
     """Write evidence files, then settle through BudgetLedger.settle_unknown_later. Over-bound: refuse."""
     from .semantic_budget import BudgetLedger
-    limit = json.loads(Path(ledger_path).read_text())["limit_usd"]
+    limit = read_ledger(Path(ledger_path))["limit_usd"]
     led = BudgetLedger(Path(ledger_path), limit_usd=str(limit))
     evidence_dir = Path(evidence_dir)
     evidence_dir.mkdir(parents=True, exist_ok=True)

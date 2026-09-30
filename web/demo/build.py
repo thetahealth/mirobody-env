@@ -30,6 +30,8 @@ DATA = HERE / "data.json"
 #: `node web/demo/gen_check.mjs` can load it without a browser.
 GEN = HERE / "gen.mjs"
 OUT = HERE / "index.html"
+#: English display text for the case's Chinese strings (`translate_en.py`); optional.
+TR = HERE / "translations.en.json"
 
 # The banner is bilingual and must keep the Chinese "勿手改" within the first 400 characters.
 BANNER = ("<!-- Generated file — do not hand-edit (生成物,勿手改). Edit `_template.html` or "
@@ -42,7 +44,7 @@ def main() -> int:
             print(f"missing {p.relative_to(HERE.parent.parent)}")
             return 2
     tpl = TPL.read_text(encoding="utf-8")
-    for slot in ("__DATA__", "__GEN__"):
+    for slot in ("__DATA__", "__GEN__", "__TR__"):
         if slot not in tpl:
             print(f"the template has no `{slot}` placeholder; the page would be an empty shell")
             return 2
@@ -56,7 +58,10 @@ def main() -> int:
               "<script>; attach to `globalThis.HaenvGen` instead")
         return 2
     # escape `</` so a `</script>` inside the JSON cannot close the tag early
+    tr = TR.read_text(encoding="utf-8") if TR.is_file() else "{}"
+    json.loads(tr)
     html = (BANNER + tpl.replace("__GEN__", gen)
+            .replace("__TR__", tr.replace("</", "<\\/"))
             .replace("__DATA__", raw.replace("</", "<\\/")))
     OUT.write_text(html, encoding="utf-8")
     print(f"ok: {OUT}  {len(html)/1024:.1f} KB"

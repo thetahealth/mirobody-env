@@ -42,8 +42,8 @@ RESIDUAL RULE -- nothing is left unlicensed
   response, a per-cell judgement, a rendered report, a freeze snapshot, or a
   clinical vocabulary.
 
-  Everything else -- source code, build and config files -- is MIT.
-  See the RESIDUAL GRANT section of `LICENSE`.
+  Everything else -- source code, build and config files -- is MIT
+  (`LICENSE`).
 
   `core/**` is governed by its own licence file, not by either of ours.
 

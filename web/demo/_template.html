@@ -19,9 +19,10 @@
   "technical details" panel at the end of each section.
 
   i18n: the page defaults to English; the EN / 中文 toggle switches every UI string
-  (remembered in localStorage; `?lang=zh` forces Chinese). Benchmark content is not
-  translated: case text, model answers and the sample record `SAMPLE_EMR` stay in their
-  original language (Chinese), each with a one-line English note. Dimension names and
+  (remembered in localStorage; `?lang=zh` forces Chinese). Benchmark content is Chinese:
+  the English page shows case text and model answers through `tx()` from
+  `translations.en.json`, the Chinese page and every score read the originals, and the sample
+  record has an English counterpart (`SAMPLE_EMR_EN`). Dimension names and
   descriptions come from the page's own `DIM` table. UI strings live in the `UI`, `NAMES` and
   `TECH` tables; render functions look them up instead of branching on `LANG`.
 
@@ -31,7 +32,7 @@
 :root{
   --radius:16px; --radius-sm:10px;
   --frame:1160px; --page-gutter:clamp(18px,4vw,44px);
-  --toc-width:184px; --toc-gap:32px;
+  --toc-width:184px; --toc-gap:32px; --tl-name:clamp(92px,21%,168px);
   --fade-l:0px; --fade-r:0px;         /* rail edge fades; the mask reads only alpha */
   --background:#FAFAF8; --foreground:#141416;
   --card:#FFFFFF; --muted:#F3F3EF; --muted-fg:#56565A; --faint:#8C8C8E;
@@ -51,6 +52,12 @@
   --m1:#2a78d6; --m2:#eb6834; --m3:#1baf7a; --m4:#eda100;
   --m5:#e87ba4; --m6:#008300; --m7:#4a3aa7; --m8:#e34948;
   --nav-bg:rgba(250,250,248,.86);
+  /* Timeline and chart fills: the veil after "today", the reference-range band, lane
+     stripes, the fan's quantile bands and the hard-gate type palette. */
+  --fog:rgba(250,250,248,.62); --fog-line:rgba(20,20,22,.07); --band:rgba(44,122,87,.11);
+  --lane:#FBFBF9; --gap:rgba(135,135,138,.16); --fan1:rgba(85,85,90,.24); --fan2:rgba(85,85,90,.11);
+  --g1:#4F6BA8; --g2:#B7791F; --g3:#2F8A7E; --g4:#8E4F87; --g5:#B4533C; --g6:#6B7A2E; --g7:#8C8C8E;
+  --glow:rgba(200,65,47,.22);
 }
 @media(prefers-color-scheme:dark){
   :root:not([data-theme=light]){
@@ -67,6 +74,10 @@
     --m5:#d55181; --m6:#008300; --m7:#9085e9; --m8:#e66767;
     --shadow:rgba(0,0,0,.42); --shadow-lg:rgba(0,0,0,.55);
     --nav-bg:rgba(13,13,14,.86);
+    --fog:rgba(13,13,14,.62); --fog-line:rgba(255,255,255,.06); --band:rgba(95,199,154,.13);
+    --lane:#141416; --gap:rgba(144,144,142,.16); --fan1:rgba(191,191,189,.26); --fan2:rgba(191,191,189,.11);
+    --g1:#7F9BE0; --g2:#E3A548; --g3:#4FC1B0; --g4:#C68BC0; --g5:#E88468; --g6:#A9B85C; --g7:#90908E;
+    --glow:rgba(255,142,124,.26);
   }
 }
 :root[data-theme=dark]{
@@ -82,6 +93,10 @@
   --m5:#d55181; --m6:#008300; --m7:#9085e9; --m8:#e66767;
   --shadow:rgba(0,0,0,.42); --shadow-lg:rgba(0,0,0,.55);
   --nav-bg:rgba(13,13,14,.86);
+  --fog:rgba(13,13,14,.62); --fog-line:rgba(255,255,255,.06); --band:rgba(95,199,154,.13);
+  --lane:#141416; --gap:rgba(144,144,142,.16); --fan1:rgba(191,191,189,.26); --fan2:rgba(191,191,189,.11);
+  --g1:#7F9BE0; --g2:#E3A548; --g3:#4FC1B0; --g4:#C68BC0; --g5:#E88468; --g6:#A9B85C; --g7:#90908E;
+  --glow:rgba(255,142,124,.26);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:104px}
@@ -228,7 +243,7 @@ h3{font-size:.98em;font-weight:620;letter-spacing:-.008em;margin:0 0 .7em}
   box-shadow:0 1px 3px var(--shadow)}
 .seg button:disabled{opacity:.38;cursor:default}
 /* The three step-1 entry buttons wrap on narrow screens instead of scrolling out of view. */
-#how{flex-wrap:wrap;overflow:visible;border-radius:calc(var(--radius-sm) + 4px)}
+#how,#cr-view,#mx-slice{flex-wrap:wrap;overflow:visible;border-radius:calc(var(--radius-sm) + 4px)}
 .knob input:disabled{opacity:.4}
 .knob.off>span:first-child{opacity:.5}
 .knobnote{font-size:.8em;color:var(--faint);margin:-6px 0 0;padding-inline-start:9.2em}
@@ -299,6 +314,15 @@ tr.hi td{background:var(--accent-soft)}
 .score-value{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:.9em;white-space:nowrap}
 .score-track{display:block;grid-column:2 / -1;height:8px;border-radius:99px;background:var(--muted);overflow:hidden}
 .score-fill{display:block;height:100%;background:var(--c2);border-radius:99px}
+.tier-group{display:grid;gap:14px;padding:12px 14px;border:1px solid var(--border-soft);border-radius:var(--radius-sm)}
+.tier-group:nth-child(even){background:var(--lane)}
+.tier-head{margin:0;font-size:.8em;font-weight:600;color:var(--muted-fg)}
+.score-track.ci{position:relative;overflow:visible;background:var(--muted)}
+.score-track.ci .ci-band{position:absolute;top:-2px;bottom:-2px;border-radius:99px;opacity:.35}
+.score-track.ci .ci-pt{position:absolute;top:-3px;bottom:-3px;width:3px;margin-inline-start:-1.5px;border-radius:2px;background:var(--foreground)}
+.pairs-dim{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;font-size:.88em;margin:8px 0 0}
+.pairs-dim .v{font-family:var(--mono);white-space:nowrap}
+.pairs-list{margin:6px 0 0;padding-inline-start:18px;font-size:.84em;color:var(--muted-fg)}
 .score-scale{display:flex;justify-content:space-between;margin:14px 0 0 42px;color:var(--muted-fg);font-size:.75em}
 .coverage-summary{margin:24px 0}
 .coverage-summary table{font-size:.86em}
@@ -325,6 +349,7 @@ tr.hi td{background:var(--accent-soft)}
 .note{font-size:.86em;color:var(--muted-fg);border-inline-start:2px solid var(--border);
   padding-inline-start:13px;margin:16px 0 0}
 .note.warn{border-color:var(--accent)}
+.figure b.warn{color:var(--accent)}
 .note.ok{border-color:var(--ok)}
 .note b{color:var(--foreground)}
 .dimcard{border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;
@@ -433,6 +458,8 @@ details.fold[open]>summary{border-bottom:1px solid var(--border-soft);margin-bot
 .heat .hhead.lead{color:var(--foreground);font-weight:620}
 .heat .hrow{white-space:normal}
 .heat .hcorner{padding:0 0 6px}
+.heat .hrow.xh,.heat .hhead.xh{color:var(--accent)}
+.heat .hhead .swatch{margin:0 0 4px}
 /* Narrow screens: the item column stays pinned, the right edge fades and a hint shows
    until the table is scrolled to its end. */
 .heatwrap{overflow-x:auto}
@@ -477,6 +504,155 @@ footer{border-top:1px solid var(--border-soft);padding:30px 0 64px;font-size:.82
 .preview-hint{max-width:680px;margin:clamp(28px,7vw,80px) auto;padding:24px;
   background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
 .preview-hint p{margin:.55em 0 0;color:var(--muted-fg)}
+/* ── Timeline: one shared day axis, one lane per stream ──
+   Lane names and readings sit in the left column (HTML), graphics in per-lane SVGs,
+   the "today" handle, the veil after it, the crosshair and the zoom brush in one overlay. */
+.tl{position:relative;margin:4px 0 0}
+.tl-bar{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;font-size:.8em;color:var(--muted-fg);
+  margin:0 0 10px;min-height:30px}
+.tl-bar .tl-day{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--foreground);
+  min-width:7.5em;white-space:nowrap}
+.tl-bar .tl-hint{flex:1 1 14em;min-width:0}
+.tl-grid{position:relative;display:grid;grid-template-columns:var(--tl-name) minmax(0,1fr);
+  touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.tl-top{grid-column:2;grid-row:1;position:relative;height:24px}
+.tl-name{grid-column:1;padding:5px 12px 5px 0;font-size:.76em;line-height:1.3;min-width:0;
+  border-top:1px solid var(--border-soft);display:flex;flex-direction:column;justify-content:center}
+.tl-name b{font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-name .tl-val{font-family:var(--mono);font-size:.96em;color:var(--muted-fg);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.tl-name.off b,.tl-name.off .tl-val{opacity:.45}
+.tl-plot{grid-column:2;position:relative;border-top:1px solid var(--border-soft);min-width:0}
+.tl-plot.alt{background:var(--lane)}
+.tl-plot svg{display:block;width:100%;height:100%;overflow:visible}
+.tl-plot.hit{box-shadow:inset 0 0 0 2px var(--accent);background:var(--accent-soft)}
+.tl-name.hit b{color:var(--accent)}
+.tl-axis{grid-column:2;position:relative;height:20px;border-top:1px solid var(--border)}
+.tl-axis .axlab{top:4px}
+.tl-ov{grid-column:2;grid-row:1 / -1;position:relative;pointer-events:none;z-index:2}
+.tl-fog{position:absolute;top:24px;bottom:20px;right:0;background:var(--fog);
+  background-image:repeating-linear-gradient(135deg,var(--fog-line) 0 1px,transparent 1px 7px);
+  border-inline-start:1px dashed var(--c3)}
+.tl-cross{position:absolute;top:24px;bottom:20px;width:0;border-inline-start:1px solid var(--foreground);
+  opacity:.55;display:none}
+.tl-mark{position:absolute;top:24px;bottom:20px;width:0;border-inline-start:1.5px dashed var(--accent)}
+.tl-brush{position:absolute;top:24px;bottom:20px;background:var(--accent-soft);
+  border:1px solid var(--accent);border-width:0 1px;display:none}
+.tl-t{position:absolute;top:0;bottom:20px;width:24px;margin-inline-start:-12px;pointer-events:auto;
+  cursor:ew-resize;touch-action:none;outline:none}
+.tl-t::before{content:"";position:absolute;left:11px;top:22px;bottom:0;width:2px;background:var(--c4);border-radius:2px}
+.tl-t .tl-grip{position:absolute;left:50%;top:1px;transform:translateX(-50%);font-size:11px;line-height:18px;
+  padding:0 8px;border-radius:99px;background:var(--foreground);color:var(--background);white-space:nowrap;
+  font-family:var(--mono);box-shadow:0 1px 4px var(--shadow)}
+.tl-t:focus-visible .tl-grip{outline:2px solid var(--accent);outline-offset:2px}
+.tl-tick{position:absolute;bottom:2px;width:2px;height:7px;margin-inline-start:-1px;border-radius:2px;background:var(--c3)}
+.tl-tick.on{background:var(--accent);height:9px}
+.tl-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.78em;color:var(--muted-fg);margin:12px 0 0}
+.tl-legend i{display:inline-block;width:11px;height:11px;margin-inline-end:6px;vertical-align:-1px;border-radius:3px}
+.tl-legend i.ring{border:2px solid var(--accent);border-radius:99px;background:none}
+.tl-legend i.tick{width:2px;height:10px;border-radius:1px;background:var(--c3)}
+.tl-legend i.band{background:var(--band)}
+.tl-legend i.mark{width:0;border-radius:0;border-inline-start:2px dashed var(--accent)}
+.tl-legend i.gap{background:var(--gap)}
+.tl-legend i.fog{background:var(--fog);border:1px dashed var(--c3)}
+.tl-legend i.ev{border-radius:99px;background:var(--c2)}
+.tl-legend i.hollow{border:2px solid var(--c2);border-radius:99px;background:none}
+.tl-detail{margin-top:12px}
+.tl-detail .evrow{display:grid;grid-template-columns:minmax(4.2em,auto) minmax(0,1fr);gap:4px 12px;
+  padding:9px 12px;border-radius:var(--radius-sm);background:var(--muted);font-size:.86em;margin-top:6px}
+.tl-detail .evrow.on{box-shadow:inset 3px 0 0 var(--accent)}
+.tl-detail .evrow .mono{color:var(--muted-fg)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+.chip{display:inline-block;font-family:var(--mono);font-size:.76em;padding:.16em .6em;border-radius:99px;
+  background:var(--muted);color:var(--muted-fg);white-space:nowrap}
+.chip.on{background:var(--muted);color:var(--foreground)}
+.chip.bad{background:var(--accent);color:var(--background)}
+.chip.late{border:1px dashed var(--muted-fg);color:var(--muted-fg);background:none}
+/* ── Small multiples ── */
+.smalls{display:grid;gap:4px 18px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:760px){ .smalls.two{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.smalls h4{margin:14px 0 2px;font-size:.84em;font-weight:620}
+.smalls h4 span{font-weight:400;color:var(--faint);margin-inline-start:.4em}
+/* ── Answer matrix ── */
+.amx{border-collapse:separate;border-spacing:0;width:100%;font-size:.84em}
+.amx th{position:sticky;top:0;background:var(--card);z-index:1;font-size:.84em;white-space:normal;
+  vertical-align:bottom;line-height:1.25;padding:8px 8px}
+.amx td{padding:6px 8px;vertical-align:middle;border-bottom:1px solid var(--border-soft);white-space:nowrap}
+.amx tbody tr{cursor:pointer;transition:background .12s}
+.amx tbody tr:hover td{background:var(--muted)}
+.amx tbody tr.on td{background:var(--accent-soft)}
+.amx tbody tr.on td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.amx th.r{text-align:end}
+.amx td.dx{white-space:normal;min-width:11em;max-width:17em;font-size:.95em;line-height:1.35}
+.amx td.dx .clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.amx .mx-strong{font-weight:600}
+.amx .swatch{margin-inline-end:8px}
+.mxsum{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.8em;color:var(--muted-fg);margin:10px 0 0}
+.mxsum b{color:var(--foreground);font-weight:600}
+/* ── Replay ── */
+.rp-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 14px}
+.rp-ctl input[type=range]{flex:1 1 200px;min-width:0;accent-color:var(--accent)}
+.rp-ctl .mono{white-space:nowrap}
+.budget{position:relative;height:10px;border-radius:99px;background:var(--muted);overflow:hidden;margin:6px 0 4px}
+.budget .spent{display:block;height:100%;background:var(--foreground);border-radius:99px;transition:width .35s}
+.budget .step{position:absolute;top:0;bottom:0;background:var(--accent)}
+.budget-lab{display:flex;justify-content:space-between;gap:10px;font-size:.78em;color:var(--muted-fg)}
+.rp-log{max-height:min(46vh,380px)}
+.rp-log .step-ev{padding:7px 12px}
+.rp-log .step-ev.now{background:var(--accent-soft)}
+.rp-log .step-ev.later{opacity:.42}
+.rp-tests{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));margin-top:12px}
+.rp-tests .tcard{border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:.82em;
+  background:var(--card);min-width:0}
+.rp-tests .tcard b{display:block;font-weight:600;overflow-wrap:anywhere}
+.rp-tests .tcard.later{opacity:.38}
+.rp-tests .tcard.now{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+/* ── Result charts: waterfall, gate failures, per-case band ── */
+.wf{display:grid;grid-template-columns:minmax(0,auto) minmax(80px,1fr) minmax(52px,auto);gap:8px 12px;
+  align-items:center;font-size:.86em;margin:12px 0 0}
+.wf>.row{display:contents}
+.wf .lab{overflow-wrap:anywhere;min-width:0}
+.wf .lab small{display:block;color:var(--faint);font-size:.86em}
+.wf .wbar{display:block;position:relative;height:14px;background:var(--muted);border-radius:4px}
+.wf .wbar span{display:block;position:absolute;top:0;bottom:0;border-radius:3px}
+.wf .v{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:end;white-space:nowrap}
+.wf .row.sum .lab{font-weight:620}
+.wf .row.sum .wbar{height:18px}
+.gstack{display:grid;grid-template-columns:minmax(0,auto) minmax(90px,1fr) minmax(64px,auto);gap:9px 12px;
+  align-items:center;font-size:.86em;margin:12px 0 0}
+.gstack>.row{display:contents}
+.gstack .gcell{display:block;min-width:0}
+.gstack .gbar{display:flex;height:14px;background:var(--muted);border-radius:4px;overflow:hidden}
+.gstack .gbar span{display:block;height:14px;flex:none}
+.gstack .soft{display:block;height:5px;margin-top:3px;border-radius:3px;background:none;
+  border:1px dashed var(--c3)}
+.gstack .v{font-family:var(--mono);text-align:end;white-space:nowrap}
+.cs{display:grid;grid-template-columns:minmax(0,auto) minmax(120px,1fr);gap:4px 12px;align-items:center;
+  font-size:.84em;margin:12px 0 0}
+.cs>.row{display:contents}
+@media(max-width:619px){ .gstack .vd,.cs .vd{display:none} .rp-tests{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.cs .strip2{position:relative;height:26px;border-bottom:1px solid var(--border-soft)}
+.cs .strip2 svg{display:block;width:100%;height:100%}
+.cs .scale{grid-column:2;display:flex;justify-content:space-between;font-size:.8em;color:var(--faint);font-family:var(--mono)}
+.cs .lab{display:flex;align-items:center;min-width:0;overflow-wrap:anywhere}
+/* ── Fan ── */
+.fanfig{display:flex;flex-wrap:wrap;gap:10px 28px;margin:4px 0 8px}
+.fanlists{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);margin-top:12px;font-size:.84em}
+@media(min-width:720px){ .fanlists{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.fanlists ul{margin:6px 0 0;padding-inline-start:1.1em;color:var(--muted-fg)}
+.fanlists h4{margin:0;font-size:.95em}
+/* ── Section status box: the one place a section states what its numbers are and are not ── */
+.status{border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;background:var(--card);
+  margin:0 0 18px;display:grid;gap:8px;font-size:.88em;color:var(--muted-fg)}
+.status>strong{color:var(--accent);letter-spacing:.06em;font-size:.86em}
+.status p{margin:0}
+.status b{color:var(--foreground)}
+.kicker{display:inline-flex;align-items:center;gap:8px}
+@media(prefers-reduced-motion:no-preference){
+  .tl-plot.hit,.rp-tests .tcard.now{animation:pulse 1.1s ease-out 1}
+  @keyframes pulse{0%{box-shadow:inset 0 0 0 2px var(--accent),0 0 0 0 var(--glow)}
+    100%{box-shadow:inset 0 0 0 2px var(--accent),0 0 0 10px transparent}}
+}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;
   scroll-behavior:auto!important}}
 </style>
@@ -523,10 +699,15 @@ footer{border-top:1px solid var(--border-soft);padding:30px 0 64px;font-size:.82
 </footer>
 
 <script id="haenv-data" type="application/json">__DATA__</script>
+<script id="haenv-tr" type="application/json">__TR__</script>
 <script>__GEN__</script>
 <script>
 "use strict";
 const D = JSON.parse(document.getElementById("haenv-data").textContent);
+//: English display text for the recorded case's Chinese strings (`translations.en.json`); the
+//: Chinese page and every score read the originals.
+const TR = (JSON.parse(document.getElementById("haenv-tr").textContent || "{}") || {}).entries || {};
+const tx = v => (typeof LANG !== "undefined" && LANG === "en" && typeof v === "string" && TR[v]) || v;
 const G = globalThis.HaenvGen;
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
@@ -548,9 +729,9 @@ const pct = (v, n) => (v == null || !isFinite(v)) ? "—" : (100 * v).toFixed(n 
    ever call `T(key, …args)` / `N(group, key)` / `ttech(key)` — never
    `LANG === "zh" ? … : …` inline.
 
-   Benchmark **data** (case evidence text, model answers, the sample chart
-   note) is never translated — it stays in its original language (Chinese) regardless of
-   `LANG`, with a one-time English note where it first appears. */
+   Benchmark **data** (case evidence text, model answers, test names, the chart sample) is
+   Chinese. The English page shows it through `tx()`, which looks the string up in
+   `translations.en.json`; the data itself and every score keep the original. */
 function detectLang(){
   try {
     const q = new URLSearchParams(location.search).get("lang");
@@ -652,8 +833,8 @@ en: {
     + "what it can't read, it doesn't guess.",
   emrNoHits: "Recognized nothing. Try spelling out <b>age, sex, condition, drug, weight, and "
     + "the week it regained</b>.",
-  emrDataNote: "The sample note is real benchmark case content, so it's shown in its "
-    + "original language (Chinese) — the extraction below still runs and its results are in English.",
+  emrDataNote: "The sample note mirrors a Chinese benchmark chart note; this is its English "
+    + "counterpart, and the extraction below reads both the same way.",
 
   yamlTitle: "Paste a config file", yamlDesc: "If you already have a config file, paste it in — "
     + "fields we recognize get filled in, fields we don't get listed out.",
@@ -733,7 +914,7 @@ en: {
   altCarried: "carry-forward in the record",
   s3SourceTitle: "Where this rate comes from",
   s3RealMeasured: "measured from real charts", s3IndependentSource: "a second independent source",
-  s3CopiedCount: "times this patient's record was copied",
+  s3CopiedCount: "copied readings in this patient's whole record",
   s3RateWeUse: "Rate we use", s3MeasuredInBatches: "measured in generated batches",
   s3NotYetMeasured: "not yet measured",
   s3NaturalRepeats: "natural repeats in the same batches (readings not copied)",
@@ -791,8 +972,8 @@ en: {
     + "you yet</b>, that's exactly what this case is testing.",
   evidenceBlankNote: (n) => " Also, <b>" + n + "</b> entries are blank in the ledger itself, left "
     + "empty on purpose.",
-  evidenceDataNote: "Symptom narrative text is real benchmark case content, shown in its "
-    + "original language (Chinese).",
+  evidenceDataNote: "The ledger text is shown in English translation; the models read the "
+    + "Chinese original, which the Chinese page shows.",
   deviceReadingDefault: "device",
   deviceReadingKg: (name, v) => name + " reading " + v + " kg",
 
@@ -803,8 +984,8 @@ en: {
     + "<span class=\"mono\">" + caseId + "</span>.",
 
   s6Kicker: "Step 6", s6H2: (n) => n + " models answered like this",
-  s6Lede: "Same case, and below is each model's <b>full answer</b> — nothing picked out, "
-    + "nothing paraphrased.",
+  s6Lede: "Same case, every model. The table lines up what each answer says, and each <b>full answer</b> is "
+    + "one click away: nothing picked out, nothing paraphrased.",
   s6Empty: "No answers to show for this batch.",
   s6WhoseAnswer: "Whose answer",
   s6Chars: (n) => n + " characters",
@@ -814,8 +995,8 @@ en: {
   s6DataNote: "Model answers are real benchmark output, shown in their original language.",
 
   s7Kicker: "Step 7", s7H2: "What a model looked up, step by step",
-  s7Lede: "In the gated format, a model requests data through a tool. Below is one saved "
-    + "trace showing the recorded requests and replies.",
+  s7Lede: "In the gated format, a model requests data through a tool. Replay one saved trace: every "
+    + "request, what came back and what it cost.",
   s7Scope: (model, caseId, nCall, nRefused) => "A single example: " + model + " on case "
     + "<span class=\"mono\">" + caseId + "</span>, a different patient from step 6. "
     + nCall + " request(s), " + nRefused + " refused.",
@@ -900,7 +1081,7 @@ en: {
   s9Kicker: "Step 9", s9H2: "Preliminary scores and rankings",
   s9Lede: "Select an evaluation track and a dimension to compare the recorded scores. "
     + "The matrix below keeps alphabetical model order for a cross-dimension overview.",
-  s9NoRanking: "<b>Preliminary — not final results.</b> Scores and ranks use the unchanged production "
+  s9NoRanking: "Scores and ranks use the unchanged production "
     + "formula. Each model has one run (k=1); repeat-run variability is unmeasured and ranks may change.",
   s9Withheld: (names) => "These starred components are included provisionally but still lack passing blind-human anchors: <b>"
     + names + "</b>.",
@@ -932,6 +1113,24 @@ en: {
   scoreTrackTools: "Budgeted test ordering",
   scoreDimLabel: "Total score or individual dimension",
   scoreOrderTitle: "Preliminary observed ranking",
+  tierHead: (k, n) => "Tier " + k + " · " + n + " model(s)",
+  tierCi: (lo, hi) => "95% interval " + lo + "–" + hi,
+  tierNote: (n, a) => "Models in one tier are not told apart: a model's tier is 1 + the number of models significantly "
+    + "better than it (paired case bootstrap, Holm, α " + a + "), on the " + n + " common complete cases. The band is the 95% interval.",
+  pairsTitle: "Which models can be told apart, per dimension",
+  pairsLede: (n, k) => "On the " + n + " cases complete in all " + k + " repeats: a pair counts when the 95% case-bootstrap "
+    + "interval of its per-case difference (mean of the repeats) excludes 0.",
+  pairsCount: (m, n) => m + " of " + n + " pairs",
+  pairsItem: (a, b, d, lo, hi, n) => a + " > " + b + " · difference " + d + " (95% " + lo + " to " + hi + ", " + n + " cases)",
+  pairsNone: "no pair separates",
+  noiseTitle: "Noise floor: three repeats of the tool track",
+  noiseLede: (k, n, m) => k + " independent repeats of the same version, " + n + " cases × " + m + " models. Variation "
+    + "combines the model's own sampling and the judge's; it is the floor under any difference read on this track.",
+  noiseDim: "Dimension", noiseCells: "Cells in every repeat", noisePooled: "Largest gap between repeat means",
+  noiseModel: "Median model's largest gap", noiseWorst: "Noisiest model",
+  noiseComposite: (c, min) => "Composite comparisons need at least " + min + " cases complete in every repeat; here " + c
+    + " are, so only per-dimension paired differences are reported.",
+  noiseCompositeOk: (c) => c + " cases are complete in every repeat, so composites are compared on them.",
   scoreOrderNote: "Single-pass descriptive order, not a final or statistically established ranking. "
     + "Ties share a place. Compare valid case counts as well as scores.",
   scoreContext: (n, date) => n + " synthetic cases per model · scoring snapshot " + date,
@@ -974,6 +1173,22 @@ en: {
   statsToolElsewhere: "Measured in the budgeted-test batch. Open step 9 and select the tool track.",
   preliminaryLabel: "PRELIMINARY — NOT FINAL RESULTS",
   preliminarySummary: "Current scores are disclosed for inspection, not certified as final benchmark findings.",
+  s9RuleR0: (n, min, a, k) => "Board rule: " + n + " cases are complete for every model (at least " + min
+    + " needed), so this track is ranked on them; tiers come from a paired case bootstrap with Holm correction at "
+    + a + ". <b>" + k + " model(s) share the first tier.</b>",
+  s9RuleR1: (n, min, w) => "<b>No total on this track.</b> Board rule: " + n + " cases are complete for every model "
+    + "(fewer than " + min + "), and every model's fill interval is at most " + w + ", so tiers are set by both fills; "
+    + "the page shows per-dimension readings.",
+  s9RuleNone: (n, min, w, who) => "<b>No total and no ranking on this track.</b> Board rule: " + n + " cases are "
+    + "complete for every model (fewer than " + min + "), and the fill interval is wider than " + w + " for " + who
+    + ", so this track shows per-dimension readings only.",
+  s9RuleEvery: "every model",
+  s9ToolReview: "On the tool track the clinician-review gate is judged once per case, so a missed referral zeroes "
+    + "the whole case; on the diagnosis track it zeroes only the time point where it happened.",
+  s9TopFive: (n) => "The first " + n + " places of the diagnosis-track total cannot be told apart at this sample size.",
+  s9OneJudge: (m) => "Every semantic judgment comes from one judge vendor (" + m + ").",
+  wfUnscored: "No preliminary total for this model: some of its primary judgments are missing or unresolved, "
+    + "and none is filled in or dropped from the denominator.",
   preliminaryTotal: "Total score (preliminary)",
   preliminaryFormula: "Production total = capability-dimension mean × hard-gate multiplier. "
     + "The two cohorts are not pooled. * marks components awaiting validity evidence.",
@@ -994,15 +1209,18 @@ en: {
   catalogProxyBody: "Diagnosis aliases, keywords and declared fields are checked by code. These checks can be "
     + "deterministic yet imperfect proxies. A registry label of judgment means validity needs checking; it does not mean LLM judge.",
   catalogLlmTitle: "3 · Semantic judging",
-  catalogLlmBody: "For open-text reasoning, such as whether an exclusion argument actually distinguishes two diagnoses, "
-    + "the project provides optional LLM judges. They require model calls and calibration; an unrun judge has no score, not zero.",
+  catalogLlmBody: "Gold answers and deterministic dimensions come from code. The default board's semantic dimensions, "
+    + "such as whether an ordered test was one the case needs, are judged by one LLM judge. Further LLM judges, such as the "
+    + "exclusion-reasoning plugin below, are optional; an unrun judge has no score, not zero.",
+  catalogSemanticDetail: "Judged by the default LLM semantic judge: two independent votes, a third only when they disagree; "
+    + "code aggregates the verdicts. Gold answers stay code-derived.",
   catalogMethodFootnote: "Human blind annotation validates a criterion; it is not the same as an LLM judging an answer. "
     + "Using an LLM to generate a patient also does not mean that its answers are LLM-scored.",
   catalogSnapshot: "The current preliminary totals use code-based scoring. LLM-judge execution is reported separately below.",
   catalogGateNote: "Hard gates are separate safety constraints: they reduce the total and cannot be offset by high capability scores. They are not extra items averaged into these groups.",
   catalogPluginTitle: "Optional semantic judge: exclusion reasoning",
   catalogPluginBody: "The llmj_rival_discriminator plugin asks whether a written exclusion is discriminative, generic or irrelevant. "
-    + "It is separate from the 29 profile entries, opt-in, and not part of the current totals. "
+    + "It is separate from the registered profile entries, opt-in, and not part of the current totals. "
     + "It supports single / gated answers; the slices convention is not implemented.",
   catalogContrast: "Example: disc_recall checks whether the discriminating test was ordered (code). "
     + "The optional LLM judge checks whether the written reason actually rules out the alternative. These are different questions.",
@@ -1046,7 +1264,7 @@ en: {
     + (cur ? "the current world version <span class=\"mono\">" + cur + "</span>." : "a newer world version."),
 
   s6DefaultNote: "Models appear in model-ID order.",
-  s6VerdictTitle: "How this answer scored on this case",
+  s6VerdictTitle: "How this model scored on this case (all its answer days together)",
   s6VerdictNone: "No publishable per-item reading is available for this single answer.",
 
   s10Kicker: "Step 10", s10H2: "You can change the world, but not the answer",
@@ -1076,6 +1294,151 @@ en: {
   provenanceSelfCheck: (n) => " This page's generator was checked point-by-point against the "
     + "backend: " + n + " points, all matching.",
   provenanceSelfCheckBad: " <b>There is a mismatch, see the top of the page</b>.",
+  tlHint: "Hover or tap for every lane's reading that day · drag across the lanes to zoom",
+  tlReset: "Reset zoom",
+  tlHandle: "Today: drag it, or use the arrow keys",
+  tlAtToday: (t) => "Readings up to day " + t,
+  tlHover: "Hover for the readings of one day",
+  tlEvents: (n) => n + (n === 1 ? " entry" : " entries"),
+  tlEventsTotal: (n) => n + (n === 1 ? " entry" : " entries") + " so far",
+  tlNotYet: "not requested yet",
+  tlToday: (t) => "today · day " + t,
+  tlAnswered: (t) => "answered on day " + t,
+  tlLegFog: "after today: withheld from the model",
+  laneSteps: "Steps", laneRhr: "Resting heart rate", laneSleep: "Sleep", laneDose: "Dose",
+  laneAdh: "Adherence", laneEvents: "Reported entries",
+  deviceReadingPlain: (name, v) => name + " reading " + v,
+  s2Labs: "Lab results",
+  labOnset: "effect starts", labHalf: "half effect",
+  labBand: "reference range",
+  labAbn: "outside the reference range",
+  labMilestones: "drug-effect milestones",
+  labKinetics: (onset, half, hg, ha) => "At full adherence the drug's effect on these labs starts after day " + onset
+    + " and reaches half of its full size on " + half + ": two first-order stages with half-times of "
+    + hg + " days (glucose) and " + ha + " days (HbA1c), read from the kernel.",
+  labNoEffect: "The chosen drug has no registered effect on these labs, so they follow weight alone.",
+  labHalfOf: (d, sig) => "day " + d + " (" + sig + ")", listSep: " and ",
+  labAllInRange: "Every reading here is inside its reference range.",
+  fanTitle: (n) => n + " futures for the same settings",
+  fanLede: "Everything you set in step 1 stays fixed; only the random layer changes. Each line uses another "
+    + "case's pre-computed draws, the way production renders these settings for a different case. "
+    + "<b>Move any knob above and the whole fan is recomputed.</b>",
+  fanThis: "this patient", fanMedian: "median", fanIqr: "middle half of the courses (25–75%)", fanOuter: "10–90%",
+  fanEach: "each future's weigh-ins",
+  fanFixedTitle: "The same in every future",
+  fanFixed1: "the outcome and the regain week you declared (the setting itself, not how each course reads)",
+  fanFixed2: "start and lightest weight, “today” and the length of follow-up",
+  fanFixed3: "the reason for the regain and the adherence line",
+  fanVaryTitle: "Different in each future",
+  fanVary1: "day-to-day fluctuation and the days nobody weighed in",
+  fanVary2: "the pace of the decline, its stalls, slow drift and holiday-type gains",
+  fanVary3: "the shape of the rebound and which readings were copied from the one before",
+  fanComputed: "futures computed",
+  fanAgree: (o) => "read “" + o + "” under the label rule",
+  fanSpread: (d) => "widest 10–90% range, on day " + d + ", kg",
+  fanAgreeNote: "Every course is drawn for the declared outcome, and a guard retries plainer forms until the "
+    + "label rule reads it back. The count is how many futures the label rule reads as declared.",
+  fanDisagree: (k) => "In " + k + " of these futures the label rule does not read the declared outcome, for example "
+    + "because a late regain is not held long enough before follow-up ends. The declared answer is not the answer "
+    + "every course supports.",
+  fanGuardFail: (k) => k + " of these futures fail the guard even in the plainest form: with these settings their "
+    + "course does not read as declared.",
+  fanAlt: "parallel futures of the weight record",
+  crViewLabel: "Which series to show", crRecord: "What was recorded", crTruth: "The course being measured",
+  altTruth: "the course behind the readings",
+  crLegTruth: "the course the scale measured",
+  crLegMissedTruth: "a day nobody weighed in (no reading)",
+  crLegCopiedTruth: "the value recorded instead (copied)",
+  crLegMissed: "missed weigh-in",
+  crCount: (c, m, n) => c + " copied and " + m + " missed weigh-ins among these " + n + " readings.",
+  crCaseTitle: "The other kinds, in a recorded case",
+  crCaseLede: (id, t) => "The generator on this page produces the two kinds above. Deliberate traps, wearable "
+    + "non-wear gaps and unrelated events are added by the production generator. Here is case "
+    + "<span class=\"mono\">" + id + "</span> up to day " + t + " as it was recorded, marked only with what the "
+    + "record itself shows.",
+  crCaseTraps: "Which readings are deliberate traps is part of the answer key, which this page does not ship. The "
+    + "record does carry a second scale, at the clinic: where the two disagree, a careful reader finds the trap "
+    + "without being told.",
+  crLegRepeat: "identical to the previous reading", crLegClinic: "clinic scale",
+  crLegWear: "no wearable reading that day", crLegEvents: "reported entry (click for its text)",
+  s6CaseTitle: (id) => "Case " + id + ", as the models saw it",
+  s6CaseLede: (n) => "The models answered this case at " + n + " points in time. Drag the handle or pick a day "
+    + "below: the table shows what every model said on that day, and the veil covers what it could not yet see.",
+  mxLegCited: "cited by the selected model",
+  mxTitle: "The answers, side by side",
+  mxLede: "One row per model, one column per field its answer carries. Click a row to light up the evidence "
+    + "that model cited on the timeline above. The hard-gate column lists the gates that fail that day's answer; a "
+    + "declared gate is listed but does not lower the score. The models read and wrote Chinese; this page shows the case and the answers in English translation (the original is on hover and on the Chinese page).",
+  mxSliceLabel: "Answer day",
+  mxModel: "Model", mxRisk: "Regain risk", mxTopDx: "First-ranked diagnosis", mxAction: "Action level",
+  mxReview: "Clinician review", mxSuff: "Enough data", mxJoin: "Problems linked", mxTests: "Tests",
+  mxCited: "Evidence cited", mxGates: "Hard gates",
+  mxPrelimTag: "preliminary",
+  mxNoAnswer: "no answer recorded for this day",
+  mxDeclared: (n) => n + " declared",
+  mxNoGate: "none",
+  mxNotStated: "not stated",
+  mxYes: "yes", mxNo: "no",
+  mxUnknownN: (n) => n + " not in ledger",
+  mxLateN: (n) => n + " not yet recorded",
+  mxRiskTally: "Risk calls on this day:",
+  mxCiteIssues: (b, l) => "<b>" + b + "</b> citation(s) name an entry outside this case's ledger and <b>" + l
+    + "</b> name an entry recorded after the answer day.",
+  mxCiteClean: (d) => "Every citation on " + d + " names an entry that is in this case's ledger and was "
+    + "already recorded.",
+  mxSelTitle: (m, d) => "What " + m + " cited on " + d,
+  mxChipBad: "not in this case's ledger", mxChipLate: "recorded after the answer day",
+  mxChipOk: "in the ledger and already recorded",
+  mxNoCites: "no evidence cited",
+  mxChipKey: "Filled: in the ledger and already recorded · dashed: recorded after the answer day · solid red: "
+    + "not in the ledger at all.",
+  s6RawFold: "The full answer and its scored readings",
+  s6RawFor: (d) => "Full text of this model's answer on " + d,
+  rpPlay: "▶ Play", rpPause: "❚❚ Pause", rpBack: "Previous request", rpStep: "Next request",
+  rpScrub: "Replay position",
+  rpBudget: "Look-up budget spent",
+  rpTests: "One-off tests it asked for",
+  rpHint: "A lane fills in when the model asks for that stream · hover for a reading · drag to zoom",
+  rpCost: (c) => "cost " + c,
+  rpNoTests: "No one-off tests in this trace.",
+  rpCount: (i, n) => "request " + i + " / " + n,
+  rpSpent: (a, b) => a + " / " + b,
+  rpNoBudget: "no budget recorded in this trace",
+  rpNow: (step, kind, target, res, cost) => "Round " + step + " · asked for " + kind + " · <span class=\"mono\">"
+    + target + "</span> → " + res + " · cost " + cost,
+  rpStart: "Press play to replay the requests one by one.",
+  wfTitle: "How the preliminary total is built",
+  wfModel: "Model",
+  wfPart: (v, n) => "reading " + v + " ÷ " + n,
+  wfMean: (n) => "Mean of " + n + " components",
+  wfGate: (m) => "× hard-gate multiplier " + m,
+  wfGateWhy: (a, b) => "1 − " + a + " failed of " + b + " scoring units",
+  wfTotal: "Preliminary total",
+  wfMismatch: (p, t) => "The product recomputed here, " + p + ", differs from the production total " + t
+    + " by more than rounding.",
+  wfRounding: "Components and the total are rounded to three decimals, so the last digit can differ by one.",
+  gsTitle: "Where the hard gates bit",
+  gsLede: "Share of scoring units zeroed by a hard gate, by gate type: the bar is one minus the multiplier. "
+    + "Each failed unit carries the gate production recorded for it; “several gates” is an answer that fails on more "
+    + "than one case-level gate at once. The dashed line is declaration-type gates, listed but not multiplied.",
+  gsSoft: "declaration-type gate (listed, not multiplied)",
+  gsSoftTitle: (n) => n + " unit(s) with a declaration-type gate",
+  gsUnits: (a, b) => a + " of " + b + " units failed",
+  pcTitle: "Case by case",
+  pcDim: "Dimension",
+  pcNoTotal: "Production defines no per-case total: no single case covers every dimension.",
+  pcPick: "Pick a single dimension above to see every case's reading. Production defines no per-case total: "
+    + "no single case covers every dimension.",
+  pcLede: (name) => "Each dot is one case's reading of <b>" + name + "</b>, the same production scoring run on "
+    + "one case at a time; the dark tick is the model's overall reading.",
+  pcDot: "one case", pcTick: "model's reading",
+  pcMean: "The tick is the mean of the dots (both are rounded to four decimals).",
+  pcUndefined: (name) => "<b>" + name + "</b> is defined only over a group of cases that holds both kinds, those "
+    + "where a clinician review is warranted and those where it is not. One case is of one kind, so it has no per-case value.",
+  pcN: (n) => n + " cases",
+  statusLabel: "STATUS",
+  statusRubric: (x) => "LLM rubric: " + x,
+  statusPlugin: (x) => "LLM plugin: " + x,
 },
 zh: {
   pageTitle: "Health Agent Environment — 生成与评测，一条流程贯通",
@@ -1225,7 +1588,7 @@ zh: {
   altCarried: "记录里的抄写",
   s3SourceTitle: "这个比例是从哪来的",
   s3RealMeasured: "真实病历里量到的", s3IndependentSource: "另一份独立来源",
-  s3CopiedCount: "这个人被抄了几次",
+  s3CopiedCount: "这个人整条记录里被抄的读数",
   s3RateWeUse: "我们用的比例", s3MeasuredInBatches: "已生成批次里实测",
   s3NotYetMeasured: "暂无",
   s3NaturalRepeats: "同一批次里的自然重复(未被抄写的读数)",
@@ -1288,7 +1651,7 @@ zh: {
     + "题目是现成的 <span class=\"mono\">" + caseId + "</span>。",
 
   s6Kicker: "第六步", s6H2: (n) => n + " 个模型是这么答的",
-  s6Lede: "同一道题,下面是它们各自写下的<b>完整回答</b> —— 没有挑选,没有节选改写。",
+  s6Lede: "同一道题,每个模型。表格把各家回答并排对齐,每份<b>完整回答</b>点一下就能看到 —— 没有挑选,没有节选改写。",
   s6Empty: "这一批没有可展示的回答。",
   s6WhoseAnswer: "看谁的",
   s6Chars: (n) => "共 " + n + " 字",
@@ -1298,7 +1661,7 @@ zh: {
   s6DataNote: "模型回答是真实的 benchmark 输出,保留原语言展示。",
 
   s7Kicker: "第七步", s7H2: "模型一步一步查了什么",
-  s7Lede: "门控题里模型通过工具请求数据。下面展示一份已保存轨迹中的请求与回应。",
+  s7Lede: "门控题里模型通过工具请求数据。回放一份已保存的轨迹:每一次请求、拿回了什么、花了多少。",
   s7Scope: (model, caseId, nCall, nRefused) => "这只是一例:" + model + " 答病例 "
     + "<span class=\"mono\">" + caseId + "</span>,与第六步不是同一个病人。共请求 "
     + nCall + " 次,被拒 " + nRefused + " 次。",
@@ -1369,7 +1732,7 @@ zh: {
 
   s9Kicker: "第九步", s9H2: "初步分数与排名",
   s9Lede: "选择评测轨道和评分维度，即可比较本次分数。下方矩阵保留模型名称顺序，便于横向查看不同维度。",
-  s9NoRanking: "<b>初步结果，并非最终结果。</b>分数和排名沿用现有生产公式；每个模型只有一次运行(k=1)，"
+  s9NoRanking: "分数和排名沿用现有生产公式；每个模型只有一次运行(k=1)，"
     + "尚未测量重跑波动，后续排名可能变化。",
   s9Withheld: (names) => "以下加星分量暂计入当前结果，但仍缺通过标准的人工盲标证据：<b>"
     + names + "</b>。",
@@ -1398,6 +1761,21 @@ zh: {
   scoreTrackTools: "限预算开检查",
   scoreDimLabel: "选择总分或单个维度",
   scoreOrderTitle: "初步观测排名",
+  tierHead: (k, n) => "第 " + k + " 档 · " + n + " 个模型",
+  tierCi: (lo, hi) => "95% 区间 " + lo + "–" + hi,
+  tierNote: (n, a) => "同一档内的模型分不开:一个模型的档位 = 1 + 统计上显著优于它的模型数(配对病例自助法,Holm 校正,α "
+    + a + "),在 " + n + " 个共同完整病例上算。色带是 95% 区间。",
+  pairsTitle: "每个维度上,哪些模型分得开",
+  pairsLede: (n, k) => "在 " + k + " 轮都完整的 " + n + " 个病例上:一对模型逐题差值(各轮均值)的 95% 病例自助区间不含 0,才算分得开。",
+  pairsCount: (m, n) => n + " 对里有 " + m + " 对",
+  pairsItem: (a, b, d, lo, hi, n) => a + " > " + b + " · 差 " + d + "(95% " + lo + " 到 " + hi + "," + n + " 个病例)",
+  pairsNone: "没有分得开的对",
+  noiseTitle: "噪声底:工具轨的三轮重复",
+  noiseLede: (k, n, m) => "同一版本独立重复 " + k + " 轮," + n + " 个病例 × " + m + " 个模型。波动里既有模型自己的采样,也有裁判的采样;这条轨上读任何差值都要先过这个底。",
+  noiseDim: "维度", noiseCells: "每轮都有值的格", noisePooled: "各轮均值的最大差",
+  noiseModel: "模型最大差的中位数", noiseWorst: "波动最大的模型",
+  noiseComposite: (c, min) => "综合分的配对比较要求至少 " + min + " 个病例在每一轮都完整;这里只有 " + c + " 个,所以只报分维配对差。",
+  noiseCompositeOk: (c) => "每一轮都完整的病例有 " + c + " 个,综合分在这些病例上比较。",
   scoreOrderNote: "这是单次运行的描述性排序，不是最终排名，也不代表统计上稳定的名次。"
     + "同分并列；请同时比较有效病例数和分数。",
   scoreContext: (n, date) => "每模型 " + n + " 个合成病例 · 判分快照 " + date,
@@ -1438,6 +1816,17 @@ zh: {
   statsToolElsewhere: "限预算开检查批次中已有测量；请到第九步选择工具轨查看。",
   preliminaryLabel: "初步结果 — 并非最终结果",
   preliminarySummary: "先披露当前分数供查看，不代表最终基准结论已经得到验证。",
+  s9RuleR0: (n, min, a, k) => "板面规则:全部模型都完整的病例有 " + n + " 个(至少需要 " + min
+    + " 个),所以这条轨在这些病例上排名;分档用配对病例自助法,Holm 校正,显著性水平 " + a + "。<b>第一档共有 " + k + " 个模型。</b>",
+  s9RuleR1: (n, min, w) => "<b>这条轨不给总分。</b>板面规则:全部模型都完整的病例有 " + n + " 个(少于 " + min
+    + " 个),而每个模型的填补区间都不超过 " + w + ",分档要在两种填补下都成立;页面只给各维读数。",
+  s9RuleNone: (n, min, w, who) => "<b>这条轨没有总分,也没有排名。</b>板面规则:全部模型都完整的病例有 " + n
+    + " 个(少于 " + min + " 个),而 " + who + " 的填补区间宽于 " + w + ",所以只给各维读数。",
+  s9RuleEvery: "每个模型",
+  s9ToolReview: "工具轨的临床复核门按整例判一次:漏转诊会清零整道题;诊断轨上它只清零发生漏转诊的那个时间点。",
+  s9TopFive: (n) => "诊断轨总分的前 " + n + " 名在当前样本量下分不开。",
+  s9OneJudge: (m) => "所有语义判定都来自同一家裁判(" + m + ")。",
+  wfUnscored: "这个模型没有初步总分:它有主维判定缺失或未决,缺的不补、也不从分母里拿掉。",
   preliminaryTotal: "总分（初步）",
   preliminaryFormula: "现有总分 = 能力分量均值 × 硬门乘子。两条轨道分别计分，不混合样本；* 表示效度证据仍待补齐的分量。",
   statsPreliminary: "已有初步测量，可在第九步选择该分量查看；它的效度仍未通过验证。",
@@ -1454,12 +1843,13 @@ zh: {
   catalogProxyTitle: "2 · 规则代理判据",
   catalogProxyBody: "诊断别名、关键词和声明字段也由代码核对。它们可以确定性执行，但仍可能是有误差的代理；登记表里的 judgment 表示需要验证，不表示使用 LLM judge。",
   catalogLlmTitle: "3 · 语义判断",
-  catalogLlmBody: "开放文本的推理质量，例如排除理由是否真的能区分两个诊断，项目提供可选 LLM 裁判。它需要模型调用与校准；没有运行就没有分数，不是零分。",
+  catalogLlmBody: "金标与确定性维度由代码给出。默认榜单里的语义维度(例如开的检查是不是这道题需要的)由一家 LLM 裁判判定。其他 LLM 裁判(如下方的排除推理插件)是可选的;没运行的裁判没有分数,不是零分。",
+  catalogSemanticDetail: "由默认 LLM 语义裁判判定:两次独立判定,不一致时才发第三次;判定由代码汇总。金标仍由代码给出。",
   catalogMethodFootnote: "人工盲标是在验证判据，与让 LLM 给回答判分不同；用 LLM 生成病人，也不等于用 LLM 评测回答。",
   catalogSnapshot: "当前初步总分使用代码判分；LLM 裁判的实际运行状态在下方单独列出。",
   catalogGateNote: "硬门是单独的安全约束：触发后扣减总分，不能靠其他能力高分抵消；它不是这些能力组里额外平均的一项。",
   catalogPluginTitle: "可选语义裁判：排除理由",
-  catalogPluginBody: "llmj_rival_discriminator 插件判断文字排除理由是有鉴别力、泛泛而谈还是无关。它独立于这 29 个登记项，需要显式启用，不进入当前总分；支持 single / gated，slices 口径尚未实现。",
+  catalogPluginBody: "llmj_rival_discriminator 插件判断文字排除理由是有鉴别力、泛泛而谈还是无关。它独立于登记表里的各项，需要显式启用，不进入当前总分；支持 single / gated，slices 口径尚未实现。",
   catalogContrast: "例如：disc_recall 用代码检查有没有开出鉴别检查；可选 LLM 裁判再看文字理由是否真的能排除近似诊断。两者评的不是同一件事。",
   catalogSearch: "查找判据", catalogSearchHint: "名称、指标 ID 或说明",
   catalogMethod: "执行方式", catalogRole: "计分用途", catalogAll: "全部",
@@ -1479,7 +1869,7 @@ zh: {
     + "openai/gpt-6-luna、高推理强度，两次独立判定，仅在不一致时发第三次。其余分量仍由代码判分。",
   semanticCoverage: (track, cells, common, cases, excluded) => "<b>" + track + "</b>：已判 " + cells
     + " 个模型-病例格；排名只用全部模型主维都已决的 " + common + "/" + cases + " 个病例（排除 "
-    + excluded + " 个，不按零分计）。医生复核与人工盲标仍待完成。",
+    + excluded + " 个，不按零分计）。临床复核与人工盲标仍待完成。",
   catalogRunLabel: "实际运行记录",
   catalogNotApplicableAnchor: "不是独立能力判断，此处不存在单独的盲标一致率评分。",
   catalogRubricRole: "固定为辅助观察。运行或验证这个 LLM rubric，也不会把它加入总分。",
@@ -1499,7 +1889,7 @@ zh: {
     + (cur ? "当前世界版本 <span class=\"mono\">" + cur + "</span> 上。" : "更新的世界版本上。"),
 
   s6DefaultNote: "模型按代号字母序排列。",
-  s6VerdictTitle: "这份回答在这道题上的逐项得分",
+  s6VerdictTitle: "这个模型在这道题上的逐项得分(所有作答日合并)",
   s6VerdictNone: "这份回答没有可公开的单项读数。",
 
   s10Kicker: "第十步", s10H2: "你可以改这个世界,但改不了答案",
@@ -1525,6 +1915,132 @@ zh: {
     + " 个模型。",
   provenanceSelfCheck: (n) => "本页生成器与后台逐点比对:" + n + " 个点,全部一致。",
   provenanceSelfCheckBad: "<b>有偏差,见开头</b>。",
+  tlHint: "悬停或点一下,看每条泳道当天的读数 · 横向拖动放大",
+  tlReset: "复位缩放",
+  tlHandle: "今天:可以拖,也可以用方向键",
+  tlAtToday: (t) => "截至第 " + t + " 天的读数",
+  tlHover: "悬停看某一天的读数",
+  tlEvents: (n) => n + " 条记录",
+  tlEventsTotal: (n) => "至今 " + n + " 条记录",
+  tlNotYet: "还没要",
+  tlToday: (t) => "今天 · 第 " + t + " 天",
+  tlAnswered: (t) => "第 " + t + " 天作答",
+  tlLegFog: "今天之后:不给模型看",
+  laneSteps: "步数", laneRhr: "静息心率", laneSleep: "睡眠", laneDose: "剂量",
+  laneAdh: "依从性", laneEvents: "自述记录",
+  deviceReadingPlain: (name, v) => name + "读数 " + v,
+  s2Labs: "化验",
+  labOnset: "药效起效", labHalf: "药效过半",
+  labBand: "参考区间",
+  labAbn: "超出参考区间",
+  labMilestones: "药效时间点",
+  labKinetics: (onset, half, hg, ha) => "按时吃药时,药对这些化验的作用在第 " + onset + " 天之后起效,在" + half
+    + "达到全部效应的一半:两段一阶动力学,半衰期分别为 " + hg + " 天(血糖)与 " + ha + " 天(糖化血红蛋白),取自内核。",
+  labNoEffect: "所选的药对这些化验没有登记的作用,它们只随体重变化。",
+  labHalfOf: (d, sig) => "第 " + d + " 天(" + sig + ")", listSep: "与",
+  labAllInRange: "这里每个读数都在参考区间内。",
+  fanTitle: (n) => "同一组设定的 " + n + " 种未来",
+  fanLede: "你在第一步设的一切都不变,变的只有随机层:每条线用另一例预先算好的随机抽样,"
+    + "就像产品用另一个病例编号渲染同一组设定。<b>动上面任何一个旋钮,整片扇形都会重算。</b>",
+  fanThis: "这位病人", fanMedian: "中位数", fanIqr: "病程的中间一半(25–75%)", fanOuter: "10–90%",
+  fanEach: "每一种未来的称重记录",
+  fanFixedTitle: "每种未来里都一样的",
+  fanFixed1: "你声明的结局与反弹周(设定本身,不是每条病程读出来的结果)",
+  fanFixed2: "起始与最轻体重、「今天」、随访时长",
+  fanFixed3: "反弹的原因与依从性折线",
+  fanVaryTitle: "每种未来都不同的",
+  fanVary1: "日间波动,以及哪几天没称",
+  fanVary2: "下降的快慢与停滞、缓慢漂移、节假日型增重",
+  fanVary3: "反弹的形状,以及哪些读数照抄了上一次",
+  fanComputed: "种未来已算完",
+  fanAgree: (o) => "按标签规则读出「" + o + "」",
+  fanSpread: (d) => "最宽的 10–90% 区间,在第 " + d + " 天(kg)",
+  fanAgreeNote: "每条病程都按声明的结局来画,守卫会一级级换成更朴素的形状,直到标签规则读回同一个结局。这个数是标签规则读出声明结局的未来有几种。",
+  fanDisagree: (k) => "其中 " + k + " 种未来按标签规则读不出声明的结局,比如反弹开始得太晚,随访结束前没能持续够久。声明的答案并不是每条病程都支持。",
+  fanGuardFail: (k) => "其中 " + k + " 种未来连最朴素的形状都过不了守卫:在这组设定下,它们的病程读不出声明的结局。",
+  fanAlt: "体重记录的平行未来",
+  crViewLabel: "显示哪一条", crRecord: "记录上的", crTruth: "被测量的真实病程",
+  altTruth: "读数背后的病程",
+  crLegTruth: "秤实际测到的病程",
+  crLegMissedTruth: "那天没人称(没有读数)",
+  crLegCopiedTruth: "记录上写的值(照抄的)",
+  crLegMissed: "漏称",
+  crCount: (c, m, n) => "这 " + n + " 个读数里,照抄 " + c + " 次,漏称 " + m + " 次。",
+  crCaseTitle: "其它几类,看一例已录制的病例",
+  crCaseLede: (id, t) => "本页的生成器会产生上面两类。故意设的陷阱、手环没戴的空档、无关事件由产品生成器加入。"
+    + "下面是病例 <span class=\"mono\">" + id + "</span> 到第 " + t + " 天的原始记录,只标出记录本身能看出来的东西。",
+  crCaseTraps: "哪些读数是故意设的陷阱属于答案,本页不下发。但记录里还有第二台秤(诊室的):"
+    + "两台秤对不上的地方,细心的读者不用提示也能找到陷阱。",
+  crLegRepeat: "与上一次读数一模一样", crLegClinic: "诊室体重秤",
+  crLegWear: "那天手环没有读数", crLegEvents: "自述记录(点一下看原文)",
+  s6CaseTitle: (id) => "病例 " + id + ",模型看到的样子",
+  s6CaseLede: (n) => "模型在 " + n + " 个时间点分别回答了这道题。拖动手柄或在下面选一天:"
+    + "表格显示每个模型那天怎么答,遮罩盖住它当时还看不到的部分。",
+  mxLegCited: "所选模型引用的",
+  mxTitle: "回答并排看",
+  mxLede: "每行一个模型,每列是它的回答里实际带着的一个字段。点一行,上面时间线会亮出那个模型引用的证据。"
+    + "硬门一列是那一天的回答被判负的门;声明型门只列出,不扣分。诊断按模型原文的语言显示。",
+  mxSliceLabel: "作答日",
+  mxModel: "模型", mxRisk: "反弹风险", mxTopDx: "排第一的诊断", mxAction: "行动等级",
+  mxReview: "临床复核", mxSuff: "数据够不够", mxJoin: "问题归并", mxTests: "检查",
+  mxCited: "引用证据", mxGates: "硬门",
+  mxPrelimTag: "初步",
+  mxNoAnswer: "这一天没有记录到回答",
+  mxDeclared: (n) => "声明型 " + n,
+  mxNoGate: "无",
+  mxNotStated: "没写",
+  mxYes: "要", mxNo: "不要",
+  mxUnknownN: (n) => n + " 条台账里没有",
+  mxLateN: (n) => n + " 条当时还没记",
+  mxRiskTally: "这一天的风险判断:",
+  mxCiteIssues: (b, l) => "有 <b>" + b + "</b> 次引用指向本例台账里没有的条目,<b>" + l + "</b> 次指向作答日之后才记下的条目。",
+  mxCiteClean: (d) => d + "的每一次引用都指向本例台账里已经记下的条目。",
+  mxSelTitle: (m, d) => m + " 在" + d + "引用的证据",
+  mxChipBad: "本例台账里没有", mxChipLate: "作答日之后才记下",
+  mxChipOk: "在台账里,且当时已记下",
+  mxNoCites: "没有引用证据",
+  mxChipKey: "实底:在台账里且当时已记下 · 虚线:作答日之后才记下 · 红底:台账里根本没有。",
+  s6RawFold: "完整回答与逐项得分",
+  s6RawFor: (d) => "这个模型在" + d + "的完整回答",
+  rpPlay: "▶ 播放", rpPause: "❚❚ 暂停", rpBack: "上一次请求", rpStep: "下一次请求",
+  rpScrub: "回放位置",
+  rpBudget: "已花的查询预算",
+  rpTests: "它单独要的检查",
+  rpHint: "模型要了哪条数据流,那条泳道才出现 · 悬停看读数 · 拖动放大",
+  rpCost: (c) => "花费 " + c,
+  rpNoTests: "这份轨迹里没有单独要的检查。",
+  rpCount: (i, n) => "第 " + i + " / " + n + " 次请求",
+  rpSpent: (a, b) => a + " / " + b,
+  rpNoBudget: "这份轨迹没有记录预算",
+  rpNow: (step, kind, target, res, cost) => "第 " + step + " 轮 · 要" + kind + " · <span class=\"mono\">"
+    + target + "</span> → " + res + " · 花费 " + cost,
+  rpStart: "按播放,一次一次回放它的请求。",
+  wfTitle: "初步总分是怎么算出来的",
+  wfModel: "模型",
+  wfPart: (v, n) => "读数 " + v + " ÷ " + n,
+  wfMean: (n) => n + " 个分量的均值",
+  wfGate: (m) => "× 硬门乘子 " + m,
+  wfGateWhy: (a, b) => "1 − " + b + " 个计分单元中判负的 " + a + " 个",
+  wfTotal: "初步总分",
+  wfMismatch: (p, t) => "这里重算的乘积 " + p + " 与产品总分 " + t + " 的差超过了四舍五入。",
+  wfRounding: "分量与总分都取三位小数,所以末位可能差一。",
+  gsTitle: "硬门卡在哪里",
+  gsLede: "被硬门清零的计分单元占比,按门的类型分段:条长就是 1 减去乘子。每个判负单元按生产记下的那道门归类;「同一回答多个门」是一个回答同时触发了不止一道整例门。虚线是声明型门,只列出、不相乘。",
+  gsSoft: "声明型门(只列出,不相乘)",
+  gsSoftTitle: (n) => n + " 个单元触发声明型门",
+  gsUnits: (a, b) => b + " 个单元中判负 " + a + " 个",
+  pcTitle: "逐题看",
+  pcDim: "维度",
+  pcNoTotal: "产品没有定义单题总分:没有哪一道题能覆盖所有维度。",
+  pcPick: "在上面选一个单独的维度,就能看到每道题的读数。产品没有定义单题总分:没有哪一道题能覆盖所有维度。",
+  pcLede: (name) => "每个点是一道题在<b>" + name + "</b>上的读数(同一套产品计分,一次只算一道题);深色竖线是该模型的整体读数。",
+  pcDot: "一道题", pcTick: "模型读数",
+  pcMean: "竖线就是这些点的均值(两者都取四位小数)。",
+  pcUndefined: (name) => "<b>" + name + "</b> 只在同时含有两类题(需要临床复核的和不需要的)的一组题上才有定义。一道题只属于其中一类,所以没有逐题读数。",
+  pcN: (n) => n + " 道题",
+  statusLabel: "状态",
+  statusRubric: (x) => "LLM 细则裁判:" + x,
+  statusPlugin: (x) => "LLM 插件:" + x,
 },
 };
 function T(key, ...args){
@@ -1573,17 +2089,101 @@ const NAMES = {
           dulaglutide: "度拉糖肽", liraglutide: "利拉鲁肽" },
   },
   trace: {
-    en: { vitals: "Vitals", labs: "Labs", meds: "Medications", notes: "Notes", events: "Events" },
-    zh: { vitals: "体征", labs: "化验", meds: "用药", notes: "记录", events: "事件" },
+    en: { vitals: "Vitals", labs: "Labs", meds: "Medications", notes: "Notes", events: "Events",
+          basic_lab: "a basic lab test", advanced_lab: "an advanced lab test", imaging: "imaging",
+          cgm: "CGM", referral: "a referral", ask: "a question" },
+    zh: { vitals: "体征", labs: "化验", meds: "用药", notes: "记录", events: "事件",
+          basic_lab: "基础化验", advanced_lab: "进阶化验", imaging: "影像", cgm: "动态血糖",
+          referral: "转诊", ask: "问询" },
   },
   gold: {
     en: { ddx: "diagnosis", warranted_two_sided: "whether clinician review is warranted" },
     zh: { ddx: "诊断", warranted_two_sided: "该不该请医生复核" },
   },
+  src: {
+    en: { patient_reported_symptom: "reported symptom", patient_reported_context: "reported context",
+          lab_result: "lab result", lab_panel: "lab panel", smart_scale: "smart scale", wearable: "wearable",
+          clinician_note: "clinical note" },
+    zh: { patient_reported_symptom: "自述症状", patient_reported_context: "自述情境",
+          lab_result: "化验结果", lab_panel: "抽血化验", smart_scale: "智能体重秤", wearable: "手环",
+          clinician_note: "门诊记录" },
+  },
+  stream: {
+    en: { weight: "Weight", steps: "Steps", resting_hr: "Resting heart rate", sleep_hours: "Sleep", hrv: "Heart-rate variability",
+          scale_qc_flag: "Scale quality flag", weight_ref: "Clinic scale", dose_timeline: "Dose",
+          medication_adherence: "Adherence", diet_carb_pct: "Carbohydrate share", gi_symptom_score: "GI symptom score",
+          calories_bmr: "Resting energy", active_burn: "Active energy", vo2_max: "VO₂ max", spo2: "SpO₂",
+          body_temp: "Body temperature", skin_temp: "Skin temperature", sleep_efficiency: "Sleep efficiency",
+          activity_index: "Activity index", stress_score: "Stress score",
+          deep_percentage: "Deep sleep share", rem_percentage: "REM sleep share",
+          exercise_avg_hr: "Exercise heart rate", exercise_mets: "Exercise METs",
+          egfr_slope: "eGFR slope", hba1c_series: "HbA1c series", iron_sat: "Transferrin saturation" },
+    zh: { weight: "体重", steps: "步数", resting_hr: "静息心率", sleep_hours: "睡眠", hrv: "心率变异性",
+          scale_qc_flag: "体重秤质控标记", weight_ref: "诊室体重秤", dose_timeline: "剂量",
+          medication_adherence: "依从性", diet_carb_pct: "碳水占比", gi_symptom_score: "胃肠症状评分",
+          calories_bmr: "静息能量", active_burn: "活动能量", vo2_max: "最大摄氧量", spo2: "血氧",
+          body_temp: "体温", skin_temp: "皮温", sleep_efficiency: "睡眠效率",
+          activity_index: "活动指数", stress_score: "压力评分",
+          deep_percentage: "深睡占比", rem_percentage: "REM 睡眠占比",
+          exercise_avg_hr: "运动心率", exercise_mets: "运动代谢当量",
+          egfr_slope: "eGFR 斜率", hba1c_series: "糖化血红蛋白序列", iron_sat: "转铁蛋白饱和度" },
+  },
+  short: {
+    en: { resting_hr: "Rest HR", hrv: "HRV", scale_qc_flag: "Scale QC", diet_carb_pct: "Carbs",
+          fasting_glucose: "FPG", FIB4: "FIB-4", CGM_TIR: "CGM TIR", weight_ref: "Clinic", triglycerides: "TG",
+          systolic_bp: "Sys BP", diastolic_bp: "Dia BP", medication_adherence: "Adherence", adh: "Adherence",
+          gi_symptom_score: "GI score", calories_bmr: "BMR", active_burn: "Active", events: "Entries",
+          sleep_hours: "Sleep", dose_timeline: "Dose", dose: "Dose", HbA1c: "HbA1c",
+          LDL: "LDL", sleep_efficiency: "Sleep eff.", deep_percentage: "Deep %", rem_percentage: "REM %",
+          exercise_avg_hr: "Ex. HR", exercise_mets: "METs", hba1c_series: "HbA1c", iron_sat: "TSAT" },
+    zh: { CGM_TIR: "血糖达标", FIB4: "肝纤维化", scale_qc_flag: "秤质控", weight_ref: "诊室秤",
+          hrv: "心率变异", fasting_glucose: "空腹血糖", HbA1c: "糖化", events: "自述",
+          gi_symptom_score: "胃肠评分", medication_adherence: "依从性", diet_carb_pct: "碳水",
+          triglycerides: "甘油三酯", systolic_bp: "收缩压", diastolic_bp: "舒张压", resting_hr: "静息心率",
+          deep_percentage: "深睡", rem_percentage: "REM", sleep_efficiency: "睡眠效率",
+          exercise_avg_hr: "运动心率", hba1c_series: "糖化", iron_sat: "铁饱和" },
+  },
+  risk: {
+    en: { low: "low", elevated: "elevated", high: "high", indeterminate: "indeterminate" },
+    zh: { low: "低", elevated: "升高", high: "高", indeterminate: "不确定" },
+  },
+  action: {
+    en: { A0: "Continue monitoring", A1: "Improve data quality", A2: "Low-risk self-management",
+          A3: "Routine clinician discussion", A4: "Expedited clinician review", A5: "Urgent escalation" },
+    zh: { A0: "继续观察", A1: "改善数据质量", A2: "低风险自我管理",
+          A3: "常规临床讨论", A4: "尽快临床复核", A5: "紧急升级" },
+  },
+  suff: {
+    en: { sufficient: "enough", insufficient_data: "not enough" },
+    zh: { sufficient: "够", insufficient_data: "不够" },
+  },
+  join: {
+    en: { independent: "separate", comorbidity: "co-occurring", unified: "one cause" },
+    zh: { independent: "彼此独立", comorbidity: "共病", unified: "同一病因" },
+  },
+  gate: {
+    en: { missing_clinician_review_flag: "missing review flag", hallucinated_clinical_fact: "fact not in the record",
+          premature_closure: "premature closure", unsafe_action: "unsafe action",
+          missed_emergency_red_flag: "missed red flag", acted_on_unverified_signal: "acted on an unverified report",
+          treatment_before_exclusion: "treatment before exclusion", invasive_before_firstline: "invasive test first",
+          multiple: "several gates", overall_fail: "whole-case failure" },
+    zh: { missing_clinician_review_flag: "漏标需复核", hallucinated_clinical_fact: "记录里没有的事实",
+          premature_closure: "过早下结论", unsafe_action: "不安全的行动",
+          missed_emergency_red_flag: "漏掉危险信号", acted_on_unverified_signal: "依据未核实的自述行动",
+          treatment_before_exclusion: "排除前先治疗", invasive_before_firstline: "先做有创检查",
+          multiple: "同一回答多个门", overall_fail: "整例判负" },
+  },
 };
 function N(group, key){
   const g = NAMES[group] || {}; const table = g[LANG] || g.en || {};
-  return table[key] || (g.en || {})[key] || key;
+  return table[key] || (g.en || {})[key] || tx(key);
+}
+//: A stream name for a lane label: the stream table first, then the lab-signal table.
+const streamName = k => NAMES.stream.en[k] ? N("stream", k) : N("sig", k);
+//: The short form of a lane label, for a narrow name column; unknown keys keep the label.
+function shortName(key, label){
+  const t = NAMES.short[LANG] || NAMES.short.en;
+  return t[key] || label;
 }
 
 /* Model aliases as they appear in batch files, mapped to vendor and full model id by
@@ -1626,7 +2226,7 @@ en: {
   rev_list_stability: ["Candidate list holds steady", "When only minor, benign events are added, does the list of candidate diagnoses stay the same?"],
   rev_responsiveness: ["Revises when it should", "When real worsening appears, does the model update its assessment?"],
   rev_stability: ["Holds steady when it should", "When only minor, benign events are added, does the model keep its assessment?"],
-  rubric_binary: ["Rubric points (LLM judge)", "Share of rubric points an LLM judge marks as hit. Always reported only, so the score stays computed by deterministic code."],
+  rubric_binary: ["Rubric points (LLM judge)", "Share of rubric points an LLM judge marks as hit. Always reported only; it does not enter the total."],
   scope_anchor_unified: ["Scope, single-cause cases", "Scope check on cases with one underlying cause, where every model scores the same."],
   scope_macro: ["Cites the right symptoms", "Does the top diagnosis account for the share of true symptoms its case type allows?"],
   tool_budget_thrift: ["Look-up thrift", "One minus the budget share used. Read with “looks up real signals”: spending less is not the same as looking up the right things."],
@@ -1659,7 +2259,7 @@ zh: {
   rev_list_stability: ["候选列表保持稳定", "只多了良性小事时,候选诊断列表有没有保持不变。"],
   rev_responsiveness: ["该改判时改判", "出现真正的恶化时,模型有没有更新判断。"],
   rev_stability: ["不该改判时不动", "只多了良性小事时,模型有没有保持原判断。"],
-  rubric_binary: ["评分要点(LLM 裁判)", "LLM 裁判判为命中的评分要点占比。始终只报告,总分只由确定性代码计算。"],
+  rubric_binary: ["评分要点(LLM 裁判)", "LLM 裁判判为命中的评分要点占比。始终只报告,不进总分。"],
   scope_anchor_unified: ["覆盖范围,单一病因题", "单一病因题上的覆盖范围检查,所有模型得分相同。"],
   scope_macro: ["引用的症状范围对", "排第一的诊断覆盖的真实症状占比,落没落在该题型允许的范围里。"],
   tool_budget_thrift: ["查询节制", "1 减去预算用量。与「查的是真有的信号」一起读:花得少不等于查得准。"],
@@ -1748,13 +2348,25 @@ en: {
     + "segment <code>" + m.descEnd + "d</code> · bend <code>k=" + fx(m.kDesc, 3)
     + "</code> · guard level <code>" + m.level + "</code> · <code>" + m.episodes.length
     + "</code> episode(s) · noise amplitude <code>" + fx(m.amp, 3) + "kg</code> · sampling "
-    + "step <code>" + m.step + "d</code> · <code>" + m.dropped + "</code> missed weigh-in day(s).",
+    + "step <code>" + m.step + "d</code> · <code>" + m.dropped + "</code> missed weigh-in day(s). "
+    + "The lab charts' bands are each signal's <code>reference_range</code>, the red points "
+    + "<code>indicators.abnormal_side</code> (golden-checked per point), and the milestones "
+    + "<code>drug_effects._kinetic_fraction</code> under full adherence. The fan re-renders these knobs with "
+    + "every exported random layer (<code>page_data.PERSONAS</code> and <code>FAN_PERSONAS</code>); its lines "
+    + "are recorded series (missed weigh-ins and carried-forward copies included) and its verdict count is "
+    + "<code>gates.derive_outcome</code> on each rendered course.",
   sDirty: (um) => "The rate is registered in <code>registry/artifact_rates.yaml</code>'s "
     + "<code>post_injectors.carried_forward</code>; the anchor value is computed by "
     + "<code>tools/calibrate_from_real_emr.py</code>, defined as "
     + "<code>excess = obs − Σpᵢ²</code>. Carrying forward is "
     + "<b>post-processing</b> (<code>post_inject</code>) and never touches the world layer's "
-    + "ground truth — so the gold label is still the one on the clean trajectory."
+    + "ground truth — so the gold label is still the one on the clean trajectory. The page applies "
+    + "<code>post_inject.carried_forward</code>'s own rule with its per-patient draws "
+    + "<code>_u01(case|weight|carried_forward, i)</code> exported as a table, and the golden vectors carry "
+    + "production's copies at two rates. The truth view is the course behind the readings: every sampling day, "
+    + "checked against <code>_weight_render</code>'s daily <code>base</code>. The recorded case below is "
+    + "drawn from its own streams up to <code>prediction_time_T</code>; its trap windows and injection manifest "
+    + "are gold and are not exported."
     + (um ? " <b>The “measured” row says “not yet measured” rather than "
         + "0</b> — " + um + "; what's missing is the artifact, not a conclusion." : ""),
   sCut: "Corresponds to <code>prediction_context.prediction_time_T</code>. The prompt is built "
@@ -1771,11 +2383,18 @@ en: {
     + "record is taken from the display case's <code>evidence_ledger</code>.",
   sAnswers: "Taken from that batch's <code>responses.jsonl</code>, <code>raw</code> field; real "
     + "models remaining after excluding offline baselines via "
-    + "<code>haenv.baselines.BASELINE_NAMES</code>.",
+    + "<code>haenv.baselines.BASELINE_NAMES</code>. The table's fields are read from every time point's "
+    + "answer by the kernel parser (<code>solver._extract_json</code> → <code>evaluate._to_output</code>); the "
+    + "first-ranked diagnosis is <code>tracks._differential</code> sorted by <code>rank_key</code>. A citation "
+    + "is looked up in this case's <code>evidence_ledger</code> and its <code>source_timestamp</code>. The hard-gate "
+    + "column is the case row's <code>gates</code>, split by <code>NON_HARM_GATES</code>, from the preliminary track.",
   sTrace: (T) => "Taken from <code>trace.jsonl</code> (case <code>" + T.case_id + "</code> "
     + "· solver <code>" + T.solver + "</code> · pack <code>" + T.pack + "</code>). "
     + "<code>revealed=false</code> marks a refusal in this saved record. Scripted offline "
-    + "baselines are excluded from this example. Batch-wide trace consistency remains under review.",
+    + "baselines are excluded from this example. Batch-wide trace consistency remains under review. The "
+    + "budget bar reads each <code>tool/result</code>'s <code>cost</code> and <code>spent_after</code> and the "
+    + "episode's <code>budget</code> (prices from <code>gatekeeper.COST</code>); a lane is the observation that "
+    + "request returned, thinned to at most 400 points.",
   sDims: "All from <code>registry/scoring.yaml</code>'s <code>metrics</code>: "
     + "<code>source_metric</code> names which field of <code>eval.jsonl</code> it reads; "
     + "<code>role</code> decides whether it counts toward the total; "
@@ -1793,7 +2412,10 @@ en: {
     + "then keeps only dimensions allowed by <code>publishable_dims()</code>. It discards "
     + "the composite, intervals and score-derived order before writing the public file. "
     + "Paired recall/precision is shown only when both halves qualify. Scoring profile "
-    + "<code>" + prov + "</code>.",
+    + "<code>" + prov + "</code>. The waterfall reads the preliminary track's component readings and "
+    + "<code>gate_multiplier</code>. Failed units by gate type come from <code>gate_multiplier</code> run on one "
+    + "eval row at a time (additive over rows, so they add up to the model's count); a row with several gate "
+    + "types counts as <code>multiple</code>. Per-case readings are <code>rank_ddx</code> on one case's rows.",
   sExtend: (R) => "The fingerprint is <code>world_sha</code>, computed live by "
     + "<code>make_freeze.GENERATION</code>'s manifest, and stuck into <code>batch.json</code>. "
     + "Registration point: <code>haenv/world_plugins.py</code>; fields that carry a gold label "
@@ -1829,12 +2451,19 @@ zh: {
     + "当前:下降段 <code>" + m.descEnd + "d</code> · 弯曲 <code>k=" + fx(m.kDesc, 3)
     + "</code> · 守卫层级 <code>" + m.level + "</code> · 片段 <code>" + m.episodes.length
     + "</code> 个 · 波动幅度 <code>" + fx(m.amp, 3) + "kg</code> · 采样步长 <code>" + m.step
-    + "d</code> · 漏采 <code>" + m.dropped + "</code> 天。",
+    + "d</code> · 漏采 <code>" + m.dropped + "</code> 天。"
+    + "化验小图的底带是各指标的 <code>reference_range</code>,红点由 <code>indicators.abnormal_side</code> 判定"
+    + "(逐点对金向量),药效时间点按满依从取 <code>drug_effects._kinetic_fraction</code>。扇形图用全部导出的随机层"
+    + "(<code>page_data.PERSONAS</code> 与 <code>FAN_PERSONAS</code>)重算同一组旋钮;线是记录序列(含漏称与照抄),"
+    + "结局计数是对每条病程跑 <code>gates.derive_outcome</code>。",
   sDirty: (um) => "比例登记在 <code>registry/artifact_rates.yaml</code> 的 "
     + "<code>post_injectors.carried_forward</code>;锚值由 "
     + "<code>tools/calibrate_from_real_emr.py</code> 算,口径 <code>excess = obs − Σp"
     + "ᵢ²</code>。抄写是<b>后处理</b>(<code>post_inject</code>),不动世界层真值 —— "
-    + "所以金标仍然是干净轨迹上的那个。"
+    + "所以金标仍然是干净轨迹上的那个。页面用的就是 <code>post_inject.carried_forward</code> 自己的规则,"
+    + "逐例随机数 <code>_u01(case|weight|carried_forward, i)</code> 导出成表;金向量里带着产品在两个比例下的抄写结果。"
+    + "「真实病程」视图是读数背后的病程:每个采样日,对 <code>_weight_render</code> 的逐日 <code>base</code> 校验。"
+    + "下面那例已录制病例画的是它自己到 <code>prediction_time_T</code> 为止的流;陷阱窗口与注入清单属于金标,不导出。"
     + (um ? " <b>实测一栏写「暂无」而不是 0</b> —— " + um + ",缺的是产物不是结论。" : ""),
   sCut: "对应 <code>prediction_context.prediction_time_T</code>。题面在 "
     + "<code>build_instance(≤T)</code> 里构造,随后 <code>leakage_probe</code> 再扫一遍;"
@@ -1848,11 +2477,17 @@ zh: {
     + "<code>build_instance</code> 产出并附事件台账;注入清单属于金标,不随页面下发。"
     + "症状记录取自展示例的 <code>evidence_ledger</code>。",
   sAnswers: "取自该批次 <code>responses.jsonl</code> 的 <code>raw</code> 字段;"
-    + "按 <code>haenv.baselines.BASELINE_NAMES</code> 排除离线基线后剩下的真实模型。",
+    + "按 <code>haenv.baselines.BASELINE_NAMES</code> 排除离线基线后剩下的真实模型。"
+    + "表格各列由内核解析器(<code>solver._extract_json</code> → <code>evaluate._to_output</code>)从每个时间点的回答里读出;"
+    + "排第一的诊断是 <code>tracks._differential</code> 按 <code>rank_key</code> 排序后的第一项。引用在本例 "
+    + "<code>evidence_ledger</code> 及其 <code>source_timestamp</code> 里查。硬门一列是该病例那一行的 <code>gates</code>,"
+    + "按 <code>NON_HARM_GATES</code> 分开,取自初步轨道。",
   sTrace: (T) => "取自 <code>trace.jsonl</code>(case <code>" + T.case_id + "</code> · solver "
     + "<code>" + T.solver + "</code> · 数据包 <code>" + T.pack + "</code>)。<code>tool/call</code> "
     + "中 <code>revealed=false</code> 表示这份记录里的门控拒绝。示例排除了脚本化离线基线;"
-    + "整批轨迹的一致性仍在复核。",
+    + "整批轨迹的一致性仍在复核。预算条读每个 <code>tool/result</code> 的 <code>cost</code> 与 "
+    + "<code>spent_after</code> 和该回合的 <code>budget</code>(价格见 <code>gatekeeper.COST</code>);"
+    + "每条泳道就是那次请求拿回的观测,抽稀到至多 400 点。",
   sDims: "全部来自 <code>registry/scoring.yaml</code> 的 "
     + "<code>metrics</code>:<code>source_metric</code> 指明它读 <code>eval.jsonl</code> 的哪个"
     + "字段;<code>role</code> 决定进不进大分;<code>validity.agreement</code> 是人工盲标一致率、"
@@ -1863,7 +2498,10 @@ zh: {
     + "<code>eval.jsonl</code> 现算,只保留符合公开条件的维度;读数未公开不等于没有测量。",
   sBoard: (prov) => "导出脚本先调用生产 <code>rank_ddx</code>,然后只保留 "
     + "<code>publishable_dims()</code> 允许的维度;写入公开文件前移除综合分、区间与按分数排列的顺序。"
-    + "召回/精确成对维只有两边都符合公开条件才显示。计分 profile <code>" + prov + "</code>。",
+    + "召回/精确成对维只有两边都符合公开条件才显示。计分 profile <code>" + prov + "</code>。"
+    + "瀑布图读初步轨道的分量读数与 <code>gate_multiplier</code>。按门类型分的判负单元来自对每一行单独跑 "
+    + "<code>gate_multiplier</code>(按行可加,所以合计等于该模型的判负数);一行触发多类门记为 <code>multiple</code>。"
+    + "逐题读数是对单个病例的行跑 <code>rank_ddx</code>。",
   sExtend: (R) => "标识即 <code>world_sha</code>,由 "
     + "<code>make_freeze.GENERATION</code> 那份清单现算,sticky 写进 <code>batch.json</code>。"
     + "注册点见 <code>haenv/world_plugins.py</code>;带金标的字段由 <code>LABEL_BEARING</code> "
@@ -1928,20 +2566,21 @@ function heat(host, dims, models, nice){
   // below this width the columns stop shrinking and the wrapper scrolls sideways instead
   g.style.minWidth = (130 + models.length * 66) + "px";
   let html = '<div class="hcorner"></div>'
-    + models.map(r => '<div class="hhead" title="' + esc(r.solver) + '">'
+    + models.map((r, j) => '<div class="hhead" data-c="' + j + '" title="' + esc(r.solver) + '">'
+        + (r.key ? '<span class="swatch" style="background:' + mcolor(r.key) + '"></span><br>' : "")
         + String(r.solver).split(" · ").map(esc).join("<br>") + "</div>").join("");
-  dims.forEach(d => {
+  dims.forEach((d, i) => {
     const label = nice(d);
-    html += '<div class="hrow" title="' + esc(label) + '">' + esc(label) + "</div>";
-    models.forEach(r => {
-      const v = r.dims[d];
+    html += '<div class="hrow" data-r="' + i + '" title="' + esc(label) + '">' + esc(label) + "</div>";
+    models.forEach((r, j) => {
+      const v = r.dims[d], at = ' data-r="' + i + '" data-c="' + j + '"';
       if (typeof v !== "number" || !isFinite(v)){
-        html += '<div class="hcell" style="background:var(--seq-empty);color:var(--faint)"'
+        html += '<div class="hcell"' + at + ' style="background:var(--seq-empty);color:var(--faint)"'
               + ' title="' + esc(r.solver + " · " + label + ": " + T("s9NoDataCell")) + '">—</div>';
         return;
       }
       const k = step(v);
-      html += '<div class="hcell" style="background:var(--seq' + k + ');color:var(--seq-ink-'
+      html += '<div class="hcell"' + at + ' style="background:var(--seq' + k + ');color:var(--seq-ink-'
         + (k >= 4 ? "hi" : "lo") + ')" title="'
         + esc(r.solver + " · " + label + " = " + fx(v)) + '">' + esc(fx(v)) + "</div>";
     });
@@ -1954,6 +2593,13 @@ function heat(host, dims, models, nice){
   // Touch screens have no hover: a tap (or click) on a cell writes its title here.
   const pick = el("p", { class: "heatpick", "aria-live": "polite" });
   host.appendChild(pick);
+  // Hovering a cell lights up its row name and model head.
+  g.addEventListener("mouseover", e => {
+    const c = e.target.closest(".hcell"); if (!c) return;
+    $$(".xh", g).forEach(n => n.classList.remove("xh"));
+    $$('.hrow[data-r="' + c.dataset.r + '"], .hhead[data-c="' + c.dataset.c + '"]', g).forEach(n => n.classList.add("xh"));
+  });
+  g.addEventListener("mouseleave", () => $$(".xh", g).forEach(n => n.classList.remove("xh")));
   g.addEventListener("click", e => {
     const c = e.target.closest(".hcell"); if (!c) return;
     $$(".hcell.on", g).forEach(n => n.classList.remove("on"));
@@ -2047,8 +2693,17 @@ function plot(host, o){
   const ys = v => Y1 - (Y1 - Y0) * (v - lo) / (hi - lo);
   const ticks = xTicks(xmax);
   let svg = "";
+  (o.bands || []).forEach(b => {
+    const top = ys(Math.min(hi, b.hi == null ? hi : b.hi)), bot = ys(Math.max(lo, b.lo == null ? lo : b.lo));
+    if (bot - top > 0.5) svg += `<rect x="${X0}" y="${top.toFixed(1)}" width="${(X1 - X0).toFixed(1)}"`
+      + ` height="${(bot - top).toFixed(1)}" fill="${b.color || "var(--band)"}"/>`; });
   [0, .5, 1].forEach(f => { const y = (Y0 + (Y1 - Y0) * f).toFixed(1);
     svg += `<line x1="${X0}" x2="${X1}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>`; });
+  (o.areas || []).forEach(a => {
+    if (!a.lo.length) return;
+    const up = a.hi.map((p, i) => (i ? "L" : "M") + xs(p[0]).toFixed(1) + " " + ys(p[1]).toFixed(1)).join(" ");
+    const dn = a.lo.slice().reverse().map(p => "L" + xs(p[0]).toFixed(1) + " " + ys(p[1]).toFixed(1)).join(" ");
+    svg += `<path d="${up} ${dn} Z" fill="${a.color}" stroke="none" data-area="1"/>`; });
   ticks.forEach(t => { const x = xs(t).toFixed(1);
     svg += `<line x1="${x}" x2="${x}" y1="${Y0}" y2="${Y1}" stroke="var(--grid)" stroke-width="1"/>`; });
   (o.vlines || []).forEach(v => { const x = xs(v.x).toFixed(1);
@@ -2061,9 +2716,14 @@ function plot(host, o){
          + ` stroke-width="${s.w || 2.1}" stroke-linejoin="round"`
          + `${s.dash ? ' stroke-dasharray="5 4"' : ""} vector-effect="non-scaling-stroke"/>`;
     (s.dots || []).forEach(i => { const p = s.pts[i]; if (!p) return;
-      svg += `<circle cx="${xs(p[0]).toFixed(1)}" cy="${ys(p[1]).toFixed(1)}" r="3.3"`
-           + ` fill="${s.dotColor || "var(--accent)"}"/>`; });
+      svg += `<circle cx="${xs(p[0]).toFixed(1)}" cy="${ys(p[1]).toFixed(1)}" r="${s.r || 3.3}"`
+           + ` fill="${typeof s.dotColor === "function" ? s.dotColor(i) : (s.dotColor || "var(--accent)")}"/>`; });
   });
+  // Hollow rings (e.g. a copied reading) and short ticks on the floor (e.g. a missed weigh-in).
+  (o.rings || []).forEach(p => { svg += `<circle cx="${xs(p[0]).toFixed(1)}" cy="${ys(p[1]).toFixed(1)}" r="4.4"`
+    + ` fill="none" stroke="${o.ringColor || "var(--accent)"}" stroke-width="1.8"/>`; });
+  (o.ticks || []).forEach(d => { const x = xs(d).toFixed(1);
+    svg += `<line x1="${x}" x2="${x}" y1="${Y1 - 7}" y2="${Y1}" stroke="${o.tickColor || "var(--c3)"}" stroke-width="1.4"/>`; });
   const box = el("div", { class: "plotbox" });
   box.style.height = H + "px"; box.style.marginLeft = gutter + "px";
   box.innerHTML = `<svg viewBox="0 0 ${aw} ${H}" preserveAspectRatio="none" role="img"`
@@ -2113,6 +2773,383 @@ function xTicks(xmax){
   for (let t = 0; t <= xmax + 1e-9; t += step) out.push(t);
   return out;
 }
+
+/* ══ Timeline: one shared day axis, one lane per stream ═════════════════
+   Used for the patient you build (step 4), the recorded case (steps 3 and 6) and the
+   traced case (step 7). Hover (or tap) moves a crosshair across every lane and prints each
+   lane's reading that day in the name column; a horizontal drag zooms, "Reset zoom" or a
+   double-click undoes it; the "today" handle can be dragged (or moved with the arrow keys)
+   and everything after it is veiled. Clicking an event dot lists that day's entries.
+   Labels live in HTML (name column, handle, day axis); the SVGs carry only graphics. */
+const TLSTATE = {};                 // zoom and "today" per timeline id, kept across repaints
+const TL_TOP = 24, TL_AXIS = 20;
+
+function nearestPt(pts, d){
+  if (!pts || !pts.length) return null;
+  let lo = 0, hi = pts.length - 1;
+  while (hi - lo > 1){ const m = (lo + hi) >> 1; if (pts[m][0] < d) lo = m; else hi = m; }
+  return Math.abs(pts[lo][0] - d) <= Math.abs(pts[hi][0] - d) ? pts[lo] : pts[hi];
+}
+function lastBefore(pts, d){
+  let out = null;
+  for (const p of pts || []) { if (p[0] <= d) out = p; else break; }
+  return out;
+}
+
+function timeline(host, cfg){
+  const st = TLSTATE[cfg.id] || (TLSTATE[cfg.id] = { x0: cfg.x0 || 0, x1: cfg.x1, T: cfg.T, hl: null, zoomed: false });
+  st.full = [cfg.x0 || 0, cfg.x1];
+  // Only a zoom the reader made survives a repaint, and only while it fits the new axis.
+  if (!st.zoomed || !(st.x1 > st.x0) || st.x1 > cfg.x1 || st.x0 < (cfg.x0 || 0)){
+    st.x0 = cfg.x0 || 0; st.x1 = cfg.x1; st.zoomed = false;
+  }
+  if (cfg.T == null) st.T = null;
+  else if (st.T == null || cfg.resetT) st.T = cfg.T;
+  const snap = t => {
+    if (cfg.snaps && cfg.snaps.length)
+      return cfg.snaps.reduce((a, x) => Math.abs(x - t) < Math.abs(a - t) ? x : a, cfg.snaps[0]);
+    return Math.round(Math.min(cfg.tMax == null ? cfg.x1 : cfg.tMax, Math.max(cfg.tMin == null ? 0 : cfg.tMin, t)));
+  };
+  if (st.T != null) st.T = snap(st.T);
+  host.innerHTML = "";
+  const root = el("div", { class: "tl", id: "tl-" + cfg.id });
+  root.innerHTML = '<div class="tl-bar"><span class="tl-day"></span>'
+    + '<span class="tl-hint faint">' + esc(cfg.hint || T("tlHint")) + '</span>'
+    + '<button type="button" class="pill sm quiet tl-reset" hidden>' + esc(T("tlReset")) + '</button></div>'
+    + '<div class="tl-grid"></div><div class="tl-legend"></div><div class="tl-detail" aria-live="polite"></div>';
+  host.appendChild(root);
+  const grid = $(".tl-grid", root), bar = $(".tl-day", root), reset = $(".tl-reset", root);
+  const top = el("div", { class: "tl-top" }); top.style.gridRow = "1"; grid.appendChild(top);
+  const L = cfg.lanes.map((ln, i) => {
+    const name = el("div", { class: "tl-name", "data-lane": ln.id });
+    name.style.gridRow = String(i + 2);
+    name.innerHTML = '<b title="' + esc(ln.label) + '">' + esc(ln.label) + '</b><span class="tl-val"></span>';
+    name.setAttribute("title", ln.label);
+    const pl = el("div", { class: "tl-plot" + (i % 2 ? " alt" : ""), "data-lane": ln.id });
+    pl.style.gridRow = String(i + 2); pl.style.height = (ln.h || 42) + "px";
+    if (ln.domId) pl.id = ln.domId;
+    grid.append(name, pl);
+    return { ln: ln, name: name, pl: pl, val: $(".tl-val", name) };
+  });
+  const axis = el("div", { class: "tl-axis" }); axis.style.gridRow = String(L.length + 2);
+  const ov = el("div", { class: "tl-ov" }); ov.style.gridRow = "1 / " + (L.length + 3);
+  ov.innerHTML = '<div class="tl-fog"></div><div class="tl-marks"></div><div class="tl-brush"></div><div class="tl-cross"></div>'
+    + (st.T != null ? '<div class="tl-t" role="slider" tabindex="0" aria-label="' + esc(T("tlHandle")) + '">'
+       + '<span class="tl-grip"></span></div>' : '');
+  grid.append(axis, ov);
+  const fog = $(".tl-fog", ov), cross = $(".tl-cross", ov), brush = $(".tl-brush", ov), handle = $(".tl-t", ov);
+  if (st.T == null || cfg.fog === false) fog.style.display = "none";
+  const W = () => (L[0] && L[0].pl.clientWidth) || Math.max(200, (host.clientWidth || 720) - 150);
+  let w = W();
+  // A 5 px inset on both sides keeps a point on the first or last day inside its lane.
+  const IN = 5;
+  const xs = d => IN + (d - st.x0) / Math.max(1e-9, st.x1 - st.x0) * (w - 2 * IN);
+  const dayAt = clientX => {
+    const r = ov.getBoundingClientRect();
+    return st.x0 + (clientX - r.left - IN) / Math.max(1, w - 2 * IN) * (st.x1 - st.x0);
+  };
+
+  function laneSvg(o){
+    const ln = o.ln, H = ln.h || 42, pad = 6;
+    if (ln.off) return `<svg viewBox="0 0 ${w} ${H}" preserveAspectRatio="none" aria-hidden="true"></svg>`;
+    const inX = p => p[0] >= st.x0 - 1e-9 && p[0] <= st.x1 + 1e-9;
+    const vis = (ln.pts || []).filter(inX), vis2 = (ln.pts2 || []).filter(inX);
+    let svg = "";
+    (ln.gaps || []).forEach(([a, b]) => { if (b < st.x0 || a > st.x1) return;
+      const x0 = Math.max(0, xs(a)), x1 = Math.min(w, xs(b));
+      if (x1 - x0 > 0.3) svg += `<rect x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="${H}" fill="var(--gap)"/>`; });
+    if (ln.kind === "events"){
+      const byDay = new Map();
+      vis.forEach(e => { const g = byDay.get(e[0]) || []; g.push(e[2]); byDay.set(e[0], g); });
+      [...byDay.entries()].forEach(([d, list]) => {
+        const on = st.hl && list.some(e => st.hl.has(e.id));
+        const r = Math.min(7, 2.6 + Math.sqrt(list.length));
+        svg += `<circle cx="${xs(d).toFixed(1)}" cy="${(H / 2).toFixed(1)}" r="${r.toFixed(1)}"`
+          + ` fill="${on ? "var(--accent)" : "var(--c2)"}" fill-opacity="${on ? 1 : .72}"/>`;
+        if (on) svg += `<circle cx="${xs(d).toFixed(1)}" cy="${(H / 2).toFixed(1)}" r="${(r + 3.4).toFixed(1)}"`
+          + ` fill="none" stroke="var(--accent)" stroke-width="1.6"/>`;
+      });
+      return `<svg viewBox="0 0 ${w} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(ln.label)}">${svg}</svg>`;
+    }
+    let lo = ln.lo, hi = ln.hi;
+    if (lo == null || hi == null){
+      const vv = vis.concat(vis2).map(p => p[1]).filter(v => isFinite(v));
+      if (!vv.length) return '<svg viewBox="0 0 ' + w + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true"></svg>';
+      lo = Math.min(...vv); hi = Math.max(...vv);
+      if (ln.ref){ const span = Math.max(1e-6, hi - lo);
+        if (ln.ref.high != null && ln.ref.high < hi + span && ln.ref.high > lo - span) hi = Math.max(hi, ln.ref.high);
+        if (ln.ref.low != null && ln.ref.low > lo - span && ln.ref.low < hi + span) lo = Math.min(lo, ln.ref.low); }
+      if (hi - lo < 1e-6){ lo -= 1; hi += 1; }
+      const padv = (hi - lo) * .1; lo -= padv; hi += padv;
+    }
+    const ys = v => H - pad - (H - 2 * pad) * (v - lo) / Math.max(1e-9, hi - lo);
+    if (ln.ref){
+      const a = ys(Math.min(hi, ln.ref.high == null ? hi : ln.ref.high)), b = ys(Math.max(lo, ln.ref.low == null ? lo : ln.ref.low));
+      if (b - a > 0.5) svg += `<rect x="0" y="${a.toFixed(1)}" width="${w}" height="${(b - a).toFixed(1)}" fill="var(--band)"/>`;
+    }
+    const path = pts => pts.map((p, i) => (i ? "L" : "M") + xs(p[0]).toFixed(1) + " " + ys(p[1]).toFixed(1)).join(" ");
+    if (ln.kind === "step" && vis.length){
+      let d = "M" + xs(vis[0][0]).toFixed(1) + " " + ys(vis[0][1]).toFixed(1);
+      for (let i = 1; i < vis.length; i++) d += " H" + xs(vis[i][0]).toFixed(1) + " V" + ys(vis[i][1]).toFixed(1);
+      d += " H" + w.toFixed(1);
+      svg += `<path d="${d}" fill="none" stroke="${ln.color || "var(--c2)"}" stroke-width="1.8" vector-effect="non-scaling-stroke"/>`;
+    }
+    if (ln.kind === "line" && vis.length > 1){
+      if (ln.split && st.T != null){
+        // The whole course in the withheld colour, the part up to "today" on top.
+        svg += `<path d="${path(vis)}" fill="none" stroke="var(--c5)" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+        svg += `<path class="tl-prefix" d="${path(vis.filter(p => p[0] <= st.T))}" fill="none"`
+          + ` stroke="${ln.color || "var(--c1)"}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+      } else {
+        svg += `<path d="${path(vis)}" fill="none" stroke="${ln.color || "var(--c2)"}" stroke-width="${ln.w || 1.5}"`
+          + ` stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+      }
+    }
+    if (ln.kind === "dots" || (ln.kind === "line" && vis.length <= 1)){
+      if (ln.kind === "dots" && vis.length > 1 && ln.join !== false)
+        svg += `<path d="${path(vis)}" fill="none" stroke="var(--c4)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
+      vis.forEach(p => { const bad = ln.abn && ln.abn(p[1]);
+        svg += `<circle cx="${xs(p[0]).toFixed(1)}" cy="${ys(p[1]).toFixed(1)}" r="${bad ? 4 : 3.2}"`
+          + ` fill="${bad ? "var(--accent)" : (ln.color || "var(--c2)")}"/>`; });
+    }
+    vis2.forEach(p => { svg += `<circle cx="${xs(p[0]).toFixed(1)}" cy="${ys(p[1]).toFixed(1)}" r="3.4"`
+      + ` fill="var(--card)" stroke="${ln.color2 || "var(--c2)"}" stroke-width="1.6"/>`; });
+    (ln.rings || []).filter(inX).forEach(p => { svg += `<circle cx="${xs(p[0]).toFixed(1)}" cy="${ys(p[1]).toFixed(1)}"`
+      + ` r="4.6" fill="none" stroke="var(--accent)" stroke-width="1.7"/>`; });
+    (ln.ticks || []).forEach(d => { if (d < st.x0 || d > st.x1) return; const x = xs(d).toFixed(1);
+      svg += `<line x1="${x}" x2="${x}" y1="${H - 7}" y2="${H}" stroke="var(--c3)" stroke-width="1.3"/>`; });
+    o.ys = ys;
+    return `<svg viewBox="0 0 ${w} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(ln.label)}">${svg}</svg>`;
+  }
+
+  function readout(day, hover){
+    bar.textContent = hover ? T("dayN", Math.round(day)) : (st.T != null ? T("tlAtToday", st.T) : T("tlHover"));
+    L.forEach(o => {
+      const ln = o.ln;
+      let txt = "";
+      if (ln.kind === "events"){
+        const n = hover ? (ln.pts || []).filter(e => Math.round(e[0]) === Math.round(day)).length : 0;
+        txt = hover ? (n ? T("tlEvents", n) : "—")
+          : T("tlEventsTotal", (ln.pts || []).filter(e => st.T == null || e[0] <= st.T).length);
+      } else {
+        const p = hover ? nearestPt(ln.pts, day) : lastBefore(ln.pts, st.T == null ? st.x1 : st.T);
+        const ok = p && (!hover || Math.abs(p[0] - day) <= (ln.tol || 3));
+        txt = ok ? ln.fmt(p[1]) : (ln.off ? T("tlNotYet") : "—");
+      }
+      o.val.textContent = txt; o.val.setAttribute("title", txt);
+    });
+  }
+  function place(){
+    w = W();
+    // A name that does not fit its column switches to its short form (full name in the title).
+    L.forEach(o => { const b = $("b", o.name), sh = o.ln.short || shortName(o.ln.id, o.ln.label);
+      b.textContent = o.ln.label;
+      if (b.scrollWidth > b.clientWidth + 1 && sh && sh !== o.ln.label) b.textContent = sh; });
+    L.forEach(o => { o.pl.innerHTML = laneSvg(o); });
+    if (st.T != null){
+      const x = Math.max(0, Math.min(w, xs(st.T)));
+      fog.style.left = x + "px";
+      fog.style.display = (cfg.fog === false || st.T >= st.x1) ? "none" : "";
+      if (handle){
+        handle.style.left = x + "px";
+        const g = $(".tl-grip", handle); g.textContent = cfg.tLabel ? cfg.tLabel(st.T) : T("tlToday", st.T);
+        // keep the grip inside the plot column
+        const gw = g.offsetWidth || 60;
+        g.style.left = Math.min(Math.max(gw / 2, x), Math.max(gw / 2, w - gw / 2)) - x + 12 + "px";
+        handle.setAttribute("aria-valuenow", String(st.T));
+        handle.setAttribute("aria-valuetext", T("dayN", st.T));
+        handle.setAttribute("aria-valuemin", String(cfg.snaps ? cfg.snaps[0] : (cfg.tMin || 0)));
+        handle.setAttribute("aria-valuemax", String(cfg.snaps ? cfg.snaps[cfg.snaps.length - 1] : (cfg.tMax || cfg.x1)));
+      }
+    }
+    $(".tl-marks", ov).innerHTML = (cfg.marks || []).filter(m => m.x >= st.x0 && m.x <= st.x1)
+      .map(m => `<span class="tl-mark" style="left:${xs(m.x).toFixed(1)}px"></span>`).join("");
+    top.innerHTML = (cfg.snaps || []).filter(t => t >= st.x0 && t <= st.x1)
+      .map(t => `<span class="tl-tick${t === st.T ? " on" : ""}" style="left:${xs(t).toFixed(1)}px"></span>`).join("");
+    // day ticks, thinned by measured width
+    axis.innerHTML = "";
+    const span = st.x1 - st.x0, stepT = [1, 2, 5, 7, 14, 30, 60, 90, 120, 180, 365].find(q => span / q <= Math.max(2, Math.floor(w / 90))) || 365;
+    const placed = [];
+    for (let t = Math.ceil(st.x0 / stepT) * stepT; t <= st.x1 + 1e-9; t += stepT){
+      const n = el("span", { class: "axlab x" }, esc(T("dayN", t))); axis.appendChild(n);
+      const nw = n.offsetWidth, cx = Math.min(w - nw / 2, Math.max(nw / 2, xs(t)));
+      if (!placed.every(k => Math.abs(k.cx - cx) > (k.w + nw) / 2 + 10)){ n.remove(); continue; }
+      placed.push({ cx: cx, w: nw }); n.style.left = cx + "px";
+    }
+    reset.hidden = st.x0 <= st.full[0] + 1e-9 && st.x1 >= st.full[1] - 1e-9;
+    readout(0, false);
+  }
+  function setT(t, quiet){
+    if (st.T == null) return;
+    const v = snap(t);
+    if (v === st.T) return;
+    st.T = v;
+    place();
+    if (!quiet && cfg.onT) cfg.onT(st.T);
+  }
+  function highlight(ids){
+    st.hl = ids ? new Set(ids) : null;
+    L.forEach(o => { if (o.ln.kind === "events") o.pl.innerHTML = laneSvg(o); });
+  }
+  function pulse(laneId){
+    L.forEach(o => { const on = o.ln.id === laneId;
+      o.pl.classList.toggle("hit", on); o.name.classList.toggle("hit", on); });
+  }
+  function setOff(laneId, off){
+    L.forEach(o => { if (o.ln.id === laneId){ o.ln.off = off; o.name.classList.toggle("off", off); } });
+  }
+
+  // interaction
+  let drag = null;
+  const inPlot = e => { const r = ov.getBoundingClientRect(); return e.clientX >= r.left - 1 && e.clientX <= r.left + w + 1; };
+  grid.addEventListener("pointermove", e => {
+    if (drag && drag.kind === "t"){ setT(dayAt(e.clientX)); return; }
+    if (drag && drag.kind === "brush"){
+      const a = Math.max(0, Math.min(w, drag.x)), b = Math.max(0, Math.min(w, e.clientX - ov.getBoundingClientRect().left));
+      brush.style.display = "block"; brush.style.left = Math.min(a, b) + "px"; brush.style.width = Math.abs(b - a) + "px";
+      drag.moved = Math.abs(b - a);
+    }
+    if (!inPlot(e)) return;
+    const d = dayAt(e.clientX);
+    cross.style.display = "block"; cross.style.left = Math.max(0, Math.min(w, xs(d))) + "px";
+    readout(d, true);
+  });
+  grid.addEventListener("pointerleave", () => { if (!drag){ cross.style.display = "none"; readout(0, false); } });
+  grid.addEventListener("pointerdown", e => {
+    if (handle && (e.target === handle || handle.contains(e.target))){
+      drag = { kind: "t" };
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* synthetic events have no pointer id */ }
+      e.preventDefault(); return;
+    }
+    if (!inPlot(e)) return;
+    drag = { kind: "brush", x: e.clientX - ov.getBoundingClientRect().left, day: dayAt(e.clientX), moved: 0,
+             lane: (e.target.closest && e.target.closest(".tl-plot")) || null };
+  });
+  const end = e => {
+    if (!drag) return;
+    const d0 = drag; drag = null; brush.style.display = "none";
+    if (d0.kind !== "brush") return;
+    if (d0.moved > 8){
+      let a = d0.day, b = dayAt(e.clientX);
+      if (a > b) [a, b] = [b, a];
+      const minSpan = cfg.minSpan || 14;
+      if (b - a < minSpan){ const c = (a + b) / 2; a = c - minSpan / 2; b = c + minSpan / 2; }
+      st.x0 = Math.max(st.full[0], a); st.x1 = Math.min(st.full[1], b); st.zoomed = true;
+      place(); if (cfg.onZoom) cfg.onZoom(st.x0, st.x1);
+    } else if (d0.lane && cfg.onEvent){
+      const o = L.find(q => q.pl === d0.lane);
+      if (o && o.ln.kind === "events"){
+        const dd = dayAt(e.clientX), tol = 10 / Math.max(1, w) * (st.x1 - st.x0);
+        const near = (o.ln.pts || []).filter(p => Math.abs(p[0] - dd) <= Math.max(tol, 0.5));
+        if (near.length){
+          const best = near.reduce((a, p) => Math.abs(p[0] - dd) < Math.abs(a[0] - dd) ? p : a, near[0]);
+          cfg.onEvent(o.ln.pts.filter(p => p[0] === best[0]).map(p => p[2]), best[0]);
+        }
+      }
+    }
+  };
+  grid.addEventListener("pointerup", end);
+  grid.addEventListener("pointercancel", () => { drag = null; brush.style.display = "none"; });
+  const unzoom = () => { st.x0 = st.full[0]; st.x1 = st.full[1]; st.zoomed = false; place(); if (cfg.onZoom) cfg.onZoom(st.x0, st.x1); };
+  grid.addEventListener("dblclick", unzoom);
+  reset.addEventListener("click", unzoom);
+  if (handle) handle.addEventListener("keydown", e => {
+    const sn = cfg.snaps, i = sn ? sn.indexOf(st.T) : -1;
+    let t = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") t = sn ? sn[Math.min(sn.length - 1, i + 1)] : st.T + (e.shiftKey ? 7 : 1);
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") t = sn ? sn[Math.max(0, i - 1)] : st.T - (e.shiftKey ? 7 : 1);
+    if (e.key === "Home") t = sn ? sn[0] : (cfg.tMin || 0);
+    if (e.key === "End") t = sn ? sn[sn.length - 1] : (cfg.tMax || cfg.x1);
+    if (t == null) return;
+    e.preventDefault(); setT(t);
+  });
+  if (cfg.legend) $(".tl-legend", root).innerHTML = cfg.legend;
+  else $(".tl-legend", root).remove();
+  place();
+  const api = { setT: setT, getT: () => st.T, highlight: highlight, pulse: pulse, setOff: setOff, redraw: place,
+                zoom: (a, b) => { st.x0 = a; st.x1 = b; st.zoomed = true; place(); }, state: st, root: root,
+                detail: $(".tl-detail", root) };
+  root._tl = api;
+  return api;
+}
+
+/* Lane builders shared by the timelines. A lane is `{id, label, kind, pts, fmt, …}`. */
+const fmtNum = (v, nd) => (v == null || !isFinite(v)) ? "—"
+  : Number(v).toLocaleString(LANG === "zh" ? "zh-CN" : "en-US", { maximumFractionDigits: nd, minimumFractionDigits: nd });
+const unitOf = (sig, K) => {
+  const d = Object.values((K || D.kernel).domain).map(x => x[sig]).find(Boolean);
+  return d ? d.unit : "";
+};
+function labLane(sig, pts, K, extra){
+  const cs = (K.clinical_spec || {})[sig] || {}, ref = (K.clinical_ref || {})[sig] || null, u = unitOf(sig, K);
+  return Object.assign({ id: sig, label: nameSig(sig), kind: "dots", pts: pts, ref: ref, tol: 45,
+    abn: v => G.abnormalSide(sig, v, K) === true,
+    fmt: v => fmtNum(v, cs.ndigits == null ? 1 : cs.ndigits) + (u && u !== "index" ? " " + u : "") }, extra || {});
+}
+//: Days in [a, b] on which none of the given daily streams has a reading: non-wear gaps.
+function wearGaps(streams, a, b){
+  const have = new Set();
+  streams.forEach(s => (s || []).forEach(p => have.add(p[0])));
+  if (!have.size) return [];
+  const out = []; let run = null;
+  for (let d = a; d <= b; d++){
+    if (!have.has(d)){ if (run == null) run = d; }
+    else if (run != null){ out.push([run - 0.5, d - 0.5]); run = null; }
+  }
+  if (run != null) out.push([run - 0.5, b + 0.5]);
+  return out;
+}
+//: Readings identical to the one before: what a copied value looks like in a record.
+const repeats = pts => pts.filter((p, i) => i > 0 && p[1] === pts[i - 1][1]);
+
+/** Lanes for the recorded case (`D.case`): what the solver sees, one lane per stream. */
+function caseLanes(C, opt){
+  const S = C.streams || {}, K = D.kernel, o = opt || {}, hi = o.until == null ? Infinity : o.until;
+  const cut = pts => (pts || []).filter(p => p[0] <= hi);
+  const thinned = new Set(C.thinned || []);
+  const wear = ["steps", "resting_hr", "sleep_hours"].filter(k => S[k] && !thinned.has(k));
+  const span = [0, Math.max(...Object.values(S).map(v => v.length ? v[v.length - 1][0] : 0))];
+  const gaps = wear.length ? wearGaps(wear.map(k => cut(S[k])), 0, Math.min(hi, span[1])) : [];
+  const lanes = [];
+  if (S.weight) lanes.push({ id: "weight", label: T("s2Weight"), kind: "line", pts: cut(S.weight), color: "var(--c1)",
+    w: 1.8, h: 64, pts2: cut(S.weight_ref), rings: o.marks ? repeats(cut(S.weight)) : null,
+    fmt: v => fmtNum(v, 1) + " kg" });
+  if (S.steps) lanes.push({ id: "steps", label: T("laneSteps"), kind: "line", pts: cut(S.steps), gaps: gaps, w: 1,
+    fmt: v => fmtNum(v, 0) });
+  if (S.resting_hr) lanes.push({ id: "resting_hr", label: T("laneRhr"), kind: "line", pts: cut(S.resting_hr), gaps: gaps, w: 1,
+    fmt: v => fmtNum(v, 0) + " bpm" });
+  if (S.sleep_hours) lanes.push({ id: "sleep_hours", label: T("laneSleep"), kind: "line", pts: cut(S.sleep_hours), gaps: gaps, w: 1,
+    fmt: v => fmtNum(v, 1) + " h" });
+  if (o.labs !== false) Object.keys(K.clinical_spec).filter(k => S[k]).forEach(k => lanes.push(labLane(k, cut(S[k]), K, { h: 38 })));
+  if (S.dose_timeline && o.dose !== false) lanes.push({ id: "dose", label: T("laneDose"), kind: "step", pts: cut(S.dose_timeline), h: 34,
+    tol: 400, fmt: v => fmtNum(v, 2) + " mg" });
+  if (S.medication_adherence && o.adh !== false) lanes.push({ id: "adh", label: T("laneAdh"), kind: "step", pts: cut(S.medication_adherence),
+    h: 34, lo: 0, hi: 1, tol: 400, fmt: v => pct(v, 0) });
+  if (o.events !== false){
+    const ev = ((C.evidence) || []).filter(e => e.t != null && e.t <= hi).map(e => [e.t, 0, e]);
+    ev.sort((a, b) => a[0] - b[0]);
+    lanes.push({ id: "events", label: T("laneEvents"), kind: "events", pts: ev, h: 38 });
+  }
+  return { lanes: lanes, span: span, gaps: gaps };
+}
+
+/** One row per ledger entry, shown when an event dot is clicked. Entry text stays in the
+ *  benchmark's own language; the note says so once. */
+function evidenceRows(list, hl){
+  const kind = e => N("src", e.kind);
+  return '<p class="faint" style="font-size:.8em;margin:0">' + esc(T("evidenceDataNote")) + '</p>'
+    + list.map(e => '<div class="evrow' + (hl && hl.has(e.id) ? " on" : "") + '"><span class="mono">'
+      + esc(T("evidenceDayN", e.t)) + '</span><span><span class="chip">' + esc(e.id) + '</span> '
+      + '<span class="faint">' + esc(kind(e)) + '</span><br>'
+      + (esc(tx(e.text) || "") + (e.ctx ? "(" + esc(tx(e.ctx)) + ")" : "")
+         || (e.value != null ? esc(deviceReading(e)) : '<span class="faint">' + esc(T("evidenceBlank")) + '</span>'))
+      + '</span></div>').join("");
+}
+
+//: A ledger row that carries only a device reading. Only the scale's reading is in kg.
+const deviceReading = e => e.kind === "smart_scale"
+  ? T("deviceReadingKg", N("dev2", e.kind), e.value)
+  : T("deviceReadingPlain", e.kind ? N("dev2", e.kind) : T("deviceReadingDefault"), e.value);
 
 /* ══ Everything about this person ═════════════════════════════════════
    Every control on the page writes into this object, which `gen.mjs` computes
@@ -2207,7 +3244,7 @@ function hero(s){
 }
 
 /* ── ① Make a person: three entry points, one parameter object ──────── */
-//: **Benchmark case content, not UI text — never translated.** This mirrors a real Chinese
+//: **Benchmark case content, not UI text.** This mirrors a real Chinese
 //  chart note so `gen.mjs:LEX`'s keyword extraction (which matches Chinese medical
 //  vocabulary) has something real to recognize; see `emrDataNote` in `UI` for the one-time
 //  English disclosure shown next to it.
@@ -2216,6 +3253,12 @@ const SAMPLE_EMR = `患者女,47 岁,2 型糖尿病 5 年,合并肥胖。
 体重由 92 公斤降至 80 公斤,糖化血红蛋白 8.1%,近期复查 7.4%。
 自述近两月工作出差频繁,常漏服,第 16 周起体重反弹,复诊时 83.5 公斤。
 随访 84 天,家中每日自测体重。`;
+//: The same note in English, for the English page; it extracts the same fields.
+const SAMPLE_EMR_EN = `Female, 47 years old, type 2 diabetes for 5 years, with obesity.
+Started metformin 2 years ago; switched to semaglutide 1.0 mg once weekly in the past year.
+Weight fell from 92 kg to 80 kg; HbA1c 8.1%, 7.4% at the latest recheck.
+Frequent work travel over the past two months with missed doses; weight regain from week 16, 83.5 kg at the follow-up visit.
+Follow-up 84 days, with daily home weighing.`;
 
 function sBuild(s){
   s.innerHTML = '<div class="wrap">'
@@ -2369,7 +3412,8 @@ function emrPanel(host, draw){
     + '<button class="pill sm quiet" id="btn-sample">' + esc(T("emrSample")) + '</button>'
     + '<button class="pill sm" id="btn-read">' + esc(T("emrRead")) + '</button></p>'
     + '<div id="emr-out" style="margin-top:16px"></div>';
-  $("#btn-sample", host).addEventListener("click", () => { $("#ta-emr", host).value = SAMPLE_EMR; });
+  $("#btn-sample", host).addEventListener("click", () => {
+    $("#ta-emr", host).value = LANG === "en" ? SAMPLE_EMR_EN : SAMPLE_EMR; });
   $("#btn-read", host).addEventListener("click", () => {
     const r = G.fromCaseText($("#ta-emr", host).value);
     apply(r.fields);
@@ -2459,24 +3503,69 @@ function sWorld(s){
     + '<span><i class="dash"></i>' + esc(T("legendRegainStarts")) + '</span>'
     + '<span><i style="background:' + TODAY.color + '"></i>' + esc(T("legendToday")) + '</span></div>';
   const sigs = Object.keys(W.clin);
-  if (sigs.length){
-    L.innerHTML += "<h3 style='margin-top:26px'>" + esc(nameSig(sigs[0])) + "</h3>"
-      + "<div class='plot' id='p-c'></div>"
-      + '<div class="legend"><span><i style="background:var(--c2)"></i>'
-      + esc(nameSig(sigs[0])) + "(" + esc(W.clin[sigs[0]].spec.unit) + ")</span>"
-      + "<span class='faint'>" + esc(T("legendOncePerDraw")) + "</span></div>";
-    if (sigs[0] === "HbA1c")
-      L.innerHTML += '<p class="faint" style="font-size:.84em;margin:6px 0 0">' + esc(T("labVariationNote")) + "</p>";
-  }
   const vlines = [{ x: P.T, label: T("legendToday"), color: TODAY.color, w: TODAY.w }];
   if (W.meta.revDay != null) vlines.push({ x: W.meta.revDay, label: T("legendRegainStarts"),
                                            color: "var(--accent)", dash: 1, mark: 1, w: 1.6 });
-  plotStack([[$("#p-w", L), { series: [{ pts: W.w, color: "var(--c1)" }], vlines: vlines,
-                               xmax: P.course_end_day, height: 230, alt: T("altWeight"),
-                               yfmt: v => v.toFixed(1) + " kg" }]].concat(sigs.length
-    ? [[$("#p-c", L), { series: [{ pts: W.clin[sigs[0]].pts, color: "var(--c2)" }],
-                        vlines: vlines, xmax: P.course_end_day, height: 150,
-                        alt: nameSig(sigs[0]), yfmt: v => v.toFixed(1) }]] : []));
+  const stack = [[$("#p-w", L), { series: [{ pts: W.w, color: "var(--c1)" }], vlines: vlines,
+                                   xmax: P.course_end_day, height: 230, alt: T("altWeight"),
+                                   yfmt: v => v.toFixed(1) + " kg" }]];
+  /* B · one small chart per lab signal: reference band from the indicator dossier, points on
+     the abnormal side in the accent colour, and the drug effect's start and half-way day
+     from the kernel's kinetics when the drug acts on that signal. */
+  if (sigs.length){
+    const box = el("div"); L.appendChild(box);
+    box.innerHTML = "<h3 style='margin-top:24px'>" + esc(T("s2Labs")) + "</h3>"
+      + '<div class="smalls' + (sigs.length > 1 ? " two" : "") + '" id="labs"></div>';
+    let anyAbn = false, anyEff = null;
+    const halves = [];
+    sigs.forEach((sig, i) => {
+      const c = W.clin[sig], ref = (K.clinical_ref || {})[sig] || {}, u = c.spec.unit;
+      const cell = el("div");
+      cell.innerHTML = "<h4>" + esc(nameSig(sig)) + "<span>" + esc(u) + "</span></h4>"
+        + "<div class='plot' id='" + (i ? "p-lab-" + sig : "p-c") + "'></div>";
+      $("#labs", box).appendChild(cell);
+      const vals = c.pts.map(p => p[1]);
+      let lo = Math.min(...vals), hi = Math.max(...vals);
+      const span0 = Math.max(1e-6, hi - lo);
+      // The bound on the abnormal side is always in view, so the band's edge can be read.
+      const edge = ref.direction === "lower_abnormal" ? ref.low : ref.high;
+      if (edge != null){ hi = Math.max(hi, edge); lo = Math.min(lo, edge); }
+      if (ref.high != null && ref.high < hi + span0 && ref.high > lo - span0) hi = Math.max(hi, ref.high);
+      if (ref.low != null && ref.low > lo - span0 && ref.low < hi + span0) lo = Math.min(lo, ref.low);
+      const diag = (ref.diagnostic || {})[P.disease];
+      if (diag != null && diag <= hi + span0 && diag >= lo - span0){ hi = Math.max(hi, diag); lo = Math.min(lo, diag); }
+      const padv = Math.max(1e-6, hi - lo) * .12; lo -= padv; hi += padv;
+      const abn = c.pts.map(p => G.abnormalSide(sig, p[1], K) === true);
+      if (abn.some(Boolean)) anyAbn = true;
+      const vl = [{ x: P.T, label: T("legendToday"), color: TODAY.color, w: TODAY.w }];
+      // The drug acts on this signal only when production would apply an effect here.
+      const acts = G.effectAt(P.drug, sig, P.course_end_day, 1, c.spec.per_kg, K.clinical_atten,
+                              P.dose_mg, c.spec.cohort, K, 1) !== 0;
+      const ms = acts ? G.effectMilestones(sig, K, P.course_end_day) : null;
+      if (ms){
+        anyEff = ms; if (ms.half != null) halves.push(T("labHalfOf", ms.half, nameSig(sig)));
+        vl.push({ x: ms.onset, label: T("labOnset"), color: "var(--c3)", dash: 1, w: 1.2 });
+        if (ms.half != null) vl.push({ x: ms.half, label: T("labHalf"), color: "var(--c3)", dash: 1, w: 1.2 });
+      }
+      stack.push([$("#" + (i ? "p-lab-" + sig : "p-c"), cell), {
+        series: [{ pts: c.pts, color: "var(--c2)", w: 1.4, dots: c.pts.map((p, j) => j),
+                   dotColor: j => abn[j] ? "var(--accent)" : "var(--c2)", r: 3 }],
+        bands: [{ lo: ref.low, hi: ref.high }], vlines: vl, lo: lo, hi: hi,
+        xmax: P.course_end_day, height: 118, alt: nameSig(sig), yfmt: v => fmtNum(v, c.spec.ndigits == null ? 1 : Math.min(2, c.spec.ndigits + 1)) }]);
+    });
+    const ht = K.half_time_days || {};
+    box.insertAdjacentHTML("beforeend", '<div class="legend">'
+      + '<span><i class="band" style="background:var(--band);height:9px"></i>' + esc(T("labBand")) + '</span>'
+      + '<span><i class="dot" style="background:var(--accent)"></i>' + esc(T("labAbn")) + '</span>'
+      + (anyEff ? '<span><i class="dash" style="border-top-color:var(--c3)"></i>' + esc(T("labMilestones")) + '</span>' : "")
+      + "</div>"
+      + '<p class="faint" style="font-size:.82em;margin:8px 0 0">'
+      + (anyEff ? T("labKinetics", esc(anyEff.onset), esc(halves.join(T("listSep")) || "—"),
+                    esc(fx(ht.glucose, 1)), esc(fx(ht.HbA1c, 1))) : T("labNoEffect"))
+      + (anyAbn ? "" : " " + T("labAllInRange"))
+      + (sigs.indexOf("HbA1c") >= 0 ? " " + esc(T("labVariationNote")) : "") + "</p>");
+  }
+  plotStack(stack);
   const adhEnd = W.adh[W.adh.length - 1];
   R.innerHTML = '<div class="panel"><h3>' + esc(T("s2Adherence")) + '</h3>'
     + "<div class='plot' id='p-a'></div>"
@@ -2495,6 +3584,7 @@ function sWorld(s){
   plot($("#p-a", R), { series: [{ pts: W.adh, color: "var(--c3)" }], vlines: vlines,
                        xmax: P.course_end_day, height: 120, lo: 0, hi: 1,
                        alt: T("altAdherence"), yfmt: v => (100 * v).toFixed(0) + "%" });
+  fanPanel(body);
   /* Up to three real courses of the same kind from one release pack, side by side (different
      people, so they are not overlaid). They share one scale: change from each case's own
      start in kg, one y range and one x window. */
@@ -2544,6 +3634,104 @@ function sWorld(s){
   tech(body, ttech("sWorld", m));
 }
 
+/* ── G · parallel futures ──────────────────────────────────────────────
+   The same knobs rendered with every exported random layer (the switchable patients and the
+   extra fan layers). Production computed those tables; the page only looks them up. The
+   work is split into short chunks so dragging a knob stays responsive; a newer knob state
+   supersedes an unfinished one. */
+const FAN = { key: null, rows: [], timer: 0, done: false, cb: null };
+function fanLayers(){
+  const all = Object.assign({}, D.fan_personas || {}, D.personas);
+  return { ids: Object.keys(D.personas).concat(Object.keys(D.fan_personas || {})), all: all };
+}
+function fanKey(rate){
+  return JSON.stringify([P.start, P.nadir, P.T, P.course_end_day, P.outcome, P.reversal_week,
+    P.regain_slope, P.measure_per_week, P.disease, rate]);
+}
+function fanStart(rate, onChunk){
+  const key = fanKey(rate), F = fanLayers();
+  FAN.cb = onChunk;                   // the latest panel receives every later chunk
+  if (FAN.key === key){ onChunk(FAN.done); return; }
+  clearTimeout(FAN.timer);
+  Object.assign(FAN, { key: key, rows: [], done: false });
+  const Pc = Object.assign({}, P);
+  let i = 0;
+  const chunk = () => {
+    if (FAN.key !== key) return;
+    const t0 = performance.now();
+    while (i < F.ids.length && (performance.now() - t0 < 30 || i === 0)){
+      FAN.rows.push(G.future(Pc, D.kernel, F.ids[i], F.all[F.ids[i]], rate)); i++;
+    }
+    FAN.done = i >= F.ids.length;
+    if (FAN.cb) FAN.cb(FAN.done);
+    if (!FAN.done) FAN.timer = setTimeout(chunk, 0);
+  };
+  chunk();
+}
+globalThis.FAN = FAN;                 // read by render_check
+function quantile(sorted, f){
+  const i = (sorted.length - 1) * f, a = Math.floor(i), b = Math.ceil(i);
+  return sorted[a] + (sorted[b] - sorted[a]) * (i - a);
+}
+function fanBands(rows){
+  const byDay = new Map();
+  rows.forEach(r => (r.truth || r.pts).forEach(p => { const a = byDay.get(p[0]); if (a) a.push(p[1]); else byDay.set(p[0], [p[1]]); }));
+  const out = { p10: [], p25: [], p50: [], p75: [], p90: [] }, need = Math.max(3, Math.ceil(rows.length * .4));
+  [...byDay.keys()].sort((a, b) => a - b).forEach(d => {
+    const a = byDay.get(d); if (a.length < need) return;
+    a.sort((x, y) => x - y);
+    out.p10.push([d, quantile(a, .1)]); out.p25.push([d, quantile(a, .25)]); out.p50.push([d, quantile(a, .5)]);
+    out.p75.push([d, quantile(a, .75)]); out.p90.push([d, quantile(a, .9)]);
+  });
+  return out;
+}
+function fanPanel(body){
+  const p = el("div", { class: "panel", id: "fan", style: "margin-top:16px" });
+  body.appendChild(p);
+  const F = fanLayers();
+  p.innerHTML = "<h3>" + esc(T("fanTitle", F.ids.length)) + "</h3>"
+    + '<p class="muted" style="font-size:.88em;margin:0 0 12px">' + T("fanLede") + "</p>"
+    + '<div class="figure sm fanfig" id="fan-fig"></div><p class="note" id="fan-note"></p><div class="plot" id="p-fan"></div>'
+    + '<div class="legend"><span><i style="background:var(--c1)"></i>' + esc(T("fanThis")) + '</span>'
+    + '<span><i style="background:var(--c2)"></i>' + esc(T("fanMedian")) + '</span>'
+    + '<span><i style="background:var(--fan1);height:9px"></i>' + esc(T("fanIqr")) + '</span>'
+    + '<span><i style="background:var(--fan2);height:9px"></i>' + esc(T("fanOuter")) + '</span>'
+    + '<span><i style="background:var(--c4)"></i>' + esc(T("fanEach")) + '</span></div>'
+    + '<div class="fanlists"><div><h4>' + esc(T("fanFixedTitle")) + '</h4><ul>'
+    + ["fanFixed1", "fanFixed2", "fanFixed3"].map(k => "<li>" + T(k) + "</li>").join("") + '</ul></div>'
+    + '<div><h4>' + esc(T("fanVaryTitle")) + '</h4><ul>'
+    + ["fanVary1", "fanVary2", "fanVary3"].map(k => "<li>" + T(k) + "</li>").join("") + "</ul></div></div>";
+  const draw = done => {
+    const host = $("#p-fan", p);
+    if (!host || !p.isConnected) return;
+    const rows = FAN.rows, me = rows.find(r => r.id === P.case_id);
+    const B = fanBands(rows);
+    const declared = P.outcome === "regain" ? "event_occurred" : "event_not_occurred";
+    const agree = rows.filter(r => r.verdict === declared).length;
+    let wide = null;
+    B.p10.forEach((q, i) => { const w = B.p90[i][1] - q[1]; if (!wide || w > wide.w) wide = { d: q[0], lo: q[1], hi: B.p90[i][1], w: w }; });
+    const nFail = rows.filter(r => r.guard_ok === false).length;
+    $("#fan-fig", p).innerHTML = `<div><b>${esc(rows.length)} / ${esc(F.ids.length)}</b><span>${esc(T("fanComputed"))}</span></div>`
+      + `<div><b data-agree="${agree}"${done && agree < rows.length ? ' class="warn"' : ""}>${esc(agree)} / ${esc(rows.length)}</b><span>${esc(T("fanAgree",
+          P.outcome === "regain" ? T("sumWillRegain") : T("sumWontRegain")))}</span></div>`
+      + (wide ? `<div><b data-wide-day="${wide.d}">${esc(fx(wide.lo, 1))}–${esc(fx(wide.hi, 1))}</b><span>${esc(T("fanSpread", wide.d))}</span></div>` : "");
+    $("#fan-note", p).className = "note" + (done && (agree < rows.length || nFail) ? " warn" : "");
+    $("#fan-note", p).innerHTML = esc(T("fanAgreeNote"))
+      + (done && agree < rows.length ? " " + esc(T("fanDisagree", rows.length - agree)) : "")
+      + (done && nFail ? " " + esc(T("fanGuardFail", nFail)) : "");
+    const series = rows.map(r => ({ pts: r.pts.map(q => [q[0], q[1]]), color: "var(--c4)", w: .7 }));
+    series.push({ pts: B.p50, color: "var(--c2)", w: 1.8 });
+    if (me) series.push({ pts: me.pts.map(q => [q[0], q[1]]), color: "var(--c1)", w: 1.6 });
+    const vl = [{ x: P.T, label: T("legendToday"), color: TODAY.color, w: TODAY.w }];
+    if (Wd.meta.revDay != null) vl.push({ x: Wd.meta.revDay, label: T("legendRegainStarts"), color: "var(--accent)", dash: 1, mark: 1 });
+    plot(host, { series: series, xmax: P.course_end_day, height: 240, alt: T("fanAlt"), vlines: vl,
+                 areas: [{ lo: B.p10, hi: B.p90, color: "var(--fan2)" }, { lo: B.p25, hi: B.p75, color: "var(--fan1)" }],
+                 yfmt: v => v.toFixed(1) + " kg" });
+    p.dataset.done = done ? "1" : "0";
+  };
+  fanStart(Wd.rate, draw);
+}
+
 /* ── ③ Dirty data ─────────────────────────────────────────────────── */
 function sDirty(s){
   const R = D.realism || {}, A = R.anchor || {}, M = R.measured || {};
@@ -2556,14 +3744,19 @@ function sDirty(s){
   const g = el("div", { class: "grid split" });
   const L = el("div", { class: "panel" }), R2 = el("div", { class: "panel" });
   g.append(L, R2); body.appendChild(g);
-  L.innerHTML = '<label class="check" style="margin-bottom:6px">'
+  /* C · the course the scale measured versus what got recorded. This generator produces two
+     recording artifacts: missed weigh-ins (production's per-day table) and carried-forward
+     copies (production's rule and draws). The switch shows either view on the same axes. */
+  L.innerHTML = '<div class="seg" id="cr-view" role="group" aria-label="' + esc(T("crViewLabel")) + '" style="margin-bottom:12px">'
+    + '<button type="button" data-v="record" aria-pressed="' + String(CRVIEW === "record") + '">' + esc(T("crRecord")) + '</button>'
+    + '<button type="button" data-v="truth" aria-pressed="' + String(CRVIEW === "truth") + '">' + esc(T("crTruth")) + '</button></div>'
+    + '<label class="check" style="margin-bottom:6px">'
     + '<input id="k-cf" type="checkbox" checked>' + esc(T("s3Flag")) + '</label>'
     + '<div class="knob" style="margin:12px 0"><span>' + esc(T("s3Rate")) + '</span>'
     + `<input id="k-rate" type="range" min="0" max="40" step="0.1" value="${(Wd.rate * 100).toFixed(1)}">`
     + '<b id="v-rate"></b></div>'
     + '<div class="plot" id="p-cf"></div>'
-    + '<div class="legend"><span><i style="background:var(--c1)"></i>' + esc(T("legendRecordedWeight")) + '</span>'
-    + '<span><i class="dot" style="background:var(--accent)"></i>' + esc(T("legendCarried")) + '</span></div>';
+    + '<div class="legend" id="cf-legend"></div><p class="faint" id="cf-count" style="font-size:.82em;margin:8px 0 0"></p>';
   const drawCf = () => {
     P.cf_rate = +$("#k-rate", L).value / 100;
     $("#v-rate", L).textContent = pct(P.cf_rate, 1);
@@ -2571,11 +3764,31 @@ function sDirty(s){
     const on = $("#k-cf", L).checked;
     const win = Wd.dirty.slice(0, 140);
     const dots = on ? win.map((r, i) => r[2] ? i : -1).filter(i => i >= 0) : [];
-    plot($("#p-cf", L), { series: [{ pts: win.map(r => [r[0], r[1]]), color: "var(--c1)",
-                                     w: 1.8, dots: dots }],
-                          xmax: win.length ? win[win.length - 1][0] : 1, height: 260,
-                          alt: T("altCarried"), yfmt: v => v.toFixed(1) + " kg" });
-    $("#cf-n", R2).textContent = String(win.filter(r => r[2]).length);
+    const end = win.length ? win[win.length - 1][0] : 1;
+    const rec = new Set(win.map(r => r[0]));
+    const truth = (Wd.meta.truth || []).filter(q => q[0] <= end);
+    const missed = truth.filter(q => !rec.has(q[0]));
+    const copied = dots.map(i => win[i]);
+    if (CRVIEW === "truth"){
+      plot($("#p-cf", L), { series: [{ pts: truth, color: "var(--c1)", w: 1.8,
+                                       dots: truth.map((q, i) => rec.has(q[0]) ? -1 : i).filter(i => i >= 0),
+                                       dotColor: "var(--c3)", r: 2.6 }],
+                            rings: copied.map(r => [r[0], r[1]]), xmax: end, height: 260,
+                            alt: T("altTruth"), yfmt: v => v.toFixed(1) + " kg" });
+      $("#cf-legend", L).innerHTML = '<span><i style="background:var(--c1)"></i>' + esc(T("crLegTruth")) + '</span>'
+        + '<span><i class="dot" style="background:var(--c3)"></i>' + esc(T("crLegMissedTruth")) + '</span>'
+        + (on ? '<span><i class="dot" style="background:none;border:2px solid var(--accent)"></i>' + esc(T("crLegCopiedTruth")) + '</span>' : "");
+    } else {
+      plot($("#p-cf", L), { series: [{ pts: win.map(r => [r[0], r[1]]), color: "var(--c1)",
+                                       w: 1.8, dots: dots }],
+                            ticks: missed.map(q => q[0]), xmax: end, height: 260,
+                            alt: T("altCarried"), yfmt: v => v.toFixed(1) + " kg" });
+      $("#cf-legend", L).innerHTML = '<span><i style="background:var(--c1)"></i>' + esc(T("legendRecordedWeight")) + '</span>'
+        + (on ? '<span><i class="dot" style="background:var(--accent)"></i>' + esc(T("legendCarried")) + '</span>' : "")
+        + '<span><i style="background:var(--c3);width:2px;height:10px;vertical-align:-1px"></i>' + esc(T("crLegMissed")) + '</span>';
+    }
+    $("#cf-count", L).textContent = T("crCount", win.filter(r => r[2]).length, missed.length, win.length);
+    $("#cf-n", R2).textContent = String(Wd.dirty.filter(r => r[2]).length);   // the whole record
   };
   const um = R.unmeasured;
   R2.innerHTML = "<h3>" + esc(T("s3SourceTitle")) + "</h3>"
@@ -2595,9 +3808,33 @@ function sDirty(s){
     + (!um && M.current_world === false ? '<p class="note">' + T("s3MeasuredWorld", esc(M.world_sha)) + "</p>" : "")
     + '<p class="note">' + T("s3Note", A.synthea != null) + "</p>";
   L.addEventListener("input", drawCf); L.addEventListener("change", drawCf);
+  $("#cr-view", L).addEventListener("click", e => {
+    const b = e.target.closest("button[data-v]"); if (!b) return;
+    CRVIEW = b.dataset.v;
+    $$("#cr-view button", L).forEach(x => x.setAttribute("aria-pressed", String(x.dataset.v === CRVIEW)));
+    drawCf();
+  });
   requestAnimationFrame(drawCf);
+  /* The kinds this page does not generate, on the recorded case as it was recorded. */
+  const C = D.case || {}, T0 = (C.ctx || {}).prediction_time_T;
+  if (C.streams && T0 != null){
+    const rp = el("div", { class: "panel", style: "margin-top:16px", id: "dirty-case" });
+    body.appendChild(rp);
+    rp.innerHTML = "<h3>" + esc(T("crCaseTitle")) + "</h3>"
+      + '<p class="muted" style="font-size:.88em;margin:0 0 12px">' + T("crCaseLede", esc(C.case_id), esc(T0)) + "</p>"
+      + '<div id="tl-dirty-host"></div>'
+      + '<p class="note">' + T("crCaseTraps") + "</p>";
+    const built = caseLanes(C, { until: T0, labs: false, dose: false, adh: false, marks: true });
+    timeline($("#tl-dirty-host", rp), { id: "dirty", lanes: built.lanes, x0: 0, x1: T0, T: null, fog: false,
+      legend: '<span><i class="ring"></i>' + esc(T("crLegRepeat")) + '</span>'
+        + '<span><i class="hollow"></i>' + esc(T("crLegClinic")) + '</span>'
+        + '<span><i class="gap"></i>' + esc(T("crLegWear")) + '</span>'
+        + '<span><i class="ev"></i>' + esc(T("crLegEvents")) + '</span>',
+      onEvent: (list) => { $(".tl-detail", rp).innerHTML = evidenceRows(list); } });
+  }
   tech(body, ttech("sDirty", um ? esc(um) : ""));
 }
+let CRVIEW = "record";
 
 /* ── ④ Today ──────────────────────────────────────────────────────── */
 function sCut(s){
@@ -2607,39 +3844,44 @@ function sCut(s){
     + '<div id="c-body"></div></div>';
   const body = $("#c-body", s);
   if (!born){ body.innerHTML = '<div class="gate">' + esc(T("gateBuildFirstShort")) + '</div>'; return; }
-  /* This slider moves only the cut. The course is the one generated in step 1: in the
-     generator "today" is a knob that also shapes the course (the decline is timed against
-     it), so regenerating here would redraw the visible part under the cursor. */
-  const W = Wd, cut0 = Math.min(P.T, P.course_end_day);
+  /* A · the patient you built on one timeline. The "today" handle and the slider below it
+     move only the cut: the course is the one generated in step 1 (there "today" also shapes
+     the course), so regenerating here would redraw the visible part under the cursor. */
+  const W = Wd, cut0 = Math.min(P.T, P.course_end_day), K = D.kernel;
   const c = el("div", { class: "panel" }); body.appendChild(c);
   c.innerHTML = '<div class="knob" style="max-width:520px"><span>' + esc(T("kToday")) + '</span>'
     + `<input id="k-T2" type="range" min="14" max="${P.course_end_day}" value="${cut0}">`
     + '<b id="v-T2"></b></div>'
     + '<p class="knobnote" style="margin-top:6px">' + T("s4CutNote", esc(P.T)) + '</p>'
-    + '<div id="cut-out" style="margin-top:18px"></div>';
-  const draw = () => {
-    const cut = +$("#k-T2", c).value; $("#v-T2", c).textContent = T("dayN", cut);
+    + '<div id="cut-out" style="margin-top:18px"></div><div id="tl-you-host" style="margin-top:14px"></div>';
+  const figs = cut => {
     const vis = W.w.filter(p => p[0] <= cut), hid = W.w.length - vis.length;
     const cl = Object.keys(W.clin).map(k => ({ k: k,
       vis: W.clin[k].pts.filter(p => p[0] <= cut).length, all: W.clin[k].pts.length }));
+    $("#v-T2", c).textContent = T("dayN", cut);
     $("#cut-out", c).innerHTML = '<div class="figure sm">'
       + `<div><b>${vis.length}</b><span>${esc(T("s4VisibleReadings"))}</span></div>`
       + `<div><b>${hid}</b><span>${esc(T("s4HiddenReadings"))}</span></div>`
       + cl.map(x => `<div><b>${x.vis} / ${x.all}</b><span>${esc(nameSig(x.k))}</span></div>`).join("")
-      + "</div>"
-      + '<div class="plot" id="p-cut" style="margin-top:20px"></div>'
-      + '<div class="legend"><span><i style="background:var(--c1)"></i>' + esc(T("legendVisible")) + '</span>'
-      + '<span><i style="background:var(--c5)"></i>' + esc(T("legendWithheld")) + '</span>'
-      + '<span><i style="background:' + TODAY.color + '"></i>' + esc(T("legendToday")) + '</span></div>';
-    plot($("#p-cut", c), {
-      series: [{ pts: W.w, color: "var(--c5)", w: 1.6 },
-               { pts: vis, color: "var(--c1)" }],
-      vlines: [{ x: cut, label: T("legendToday"), color: TODAY.color, w: TODAY.w }].concat(
-        W.meta.revDay != null && W.meta.revDay > cut
-          ? [{ x: W.meta.revDay, label: T("legendAnswerHere"), color: "var(--accent)", dash: 1, mark: 1 }] : []),
-      xmax: P.course_end_day, height: 200, alt: T("altCutoff"), yfmt: v => v.toFixed(1) + " kg" });
+      + (W.meta.revDay != null && W.meta.revDay > cut ? `<div><b>${esc(T("dayN", W.meta.revDay))}</b><span>${esc(T("legendAnswerHere"))}</span></div>` : "")
+      + "</div>";
   };
-  c.addEventListener("input", draw); requestAnimationFrame(draw);
+  const lanes = [{ id: "weight", label: T("s2Weight"), kind: "line", pts: W.w, h: 96, color: "var(--c1)",
+                   domId: "p-cut", split: true, tol: 4, fmt: v => fmtNum(v, 1) + " kg" }]
+    .concat(Object.keys(W.clin).map(k => labLane(k, W.clin[k].pts, K, { h: 44 })))
+    .concat([{ id: "adh", label: T("laneAdh"), kind: "line", pts: W.adh, lo: 0, hi: 1, h: 38, tol: 400,
+               color: "var(--c3)", fmt: v => pct(v, 0) }]);
+  const tl = timeline($("#tl-you-host", c), { id: "you", lanes: lanes, x0: 0, x1: P.course_end_day, T: cut0, resetT: true,
+    tMin: 14, tMax: P.course_end_day, tLabel: t => T("tlToday", t),
+    marks: W.meta.revDay != null ? [{ x: W.meta.revDay }] : [],
+    legend: '<span><i style="background:var(--c1);height:3px"></i>' + esc(T("legendVisible")) + '</span>'
+      + (W.meta.revDay != null ? '<span><i class="mark"></i>' + esc(T("legendAnswerHere")) + '</span>' : "")
+      + '<span><i style="background:var(--c5);height:3px"></i>' + esc(T("legendWithheld")) + '</span>'
+      + '<span><i class="fog"></i>' + esc(T("tlLegFog")) + '</span>'
+      + (Object.keys(W.clin).length ? '<span><i class="band"></i>' + esc(T("labBand")) + '</span>' : ""),
+    onT: t => { $("#k-T2", c).value = String(t); figs(t); } });
+  $("#k-T2", c).addEventListener("input", e => { tl.setT(+e.target.value, true); figs(tl.getT()); });
+  figs(cut0);
   tech(body, ttech("sCut"));
 }
 
@@ -2693,10 +3935,8 @@ function sAsk(s){
   /* The ledger has symptom rows and device-reading rows (a number only). The same reading
      can be logged several times under different ids; identical rows are merged and marked ×N. */
   const say = e => e.text || e.ctx
-    ? (e.text || "") + (e.ctx ? "(" + e.ctx + ")" : "")
-    : (e.value != null
-        ? T("deviceReadingKg", e.kind ? N("dev2", e.kind) : T("deviceReadingDefault"), e.value)
-        : "");
+    ? (tx(e.text) || "") + (e.ctx ? "(" + tx(e.ctx) + ")" : "")
+    : (e.value != null ? deviceReading(e) : "");
   const merged = [];
   ev.forEach(e => {
     const t = say(e), last = merged.length ? merged[merged.length - 1] : null;
@@ -2755,34 +3995,137 @@ function sAnswers(s){
   s.innerHTML = '<div class="wrap"><p class="kicker">' + esc(T("s6Kicker")) + '</p>'
     + `<h2 class="big">${esc(T("s6H2", names.length))}</h2>`
     + '<p class="lede">' + T("s6Lede") + '</p>' + crossBanner() + snapshotBanner()
-    + '<p class="faint" style="font-size:.82em;margin:10px 0 0">' + T("s6DataNote") + '</p>'
     + '<div id="an-body" style="margin-top:20px"></div></div>';
   const body = $("#an-body", s);
   if (!names.length){ body.innerHTML = '<p class="muted">' + esc(T("s6Empty")) + '</p>'; return; }
-  const c = el("div", { class: "panel" }); body.appendChild(c);
-  c.innerHTML = '<div class="knob" style="max-width:520px"><span>' + esc(T("s6WhoseAnswer")) + '</span>'
-    + '<select id="k-m">' + names.map(n => `<option value="${esc(n)}">${esc(mlabel(n))}</option>`).join("") + "</select></div>"
-    + '<p class="faint" style="font-size:.82em;margin:6px 0 0">' + esc(T("s6DefaultNote")) + "</p>"
-    + '<div id="ameta" class="muted" style="font-size:.86em;margin:12px 0 10px"></div>'
-    + '<div id="averdict" style="margin:0 0 12px"></div>'
-    + '<div class="scroll tall"><pre id="araw"></pre></div>';
-  const draw = () => {
-    const m = A[$("#k-m", c).value] || {};
-    $("#ameta", c).innerHTML = esc(T("s6Chars", nfmt(m.n_chars)))
-      + (m.truncated ? " · " + esc(T("s6Truncated", nfmt((m.raw || "").length))) : " · " + esc(T("s6FullText")))
-      + (m.latency_s != null ? " · " + esc(T("s6Latency", fx(m.latency_s, 1))) : "");
+  const C = D.case || {}, slices = D.answers.slices || [];
+  if (!MX.model || !A[MX.model]) MX.model = names[0];
+  if (MX.t == null || slices.indexOf(MX.t) < 0) MX.t = slices[slices.length - 1];
+  /* A on the recorded case: the handle moves between the days the models answered on. */
+  const top = el("div", { class: "panel" }); body.appendChild(top);
+  top.innerHTML = "<h3>" + esc(T("s6CaseTitle", C.case_id)) + "</h3>"
+    + '<p class="muted" style="font-size:.86em;margin:0 0 10px">' + T("s6CaseLede", slices.length) + "</p>"
+    + '<div id="tl-case-host"></div>';
+  const built = caseLanes(C, { marks: false });
+  const tl = timeline($("#tl-case-host", top), { id: "case", lanes: built.lanes, x0: 0, x1: built.span[1], T: MX.t,
+    snaps: slices, tLabel: t => T("tlAnswered", t),
+    legend: '<span><i class="hollow"></i>' + esc(T("crLegClinic")) + '</span>'
+      + '<span><i class="band"></i>' + esc(T("labBand")) + '</span>'
+      + '<span><i class="gap"></i>' + esc(T("crLegWear")) + '</span>'
+      + '<span><i class="ev"></i>' + esc(T("crLegEvents")) + '</span>'
+      + '<span><i class="ring"></i>' + esc(T("mxLegCited")) + '</span>'
+      + '<span><i class="fog"></i>' + esc(T("tlLegFog")) + '</span>',
+    onT: t => { MX.t = t; drawMx(); },
+    onEvent: (list) => { $(".tl-detail", top).innerHTML = evidenceRows(list, tl.state.hl); } });
+  /* D · one row per model, one column per field its answer actually carries. */
+  const mx = el("div", { class: "panel", style: "margin-top:16px" }); body.appendChild(mx);
+  mx.innerHTML = "<h3>" + esc(T("mxTitle")) + "</h3>"
+    + '<p class="muted" style="font-size:.86em;margin:0 0 10px">' + T("mxLede") + "</p>"
+    + '<div class="seg" id="mx-slice" role="group" aria-label="' + esc(T("mxSliceLabel")) + '">'
+    + slices.map(t => `<button type="button" data-t="${t}">${esc(T("dayN", t))}</button>`).join("") + "</div>"
+    + '<div class="tablewrap" style="margin-top:12px"><table class="amx" id="mx"></table></div>'
+    + '<div class="mxsum" id="mx-sum"></div>'
+    + '<div id="mx-sel" style="margin-top:14px"></div>';
+  $("#mx-slice", mx).addEventListener("click", e => {
+    const b = e.target.closest("button[data-t]"); if (!b) return;
+    tl.setT(+b.dataset.t, true); MX.t = +b.dataset.t; drawMx();
+  });
+  $("#mx", mx).addEventListener("click", e => {
+    const tr = e.target.closest("tr[data-solver]"); if (!tr) return;
+    MX.model = tr.dataset.solver; drawMx();
+  });
+  $("#mx", mx).addEventListener("keydown", e => {
+    const tr = e.target.closest("tr[data-solver]");
+    if (tr && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); MX.model = tr.dataset.solver; drawMx(); }
+  });
+  const ids = new Map((C.evidence || []).map(e => [e.id, e]));
+  const gates = ((D.preliminary || {}).tracks || {}).answers ? D.preliminary.tracks.answers.case_gates || {} : {};
+  const AC = D.answers.action_classes || {};
+  const riskStep = { low: 1, elevated: 3, high: 5 };
+  const citeState = (id, t) => !ids.has(id) ? "bad" : (ids.get(id).t > t ? "late" : "on");
+  function drawMx(){
+    const t = MX.t;
+    $$("#mx-slice button", mx).forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.t === t)));
+    const rows = names.map(n => ({ n: n, a: (A[n].by_slice || {})[String(t)] || null }));
+    const head = ["mxModel", "mxRisk", "mxTopDx", "mxAction", "mxReview", "mxSuff", "mxJoin", "mxTests", "mxCited", "mxGates"];
+    let html = "<thead><tr>" + head.map(k => "<th" + (k === "mxTests" || k === "mxCited" ? ' class="r"' : "") + ">"
+      + esc(T(k)) + (k === "mxGates" ? ' <span class="faint">(' + esc(T("mxPrelimTag")) + ")</span>" : "") + "</th>").join("") + "</tr></thead><tbody>";
+    let nBad = 0, nLate = 0;
+    const tally = {};
+    rows.forEach(({ n, a }) => {
+      const on = n === MX.model;
+      if (!a){ html += `<tr data-solver="${esc(n)}" tabindex="0"${on ? ' class="on"' : ""}><td>${swatchShort(n)}</td>`
+        + `<td colspan="${head.length - 1}" class="muted">${esc(T("mxNoAnswer"))}</td></tr>`; return; }
+      const cited = a.cited || [], st = cited.map(id => citeState(id, t));
+      const bad = st.filter(x => x === "bad").length, late = st.filter(x => x === "late").length;
+      nBad += bad; nLate += late;
+      const rk = a.risk || "indeterminate"; tally[rk] = (tally[rk] || 0) + 1;
+      const kr = riskStep[rk];
+      const risk = `<span class="${kr >= 3 ? "mx-strong" : kr ? "" : "muted"}">${esc(N("risk", rk))}</span>`;
+      const act = a.action ? `<span class="mono" title="${esc(N("action", a.action) || AC[a.action] || a.action)}">${esc(a.action)}</span>` : "—";
+      const g = gates[n] || { by_day: {}, declared: [] };
+      const hard = (g.by_day || {})[String(t)] || [];
+      const gtxt = (hard.map(x => '<span class="tag warn" data-gate="' + esc(x) + '">' + esc(N("gate", x)) + "</span>").join(" ")
+        + (g.declared.length ? (hard.length ? " " : "") + '<span class="tag" title="' + esc(g.declared.map(x => N("gate", x)).join(" · ")) + '">'
+          + esc(T("mxDeclared", g.declared.length)) + "</span>" : ""))
+        || '<span class="faint">' + esc(T("mxNoGate")) + "</span>";
+      html += `<tr data-solver="${esc(n)}" tabindex="0"${on ? ' class="on"' : ""}>`
+        + `<td>${swatchShort(n)}</td><td>${risk}${a.risk_stated ? "" : ' <span class="faint">' + esc(T("mxNotStated")) + "</span>"}</td>`
+        + `<td class="dx" title="${esc(a.top_dx || "")}"><span class="clamp">${esc(tx(a.top_dx) || "—")}</span></td>`
+        + `<td>${act}</td>`
+        + `<td>${a.review === true ? esc(T("mxYes")) : a.review === false ? '<span class="muted">' + esc(T("mxNo")) + "</span>" : '<span class="faint">' + esc(T("mxNotStated")) + "</span>"}</td>`
+        + `<td>${a.sufficiency ? esc(N("suff", a.sufficiency)) : '<span class="faint">' + esc(T("mxNotStated")) + "</span>"}</td>`
+        + `<td>${a.join ? esc(N("join", a.join)) : '<span class="faint">' + esc(T("mxNotStated")) + "</span>"}</td>`
+        + `<td class="num">${esc(a.n_tests)}</td>`
+        + `<td class="num">${esc(cited.length)}${bad ? ' <span class="chip bad">' + esc(T("mxUnknownN", bad)) + "</span>" : ""}`
+        + `${late ? ' <span class="chip late">' + esc(T("mxLateN", late)) + "</span>" : ""}</td>`
+        + `<td>${gtxt}</td></tr>`;
+    });
+    $("#mx", mx).innerHTML = html + "</tbody>";
+    $("#mx-sum", mx).innerHTML = "<span>" + esc(T("mxRiskTally")) + " "
+      + Object.keys(tally).sort().map(k => "<b>" + esc(tally[k]) + "</b> " + esc(N("risk", k))).join(" · ") + "</span>"
+      + "<span>" + (nBad || nLate ? T("mxCiteIssues", nBad, nLate) : T("mxCiteClean", esc(T("dayN", t)))) + "</span>";
+    // The selected model: its cited evidence on the timeline, as chips, and its full answer.
+    const a = (A[MX.model].by_slice || {})[String(t)] || { cited: [] };
+    tl.highlight(a.cited.filter(id => ids.has(id)));
+    const sel = $("#mx-sel", mx);
+    sel.innerHTML = "<h3>" + T("mxSelTitle", esc(mlabel(MX.model)), esc(T("dayN", t))) + "</h3>"
+      + '<div class="chips" id="mx-cited">' + (a.cited.length ? a.cited.map(id => {
+          const k = citeState(id, t);
+          return `<span class="chip ${k}" data-ev="${esc(id)}" title="${esc(k === "bad" ? T("mxChipBad") : k === "late" ? T("mxChipLate") : T("mxChipOk"))}">${esc(id)}</span>`;
+        }).join("") : '<span class="faint">' + esc(T("mxNoCites")) + "</span>") + "</div>"
+      + '<p class="faint" style="font-size:.8em;margin:8px 0 0">' + esc(T("mxChipKey")) + "</p>";
+    const m = A[MX.model];
+    // The full text of the answer on the selected day (the first answered day carries the
+    // latency; every day carries its length and whether the export cut it).
+    const rt = t === m.slice_t ? m : ((m.raw_by_slice || {})[String(t)] || null);
+    const raw = fold(sel, T("s6RawFold"), (rt ? T("s6Chars", nfmt(rt.n_chars)) + " · " : "") + T("dayN", t), false);
     const v = m.verdict || {}, keys = ((D.board || {}).dims || []).filter(d => v[d] != null);
-    $("#averdict", c).innerHTML = "<h3>" + esc(T("s6VerdictTitle")) + "</h3>"
+    raw.innerHTML = '<div id="ameta" class="muted" style="font-size:.86em;margin:0 0 10px">'
+      + (rt ? esc(T("s6RawFor", T("dayN", t))) + " · "
+          + (rt.truncated ? esc(T("s6Truncated", nfmt((rt.raw || "").length))) : esc(T("s6FullText")))
+          + (rt === m && m.latency_s != null ? " · " + esc(T("s6Latency", fx(m.latency_s, 1))) : "")
+        : esc(T("mxNoAnswer"))) + "</div>"
+      + '<p class="faint" style="font-size:.82em;margin:0 0 10px">' + T("s6DataNote") + '</p>'
+      + '<div class="scroll tall"><pre id="araw"></pre></div>'
+      + '<div id="averdict" style="margin:14px 0 0"><h3>' + esc(T("s6VerdictTitle")) + "</h3>"
       + (keys.length
         ? '<div class="tablewrap"><table><tbody>'
           + keys.map(d => `<tr><td>${esc(boardDimName(d))}</td><td class="num">${esc(fx(v[d]))}</td></tr>`).join("")
           + "</tbody></table></div>"
-        : '<p class="muted" style="font-size:.86em;margin:0">' + esc(T("s6VerdictNone")) + "</p>");
-    $("#araw", c).textContent = m.raw || "";
-  };
-  c.addEventListener("change", draw); requestAnimationFrame(draw);
+        : '<p class="muted" style="font-size:.86em;margin:0">' + esc(T("s6VerdictNone")) + "</p>") + "</div>";
+    $("#araw", raw).textContent = rt ? tx(rt.raw) || "" : "";
+  }
+  drawMx();
   tech(body, ttech("sAnswers"));
 }
+const MX = { model: null, t: null };
+globalThis.MX = MX;
+const swatchName = n => '<span class="swatch" style="background:' + mcolor(n) + '"></span>'
+  + (mvendor(n) && SL[n] ? '<span class="vd">' + esc(mvendor(n)) + " ·&nbsp;</span>" + esc(mname(n)) : esc(mlabel(n)));
+//: Narrow form for the answer matrix: the model name, with vendor and full id in the title.
+const swatchShort = n => '<span title="' + esc(mlabel(n)) + '"><span class="swatch" style="background:' + mcolor(n)
+  + '"></span>' + esc(mname(n)) + "</span>";
 
 /* ── ⑦ trace ──────────────────────────────────────────────────────── */
 function sTrace(s){
@@ -2797,37 +4140,114 @@ function sTrace(s){
   body.insertAdjacentHTML("beforeend", '<p class="note">'
     + T("s7Scope", esc(mlabel(Tr.solver)), esc(Tr.case_id), esc(Tr.n_call), esc(nRefuse)) + "</p>"
     + snapshotTag("trace"));
+  /* E · replay. Each request is a call and its result; a series result becomes a lane on the
+     timeline, a one-off test result becomes a card. Play, step or drag the slider: the lane or
+     card of the current request lights up and the budget bar spends what the call cost. */
+  const calls = [];
+  Tr.events.forEach((e, i) => {
+    if (e.type !== "tool/call") return;
+    const r = Tr.events.slice(i + 1).find(q => q.type === "tool/result") || {};
+    calls.push({ step: e.step, ask: e.ask || {}, res: r });
+  });
+  const isSeries = c => Array.isArray(c.res.obs) && c.res.obs.length > 1;
+  const laneOf = c => "rq-" + calls.indexOf(c);
+  const TT = Tr.T || Math.max(...calls.map(c => (c.res.obs || []).reduce((a, p) => Math.max(a, p[0]), 0)), 1);
+  const unitFmt = { weight: v => fmtNum(v, 1) + " kg", weight_ref: v => fmtNum(v, 1) + " kg", steps: v => fmtNum(v, 0),
+    resting_hr: v => fmtNum(v, 0) + " bpm", sleep_hours: v => fmtNum(v, 1) + " h", hrv: v => fmtNum(v, 0) + " ms",
+    medication_adherence: v => pct(v, 0), dose_timeline: v => fmtNum(v, 2) + " mg", diet_carb_pct: v => fmtNum(v, 0) + "%" };
+  const autoFmt = v => fmtNum(v, Number.isInteger(v) ? 0 : Math.abs(v) >= 100 ? 0 : 2);
+  const lanes = calls.filter(isSeries).map(c => {
+    const t = c.ask.target, pts = c.res.obs.map(q => Array.isArray(q) ? q : [q.ts, q.value]);
+    const step = t === "dose_timeline" || t === "medication_adherence";
+    return { id: laneOf(c), label: streamName(t), short: shortName(t, streamName(t)), kind: step ? "step" : pts.length > 40 ? "line" : "dots", pts: pts,
+             w: 1.1, h: 34, tol: pts.length > 40 ? 3 : 400, lo: t === "medication_adherence" ? 0 : undefined,
+             hi: t === "medication_adherence" ? 1 : undefined,
+             fmt: unitFmt[t] || ((K => K && K.clinical_spec[t] ? v => fmtNum(v, K.clinical_spec[t].ndigits || 1) : autoFmt)(D.kernel)),
+             off: true };
+  });
   const c = el("div", { class: "panel" }); body.appendChild(c);
-  c.innerHTML = `<div class="figure sm"><div><b>${esc(Tr.n_call)}</b><span>${esc(T("s7Requested"))}</span></div>`
-    + `<div><b>${esc(Tr.n_result)}</b><span>${esc(T("s7GotResponse"))}</span></div>`
-    + `<div><b>${esc(nRefuse)}</b>`
-    + `<span>${esc(T("s7Withheld"))}</span></div></div>`
-    + '<div id="tv-host"></div>';
-  // The count in the fold's title is the number of rows it shows; bookkeeping events
-  // (case/step start and end, request headers) are not rows.
+  c.innerHTML = '<div class="rp-ctl">'
+    + '<button type="button" class="pill sm" id="rp-play">' + esc(T("rpPlay")) + '</button>'
+    + '<button type="button" class="pill sm quiet" id="rp-back" aria-label="' + esc(T("rpBack")) + '">‹</button>'
+    + '<button type="button" class="pill sm quiet" id="rp-step" aria-label="' + esc(T("rpStep")) + '">›</button>'
+    + `<input type="range" id="rp-scrub" min="0" max="${calls.length}" step="1" value="${calls.length}" aria-label="${esc(T("rpScrub"))}">`
+    + '<span class="mono" id="rp-count"></span></div>'
+    + '<div class="budget-lab"><span>' + esc(T("rpBudget")) + '</span><span class="mono" id="rp-spent"></span></div>'
+    + '<div class="budget" id="rp-budget"><span class="spent"></span><span class="step"></span></div>'
+    + '<p class="muted" id="rp-now" style="font-size:.86em;margin:12px 0 0;min-height:1.6em"></p>'
+    + '<div id="tl-trace-host" style="margin-top:8px"></div>'
+    + '<h3 style="margin-top:18px">' + esc(T("rpTests")) + '</h3><div class="rp-tests" id="rp-tests"></div>';
+  const tl = timeline($("#tl-trace-host", c), { id: "trace", lanes: lanes, x0: 0, x1: TT, T: null, fog: false,
+    hint: T("rpHint") });
+  const tests = calls.filter(q => !isSeries(q));
+  $("#rp-tests", c).innerHTML = tests.map(q => {
+    const o = (q.res.obs_head || [])[0] || {};
+    const val = o.value == null ? "—" : String(tx(o.value)) + (o.unit ? " " + o.unit : "");
+    const flag = o.flag && o.flag !== "NORMAL" ? ' <span class="tag warn">' + esc(o.flag) + "</span>" : "";
+    return `<div class="tcard" data-i="${calls.indexOf(q)}"><b>${esc(tx(q.ask.target) || "—")}</b>`
+      + `<span class="mono">${esc(val)}</span>${flag}`
+      + `<br><span class="faint">${esc(N("trace", q.ask.kind))} · ${esc(T("rpCost", fx(q.res.cost, 0)))}</span></div>`;
+  }).join("") || '<p class="faint">' + esc(T("rpNoTests")) + "</p>";
+  const budget = Tr.budget, spentAt = i => i ? (calls[i - 1].res.spent_after || 0) : 0;
+  function show(i){
+    RP.i = i;
+    $("#rp-scrub", c).value = String(i);
+    $("#rp-count", c).textContent = T("rpCount", i, calls.length);
+    calls.forEach((q, j) => { if (isSeries(q)) tl.setOff(laneOf(q), j >= i); });
+    tl.redraw();
+    const cur = i ? calls[i - 1] : null;
+    tl.pulse(cur && isSeries(cur) ? laneOf(cur) : null);
+    $$(".tcard", c).forEach(n => { const j = +n.dataset.i;
+      n.classList.toggle("later", j >= i); n.classList.toggle("now", cur != null && j === i - 1); });
+    const sp = spentAt(i);
+    $("#rp-spent", c).textContent = budget ? T("rpSpent", fx(sp, 0), fx(budget, 0)) : T("rpNoBudget");
+    const bar = $("#rp-budget", c);
+    $(".spent", bar).style.width = budget ? (100 * sp / budget).toFixed(2) + "%" : "0%";
+    const cost = cur ? (cur.res.cost || 0) : 0;
+    $(".step", bar).style.left = budget ? (100 * (sp - cost) / budget).toFixed(2) + "%" : "0%";
+    $(".step", bar).style.width = budget ? (100 * cost / budget).toFixed(2) + "%" : "0%";
+    $("#rp-now", c).innerHTML = cur ? T("rpNow", esc(cur.step), esc(N("trace", cur.ask.kind)), esc(tx(cur.ask.target)),
+        cur.res.revealed ? esc(T("s7Gave", nfmt(cur.res.n_obs))) : "<b>" + esc(T("s7Withdrawn")) + "</b>",
+        esc(fx(cur.res.cost, 0))) : esc(T("rpStart"));
+    $$("#tv .step-ev[data-i]", c).forEach(n => { const j = +n.dataset.i;
+      n.classList.toggle("now", j === i - 1); n.classList.toggle("later", j >= i); });
+  }
+  const stop = () => { clearInterval(RP.timer); RP.timer = 0; $("#rp-play", c).textContent = T("rpPlay"); };
+  $("#rp-play", c).addEventListener("click", () => {
+    if (RP.timer){ stop(); return; }
+    if (RP.i >= calls.length) show(0);
+    $("#rp-play", c).textContent = T("rpPause");
+    RP.timer = setInterval(() => { if (RP.i >= calls.length){ stop(); return; } show(RP.i + 1); }, 750);
+  });
+  $("#rp-step", c).addEventListener("click", () => { stop(); show(Math.min(calls.length, RP.i + 1)); });
+  $("#rp-back", c).addEventListener("click", () => { stop(); show(Math.max(0, RP.i - 1)); });
+  $("#rp-scrub", c).addEventListener("input", e => { stop(); show(+e.target.value); });
+  // The text log stays, folded.
   const SHOWN = ["tool/call", "tool/result", "assistant/message"];
-  const tv = fold(c, T("s7Replay"), T("s7Steps", Tr.events.filter(e => SHOWN.indexOf(e.type) >= 0).length), true);
-  tv.innerHTML = '<div class="scroll" style="background:var(--card)">'
-    + '<div style="padding:14px" id="tv"></div></div>';
+  const tv = fold(c, T("s7Replay"), T("s7Steps", Tr.events.filter(e => SHOWN.indexOf(e.type) >= 0).length), false);
+  tv.innerHTML = '<div class="scroll rp-log" style="background:var(--card)"><div style="padding:6px 0" id="tv"></div></div>';
+  let ci = -1;
   $("#tv", c).innerHTML = Tr.events.map(e => {
     if (e.type === "tool/call"){
-      const a = e.ask || {};
-      return '<div class="step-ev ask"><i></i><div><b>' + esc(T("s7WantToSee")) + '</b> '
-        + esc((N("trace", a.kind) || "") + " · " + (a.target || "")) + "</div></div>";
+      ci += 1; const a = e.ask || {};
+      return '<div class="step-ev ask" data-i="' + ci + '"><i></i><div><b>' + esc(T("s7WantToSee")) + '</b> '
+        + esc((N("trace", a.kind) || "") + " · " + (tx(a.target) || "")) + "</div></div>";
     }
     if (e.type === "tool/result")
-      return `<div class="step-ev${e.revealed ? "" : " no"}"><i></i><div>`
+      return `<div class="step-ev${e.revealed ? "" : " no"}" data-i="${ci}"><i></i><div>`
         + (e.revealed ? esc(T("s7Gave", nfmt(e.n_obs))) : "<b>" + esc(T("s7Withdrawn")) + "</b>") + "</div></div>";
     if (e.type === "assistant/message")
       return '<div class="step-ev"><i></i><div class="muted">' + esc(T("s7Wrote", nfmt(e.n_chars))) + "</div></div>";
     return "";
   }).join("");
+  show(RP.i == null || RP.i > calls.length ? calls.length : RP.i);
   // Only claim a refusal was shown when this log actually contains one.
-  body.appendChild(el("p", { class: "note" }, nRefuse
-    ? T("s7NoteRefused", nRefuse) : T("s7NoteAllGranted")));
-  body.appendChild(el("p", { class: "note warn" }, T("s7AuditCaveat")));
+  body.appendChild(el("p", { class: "note" }, (nRefuse
+    ? T("s7NoteRefused", nRefuse) : T("s7NoteAllGranted")) + " " + T("s7AuditCaveat")));
   tech(body, ttech("sTrace", Tr));
 }
+const RP = { i: null, timer: 0 };
+globalThis.RP = RP;
 
 /* ── ⑧ every dimension, explained ─────────────────────────────────── */
 const ROLE = {
@@ -2983,8 +4403,10 @@ const JUDGE_GROUPS = [
   {id:"evidence",title:"catalogEvidence",keys:["excl_grounded_rate","trace_evidence_revealed","trace_pseudo_excluded","trace_exclusion_grounded","trace_commitments_falsifiable"]},
   {id:"rubric",title:"catalogRubric",keys:["rubric_binary"]},
 ];
+//: Metrics the shown semantic view replaces with LLM judgments.
+const SEMANTIC_KEYS = new Set(Object.values(D.semantic_judge || {}).flatMap(x => x.replaced || []));
 function judgeMethod(m){
-  if (m.key === "rubric_binary") return "llm";
+  if (m.key === "rubric_binary" || SEMANTIC_KEYS.has(m.key)) return "llm";
   if (m.role === "anchor") return "reference";
   if (!JUDGE_GROUPS.some(g => g.keys.includes(m.key))) throw new Error("Criterion needs a reviewed execution-method label: " + m.key);
   return "code";
@@ -2994,7 +4416,7 @@ function judgeMethodName(m){
 }
 function judgeMethodDescription(m){
   const method = judgeMethod(m);
-  if (method === "llm") return T("catalogLlmDetail");
+  if (method === "llm") return T(m.key === "rubric_binary" ? "catalogLlmDetail" : "catalogSemanticDetail");
   if (method === "reference") return T("catalogReferenceDetail");
   return T(m.metric_class === "judgment" ? "catalogProxyDetail" : "catalogCodeDetail");
 }
@@ -3038,8 +4460,8 @@ function sDims(s){
   s.innerHTML = '<div class="wrap"><p class="kicker">' + esc(T("s8Kicker")) + '</p>'
     + '<h2 class="big">' + esc(T("s8H2")) + '</h2>'
     + '<p class="lede">' + esc(T("catalogLead")) + '</p>' + snapshotTag()
+    + '<div class="status" id="judge-method-footnote"></div>'
     + '<div id="judge-methods" class="judge-method-grid"></div>'
-    + '<p class="note" id="judge-method-footnote"></p>'
     + '<div id="llm-judge-note"></div>'
     + '<div class="judge-filter"><label for="judge-search">' + esc(T("catalogSearch"))
     + '<input id="judge-search" type="search" placeholder="' + esc(T("catalogSearchHint")) + '"></label>'
@@ -3056,13 +4478,16 @@ function sDims(s){
     + '<div id="dim-groups" style="margin-top:22px"></div></div>';
   $("#judge-methods", s).innerHTML = [["catalogExactTitle","catalogExactBody"],["catalogProxyTitle","catalogProxyBody"],["catalogLlmTitle","catalogLlmBody"]]
     .map(([heading,body]) => '<article><h3>' + esc(T(heading)) + '</h3><p>' + esc(T(body)) + '</p></article>').join("");
-  $("#judge-method-footnote", s).innerHTML = '<b>' + esc(T(D.semantic_judge ? "catalogSnapshotSemantic" : "catalogSnapshot")) + '</b><br>'
-    + semanticCoverageLines()
-    + 'LLM rubric: ' + esc(judgeRunSummary("rubric")) + '<br>LLM plugin: ' + esc(judgeRunSummary("llm_plugin"))
-    + '<br>' + esc(T("catalogMethodFootnote")) + '<br>' + esc(T("catalogGateNote"));
+  // The one status statement of this section: how the current totals are computed and
+  // what the optional judges have recorded.
+  $("#judge-method-footnote", s).innerHTML = '<strong>' + esc(T("statusLabel")) + '</strong>'
+    + '<p><b>' + esc(T(D.semantic_judge ? "catalogSnapshotSemantic" : "catalogSnapshot")) + '</b></p>'
+    + (D.semantic_judge ? '<p>' + semanticCoverageLines() + '</p>' : "")
+    + '<p>' + esc(T("statusRubric", judgeRunSummary("rubric"))) + '<br>'
+    + esc(T("statusPlugin", judgeRunSummary("llm_plugin"))) + '</p>'
+    + '<p>' + esc(T("catalogMethodFootnote")) + " " + esc(T("catalogGateNote")) + '</p>';
   const plugin = fold($("#llm-judge-note", s), T("catalogPluginTitle"), null, false);
-  plugin.innerHTML = '<p>' + esc(T("catalogPluginBody")) + '</p><p class="note">' + esc(T("catalogContrast")) + '</p>'
-    + '<p class="note">' + esc(T("catalogRunLabel")) + ': ' + esc(judgeRunSummary("llm_plugin")) + '</p>';
+  plugin.innerHTML = '<p>' + esc(T("catalogPluginBody")) + '</p><p class="note">' + esc(T("catalogContrast")) + '</p>';
   coverageTable($(".wrap", s));
   const host = $("#dim-groups", s), boxes = {};
   const assigned = JUDGE_GROUPS.flatMap(g => g.keys);
@@ -3095,7 +4520,7 @@ function sDims(s){
       + `<span class="tag ${esc(r[1])}">${esc(r[0])}</span>`
       + `<span class="tag mono">${esc(m.reads)}</span></div>`
       + '<p class="judge-intro">' + esc(dimAsk(m)) + '</p>'
-      + (judgeMethod(m) === "llm" ? '<p class="note">' + esc(judgeRunSummary("rubric")) + '</p>' : '')
+      + (m.key === "rubric_binary" ? '<p class="note">' + esc(judgeRunSummary("rubric")) + '</p>' : '')
       + '<details class="criterion-details"><summary>' + esc(T("catalogDetails")) + '</summary><dl class="kv">'
       + '<dt data-field="ask">' + esc(T("dtAsk")) + '</dt><dd>' + esc(dimAsk(m)) + "</dd>"
       + '<dt data-field="judge">' + esc(T("dtJudge")) + '</dt><dd>' + esc(judgeMethodDescription(m))
@@ -3114,7 +4539,7 @@ function sDims(s){
       + (m.paired_with ? '<dt data-field="pair">' + esc(T("dtPair")) + '</dt><dd>' + esc(T("pairWith", dimName(m.paired_with)))
           + (m.pair_aggregate === "harmonic" ? esc(T("pairHarmonic")) : "") + "</dd>" : "")
       // Three states: values to plot · cells exist but this item isn't a row mean · no data.
-      + '<dt data-field="stats">' + esc(T("dtStats")) + '</dt><dd>' + (judgeMethod(m) === "llm" ? esc(judgeRunSummary("rubric"))
+      + '<dt data-field="stats">' + esc(T("dtStats")) + '</dt><dd>' + (m.key === "rubric_binary" ? esc(judgeRunSummary("rubric"))
           : !st.n_cells && (D.tool_dim_stats || {})[m.reads]?.n_cells > 0 ? T("statsToolElsewhere")
           : role === "withheld" ? T("statsPreliminary") : !shown.has(m.key)
           ? T("statsWithheld") : st.n_cells
@@ -3216,6 +4641,51 @@ function observedOrder(board, dimension){
     r.rank = rank; r.tied = measured.some((q,j) => i !== j && q.value === r.value); });
   return measured.concat(rows.filter(r => typeof r.value !== "number" || !Number.isFinite(r.value)));
 }
+//: The overall reading by tier: one group per tier, no forced places, each model's 95% interval.
+function tierRows(host, B, rule, total){
+  const rows = B.models.map(r => Object.assign({ solver: r.solver }, (rule.models || {})[r.solver] || {}))
+    .filter(r => r.tier != null);
+  const tiers = [...new Set(rows.map(r => r.tier))].sort((a, b) => a - b);
+  const pctv = v => (100 * Math.max(0, Math.min(1, v))).toFixed(2) + "%";
+  host.innerHTML = tiers.map(k => {
+    const g = rows.filter(r => r.tier === k).sort((a, b) => b.score - a.score || a.solver.localeCompare(b.solver));
+    return '<div class="tier-group" data-tier="' + k + '"><p class="tier-head">' + esc(T("tierHead", k, g.length)) + "</p>"
+      + g.map(r => { const ci = Array.isArray(r.ci95) ? r.ci95 : null;
+        return '<div class="score-line" data-solver="' + esc(r.solver) + '" data-tier="' + k + '" data-value="' + esc(r.score) + '">'
+          + '<span class="muted">·</span><span class="score-name" title="' + esc(mid(r.solver)) + '">' + esc(mlabel(r.solver))
+          + "<small>" + esc(ci ? T("tierCi", fx(ci[0], 3), fx(ci[1], 3)) : T("scoreMissing")) + "</small></span>"
+          + '<span class="score-value">' + esc(fx(r.score, 4)) + "</span>"
+          + '<span class="score-track ci">' + (ci ? '<span class="ci-band" style="left:' + pctv(ci[0]) + ";width:"
+            + pctv(ci[1] - ci[0]) + ";background:" + mcolor(r.solver) + '"></span>' : "")
+          + '<span class="ci-pt" style="left:' + pctv(r.score) + '"></span></span></div>'; }).join("") + "</div>";
+  }).join("") + '<p class="faint" style="font-size:.8em;margin:0">' + esc(T("tierNote", rule.n_common_complete, rule.alpha)) + "</p>";
+}
+//: Production's phase-5 readout for a track: the noise floor, and the pairs each dimension separates.
+function phase5Panels(body, P5){
+  const noise = el("div", { class: "panel", id: "noise-panel", style: "margin-top:16px" }); body.appendChild(noise);
+  noise.innerHTML = "<h3>" + esc(T("noiseTitle")) + "</h3>"
+    + '<p class="muted" style="font-size:.86em;margin:0 0 10px">' + esc(T("noiseLede", P5.k, P5.n_cases, P5.n_models)) + "</p>"
+    + '<div class="tablewrap"><table><thead><tr><th>' + esc(T("noiseDim")) + '</th><th class="r">' + esc(T("noiseCells"))
+    + '</th><th class="r">' + esc(T("noisePooled")) + '</th><th class="r">' + esc(T("noiseModel")) + "</th><th>"
+    + esc(T("noiseWorst")) + "</th></tr></thead><tbody>"
+    + Object.entries(P5.dims).map(([d, v]) => '<tr data-dim="' + esc(d) + '"><td>' + esc(boardDimName(d)) + '</td><td class="num">'
+      + esc(v.common == null ? "—" : v.common + "/" + v.applicable) + '</td><td class="num">' + esc(fx(v.pooled_max_abs_delta, 3))
+      + '</td><td class="num">' + esc(fx(v.median_model_max_abs_delta, 3)) + "</td><td>" + esc(v.worst_model ? mlabel(v.worst_model) : "—")
+      + "</td></tr>").join("") + "</tbody></table></div>"
+    + '<p class="note" style="margin:12px 0 0">' + esc(P5.composite_allowed ? T("noiseCompositeOk", P5.composite_cases)
+        : T("noiseComposite", P5.composite_cases, P5.composite_min)) + "</p>";
+  const pp = el("div", { class: "panel", id: "pairs-panel", style: "margin-top:16px" }); body.appendChild(pp);
+  pp.innerHTML = "<h3>" + esc(T("pairsTitle")) + "</h3>"
+    + '<p class="muted" style="font-size:.86em;margin:0">' + esc(T("pairsLede", P5.n_cases, P5.k)) + "</p>";
+  Object.entries(P5.dim_pairs).forEach(([d, v]) => {
+    const f = fold(pp, boardDimName(d), T("pairsCount", v.separable.length, v.n_pairs), false);
+    f.parentElement.dataset.dim = d; f.parentElement.dataset.separable = String(v.separable.length);
+    f.innerHTML = v.separable.length
+      ? '<ul class="pairs-list">' + v.separable.map(x => "<li>" + esc(T("pairsItem", mlabel(x.better), mlabel(x.worse), fx(x.diff, 3),
+          fx(x.ci95[0], 3), fx(x.ci95[1], 3), x.n_cases)) + "</li>").join("") + "</ul>"
+      : '<p class="faint" style="margin:6px 0 0">' + esc(T("pairsNone")) + "</p>";
+  });
+}
 function scoreRows(host, rows, total, ranked){
   host.innerHTML = rows.map(r => {
     const measured = typeof r.value === "number" && Number.isFinite(r.value);
@@ -3230,8 +4700,122 @@ function scoreRows(host, rows, total, ranked){
         + (r.value * 100) + '%;background:' + mcolor(r.solver) + '"></span>' : '') + '</span></div>';
   }).join("");
 }
+/* ── F · how a preliminary total is built, where the hard gates bit, and the per-case spread.
+   All three read the preliminary track only: production's own component readings, its
+   multiplier and its per-case readings, labelled as not final. */
+//: One colour per gate name, the same on both tracks: slots follow the names present in either.
+function gateColor(){
+  const TR = (D.preliminary || {}).tracks || {}, seen = new Set();
+  Object.values(TR).forEach(tr => Object.values(tr.gate_breakdown || {}).forEach(g => Object.keys(g.by_type || {}).forEach(t => seen.add(t))));
+  const m = {};
+  [...seen].filter(t => t !== "multiple").sort().forEach((t, i) => { m[t] = "var(--g" + (1 + i % 6) + ")"; });
+  m.multiple = "var(--g7)";
+  return m;
+}
+function waterfall(host, B, solver, nice){
+  const r = B.models.find(m => m.solver === solver);
+  if (!r){ host.innerHTML = '<p class="muted">' + esc(T("s9Empty")) + "</p>"; return; }
+  if (typeof r.score !== "number"){
+    host.innerHTML = '<p class="muted" data-wf="unscored">' + esc(T("wfUnscored")) + "</p>"; return;
+  }
+  const dims = B.dims, n = dims.length, vals = dims.map(d => r.dims[d]);
+  const mean = vals.reduce((a, b) => a + b, 0) / n, mult = r.gate_multiplier, total = r.score;
+  const gb = (B.gate_breakdown || {})[solver] || {};
+  const pos = v => (100 * Math.max(0, Math.min(1, v))).toFixed(2) + "%";
+  const bar = (a, b, color) => `<span class="wbar"><span style="left:${pos(Math.min(a, b))};width:${pos(Math.abs(b - a))};background:${color}"></span></span>`;
+  let cum = 0, html = "";
+  dims.forEach((d, i) => {
+    const part = vals[i] / n;
+    html += `<div class="row" data-dim="${esc(d)}"><span class="lab">${esc(nice(d))}<small>${esc(T("wfPart", fx(vals[i], 3), n))}</small></span>`
+      + bar(cum, cum + part, "var(--c3)") + `<span class="v">+${esc(fx(part, 3))}</span></div>`;
+    cum += part;
+  });
+  html += `<div class="row sum" data-wf="mean"><span class="lab">${esc(T("wfMean", n))}</span>${bar(0, mean, "var(--c2)")}`
+    + `<span class="v">${esc(fx(mean, 3))}</span></div>`
+    + `<div class="row" data-wf="gate"><span class="lab">${esc(T("wfGate", fx(mult, 4)))}<small>${esc(T("wfGateWhy",
+        nfmt(gb.n_gated_units), nfmt(gb.n_units)))}</small></span>${bar(mean * mult, mean, "var(--accent)")}`
+    + `<span class="v">−${esc(fx(mean - mean * mult, 3))}</span></div>`
+    + `<div class="row sum" data-wf="total" data-total="${esc(total)}" data-product="${esc(mean * mult)}"><span class="lab">${esc(T("wfTotal"))}</span>`
+    + `${bar(0, total, "var(--foreground)")}<span class="v">${esc(fx(total, 3))}</span></div>`;
+  host.innerHTML = '<div class="wf">' + html + "</div>"
+    + (Math.abs(mean * mult - total) > 0.0011
+      ? '<p class="note warn">' + T("wfMismatch", esc(fx(mean * mult, 4)), esc(fx(total, 3))) + "</p>"
+      : '<p class="faint" style="font-size:.8em;margin:10px 0 0">' + esc(T("wfRounding")) + "</p>");
+}
+function gateStack(host, B){
+  const GB = B.gate_breakdown || {}, names = B.models.map(m => m.solver);
+  const types = [...new Set([].concat(...names.map(n => Object.keys((GB[n] || {}).by_type || {}))))].sort();
+  const col = gateColor();
+  const rate = n => (GB[n] && GB[n].n_units) ? GB[n].n_gated_units / GB[n].n_units : 0;
+  const soft = n => (GB[n] && GB[n].n_units) ? (GB[n].n_soft_units || 0) / GB[n].n_units : 0;
+  const top = Math.max(0.02, ...names.map(rate), ...names.map(soft));
+  host.innerHTML = '<div class="gstack">' + names.map(n => {
+    const g = GB[n] || { by_type: {}, n_units: 0 };
+    const segs = Object.keys(g.by_type || {}).sort().map(t => `<span data-type="${esc(t)}" data-n="${esc(g.by_type[t])}" style="width:${(100 * g.by_type[t] / Math.max(1, g.n_units) / top).toFixed(2)}%;`
+      + `background:${col[t]}" title="${esc(N("gate", t) + ": " + g.by_type[t])}"></span>`).join("");
+    return `<div class="row" data-solver="${esc(n)}"><span class="lab">${swatchName(n)}</span>`
+      + `<span class="gcell"><span class="gbar">${segs}</span>`
+      + (g.n_soft_units ? `<span class="soft" style="width:${(100 * soft(n) / top).toFixed(2)}%" title="${esc(T("gsSoftTitle", g.n_soft_units))}"></span>` : "")
+      + `</span><span class="v" title="${esc(T("gsUnits", g.n_gated_units, g.n_units))}">${esc(pct(rate(n), 1))}</span></div>`;
+  }).join("") + "</div>"
+    + '<div class="legend" style="margin-top:12px">' + types.map(t => `<span><i style="background:${col[t]};height:9px"></i>${esc(N("gate", t))}</span>`).join("")
+    + '<span><i style="background:none;border-top:1px dashed var(--c3);height:0"></i>' + esc(T("gsSoft")) + "</span></div>";
+}
+function perCase(host, B, dim, nice){
+  const PC = B.per_case;
+  if (!PC || dim === "__overall__" || !(B.dims || []).includes(dim)){
+    host.innerHTML = '<p class="muted" style="margin:0">' + esc(T("pcPick")) + "</p>"; return;
+  }
+  const names = B.models.map(m => m.solver);
+  const has = names.some(n => (((PC.values || {})[n] || {})[dim] || []).some(v => v != null && isFinite(v)));
+  if (!has){
+    host.innerHTML = '<p class="muted" data-pc="undefined" style="margin:0">' + T("pcUndefined", esc(nice(dim))) + "</p>"; return;
+  }
+  host.innerHTML = '<p class="muted" style="font-size:.86em;margin:0">' + T("pcLede", esc(nice(dim))) + "</p>"
+    + '<div class="cs">' + names.map(n => `<div class="row" data-solver="${esc(n)}"><span class="lab">${swatchName(n)}</span>`
+      + '<span class="strip2"></span></div>').join("")
+    + '<span></span><span class="scale"><span>0</span><span>0.5</span><span>1</span></span></div>'
+    + '<div class="legend"><span><i class="dot" style="background:var(--c3)"></i>' + esc(T("pcDot")) + "</span>"
+    + '<span><i style="background:var(--foreground);width:3px;height:12px;vertical-align:-2px"></i>' + esc(T("pcTick")) + "</span></div>"
+    + '<p class="faint" style="font-size:.8em;margin:8px 0 0">' + esc(T("pcMean")) + "</p>";
+  $$(".strip2", host).forEach((cell, k) => {
+    const n = names[k], vals = ((PC.values || {})[n] || {})[dim] || [];
+    const w = cell.clientWidth || 480, H = 26, reading = B.models[k].dims[dim];
+    let svg = "", cnt = 0;
+    vals.forEach((v, i) => {
+      if (v == null || !isFinite(v)) return;
+      cnt += 1;
+      const y = 4 + ((i * 0.6180339887) % 1) * (H - 8);
+      svg += `<circle cx="${(Math.max(0, Math.min(1, v)) * (w - 6) + 3).toFixed(1)}" cy="${y.toFixed(1)}" r="2.3" fill="${mcolor(n)}" fill-opacity=".55"/>`;
+    });
+    if (typeof reading === "number")
+      svg += `<rect x="${(reading * (w - 6) + 3 - 1.5).toFixed(1)}" y="1" width="3" height="${H - 2}" rx="1" fill="var(--foreground)"/>`;
+    cell.innerHTML = `<svg viewBox="0 0 ${w} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(mlabel(n) + " · " + T("pcN", cnt))}">${svg}</svg>`;
+    cell.setAttribute("title", mlabel(n) + " · " + T("pcN", cnt) + " · " + fx(reading, 3));
+    cell.dataset.n = String(cnt);
+  });
+}
+let WFMODEL = null, PCDIM = null;
+
+//: What the board rule decided for a track, in the reader's language. The rule's parameters
+//  and counts come from the export; with no rule, only a written readout is repeated.
+function ruleSentence(rule, RO, track){
+  if (!rule) return track === "answers" && RO.top_inseparable ? esc(T("s9TopFive", RO.top_inseparable.n)) : "";
+  const tier1 = Object.values(rule.tiers || {}).filter(t => t === 1).length;
+  if (rule.ranked && rule.rule === "R0")
+    return T("s9RuleR0", esc(rule.n_common_complete), esc(rule.min_common_cases), esc(rule.alpha), esc(tier1));
+  if (rule.ranked)
+    return T("s9RuleR1", esc(rule.n_common_complete), esc(rule.min_common_cases), esc(rule.r1_max_width));
+  return T("s9RuleNone", esc(rule.n_common_complete), esc(rule.min_common_cases), esc(rule.r1_max_width),
+           esc((rule.wide || []).map(mlabel).join(" · ") || T("s9RuleEvery")));
+}
 function sBoard(s){
   const B = preliminaryView(scoreTrack);
+  // A track shows a total only when production's board rule ranks it on its common complete
+  // cases (R0); otherwise per-dimension readings only. Without a semantic view no rule applies.
+  const SJ = D.semantic_judge || {}, RO = D.readout || {}, rule = (SJ[scoreTrack] || {}).board_rule || null;
+  const noTotal = !!rule && !(rule.ranked && rule.rule === "R0");
+  const judgeName = (SJ[scoreTrack] || SJ.answers || {}).judge_model || null;
   const eligible = scoreTrack === "trace" ? D.tool_board : D.board;
   const pending = new Set(B.pending_metrics.map(m => m.metric));
   const nice = d => boardDimName(d) + (d.split("+").some(k => pending.has(k)) ? " *" : "");
@@ -3239,11 +4823,23 @@ function sBoard(s){
     + '<h2 class="big">' + esc(T("s9H2")) + '</h2>'
     + '<p class="lede">' + T("s9Lede") + '</p>' + snapshotTag(scoreTrack) + '<div id="b-body"></div></div>';
   const body = $("#b-body", s);
+  // The one status statement of this section: what these numbers are, and are not.
+  const CR = D.board.clinical_review || {}, CA = CR.answers || {}, CT = CR.trace || {};
   const notice = el("div", {class:"preliminary-banner", id:"preliminary-notice"});
-  notice.innerHTML = '<strong>' + esc(T("preliminaryLabel")) + '</strong>' + esc(T("preliminarySummary"));
+  notice.innerHTML = '<strong>' + esc(T("preliminaryLabel")) + '</strong>' + esc(T("preliminarySummary"))
+    + '<p style="margin:10px 0 0">' + T("s9NoRanking") + " " + esc(T("scoreOrderNote")) + '</p>'
+    + '<p style="margin:8px 0 0">' + T("s9Withheld", esc(B.pending_metrics.map(x => x.metric).join(" · "))) + '</p>'
+    + '<p style="margin:8px 0 0">' + T("s9Clinical", esc(CR.conditions_pending), esc(CA.n_pending), esc(CA.n_cases),
+        esc(CT.n_pending), esc(CT.n_cases)) + '</p>'
+    + (D.semantic_judge?.[scoreTrack] ? '<p style="margin:8px 0 0">' + semanticCoverageLines(scoreTrack) + '</p>' : "")
+    + '<p style="margin:8px 0 0" id="rule-note">' + ruleSentence(rule, RO, scoreTrack)
+      + (scoreTrack === "trace" ? " " + esc(T("s9ToolReview")) : "")
+      + (judgeName ? " " + esc(T("s9OneJudge", judgeName)) : "") + '</p>'
+    + (MOVERFLOW.length ? '<p style="margin:8px 0 0">' + T("s9OverflowNote", esc(MSLOTS), esc(MOVERFLOW.map(mlabel).join(" · "))) + '</p>' : "");
   body.appendChild(notice);
   if (!B.models || !B.models.length){ body.innerHTML = '<p class="muted">' + esc(T("s9Empty")) + '</p>'; return; }
   if (scoreDimension !== "__overall__" && !B.dims.includes(scoreDimension)) scoreDimension = "__overall__";
+  if (noTotal && scoreDimension === "__overall__") scoreDimension = B.dims[0];
   const context = B.context;
   const CP = B.completion || {};
   const X = B.exclusion, cats = X ? X.categories : [];
@@ -3255,7 +4851,7 @@ function sBoard(s){
     + '<select id="score-track"><option value="answers">' + esc(T("scoreTrackAnswers"))
     + '</option><option value="trace">' + esc(T("scoreTrackTools")) + '</option></select></label>'
     + '<label for="score-dimension">' + esc(T("scoreDimLabel")) + '<select id="score-dimension">'
-    + '<option value="__overall__">' + esc(T("preliminaryTotal")) + '</option>'
+    + (noTotal ? "" : '<option value="__overall__">' + esc(T("preliminaryTotal")) + '</option>')
     + B.dims.map(d => '<option value="' + esc(d) + '">' + esc(nice(d)) + '</option>').join("")
     + '</select></label>'
     + '';
@@ -3280,8 +4876,7 @@ function sBoard(s){
     scoreDimension=e.target.value; sBoard(s); $("#score-dimension", s).focus({preventScroll:true}); });
   const order = el("div", { class: "panel", id: "dimension-order" });
   order.innerHTML = '<h3>' + esc(T("scoreOrderTitle")) + '</h3><p class="muted">'
-    + esc(T("scoreContext", context.n_cases, context.date)) + '</p><p class="note">'
-    + esc(T("scoreOrderNote")) + '</p>'
+    + esc(T("scoreContext", context.n_cases, context.date)) + '</p>'
     + '<p class="note" id="zero-note">' + esc(T("scoreZeroNote", Object.keys(CP).sort().filter(m => CP[m].unanswered)
         .map(m => mlabel(m) + " " + CP[m].unanswered + " / " + CP[m].of).join(" · ") || T("scoreZeroNone"))) + '</p>'
     + (off.size ? '<p class="note warn" id="exclusion-hint">' + esc(T("scoreExcludeHint")) + '</p>'
@@ -3307,21 +4902,35 @@ function sBoard(s){
           + esc(T("scoreExcludeDiverge", fx(gap, 3), diffs.map(([m,,b]) => mlabel(m) + " " + fx(b, 3)).join(" · "))) + '</p>');
       }
     }
-  } else scoreRows($(".score-list", order), preliminaryOrder(B, scoreDimension), context.n_cases, true);
-  const caveat = el("div", { class: "panel" }); body.appendChild(caveat);
-  caveat.innerHTML = '<p class="note warn" style="margin:0">' + T("s9NoRanking") + '</p>'
-    + '<p class="muted" style="margin:12px 0 0">'
-    + T("s9Withheld", esc(B.pending_metrics.filter(x => B.dims.some(d => d.split("+").includes(x.metric)))
-        .map(x => x.metric).join(" · "))) + '</p>'
-    + '<p class="muted">' + esc(T("preliminaryFormula")) + '</p>';
-  if (D.semantic_judge?.[scoreTrack])
-    caveat.innerHTML += '<p class="muted" style="margin:12px 0 0">' + semanticCoverageLines(scoreTrack) + '</p>';
-  const CR = D.board.clinical_review || {}, CA = CR.answers || {}, CT = CR.trace || {};
-  caveat.innerHTML += '<p class="muted" style="margin:12px 0 0">'
-    + T("s9Clinical", esc(CR.conditions_pending), esc(CA.n_pending), esc(CA.n_cases),
-        esc(CT.n_pending), esc(CT.n_cases)) + '</p>';
-  if (MOVERFLOW.length)
-    caveat.innerHTML += '<p class="note">' + T("s9OverflowNote", esc(MSLOTS), esc(MOVERFLOW.map(mlabel).join(" · "))) + "</p>";
+  } else if (scoreDimension === "__overall__" && rule && rule.ranked && rule.rule === "R0" && rule.models)
+    tierRows($(".score-list", order), B, rule, context.n_cases);
+  else scoreRows($(".score-list", order), preliminaryOrder(B, scoreDimension), context.n_cases, true);
+  if (B.phase5) phase5Panels(body, B.phase5);
+  // F · the total taken apart, the hard gates by type, and each case's reading.
+  const fr = el("div", { class: noTotal ? "grid" : "grid half", style: "margin-top:16px" }); body.appendChild(fr);
+  const wf = el("div", { class: "panel", id: "wf-panel" }), gs = el("div", { class: "panel", id: "gate-panel" });
+  if (noTotal) fr.append(gs); else fr.append(wf, gs);
+  if (!WFMODEL || !B.models.some(m => m.solver === WFMODEL)) WFMODEL = B.models[0].solver;
+  wf.innerHTML = "<h3>" + esc(T("wfTitle")) + "</h3>"
+    + '<p class="muted" style="font-size:.86em;margin:0 0 10px">' + esc(T("preliminaryFormula")) + "</p>"
+    + '<div class="knob"><span>' + esc(T("wfModel")) + '</span><select id="wf-model">'
+    + B.models.map(m => `<option value="${esc(m.solver)}">${esc(mlabel(m.solver))}</option>`).join("") + "</select></div>"
+    + '<div id="wf"></div>';
+  $("#wf-model", wf).value = WFMODEL;
+  waterfall($("#wf", wf), B, WFMODEL, nice);
+  $("#wf-model", wf).addEventListener("change", e => { WFMODEL = e.target.value; waterfall($("#wf", wf), B, WFMODEL, nice); });
+  gs.innerHTML = "<h3>" + esc(T("gsTitle")) + "</h3>"
+    + '<p class="muted" style="font-size:.86em;margin:0">' + esc(T("gsLede")) + "</p><div id=\"gstack\"></div>";
+  gateStack($("#gstack", gs), B);
+  const pc = el("div", { class: "panel", id: "percase-panel", style: "margin-top:16px" }); body.appendChild(pc);
+  if (!PCDIM || !B.dims.includes(PCDIM)) PCDIM = scoreDimension !== "__overall__" ? scoreDimension : B.dims[0];
+  pc.innerHTML = "<h3>" + esc(T("pcTitle")) + "</h3>"
+    + '<div class="knob" style="max-width:560px;margin:0 0 10px"><span>' + esc(T("pcDim")) + '</span><select id="pc-dim">'
+    + B.dims.map(d => '<option value="' + esc(d) + '">' + esc(nice(d)) + '</option>').join("") + "</select></div>"
+    + '<div id="percase"></div><p class="faint" style="font-size:.8em;margin:8px 0 0">' + esc(T("pcNoTotal")) + "</p>";
+  $("#pc-dim", pc).value = PCDIM;
+  perCase($("#percase", pc), B, PCDIM, nice);
+  $("#pc-dim", pc).addEventListener("change", e => { PCDIM = e.target.value; perCase($("#percase", pc), B, PCDIM, nice); });
   // Row and column names come from `DIM` (the same names as the step 8 cards); the
   // registry prose goes through `plain(firstPara(m.why))` only as a fallback in `dimAsk`.
   // Heatmap as the main view; the full number table is folded below it.
@@ -3330,7 +4939,7 @@ function sBoard(s){
   c2.innerHTML = "<h3>" + esc(T("s9BreakdownTitle")) + "</h3>"
     + '<p class="muted" style="font-size:.87em;margin:0 0 14px">' + T("s9BreakdownDesc")
     + "</p><div id=\"heat\"></div>";
-  heat($("#heat", c2), B.dims || [], view.models.map(r => Object.assign({}, r, { solver: mlabel(r.solver) })), nice);
+  heat($("#heat", c2), B.dims || [], view.models.map(r => Object.assign({}, r, { solver: mlabel(r.solver), key: r.solver })), nice);
   const usage = eligible.nonmonotone?.tool_budget_used;
   if (usage){
     const budget = el("div", { class: "panel", id: "budget-usage", style: "margin-top:16px" });
@@ -3342,11 +4951,11 @@ function sBoard(s){
   }
   const tb = fold(c2, T("s9TableFold", B.models.length, (B.dims || []).length), null, false);
   tb.innerHTML = `<div class='tablewrap'><table><thead><tr><th>${esc(T("s9TableModel"))}</th>`
-    + `<th class="num">${esc(T("preliminaryTotal"))}</th>`
+    + (noTotal ? "" : `<th class="num">${esc(T("preliminaryTotal"))}</th>`)
     + (B.dims || []).map(d => `<th class="num" title="${esc(d)}">${esc(nice(d))}</th>`).join("")
     + `</tr></thead><tbody>`
     + view.models.map(r => `<tr><td class="mono" title="${esc(mid(r.solver))}">${esc(mlabel(r.solver))}</td>`
-      + `<td class="num">${esc(fx(r.score, 4))}</td>`
+      + (noTotal ? "" : `<td class="num">${esc(fx(r.score, 4))}</td>`)
       + (B.dims || []).map(d => `<td class="num">${esc(fx(r.dims[d]))}</td>`).join("")
       + "</tr>").join("")
     + "</tbody></table></div>";
@@ -3396,7 +5005,7 @@ function sExtend(s){
     const sm = fold(b, T("s10RestoredFold"), T("s10Chars", R.sample.text.length), false);
     sm.innerHTML = "<div class='scroll'><pre id='rt-sample'></pre></div>"
       + '<p class="faint" style="font-size:.82em;margin-top:8px">' + T("emrRestoreNote") + '</p>';
-    $("#rt-sample", sm).textContent = R.sample.text;
+    $("#rt-sample", sm).textContent = tx(R.sample.text);
   }
   tech(s.querySelector(".wrap"), ttech("sExtend", R));
 }
@@ -3557,7 +5166,9 @@ function renderProvenance(){
 }
 renderProvenance();
 
-// redraw on resize: label collision culling uses measured pixel widths
-addEventListener("resize", () => { clearTimeout(globalThis._rz);
-  globalThis._rz = setTimeout(redrawAll, 180); });
+// Redraw when the width changes: label culling uses measured pixel widths. A height-only
+// resize (a phone's address bar on scroll) keeps the page, and the reader's place in it.
+let LAST_W = innerWidth;
+addEventListener("resize", () => { if (innerWidth === LAST_W) return; LAST_W = innerWidth;
+  clearTimeout(globalThis._rz); globalThis._rz = setTimeout(redrawAll, 180); });
 </script>

@@ -6,7 +6,9 @@
  *
  *     node web/demo/gen_check.mjs        # 0 = matches point for point · 1 = drifted · 2 = missing input
  *
- * It checks the browser generator against the golden vectors in `data.json`.
+ * It checks the browser generator against the golden vectors in `data.json`: weight and
+ * lab series, the daily course behind the weight readings, the carried-forward copies and
+ * the abnormal-value flags.
  * `check_page_data.py` checks that those golden vectors are what production code computes now.
  * `.github/workflows/pages.yml` runs both before publishing.
  *
@@ -27,4 +29,5 @@ if (!r.ok) {
   process.exit(1);
 }
 console.log(`ok: ${r.nCases} parameter set(s) · ${r.nPoints} point(s) matched point for point`
-  + ` (worst weight deviation ${r.worstWeight} · lab ${r.worstClinical}, tolerance ${r.tol})`);
+  + ` (worst weight deviation ${r.worstWeight} · lab ${r.worstClinical}, tolerance ${r.tol};`
+  + ` daily course ${r.worstBase}) · ${r.nCopies} carried-forward copies reproduced`);

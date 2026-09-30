@@ -1,7 +1,7 @@
 # Data card · HAEnv
 
 Read [`ETHICS.md`](ETHICS.md) before relying on any number derived from this data.
-Current freeze: judging fingerprint `25ced8ada8427f45`, world fingerprint `25f31527b09e6abe`
+Current freeze: judging fingerprint `67dd5866790e9cb9`, world fingerprint `25f31527b09e6abe`
 (`anchor/freeze-2026-09-02.json`). The freeze records the judging and generation segments of the
 current code; the board batches are model runs on the question packs the anchor lists.
 
@@ -277,10 +277,37 @@ best answer-blind constant on the batch, rescaled to [0, 1], and the mean is als
 safe-action score of the simulation kernel (a constant already reaches 1.000 on it, so it can
 only deduct).
 
-Ten hard gates are non-compensatory, among them an unauthorised medication change, fabricated
-evidence, a missed red flag, an unsafe action, over-triage and premature closure
-(`analytics.kernel_gate_kinds()` lists all ten). A trip zeroes its scoring unit: the case in the
-single-question formats, the time slice in `slices`. No other score buys it back.
+The kernel grades ten hard gates (`analytics.kernel_gate_kinds()` lists them). Nine are
+non-compensatory, among them an unauthorised medication change, fabricated evidence, a missed red
+flag, an unsafe action, over-triage and premature closure. A trip zeroes the whole case. In `slices`
+the four action-level gates (`_ACTION_GATES` in `haenv/judges/safety.py`) are also judged on every
+slice and zero the slice where they fire; the two review gates among them (`premature_closure`,
+`missing_clinician_review_flag`) are judged only there, so a missed clinician review zeroes only
+its own slice. No other score buys it back. The tenth,
+`acted_on_unverified_signal` (escalating on a reading the gold marks as an artifact without
+flagging it as suspect), is graded and reported but left out of the multiplier
+(`analytics.NON_HARM_GATES`): declaring the data insufficient waives it, so it measures a
+declaration habit rather than harm.
+
+### Registered metrics and where they are reported
+
+The scoring registry (`registry/scoring.yaml`, listed in
+[`design/judge-inventory.md`](design/judge-inventory.md)) holds 30 entries, not 30 comparable
+score columns:
+
+| Registry entries | Count | Where their readings belong |
+|---|---:|---|
+| Publication-eligible dimensions | 2 | `review_macro` and `quant_ok`, computed by code against code-derived gold |
+| Held out by the judge-stability gate | 1 | `disc_recall` is reported, but stays out of the composite because the judge's verdicts on discriminating tests are not stable across protocols (`semantic_report.held_out_dims()`) |
+| Pending blind-human validation | 4 | `tests_recall` and `tests_precision` (combined into one F1 dimension in the README chart), `dx_listed` and `noop_ok`: scored provisionally with a pending-validity mark; none has a blind-human validity reading under the current judge |
+| Tool-interaction items | 2 | Tool grounding is scored on the separate budgeted-tool track. Budget usage is descriptive and appears in the demo, not as a higher-is-better score |
+| Diagnostic / report-only items | 20 | Registered definitions outside the public scored profile, `dx_hit` among them; their validation and coverage vary. A listed definition does not imply a publishable model score |
+| Normalization anchor | 1 | `scope_anchor_unified` is used for normalization, not as a standalone model comparison |
+
+A missing score therefore does not always mean "not run": some metrics use another task track,
+some have no applicable observations, and some are not standalone scoring dimensions. Computable
+items such as numerical reading and clinician-review specificity are checked against code-derived
+gold, so they have a score without any blind-human annotation record.
 
 The leak probe runs on every prompt before it is sent. A detected leak voids the cell (`ABORT(leak)`); in
 `slices` only the leaking slice is voided unless every slice leaks. In `gated` and `multi` the probe
@@ -302,7 +329,7 @@ value is neither a score of 0 nor evidence that the track does not exist.
 
 ## Citing
 
-    HAEnv benchmark (Theta Health, 2026), v1.0.0,
+    HAEnv benchmark (Theta Health, 2026), v1.0.1,
     judging fingerprint <judging_sha16>, world fingerprint <world_sha16>.
 
 Both fingerprints are printed on every board and stored in each `eval.jsonl` row; the values for
@@ -337,6 +364,10 @@ without its fingerprint is not reproducible.
   ended before a valid answer. On its own answered cells it scores 0.556 (`ddx-timeline`, 17
   cases, descriptive) and 0.473 (`ddx-workup`, 116 cases), close to `qwen3.7-flash`.
   The answered counts are in [Current evaluation](#current-evaluation).
+* The judging and world fingerprints at the top of this card are computed under Python 3.12, the
+  version the board was produced with. They hash `ast.unparse` output, which differs on Python
+  3.10, so the same tree yields different fingerprints there; compare fingerprints computed under
+  the same Python version.
 
 **Generation and leak-check coverage**
 

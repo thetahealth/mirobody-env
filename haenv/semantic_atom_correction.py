@@ -257,10 +257,12 @@ def validate_atom_correction(out: Path):
         raise ValueError("Correction sources differ from base")
     loose = ("version", "criteria", "diagnosis_rendering", "criteria_by_reference_kind", "reason_slot",
              "prompt_layout", "judge", "scoring_gate", "proposal_source")
-    if ({k: v for k, v in m["policy"].items() if k not in loose}
-            != {k: v for k, v in original["policy"].items() if k not in loose}
-            or {k: v for k, v in m["policy"]["judge"].items() if k != "consensus"}
-            != {k: v for k, v in original["policy"]["judge"].items() if k != "consensus"}):
+    from .semantic_rubric import judging_policy
+    mine, theirs = judging_policy(m["policy"]), judging_policy(original["policy"])
+    if ({k: v for k, v in mine.items() if k not in loose}
+            != {k: v for k, v in theirs.items() if k not in loose}
+            or {k: v for k, v in mine["judge"].items() if k != "consensus"}
+            != {k: v for k, v in theirs["judge"].items() if k != "consensus"}):
         raise ValueError("Correction changed the judge model or its settings")
     keys = None if c["selection"] == "affected" else c.get("atom_keys", c["keys"])
     expected = atom_records(rows, m["policy"], m["run_id"], keys, c["kind"])

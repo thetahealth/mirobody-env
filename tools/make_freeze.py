@@ -98,7 +98,7 @@ JUDGING = (
     "haenv/semantic_judge.py", "haenv/semantic_inputs.py", "haenv/semantic_rubric.py",
     "haenv/semantic_pipeline.py",
     "haenv/semantic_report.py",
-    "haenv/judge_compaction.py", "haenv/judge_scheduler.py", "haenv/semantic_parallel.py",
+    "haenv/judge_compaction.py",
     "haenv/judge_evidence.py",
     "haenv/semantic_visibility.py", "haenv/semantic_corrections.py",
     "haenv/semantic_lean.py", "registry/semantic_judging_v4.yaml",
@@ -152,6 +152,10 @@ INFRA = (
     "haenv/relay_accounting.py", "haenv/native_accounting.py",
     "haenv/paid_slots.py", "haenv/semantic_budget.py", "haenv/semantic_transport.py",
     "haenv/run_scheduler.py", "haenv/transport.py",
+    # judge lane scheduling and per-cell result files: how cells are run and written, not
+    # what a vote or a score is (consensus and rubric summaries stay in `semantic_judge` /
+    # `semantic_rubric`)
+    "haenv/judge_scheduler.py", "haenv/semantic_parallel.py",
 )
 
 #: INFRA modules must not import these (AST-checked): scoring, gates, judges and the
@@ -165,8 +169,8 @@ INFRA_FORBIDDEN_IMPORTS = ("haenv.judges", "haenv.scoring", "haenv.gates", "haen
 #: new value must reproduce, and the files dropped between the two must all be in `INFRA`.
 #: Both W5 values (6f1196dc, a26d32ad) differ only in files now in `INFRA` => one value.
 JUDGING_SHA_EQUIVALENCE = (
-    {"old": "548e2c872f6271c7", "rev": "6f1196dc", "new": "5247147f50143286"},
-    {"old": "6aa282bab6e2afcf", "rev": "a26d32ad", "new": "5247147f50143286"},
+    {"old": "548e2c872f6271c7", "rev": "6f1196dc", "new": "2f560f1c346ba93d"},
+    {"old": "6aa282bab6e2afcf", "rev": "a26d32ad", "new": "2f560f1c346ba93d"},
 )
 
 #: Registry yaml in neither segment, with the reason the judging segment cannot reach it.
@@ -288,6 +292,11 @@ REGISTRY_YAML_OUT_OF_SCOPE: dict[str, str] = {
 #: reason. An entry must not decide `overall` or any `absence.DENOM_FIELD` denominator;
 #: its crossing symbols are pinned in `ALLOW_SYMBOL_PIN`.
 JUDGING_IMPORT_ALLOW: dict[str, str] = {
+    "haenv/semantic_parallel.py":
+        "`INFRA` segment (see `INFRA`): the lane scheduler and the per-cell result files of a "
+        "semantic run. The pipeline imports the lane cap and the cell runner; votes come from "
+        "`semantic_judge.evaluate_consensus` and summaries from `semantic_rubric`, both in the "
+        "judging segment. The crossing symbols are pinned in `ALLOW_SYMBOL_PIN`.",
     "haenv/paid_completion.py":
         "`INFRA` segment (see `INFRA`): the streaming reader records the first chunk's "
         "generation id (`note_generation`) on the in-flight marker, so a cut stream can be "
@@ -437,7 +446,9 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
         "(from `evaluate`) and `judging_fingerprint` / `judging_vintages` "
         "(from `report`) -- all provenance. Semantic preparation also checks "
         "world_fingerprint to refuse slice reconstruction under a different world; "
-        "this is source validation, not a scoring rule.",
+        "this is source validation, not a scoring rule. `semantic_bytes` and "
+        "`infra_files` feed `code_state`, the run identity a resume compares; "
+        "they decide whether a run may continue, never a cell's value.",
     "haenv/trace.py":
         "A provenance layer: it only records the event log (model output / "
         "tool calls and returns / gate verdicts), produces no scoring field "
@@ -507,6 +518,7 @@ PENDING_ANCHOR: dict[str, str] = {}
 #: Names each `JUDGING_IMPORT_ALLOW` module lets cross into the judging segment
 #: (`from .M import ...` binding names); must match exactly.
 ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
+    "haenv/semantic_parallel.py": frozenset({"MAX_JUDGE_LANES", "run_cells"}),
     "haenv/run_scheduler.py": frozenset({"_schedule", "_stall_guard", "stall_report_lines"}),
     "haenv/semantic_budget.py": frozenset({"BudgetExceeded", "BudgetLedger", "cost_summary"}),
     "haenv/semantic_transport.py": frozenset({"PriceSchedule", "PricedJudge"}),
@@ -519,8 +531,8 @@ ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
     "haenv/semantic_runref.py": frozenset({"correction_base", "subset_base", "view_run"}),
     "haenv/streams.py": frozenset({"device_signals"}),
     "haenv/anchor.py": frozenset({
-        "_jvint", "_wvint", "judging_fingerprint", "judging_fp_cached",
-        "judging_vintages", "world_fingerprint"}),
+        "_jvint", "_wvint", "infra_files", "judging_fingerprint", "judging_fp_cached",
+        "judging_vintages", "semantic_bytes", "world_fingerprint"}),
     "haenv/batch.py": frozenset({"provenance_fields", "record_usage", "kernel_fingerprint"}),
     "haenv/build.py": frozenset({
         "CLINICAL_ATTEN", "_cached_yaml", "_clinical_baselines", "_clinical_cv"}),

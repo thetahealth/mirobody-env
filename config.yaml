@@ -1,6 +1,9 @@
 # haenv configuration: models, backends, concurrency, timeouts and generation settings.
 # config.yaml is not covered by the freeze anchor; changing a model's settings changes the
 # measurement conditions of its readings without moving any fingerprint.
+# Schema, defaults and each field's role: haenv/settings.py (a misspelt key in a section is
+# refused). `haenv <cmd> --set eval.workers=4` overrides one value for one run; every run
+# appends the resolved configuration and its layers to <batch>/config_runs.jsonl.
 
 # L0 kernel directory, relative to the repo root. Override with HAENV_KERNEL_PATH.
 kernel_path: core
@@ -78,9 +81,13 @@ backend_limits:
 #   model_workers: per-model pool sizes that replace `workers` for the named models.
 #   pooling: model = one pool per model, longest expected cell first (from a timing table
 #            when one is present); backend = one pool per backend in task order.
+#   model_wall_budget_s: seconds per model ("*" = every model not named), counted from the
+#            model's first cell; past it the model starts no further cell and the board
+#            reads its unstarted cells as timed out. Empty = no budget.
 eval:
   workers: 8
   model_workers: {}
+  model_wall_budget_s: {}
   pooling: model
 
 # Paid requests in flight across every process that shares one budget ledger, and the part
@@ -99,6 +106,12 @@ env_file: ${HAENV_ENV_FILE}
 # its model's stall deadline (run_scheduler.stall_deadline_s) is closed and retried.
 timeout_s: 900
 max_retries: 2
+# New connections per process: paced by a token bucket, and a failure while connecting
+# (TCP, proxy CONNECT tunnel, TLS handshake; nothing sent yet) is retried with backoff.
+transport:
+  connect_per_s: 8
+  connect_burst: 8
+  connect_retries: 3
 verbose: 1              # 0=WARNING 1=INFO 2=DEBUG
 
 synth:

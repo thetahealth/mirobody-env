@@ -19,34 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-NOTE ON SCOPE — this file covers the **code** only.
-
-The benchmark **data** (task specifications, registries, frozen packs, and the
-cases, results and reports produced from them) is licensed separately under
-CC BY 4.0. See `LICENSE-DATA`.
-
-The L0 kernel this project builds on lives in `core/`. It carries **its own
-licence file**, `core/LICENSE`, and is therefore NOT covered by the grant above —
-read that file instead.
-
----
-
-RESIDUAL GRANT — everything not otherwise assigned is MIT.
-
-  Every file in this repository is licensed under the MIT terms above,
-  EXCEPT:
-
-    1. files covered by `LICENSE-DATA` (CC BY 4.0) — see the enumeration and
-       the residual rule in that file;
-    2. everything under `core/` — the kernel carries its own licence file,
-       which governs it (see the note above).
-
-This makes the two licence files jointly exhaustive: `LICENSE-DATA` defines the
-data class, `core/` governs itself, and MIT is the residual for
-everything else. This includes the second Python package `verifier_core/`, the
-pipeline config `config.yaml`, the build files `pyproject.toml` / `uv.lock`, and
-the splitter `frozen/split_wq.py`. The *data* beside that splitter in `frozen/`
-is CC BY; see `LICENSE-DATA`.

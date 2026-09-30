@@ -92,14 +92,16 @@ uv run haenv run inputs/ddx-timeline.job.yaml --fresh                      # sta
 
 Token scale in real runs:
 
-| Pack | Models × cases | Input per model per case | Output per model per case |
+| Pack | Models × cases | Input per answered cell | Output per answered cell |
 |---|---|---|---|
 | `ddx-workup` (budgeted tests) | 10 × 145 | 14,579 | 11,831 |
 | `ddx-timeline` (questions at several time points) | 10 × 145 | 85,860 | 42,587 |
 
-Output length depends mostly on the model, input length on the pack. To recompute from a batch,
-first inspect `eval_usage.status` and each model's `missing` counts; the following averages cover
-only measured rows and are undefined if none were measured:
+Each figure is the mean over every cell with measured usage, pooled across models (1,405 cells for
+`ddx-workup`, 1,323 for `ddx-timeline`), so a model that answered more cells weighs more. Output
+length depends mostly on the model, input length on the pack. To recompute from a batch, first
+inspect `eval_usage.status` and each model's `missing` counts; the following averages cover only
+measured rows and are undefined if none were measured:
 
 ```bash
 uv run python -c "import json,sys; u=json.load(open(sys.argv[1]))['eval_usage']; by=u.get('by_solver',{}); m=[v for v in by.values() if v.get('n_measured')]; n=sum(v['n_measured'] for v in m); print('status:', u['status'], 'unmeasured:', {k:v['missing'] for k,v in by.items() if v.get('missing') and any(not s.startswith('absent:') for s in v['missing'])}); n or sys.exit('no measured rows'); print(len(m), 'models', n, 'rows', sum(v['in_total'] for v in m)//n, 'in/row', sum(v['out'] for v in m)//n, 'out/row')" results/joint_dx/ddx-workup/<batch>/batch.json

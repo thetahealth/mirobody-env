@@ -74,6 +74,7 @@ click($("#how button[data-k='knobs']"));
 /* ⑤ Before "Generate this patient" the disease-course sections show a `.gate` placeholder;
    after the click the section is repainted and the placeholder is gone. */
 const gated = !!doc.querySelector("#s2 .gate");
+const P0T = $("#k-T").value;
 click($("#btn-born"));
 await new Promise(r => setTimeout(r, 60));
 check("born_button_reveals", gated && !doc.querySelector("#s2 .gate"));
@@ -304,9 +305,18 @@ check("toc_covers_every_section",
   const notes = [];
   for (const [track, board] of Object.entries(data.preliminary.tracks)){
     const sel = $("#score-track"); sel.value = track; fire(sel, "change");
-    for (const dim of ["__overall__", ...board.dims]){
+    for (const dim of $('#score-dimension option[value="__overall__"]') ? ["__overall__", ...board.dims] : board.dims){
       const choose = $("#score-dimension"); choose.value = dim; fire(choose, "change");
       const shown = $$("#dimension-order .score-line");
+      const rule = ((data.semantic_judge || {})[track] || {}).board_rule;
+      if (dim === "__overall__" && rule && rule.ranked && rule.rule === "R0" && rule.models){
+        // by tier, then the rule's point estimate; no forced places
+        const M = rule.models, exp = [...board.models].filter(r => M[r.solver] && M[r.solver].tier != null)
+          .sort((a,b) => M[a.solver].tier - M[b.solver].tier || M[b.solver].score - M[a.solver].score || a.solver.localeCompare(b.solver));
+        notes.push({track, dim, ok: shown.length === exp.length && shown.every((node,i) => node.dataset.solver === exp[i].solver
+          && Number(node.dataset.tier) === M[exp[i].solver].tier && !node.dataset.rank)});
+        continue;
+      }
       const value = r => dim === "__overall__" ? r.score : r.dims[dim];
       const count = r => dim === "__overall__" ? r.n_cases : board.samples[r.solver][dim];
       const expected = [...board.models].sort((a,b) => value(b) - value(a) || a.solver.localeCompare(b.solver));
@@ -322,14 +332,15 @@ check("toc_covers_every_section",
   catch { unlabeled = true; }
   check("preliminary_totals_require_disclaimer_metadata", unlabeled
     && /not final|并非最终/i.test($("#preliminary-notice")?.textContent || "")
-    && $("#s9").textContent.includes("dx_listed") && $("#s9").textContent.includes("noop_ok"));
+    && data.preliminary.tracks.answers.pending_metrics.length > 0
+    && data.preliminary.tracks.answers.pending_metrics.every(m => $("#s9").textContent.includes(m.metric)));
   const sample = {dims:["d"], models:[{solver:"a",dims:{d:.8}},{solver:"b",dims:{d:.8}},
     {solver:"c",dims:{d:0}},{solver:"missing",dims:{d:null}}]};
   const tied = order(sample, "d");
   check("dimension_ties_zero_and_missing_are_distinct", tied.map(r => r.rank || null).join() === "1,1,3,"
     && tied[0].tied && tied[1].tied && tied[2].value === 0 && tied[3].value === null);
   let rejected = false;
-  try { order(data.board, "dx_hit"); } catch { rejected = true; }
+  try { order(data.board, data.preliminary.tracks.answers.pending_metrics[0].metric); } catch { rejected = true; }
   check("eligible_order_rejects_pending_metrics_and_source_stays_unmutated", rejected && JSON.stringify(data.board.models) === before
     && JSON.stringify(W.eval("D.board.models")) === before);
   const usage = $$("#budget-usage .score-line");
@@ -343,10 +354,60 @@ check("toc_covers_every_section",
   check("computable_metrics_are_not_pending_human_anchors", computed.length === 2
     && computed.every(c => /not required|不要求/.test(c.querySelector('[data-field="agree"] + dd').textContent)
       && !c.querySelector('[data-field="revisit"]')));
+  // The export's board-rule verdict decides whether a track shows a total. No rule (no
+  // semantic view): totals on both tracks. A rule that does not rank the track: no total
+  // option, no waterfall, no total column, and the notice states the rule's counts.
+  const tsel = $("#score-track");
+  const view = track => { tsel.value = track; fire(tsel, "change");
+    return { overall: !!$('#score-dimension option[value="__overall__"]'), wf: !!$("#wf-panel"),
+             col: $$("#s9 table th").some(th => th.textContent === W.eval('T("preliminaryTotal")')),
+             note: ($("#rule-note") || {}).textContent || "" }; };
+  const SJ0 = W.eval("D.semantic_judge");
+  const plain = [view("trace"), view("answers")];
+  const cov = { cells: 1, common_cases: 1, cases: 1, excluded_cases: 0, judge_model: "judge-x" };
+  const none = { rule: "R1", ranked: false, n_common_complete: 7, min_common_cases: 20, r1_max_width: 0.05,
+                 alpha: 0.05, wide: [], tiers: {} };
+  const r0 = { rule: "R0", ranked: true, n_common_complete: 37, min_common_cases: 20, r1_max_width: 0.05,
+               alpha: 0.05, wide: [], tiers: { a: 1, b: 1, c: 2 } };
+  W.eval("D").semantic_judge = { trace: Object.assign({ board_rule: none }, cov), answers: Object.assign({ board_rule: r0 }, cov) };
+  const ruled = [view("trace"), view("answers")];
+  if (SJ0 === undefined) delete W.eval("D").semantic_judge; else W.eval("D").semantic_judge = SJ0;
+  view("answers");
+  const shows = v => v.overall && v.wf, hides = v => !v.overall && !v.wf && !v.col;
+  // Tiers, 95% intervals, the noise floor and the per-dimension pairs appear exactly when the
+  // export carries them.
+  const bare = { tiers: $$("#dimension-order .tier-group").length, noise: !!$("#noise-panel"), pairs: !!$("#pairs-panel") };
+  const Dd = W.eval("D"), ans = Dd.preliminary.tracks.answers, TR = Dd.preliminary.tracks.trace;
+  const solvers = ans.models.map(m => m.solver);
+  const M = {}; solvers.forEach((sv, i) => { M[sv] = { tier: i < 5 ? 1 : i - 3, score: 0.9 - i * 0.02, ci95: [0.8 - i * 0.02, 0.95 - i * 0.02] }; });
+  const rule0 = Object.assign({}, r0, { tiers: Object.fromEntries(solvers.map(sv => [sv, M[sv].tier])), models: M });
+  const P5 = { k: 3, n_cases: 16, n_models: 10, composite_cases: 2, composite_allowed: false, composite_min: 10,
+    dims: { noop_ok: { common: 158, applicable: 160, pooled_max_abs_delta: 0.03, median_model_max_abs_delta: 0, worst_model: solvers[0] } },
+    dim_pairs: { noop_ok: { n_pairs: 45, separable: [{ better: solvers[1], worse: solvers[0], diff: 0.17, ci95: [0.08, 0.25], n_cases: 16 }] },
+                 tests_recall: { n_pairs: 45, separable: [] } } };
+  Dd.semantic_judge = { answers: Object.assign({ board_rule: rule0 }, cov) }; TR.phase5 = P5;
+  view("answers"); const sd = $("#score-dimension"); sd.value = "__overall__"; fire(sd, "change");
+  const groups = $$("#dimension-order .tier-group"), lines = $$("#dimension-order .score-line");
+  const tiered = groups.length === new Set(Object.values(M).map(m => m.tier)).size
+    && lines.length === solvers.length && lines.every(n => n.querySelector(".ci-band") && !n.dataset.rank
+      && n.querySelector(".muted").textContent === "·")
+    && groups[0].querySelectorAll(".score-line").length === 5 && !$("#noise-panel");
+  view("trace");
+  const noiseRows = $$("#noise-panel tbody tr").length, pf = $$("#pairs-panel details");
+  const paired = noiseRows === 1 && pf.length === 2 && pf[0].dataset.separable === "1" && pf[1].dataset.separable === "0"
+    && $("#noise-panel").textContent.includes(W.eval('T("noiseComposite", 2, 10)'));
+  if (SJ0 === undefined) delete Dd.semantic_judge; else Dd.semantic_judge = SJ0;
+  delete TR.phase5; view("answers");
+  check("tiers_pairs_and_noise_follow_the_export", bare.tiers === 0 && !bare.noise && !bare.pairs && tiered && paired,
+    { bare, tiered, paired, groups: groups.length, noiseRows, folds: pf.length });
+  check("board_rule_decides_the_total",
+    (SJ0 ? true : plain.every(shows)) && hides(ruled[0]) && ruled[0].note.includes("7") && ruled[0].note.includes("20")
+      && shows(ruled[1]) && ruled[1].note.includes(W.eval('T("s9RuleR0", 37, 20, 0.05, 2)').replace(/<[^>]+>/g, "")),
+    { plain, ruled });
   const back = $("#score-track"); back.value = "answers"; fire(back, "change");
 }
 
-/* Board exclusion: the default is the main rule (nothing ticked, ranks shown). Ticking a failure
+/* Board exclusion: the default is the main rule (nothing ticked, tiers or ranks shown). Ticking a failure
    reason recomputes every model on the remaining cells in the page; each precomputed
    combination must agree with production `rank_ddx` within 0.001, or the page must say so. */
 {
@@ -362,7 +423,8 @@ check("toc_covers_every_section",
     const X = board.exclusion, present = X.categories.map(c => c.key);
     notes.push({track, main: !!$("#zero-note") && !$("#exclusion-hint") && boxes().length === present.length
       && boxes().every(b => !b.checked)
-      && $$("#dimension-order .score-line").every(n => n.dataset.rank)
+      // A ranked total is shown by tier (the board rule), otherwise by rank.
+      && $$("#dimension-order .score-line").every(n => n.dataset.rank || n.dataset.tier)
       && $$("#dimension-order .score-line").every(n => Number(n.dataset.value) === board.models
         .find(m => m.solver === n.dataset.solver).score)});
     notes.push({track, labels: boxes().every((b,i) => b.parentNode.textContent.includes(
@@ -422,9 +484,14 @@ check("toc_covers_every_section",
     check("criterion_detail_opens_and_closes", expanded && !details[0].open);
   }
   const method = W.eval("typeof judgeMethod === 'function' ? judgeMethod : null");
-  const proxy = data.scoring.filter(m => m.metric_class === "judgment" && m.key !== "rubric_binary");
+  // Metrics the shown semantic view replaces are judged by the LLM; every other proxy is code.
+  const semantic = new Set(Object.values(data.semantic_judge || {}).flatMap(x => x.replaced || []));
+  const proxy = data.scoring.filter(m => m.metric_class === "judgment" && m.key !== "rubric_binary"
+    && !semantic.has(m.key));
   check("proxy_judgment_does_not_imply_llm", !!method && proxy.length > 0 && proxy.every(m =>
-    method(m) === "code" && cards.find(c => c.dataset.metric === m.key)?.dataset.method === "code"));
+    method(m) === "code" && cards.find(c => c.dataset.metric === m.key)?.dataset.method === "code")
+    && [...semantic].every(k => !cards.find(c => c.dataset.metric === k)
+      || cards.find(c => c.dataset.metric === k).dataset.method === "llm"));
   check("llm_and_reference_methods_are_distinct", !!method
     && method(data.scoring.find(m => m.key === "rubric_binary")) === "llm"
     && method(data.scoring.find(m => m.key === "scope_anchor_unified")) === "reference"
@@ -458,11 +525,17 @@ check("toc_covers_every_section",
     const activeGroupsOpen = () => groups.filter(g => !g.hidden).every(g => g.open);
     const setSelect = (control, value) => { control.value = value; fire(control, "change"); };
     setSelect(methodSelect, "llm");
-    check("llm_filter_finds_only_registered_rubric", visible().map(c => c.dataset.metric).join() === "rubric_binary"
-      && activeGroupsOpen() && !/disabled|已禁用/i.test(visible()[0]?.textContent || "")
-      && count.textContent.includes("1"));
+    const llmKeys = cards.map(c => c.dataset.metric).filter(k => k === "rubric_binary" || semantic.has(k)).sort();
+    const shownLlm = visible().map(c => c.dataset.metric).sort();
+    check("llm_filter_finds_only_registered_rubric_and_semantic_view",
+      JSON.stringify(shownLlm) === JSON.stringify(llmKeys) && activeGroupsOpen()
+      && visible().every(c => !/disabled|已禁用/i.test(c.textContent))
+      && count.textContent.includes(String(llmKeys.length)), { shownLlm, llmKeys });
     setSelect(roleSelect, "dim");
-    check("method_and_role_filters_intersect", visible().length === 0 && !empty.hidden);
+    const llmDims = cards.filter(c => llmKeys.includes(c.dataset.metric) && c.dataset.role === "dim").length;
+    check("method_and_role_filters_intersect", llmDims > 0
+      ? visible().length === llmDims && empty.hidden : visible().length === 0 && !empty.hidden,
+      { visible: visible().length, llmDims });
     click(reset);
     setSelect(methodSelect, "reference");
     check("reference_filter_keeps_normalization_separate", visible().map(c => c.dataset.metric).join() === "scope_anchor_unified"
@@ -482,6 +555,305 @@ check("toc_covers_every_section",
       && search.value === "" && methodSelect.value === "all" && roleSelect.value === "all"
       && empty.hidden && details.every(d => !d.open) && count.textContent.includes(String(keys.length)));
   }
+}
+
+/* ⑱ v5 blocks. Each check drives the control the way a reader does (pointer, key, click)
+   and reads the result from the DOM or the page's own state. */
+const until = async (ok, ms) => { const t0 = Date.now(); while (!ok() && Date.now() - t0 < ms) await new Promise(r => setTimeout(r, 25)); return ok(); };
+const ptr = (n, type, x) => n.dispatchEvent(new W.PointerEvent(type, { bubbles: true, clientX: x, pointerId: 1 }));
+const click2 = n => n && n.dispatchEvent(new W.MouseEvent("click", { bubbles: true }));
+{
+  // A · dragging "today" on the patient's timeline moves the cut and the veil, keeps the course,
+  // syncs the slider and leaves step 1's "today" alone.
+  const tl = $("#tl-you") && $("#tl-you")._tl, h = $("#tl-you .tl-t"), kT = $("#k-T"), k2 = $("#k-T2");
+  const course = () => ($$("#p-cut path")[0] || {}).getAttribute?.("d");
+  if (!tl || !h) check("timeline_t_drag_moves_only_the_cut", false, "no timeline or handle in step 4");
+  else {
+    const bad = [], t0 = tl.getT(), c0 = course(), fog0 = $("#tl-you .tl-fog").style.left, figs0 = $("#cut-out").textContent;
+    const st = tl.state, w = 570, IN = 5, px = d => IN + (d - st.x0) / (st.x1 - st.x0) * (w - 2 * IN);
+    const target = Math.round(t0 + (st.x1 - t0) / 2);
+    ptr(h, "pointerdown", px(t0)); ptr(h, "pointermove", px(target)); ptr(h, "pointerup", px(target));
+    if (Math.abs(tl.getT() - target) > 1) bad.push("handle at " + tl.getT() + ", dragged to " + target);
+    if (course() !== c0) bad.push("the course was redrawn");
+    if ($("#tl-you .tl-fog").style.left === fog0) bad.push("the veil did not move");
+    if (k2.value !== String(tl.getT())) bad.push("slider " + k2.value + " not synced to " + tl.getT());
+    if ($("#cut-out").textContent === figs0) bad.push("visible-reading counts did not change");
+    const pre = ($$("#p-cut path")[1] || {}).getAttribute?.("d") || "";
+    if (!c0.startsWith(pre) || pre.length >= c0.length) bad.push("visible line is not a proper prefix of the course");
+    const t1 = tl.getT();
+    h.dispatchEvent(new W.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    if (tl.getT() !== t1 + 1) bad.push("ArrowRight moved today to " + tl.getT());
+    if (kT.value !== String(P0T)) bad.push("step 1 today changed");
+    check("timeline_t_drag_moves_only_the_cut", bad.length === 0, bad);
+  }
+}
+{
+  // A · the crosshair prints every lane's reading of the hovered day, and a drag zooms.
+  const g = $("#tl-you .tl-grid"), tl = $("#tl-you") && $("#tl-you")._tl;
+  if (!g || !tl) check("timeline_crosshair_and_zoom", false);
+  else {
+    const vals0 = $$("#tl-you .tl-val").map(n => n.textContent).join("|");
+    ptr(g, "pointermove", 100);
+    const vals1 = $$("#tl-you .tl-val").map(n => n.textContent).join("|");
+    const x0 = tl.state.x0, x1 = tl.state.x1;
+    const lane = $("#tl-you .tl-plot");
+    ptr(lane, "pointerdown", 60); ptr(lane, "pointermove", 260); ptr(lane, "pointerup", 260);
+    const zoomed = tl.state.x1 - tl.state.x0 < (x1 - x0) * .6 && !$("#tl-you .tl-reset").hidden;
+    click2($("#tl-you .tl-reset"));
+    const day = $("#tl-you .tl-day").textContent;
+    check("timeline_crosshair_and_zoom", vals1 !== vals0 && /\d/.test(day) && zoomed
+      && tl.state.x0 === x0 && tl.state.x1 === x1, { vals0, vals1, zoomed, day, x: [tl.state.x0, tl.state.x1, x0, x1] });
+  }
+}
+{
+  // C · the switch shows the course (every sampling day) or the record (readings only), and the
+  // copies are marked where the record says they are.
+  const seg = b => $(`#cr-view button[data-v="${b}"]`);
+  const pts = () => (($$("#p-cf path")[0] || {}).getAttribute?.("d") || "").split(/[ML]/).filter(x => x.trim()).length;
+  click2(seg("record"));
+  const nRec = pts(), rings0 = $$("#p-cf circle").length;
+  click2(seg("truth"));
+  const nTruth = pts(), wd = W.eval("Wd"), win = wd.dirty.slice(0, 140), end = win[win.length - 1][0];
+  const wantTruth = wd.meta.truth.filter(q => q[0] <= end).length;
+  const copied = win.filter(r => r[2]).length;
+  const rings = $$("#p-cf circle").filter(c => c.getAttribute("fill") === "none").length;
+  check("copied_count_covers_the_whole_record", $("#cf-n").textContent === String(W.eval("Wd").dirty.filter(r => r[2]).length)
+    && W.eval("Wd").dirty.length > 140);
+  check("truth_record_switch_changes_the_series", nRec === win.length && nTruth === wantTruth && nTruth > nRec
+    && rings === copied && seg("truth").getAttribute("aria-pressed") === "true" && rings0 > 0,
+    { nRec, nTruth, wantTruth, rings, copied });
+  click2(seg("record"));
+}
+{
+  // D · clicking a model's row lights up exactly the ledger entries it cited, and a citation
+  // outside the ledger is flagged rather than dropped.
+  const rows = $$("#mx tbody tr[data-solver]");
+  const mx = W.eval("MX"), A = W.eval("D.answers.models"), t = mx.t;
+  const ledger = new Set(W.eval("D.case.evidence").map(e => e.id));
+  const pick = rows.find(r => ((A[r.dataset.solver].by_slice[String(t)] || {}).cited || []).length > 0);
+  click2(pick);
+  const cited = (A[pick.dataset.solver].by_slice[String(t)] || {}).cited || [];
+  const hl = [...($("#tl-case")._tl.state.hl || [])].sort();
+  const want = cited.filter(id => ledger.has(id)).sort();
+  const lit = $$("#tl-case .tl-plot[data-lane=events] circle").filter(c => c.getAttribute("stroke") === "var(--accent)").length;
+  const chips = $$("#mx-cited .chip").length;
+  check("matrix_row_highlights_cited_evidence", !!pick && JSON.stringify(hl) === JSON.stringify(want) && lit > 0
+    && chips === cited.length && $("#mx tr.on")?.dataset.solver === pick.dataset.solver, { solver: pick && pick.dataset.solver, hl: hl.length, want: want.length, lit, chips });
+  // negative control: a made-up citation must show up as "not in ledger"
+  const save = JSON.stringify(A[pick.dataset.solver].by_slice[String(t)].cited);
+  const row = () => $(`#mx tbody tr[data-solver="${pick.dataset.solver}"]`);
+  A[pick.dataset.solver].by_slice[String(t)].cited = ["EV-NOT-IN-LEDGER"].concat(JSON.parse(save));
+  click2(row());
+  const flagged = $$("#mx-cited .chip.bad").map(c => c.textContent).includes("EV-NOT-IN-LEDGER")
+    && /1/.test($("#mx tr.on .chip.bad")?.textContent || "");
+  A[pick.dataset.solver].by_slice[String(t)].cited = JSON.parse(save);
+  click2(row());
+  check("matrix_flags_citations_outside_the_ledger", flagged && !$("#mx-cited .chip.bad"));
+}
+{
+  // D · moving "today" on the recorded case to another answer day re-reads the table.
+  const tl = $("#tl-case")._tl, h = $("#tl-case .tl-t"), sl = W.eval("D.answers.slices");
+  const before = $("#mx").textContent, t0 = tl.getT();
+  h.dispatchEvent(new W.KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+  const pressed = $("#mx-slice button[aria-pressed=true]")?.dataset.t;
+  check("recorded_case_today_moves_between_answer_days", tl.getT() === sl[0] && W.eval("MX").t === sl[0]
+    && pressed === String(sl[0]) && $("#mx").textContent !== before && t0 !== sl[0], { t0, t: tl.getT(), pressed });
+  click2($(`#mx-slice button[data-t="${t0}"]`));
+}
+{
+  // E · replay: back to the start, one step, then the end; lanes appear as they are asked for
+  // and the budget bar spends what each call cost.
+  const Tr = W.eval("D.trace"), calls = Tr.events.filter(e => e.type === "tool/result");
+  const spent = () => parseFloat($("#rp-budget .spent").style.width);
+  const scrub = $("#rp-scrub");
+  scrub.value = "0"; fire(scrub, "input");
+  const off0 = $$("#tl-trace .tl-name.off").length, lanes = $$("#tl-trace .tl-name").length, w0 = spent();
+  click2($("#rp-step"));
+  const w1 = spent(), cnt1 = $("#rp-count").textContent, off1 = $$("#tl-trace .tl-name.off").length;
+  const want1 = 100 * calls[0].spent_after / Tr.budget;
+  scrub.value = scrub.max; fire(scrub, "input");
+  const wEnd = spent(), offEnd = $$("#tl-trace .tl-name.off").length;
+  check("replay_steps_through_requests", lanes > 0 && off0 === lanes && w0 === 0 && Math.abs(w1 - want1) < .01
+    && off1 === lanes - 1 && /1/.test(cnt1) && offEnd === 0
+    && Math.abs(wEnd - 100 * calls[calls.length - 1].spent_after / Tr.budget) < .01,
+    { lanes, off0, off1, offEnd, w0, w1, want1, wEnd });
+}
+{
+  // G · the fan uses every exported random layer, counts the label rule's verdicts, and is
+  // recomputed when a knob moves.
+  const F = W.FAN, nAll = Object.keys(W.eval("D.personas")).length + Object.keys(W.eval("D.fan_personas")).length;
+  await until(() => F.done, 20000);
+  const area = () => $$("#p-fan path[data-area]").map(p => p.getAttribute("d")).join("|");
+  const a0 = area(), declared = $("#b-re").getAttribute("aria-pressed") === "true" ? "event_occurred" : "event_not_occurred";
+  const agreeShown = +($("#fan-fig b[data-agree]") || {}).dataset?.agree;
+  const agree = F.rows.filter(r => r.verdict === declared).length;
+  const n = $("#k-week"); const old = n.value;
+  n.value = String(+n.value + 6); fire(n, "input"); fire(n, "change");
+  await until(() => F.done && area() !== a0, 20000);
+  const moved = area() !== a0;
+  n.value = old; fire(n, "input"); fire(n, "change");
+  await until(() => F.done, 20000);
+  // At the latest regain week the slider allows, some futures no longer read as declared:
+  // the panel must say how many, and warn.
+  n.value = n.max; fire(n, "input"); fire(n, "change");
+  await until(() => F.done, 20000);
+  const dec2 = $("#b-re").getAttribute("aria-pressed") === "true" ? "event_occurred" : "event_not_occurred";
+  const agree2 = F.rows.filter(r => r.verdict === dec2).length, note2 = $("#fan-note");
+  const honest = agree2 < F.rows.length && note2.classList.contains("warn")
+    && note2.textContent.includes(W.eval(`T("fanDisagree", ${F.rows.length - agree2})`))
+    && $("#fan-fig b[data-agree]").classList.contains("warn");
+  n.value = old; fire(n, "input"); fire(n, "change");
+  await until(() => F.done, 20000);
+  const calm = !$("#fan-note").classList.contains("warn") === (F.rows.filter(r => r.verdict === declared).length === F.rows.length);
+  check("fan_says_when_futures_disagree_with_the_declared_outcome", honest && calm, { agree2, rows: F.rows.length, calm });
+  check("fan_uses_every_layer_and_follows_the_knobs", F.rows.length === nAll && agreeShown === agree && moved && a0.length > 0,
+    { rows: F.rows.length, nAll, agree, agreeShown, moved });
+}
+{
+  // B · every lab chart marks exactly the readings production calls abnormal, and draws the
+  // reference band when the dossier registers a bound.
+  const K = W.eval("D.kernel"), wd = W.eval("Wd"), G2 = W.HaenvGen, bad = [];
+  Object.keys(wd.clin).forEach((sig, i) => {
+    const host = doc.getElementById(i ? "p-lab-" + sig : "p-c");
+    if (!host){ bad.push(sig + ": no chart"); return; }
+    const want = wd.clin[sig].pts.filter(p => G2.abnormalSide(sig, p[1], K) === true).length;
+    const got = $$("#" + host.id + " circle").filter(c => c.getAttribute("fill") === "var(--accent)").length;
+    if (want !== got) bad.push(sig + ": " + got + " red points, " + want + " abnormal readings");
+    const ref = K.clinical_ref[sig] || {};
+    if ((ref.low != null || ref.high != null) && !host.querySelector("rect")) bad.push(sig + ": no reference band");
+  });
+  check("lab_charts_mark_production_abnormal_readings", Object.keys(wd.clin).length > 0 && bad.length === 0, bad);
+}
+{
+  // F · the waterfall's product (mean of the drawn components × multiplier) reproduces each
+  // production total.
+  const tr = W.eval("D.preliminary.tracks.answers"), sel = $("#wf-model"), bad = [];
+  for (const m of tr.models){
+    sel.value = m.solver; fire(sel, "change");
+    const row = $('#wf .row[data-wf="total"]');
+    const prod = +row.dataset.product, tot = +row.dataset.total;
+    if (Math.abs(prod - tot) > 0.0011 || tot !== m.score) bad.push(m.solver + ": " + prod + " vs " + tot);
+  }
+  check("waterfall_reproduces_production_totals", bad.length === 0 && tr.models.length > 0, bad);
+}
+/* Production's own `gated_units` strings, re-read here without the exporter's code:
+   `case:g1;g2` fails every unit of the row on those gates (one name, or "multiple"),
+   `case:gate@1,2` fails the slices listed, `case:*` fails the row with no gate named. */
+const unitsFromRaw = raw => {
+  const c = {};
+  raw.forEach(([, u, s]) => {
+    const parts = s.slice(s.indexOf(":") + 1).split(";");
+    if (parts.some(q => q.includes("@")))
+      parts.forEach(q => { const [g, at] = q.split("@"); c[g] = (c[g] || 0) + at.split(",").filter(x => x.trim()).length; });
+    else if (parts.length === 1 && parts[0] === "*") c.overall_fail = (c.overall_fail || 0) + u;
+    else { const nm = [...new Set(parts.map(q => q.split(":")[0].trim()))]; const k = nm.length === 1 ? nm[0] : "multiple"; c[k] = (c[k] || 0) + u; }
+  });
+  return c;
+};
+const daysFromRaw = (raw, order, day) => {
+  if (!raw) return [];
+  const parts = raw.slice(raw.indexOf(":") + 1).split(";");
+  if (!parts.some(q => q.includes("@"))) return parts[0] === "*" ? ["overall_fail"] : [...new Set(parts.map(q => q.split(":")[0].trim()))].sort();
+  return parts.filter(q => q.split("@")[1].split(",").some(i => order[+i - 1] === day)).map(q => q.split("@")[0]).sort();
+};
+{
+  // F · every gate-type segment drawn, on both tracks, is the unit count production's own
+  // `gated_units` record gives that type, and the segments of a row add up to its failed units.
+  const bad = [], trackSel = () => $("#score-track");
+  let nSeg = 0, types = new Set();
+  for (const name of ["answers", "trace"]){
+    const ts = trackSel(); ts.value = name; fire(ts, "change");
+    const tr = W.eval("D.preliminary.tracks." + name);
+    for (const m of tr.models){
+      const g = tr.gate_breakdown[m.solver], row = $(`#gstack .row[data-solver="${m.solver}"]`);
+      if (!row){ bad.push(name + "/" + m.solver + ": no row"); continue; }
+      const drawn = {};
+      [...row.querySelectorAll(".gbar span[data-type]")].forEach(x => { drawn[x.dataset.type] = +x.dataset.n; nSeg++; types.add(x.dataset.type); });
+      const want = unitsFromRaw(g.raw || []);
+      if (JSON.stringify(Object.entries(drawn).sort()) !== JSON.stringify(Object.entries(want).sort()))
+        bad.push(name + "/" + m.solver + ": drawn " + JSON.stringify(drawn) + ", production " + JSON.stringify(want));
+      const sum = Object.values(drawn).reduce((a, b) => a + b, 0);
+      if (sum !== g.n_gated_units) bad.push(name + "/" + m.solver + ": segments add up to " + sum + ", not " + g.n_gated_units);
+      if (Math.abs(1 - g.n_gated_units / g.n_units - m.gate_multiplier) > 1e-9) bad.push(name + "/" + m.solver + ": share ≠ multiplier");
+    }
+  }
+  const ts = trackSel(); ts.value = "answers"; fire(ts, "change");
+  check("gate_segments_match_production_records", bad.length === 0 && nSeg > 0, bad.slice(0, 6));
+}
+{
+  // D · on every answer day, each row's hard-gate tags are the gates production's record fails
+  // that day's slice on (a case-level gate on every day).
+  const bad = [], CG = W.eval("D.preliminary.tracks.answers.case_gates"), days = W.eval("D.answers.slices");
+  let nTags = 0, nWant = 0;
+  for (const d of days){
+    click2($(`#mx-slice button[data-t="${d}"]`));
+    for (const tr of $$("#mx tbody tr[data-solver]")){
+      const s = tr.dataset.solver, g = CG[s];
+      const shown = [...tr.querySelectorAll("[data-gate]")].map(x => x.dataset.gate).sort();
+      const want = g ? daysFromRaw(g.raw, g.slice_days, d) : [];
+      nTags += shown.length; nWant += want.length;
+      if (JSON.stringify(shown) !== JSON.stringify(want)) bad.push(s + "@" + d + ": shown " + shown + ", production " + want);
+    }
+    // Citation flags follow the answer's own citations: "not in ledger" counts the ids the case's
+    // ledger does not hold, "late" the ledger ids dated after the answer day.
+    const ev = new Map(W.eval("D.case.evidence").map(e => [e.id, e.t]));
+    for (const tr of $$("#mx tbody tr[data-solver]")){
+      const a = W.eval("D.answers.models")[tr.dataset.solver]?.by_slice?.[String(d)] || { cited: [] };
+      const wantBad = a.cited.filter(x => !ev.has(x)).length;
+      const wantLate = a.cited.filter(x => ev.has(x) && ev.get(x) != null && ev.get(x) > d).length;
+      const n = sel => Number((tr.querySelector(sel)?.textContent.match(/\d+/) || [0])[0]);
+      if (n(".chip.bad") !== wantBad || n(".chip.late") !== wantLate)
+        bad.push(tr.dataset.solver + "@" + d + ": flags " + n(".chip.bad") + "/" + n(".chip.late")
+          + ", citations " + wantBad + "/" + wantLate);
+    }
+  }
+  click2($(`#mx-slice button[data-t="${days[days.length - 1]}"]`));
+  // The shown case may trip no gate at all; the tags then have to be absent everywhere.
+  check("matrix_gate_column_follows_the_answer_day", bad.length === 0 && nTags === nWant,
+    { bad: bad.slice(0, 6), nTags, nWant });
+}
+{
+  // F · for every dimension, each model's tick sits at the mean of its drawn dots; a dimension
+  // with no per-case value says why instead of drawing empty rows.
+  const tr = W.eval("D.preliminary.tracks.answers"), sel = $("#pc-dim"), bad = [];
+  let nRows = 0, nUndef = 0;
+  for (const o of [...sel.querySelectorAll("option")]){
+    sel.value = o.value; fire(sel, "change");
+    const vals = tr.models.map(m => (tr.per_case.values[m.solver][o.value] || []).filter(v => v != null));
+    if ($("#percase [data-pc=undefined]")){
+      nUndef++;
+      if (vals.some(v => v.length)) bad.push(o.value + ": says undefined but has values");
+      continue;
+    }
+    for (const r of $$("#percase .row")){
+      const svg = r.querySelector("svg"); if (!svg) { bad.push(o.value + ": no strip"); continue; }
+      const w = +svg.getAttribute("viewBox").split(" ")[2];
+      const xs = [...r.querySelectorAll("circle")].map(c => (+c.getAttribute("cx") - 3) / (w - 6));
+      const tick = r.querySelector("rect");
+      if (!xs.length || !tick){ bad.push(o.value + "/" + r.dataset.solver + ": empty row"); continue; }
+      const mean = xs.reduce((a, b) => a + b, 0) / xs.length, at = (+tick.getAttribute("x") + 1.5 - 3) / (w - 6);
+      nRows++;
+      if (Math.abs(mean - at) > 0.0015) bad.push(o.value + "/" + r.dataset.solver + ": dots average " + mean.toFixed(4) + ", tick " + at.toFixed(4));
+    }
+  }
+  sel.value = sel.querySelector("option").value; fire(sel, "change");
+  check("per_case_tick_is_the_mean_of_the_dots", bad.length === 0 && nRows > 0, { nRows, nUndef, bad: bad.slice(0, 6) });
+}
+{
+  // A height-only resize (a phone's address bar) keeps the page; a width change repaints it.
+  const node0 = $("#s9 .grid.half"), w0 = W.innerWidth;
+  Object.defineProperty(W, "innerHeight", { value: W.innerHeight + 60, configurable: true });
+  W.dispatchEvent(new W.Event("resize"));
+  await new Promise(r => setTimeout(r, 260));
+  const kept = !!node0 && node0.isConnected;
+  Object.defineProperty(W, "innerWidth", { value: w0 + 40, configurable: true });
+  W.dispatchEvent(new W.Event("resize"));
+  await new Promise(r => setTimeout(r, 260));
+  const repainted = !!node0 && !node0.isConnected && !!$("#s9 .grid.half");
+  Object.defineProperty(W, "innerWidth", { value: w0, configurable: true });
+  W.dispatchEvent(new W.Event("resize"));
+  await new Promise(r => setTimeout(r, 260));
+  check("height_only_resize_keeps_the_page", kept && repainted, { kept, repainted });
 }
 
 /* ⑰ Every i18n key the page asks for exists in both languages, and no rendered `<dd>` is
@@ -521,6 +893,20 @@ check("toc_covers_every_section",
       && doc.title === "Health Agent Environment — " + subtitle });
   }
   const bEn = $('#lang-toggle button[data-lang="en"]'); if (bEn) click(bEn);
+  await new Promise(r => setTimeout(r, 30));
+  // The English page is English throughout: the case and the answers are shown translated.
+  // Only the language toggle names the other language. Folds are opened so their text counts.
+  $$("details").forEach(d => { d.open = true; });
+  const cjk = [];
+  const tw = doc.createTreeWalker(doc.body, W.NodeFilter.SHOW_TEXT);
+  for (let n = tw.nextNode(); n; n = tw.nextNode()){
+    const t = n.textContent;
+    if (!/[\u3400-\u9fff]/.test(t)) continue;
+    const p = n.parentElement;
+    if (!p || p.closest("script, style, #lang-toggle")) continue;
+    cjk.push(((p.closest("section") || {}).id || "?") + ": " + t.trim().slice(0, 40));
+  }
+  check("english_page_shows_no_chinese_text", cjk.length === 0, cjk.slice(0, 8));
   check("no_empty_dd_in_either_language", empties.length === 0, empties.slice(0, 8));
   check("pipeline_heading_matches_browser_title_in_both_languages", heroCopy.every(x => x.ok), heroCopy);
 }

@@ -23,6 +23,12 @@ if str(_HERE) not in sys.path:
 
 ROOT = _HERE.parent
 
+# Subprocesses that run a script under tools/ must import this tree's `haenv`. A worktree whose
+# virtualenv holds an editable install of another checkout would otherwise test that one.
+import os as _os
+_os.environ["PYTHONPATH"] = _os.pathsep.join(
+    [str(ROOT), *(p for p in _os.environ.get("PYTHONPATH", "").split(_os.pathsep) if p and p != str(ROOT))])
+
 
 @pytest.fixture(autouse=True)
 def _isolate_registries():
@@ -84,6 +90,18 @@ def _isolate_registries():
         # registers an external subject removes it with `unregister_subject`.
 
 
+@pytest.fixture(autouse=True)
+def _isolate_config_set(monkeypatch):
+    """`haenv ... --set` / `--pooling` run in-process writes `$HAENV_CONFIG_SET`; restore it."""
+    import os
+    from haenv.settings import SET_ENV
+    if SET_ENV in os.environ:
+        monkeypatch.setenv(SET_ENV, os.environ[SET_ENV])
+    else:
+        monkeypatch.delenv(SET_ENV, raising=False)
+    yield
+
+
 _SOLVING_FP_MEMO: dict = {}
 
 
@@ -113,10 +131,46 @@ def _stable_solving_fingerprint(monkeypatch):
     yield
 
 
+_maintainer_modifyitems = None
 try:
     from _maintainer_hooks import (                             # noqa: F401
-        pytest_collection_modifyitems, pytest_configure, pytest_report_header,
+        pytest_configure, pytest_report_header,
         pytest_runtest_logreport, pytest_sessionfinish, pytest_terminal_summary)
+    from _maintainer_hooks import pytest_collection_modifyitems as _maintainer_modifyitems
 except ModuleNotFoundError as _e:                               # pragma: no cover
     if _e.name != "_maintainer_hooks":
         raise
+
+
+# ---- speed tiers: `pytest --fast` is the inner loop; the default tier still runs everything
+
+#: Fixtures built once per session and shared by every worker.
+SHARED_BUILD_FIXTURES = frozenset({"offline_batch", "slice_batch", "serial_batch"})
+
+
+def pytest_addoption(parser):
+    parser.addoption("--fast", action="store_true",
+                     help="deselect `integration` tests (measured slow, or using a shared "
+                          "offline build); for the edit-test loop, not for sign-off")
+
+
+def _slow_ids() -> frozenset:
+    import json
+    path = _HERE / "_speed_tiers.json"
+    return frozenset(json.loads(path.read_text(encoding="utf-8"))["slow"]) if path.is_file() else frozenset()
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(config, items):
+    """Maintainer tiering first (by file), then the speed tier. Both mark before `-m`
+    filters, so `-m "not integration"` selects the same tests as `--fast`."""
+    if _maintainer_modifyitems is not None:
+        _maintainer_modifyitems(config, items)
+    slow = _slow_ids()
+    for it in items:
+        if it.nodeid in slow or SHARED_BUILD_FIXTURES & set(getattr(it, "fixturenames", ())):
+            it.add_marker(pytest.mark.integration)
+    if config.getoption("--fast"):
+        keep = [it for it in items if it.get_closest_marker("integration") is None]
+        config.hook.pytest_deselected(items=[it for it in items if it not in keep])
+        items[:] = keep

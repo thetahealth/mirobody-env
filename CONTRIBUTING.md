@@ -37,8 +37,9 @@ no model calls and need no API key and no evaluation results. CI runs both tiers
 and 3.12:
 
 ```bash
-uv run --group test pytest              # unit tests
-uv run --group test pytest -m world     # world-layer contract tests
+uv run --group test pytest -n auto --dist worksteal   # unit tests, in parallel
+uv run --group test pytest --fast -n auto             # the edit-test loop: skips `integration` tests
+uv run --group test pytest -m world                   # world-layer contract tests
 ```
 
 The `test` dependency group installs pytest and the two example plugin packages the plugin tests
@@ -87,6 +88,30 @@ Comments and docstrings do not enter the fingerprint; changing only a comment ne
 ---
 
 ## 4. Commits and pull requests
+
+### One commit, one thing
+
+A commit should be describable in one sentence that names what changed. If the sentence needs an
+"and", it is two commits. Mechanical sweeps (formatting, renaming, regenerated figures) go in their
+own commit so they never sit between a semantic change and its evidence.
+
+Titles follow `type(scope): what changed`, imperative, lower case, no trailing period, 72 characters
+at most. `type` is one of `feat`, `fix`, `docs`, `ci`, `build`, `refactor`, `test`, `chore`; `scope`
+names the directory or component touched (`build`, `cli`, `judge`, `demo`, `readme`). The commit body
+carries the *why* — the diff already carries the what.
+
+Changes to anything a reader of the published scores relies on — `README.md`, `docs/DATA_CARD.md`,
+`docs/REPRODUCE.md`, the leaderboard data, the frozen packs — name that surface in their scope, so
+that "which commit moved a published reading" stays answerable later.
+
+### How releases reach `main`
+
+Each release reaches `main` as one self-contained commit with a written summary, and the history
+of `main` is not rewritten: a release commit is what a downstream project rebases onto, and a
+published tag points at the commit its package was built from. Work in progress does not land on
+`main`.
+
+### Reviews
 
 * A change should carry its reading: what changed, what was measured, and which control pins it down.
 * Run it yourself before citing a number. If a documented number does not reproduce, open a

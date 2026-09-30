@@ -122,7 +122,7 @@ def test_solver_prices_do_not_require_judge_reasoning_capability():
 
 
 def test_parallel_budget_stop_persists_inflight_success(tmp_path, monkeypatch):
-    monkeypatch.setattr(ev, "EVAL_WORKERS", [2])
+    monkeypatch.setattr(ev.RUN, "workers", 2)
     monkeypatch.setattr(ev, "_backend_of", lambda n: "openrouter")
     started = threading.Barrier(2)
     def work(i):
@@ -152,8 +152,8 @@ def test_run_eval_binds_real_solver_to_shared_ledger(tmp_path, monkeypatch):
     monkeypatch.setattr(ev, "build_solvers", lambda *a: [("s", ev._const(s))])
     monkeypatch.setattr(ev, "_preflight_quota", lambda *a, **k: None)
     monkeypatch.setattr(ev, "load_probes", lambda *a: {})
-    monkeypatch.setattr(ev, "RESP_PATH", [None])
-    monkeypatch.setattr(ev, "EVAL_WORKERS", [1])
+    monkeypatch.setattr(ev.RUN, "resp_path", None)
+    monkeypatch.setattr(ev.RUN, "workers", 1)
     def single(cid, name, raw, t, solver):
         assert solver._accounting.paid.ledger.path == (tmp_path / "shared.json").resolve()
         solver._post("question")

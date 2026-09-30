@@ -41,6 +41,8 @@
  * | `clinicalSeries` | `haenv/build.py:render_clinical` |
  * | `quantizeWithinSlope` | `haenv/build.py:_quantize_within_slope` |
  * | `effectAt` | `haenv/drug_effects.py:effect_at` + `direct_effect` + `total_effect` + `applies_to` |
+ * | `carryForward` | `haenv/post_inject.py:carried_forward` (draws looked up from `PER.cf_u`) |
+ * | `abnormalSide` | `haenv/indicators.py:abnormal_side` |
  * | `kineticFraction` | `haenv/drug_effects.py:_kinetic_fraction` |
  * | `responseOf` | `haenv/drug_effects.py:response_for` (per-person draw looked up from `PER.response`) |
  *
@@ -594,15 +596,19 @@
     const sd = K.ar_sd_frac * amp, sigma = sd * Math.sqrt(Math.max(0, 1 - phi * phi));
     const bound = sigma * Math.sqrt(3.0);
     let dropped = 0;
+    // `full` keeps every sampling day, the missed weigh-ins included: the course the
+    // readings are taken from.
     const emit = base => {
-      const pts = []; let gap = 0, x = 0, wk = 0; dropped = 0;
+      const pts = [], full = []; let gap = 0, x = 0, wk = 0; dropped = 0;
       for (let d = 0; d <= endDay; d += step) {
         if (d === 0) { x = sd * shock[0]; wk = 0; } else { wk += 1; x = phi * x + bound * shock[wk + 1]; }
+        full.push([d, pyRound(base[d] + x, 2)]);
         const keep = step !== K.weight_step || d === 0 || gap >= K.weight_max_gap || PER.weighed[d] === 1;
         if (!keep) { gap += 1; dropped += 1; continue; }
         gap = 0;
         pts.push([d, pyRound(base[d] + x, 2)]);
       }
+      pts.full = full;
       return pts;
     };
     const draws = PER.skel;
@@ -625,7 +631,7 @@
                        start - nadir, irr.caps, nadir, S, R)
         : { state: "n/a" };
       meta.regain = rg.state; meta.regain_detail = rg;
-      meta.level = level; meta.pre = Object.assign({}, pre);
+      meta.level = level; meta.pre = Object.assign({}, pre); meta.base = base;
       return [emit(base), meta];
     };
     let pre = { pace: false, drift: false, eps: false };
@@ -641,7 +647,8 @@
     }
     meta.guard_ok = ok(pts);
     pts.meta = Object.assign(meta, { descEnd: descEnd, revDay: revDay, amp: amp, kDesc: kDesc,
-                                     kReb: kReb, step: step, dropped: dropped, trend: trend });
+                                     kReb: kReb, step: step, dropped: dropped, trend: trend,
+                                     truth: pts.full });
     return pts;
   }
 
@@ -824,9 +831,29 @@
     const pre = resolveDrug(drug, K); if (pre === null) return 0;
     const got = totalEffect(K.drugs[pre], doseMg, field); if (!got) return 0;
     const direct = got[0] - Number(perKg) * Number(atten) * got[1];
+    return direct * kineticFraction(sig, day, driveOf(adherence, K), K)
+      * (response == null ? 1 : Number(response));
+  }
+
+  /** The drive `effect_at` feeds the kinetics: zero until `onset_days`, then adherence. */
+  function driveOf(adherence, K) {
     const adh = typeof adherence === "function" ? adherence : () => Number(adherence);
-    const drive = d => d <= K.onset_days ? 0 : Math.max(0, Math.min(1, Number(adh(d))));
-    return direct * kineticFraction(sig, day, drive, K) * (response == null ? 1 : Number(response));
+    return d => d <= K.onset_days ? 0 : Math.max(0, Math.min(1, Number(adh(d))));
+  }
+
+  /** When the drug effect on `sig` starts and when half of its full size is reached, with
+   *  full adherence (`kineticFraction` under `driveOf(1)`). `null` for a signal without a
+   *  kinetic stage. */
+  function effectMilestones(sig, K, horizon) {
+    if (!((K.effect_fields || {})[sig])) return null;
+    const drive = driveOf(1, K);
+    let lo = 0, hi = Math.max(1, Math.trunc(horizon));
+    if (kineticFraction(sig, hi, drive, K) < 0.5) return { onset: K.onset_days, half: null };
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (kineticFraction(sig, mid, drive, K) >= 0.5) hi = mid; else lo = mid;
+    }
+    return { onset: K.onset_days, half: hi };
   }
 
   /** This person's drug-response multiplier (drug_effects.response_for). The per-person
@@ -927,21 +954,37 @@
     };
   }
 
-  /* ── Carry-forward: copies some points verbatim from the previous value ─────────────
-       This is **post-processing** (`post_inject.carried_forward`), it never touches the
-       world layer's ground truth. Which points get chosen uses this patient's own
-       `weighed` table as the deterministic sequence, rather than drawing new randomness. */
+  /* ── Carry-forward (post_inject.carried_forward): reading i takes the previous recorded
+       value when this case's draw `PER.cf_u[i]` is below the rate. Post-processing only:
+       the world layer's course and the gold label are untouched. Returns
+       `[day, recorded value, copied]`. */
   function carryForward(pts, rate, PER) {
     const out = pts.map(p => [p[0], p[1], 0]);
-    if (!(rate > 0)) return out;
-    let acc = 0;
+    if (!(rate > 0) || out.length < 2) return out;
+    const U = PER.cf_u || [];
     for (let i = 1; i < out.length; i++) {
-      acc += rate;
-      if (acc >= 1 && PER.weighed[out[i][0] % PER.weighed.length] === 1) {
-        acc -= 1; out[i][1] = out[i - 1][1]; out[i][2] = 1;
-      }
+      if (U[i] < rate) { out[i][1] = out[i - 1][1]; out[i][2] = 1; }
     }
     return out;
+  }
+
+  /** indicators.abnormal_side: `true` on the abnormal side of the registered reference
+   *  bound, `false` inside it, `null` when that bound is not registered. */
+  function abnormalSide(sig, v, K) {
+    const r = (K.clinical_ref || {})[sig];
+    if (!r) return null;
+    if (r.direction === "lower_abnormal") return r.low == null ? null : Number(v) < Number(r.low);
+    return r.high == null ? null : Number(v) > Number(r.high);
+  }
+
+  /** The same knobs rendered with other case ids' random layers: one recorded weight
+   *  series per layer (missed weigh-ins and carried-forward copies included), its course
+   *  and the label rule's verdict on it. `ids` limits the work to a slice of `layers`. */
+  function future(P, K, id, PER, rate) {
+    const w = weightSeries(Object.assign({}, P, { case_id: id }), K, PER);
+    const [verdict] = deriveOutcome(w, labelRule(K));
+    return { id: id, pts: carryForward(w, rate, PER), truth: w.meta.truth, verdict: verdict,
+             level: w.meta.level, guard_ok: w.meta.guard_ok };
   }
 
   /* ── Parameters ⇄ job.yaml ──────────────────────────────────────────────────── */
@@ -1010,8 +1053,8 @@
 
   /* ── Chart-note text → parameters (keyword extraction) ───────────────────────────────
      This is keyword extraction with visible rules; in production a model extracts
-     structured facts. The patterns match Chinese medical vocabulary because the sample chart
-     note (`SAMPLE_EMR`) is benchmark content and stays in Chinese in both page languages. */
+     structured facts. The patterns match Chinese and English wording, so the Chinese sample
+     note and its English counterpart extract the same fields. */
   const LEX = [
     { k: "disease", v: "T2D", re: /2\s*型糖尿病|Ⅱ型糖尿病|T2DM|type\s*2\s*diabetes/i },
     { k: "disease", v: "obesity", re: /肥胖|超重|obesity/i },
@@ -1024,13 +1067,15 @@
     { k: "drug", v: "metformin", re: /二甲双胍|metformin/i },
     { k: "outcome", v: "regain", re: /体重(again|反弹|回升|复增)|再次增重|regain/i },
     { k: "outcome", v: "maintain", re: /体重(维持|保持|平稳)|未见反弹|maintain/i },
-    { k: "driver", v: "poor_medication_adherence", re: /漏服|自行停药|依从性?差|未按时|停用/ },
+    { k: "driver", v: "poor_medication_adherence",
+      re: /漏服|自行停药|依从性?差|未按时|停用|missed (?:doses|injections)|skipped doses|non-?adheren|stopped taking/i },
   ];
 
   function fromCaseText(text) {
     const t = String(text || ""), got = {}, hits = [];
     LEX.forEach(e => { if (!(e.k in got) && e.re.test(t)) { got[e.k] = e.v; hits.push([e.k, e.v]); } });
-    const age = t.match(/(\d{2})\s*岁/);
+    const age = t.match(/(\d{2})\s*岁/) || t.match(/\b(\d{2})[-\s]?years?[-\s]?old\b/i)
+      || t.match(/\b(?:female|male|woman|man)\s*,\s*(\d{2})\b/i);
     if (age) {
       const a = Number(age[1]), lo = Math.floor(a / 5) * 5;
       got.age_range = lo + "-" + (lo + 4); hits.push(["age_range", got.age_range]);
@@ -1045,9 +1090,11 @@
     const hb = t.match(/(?:HbA1c|糖化(?:血红蛋白)?)[^\d]{0,6}(\d{1,2}(?:\.\d)?)\s*%?/i);
     // The hit key `hba1c_base` matches the `k-hb` knob, so the page can translate it.
     if (hb) { got.hba1c = Number(hb[1]); hits.push(["hba1c_base", got.hba1c]); }
-    const wk = t.match(/第\s*(\d{1,2})\s*周[^。；;]{0,8}(?:反弹|回升|复增|增重)/);
+    const wk = t.match(/第\s*(\d{1,2})\s*周[^。；;]{0,8}(?:反弹|回升|复增|增重)/)
+      || t.match(/(?:regain|rebound)[^.;]{0,24}?\bweek\s*(\d{1,2})\b/i)
+      || t.match(/\bweek\s*(\d{1,2})\b[^.;]{0,24}?(?:regain|rebound)/i);
     if (wk) { got.reversal_week = Number(wk[1]); hits.push(["reversal_week", got.reversal_week]); }
-    const fu = t.match(/随访\s*(\d{1,3})\s*(?:天|日)/);
+    const fu = t.match(/随访\s*(\d{1,3})\s*(?:天|日)/) || t.match(/follow-?up\s*(?:of\s*)?(\d{1,3})\s*days?/i);
     if (fu) { got.T = Number(fu[1]); hits.push(["index_time_T", got.T]); }
     return { fields: got, hits: hits };
   }
@@ -1056,7 +1103,7 @@
   function selfCheck(D) {
     const G = D.golden, K = D.kernel, PS = D.personas;
     if (!G || !K || !PS) return { ok: false, reason: "data.json has no golden / kernel / personas section" };
-    let worstW = 0, worstC = 0, n = 0, bad = [];
+    let worstW = 0, worstC = 0, worstB = 0, n = 0, nCf = 0, bad = [];
     G.cases.forEach(g => {
       const P = Object.assign({}, g.params, { devices: g.params.devices });
       const PER = PS[P.case_id];
@@ -1084,6 +1131,25 @@
         for (let i = 0; i < got.length; i++) {
           worstC = Math.max(worstC, Math.abs(got[i][1] - c.pts[i][1])); n++;
         }
+        (c.abn || []).forEach((a, i) => {
+          if (abnormalSide(sig, c.pts[i][1], K) !== a) bad.push(g.label + "/" + sig + ": abnormal flag differs at point " + i);
+        });
+      });
+      // The course behind the readings: every sampling day, equal to each kept reading.
+      const tr = w.meta.truth || [], step = w.meta.step, byDay = new Map(tr.map(q => [q[0], q[1]]));
+      if (tr.length !== Math.floor(P.course_end_day / step) + 1 || w.some(q => byDay.get(q[0]) !== q[1]))
+        bad.push(g.label + ": the course behind the readings does not hold every sampling day and every reading");
+      // The daily course behind the readings, and the carried-forward copies.
+      if (g.base) {
+        const b = w.meta.base || [];
+        if (b.length !== g.base.length) bad.push(g.label + ": daily course has " + b.length + " days ≠ " + g.base.length);
+        else for (let i = 0; i < b.length; i++) { worstB = Math.max(worstB, Math.abs(b[i] - g.base[i])); n++; }
+      }
+      (g.carried_forward || []).forEach(cf => {
+        const got = carryForward(w, cf.rate, PER).map((q, i) => [i, q[1]]).filter(q => q[1] !== w[q[0]][1]);
+        if (JSON.stringify(got) !== JSON.stringify(cf.changed))
+          bad.push(g.label + ": carried-forward copies at rate " + cf.rate + " differ");
+        else nCf += got.length;
       });
     });
     (G.overlay || []).forEach(o => {
@@ -1100,10 +1166,10 @@
       }
       bad.push(...sameSkeleton(o.label, w.meta, o.skeleton));
     });
-    const tol = G.tol == null ? 0.005 : G.tol;
-    return { ok: !bad.length && worstW <= tol && worstC <= tol,
-             worstWeight: worstW, worstClinical: worstC, nPoints: n,
-             nCases: G.cases.length + (G.overlay || []).length, tol: tol, bad: bad };
+    const tol = G.tol == null ? 0.005 : G.tol, tolBase = 1e-4;
+    return { ok: !bad.length && worstW <= tol && worstC <= tol && worstB <= tolBase,
+             worstWeight: worstW, worstClinical: worstC, worstBase: worstB, nPoints: n,
+             nCopies: nCf, nCases: G.cases.length + (G.overlay || []).length, tol: tol, bad: bad };
   }
 
   /** The guard's decisions (level, pass, pre-T choices, regain check) must match exactly:
@@ -1118,7 +1184,8 @@
   globalThis.HaenvGen = {
     pyRound, shape, feasibleK, stepOf, adherencePts, weightSeries, weightRender, weightOverlay,
     resampleToGrid, deriveOutcome, labelSeries, labelRule,
-    clinicalSeries, effectAt, responseOf, kineticFraction, quantizeWithinSlope, signalsFor, specFor, gold, carryForward,
+    clinicalSeries, effectAt, responseOf, kineticFraction, effectMilestones, quantizeWithinSlope,
+    signalsFor, specFor, gold, carryForward, abnormalSide, future,
     toJobYaml, parseJobYaml, fromCaseText, selfCheck, YAML_FIELDS, LEX,
   };
 })();

@@ -19,8 +19,29 @@ LEAN_LAYOUT = "lean-v4"
 REGISTRY_SECOND = ROOT / "registry/semantic_judging_second.yaml"
 
 
+#: Judge-block keys that say how a run executes, not what it judges. They are not part of a
+#: run's judging identity: `load_policy` drops them and every policy comparison goes through
+#: `judging_policy`, so changing the lane count never refuses a seal, a resume or a correction.
+EXECUTION_KEYS = ("max_concurrency",)
+#: Lanes a run uses when neither the command line nor a legacy sealed policy names a number.
+DEFAULT_JUDGE_LANES = 10
+
+
+def judging_policy(policy: dict) -> dict:
+    """The policy without its execution keys: what two runs must share to be the same judging."""
+    out = dict(policy)
+    if isinstance(out.get("judge"), dict):
+        out["judge"] = {k: v for k, v in out["judge"].items() if k not in EXECUTION_KEYS}
+    return out
+
+
+def default_lanes(policy: dict) -> int:
+    """Lane count when none is given: a legacy sealed policy's own number, else the default."""
+    return int((policy.get("judge") or {}).get("max_concurrency", DEFAULT_JUDGE_LANES))
+
+
 def load_policy(path=None) -> dict:
-    policy = load_yaml(REGISTRY if path is None else path)
+    policy = judging_policy(load_yaml(REGISTRY if path is None else path))
     judge = policy["judge"]
     if policy.get("role") == "second_provider":
         if (policy["default_mode"] != "llm" or judge["model_id"].startswith("openai/")

@@ -64,7 +64,20 @@ def load_cfg() -> dict:
     local = ROOT / "config.local.yaml"
     if local.is_file():
         _deep_merge(cfg, _cached(local) or {})
-    return apply_config_overlay(cfg)
+    from . import settings
+    return settings.validate(settings.apply_set(apply_config_overlay(cfg)))
+
+
+def config_layers() -> list[dict]:
+    """Every file merged into `load_cfg`, in order, with its SHA-256 (`--set` is recorded
+    separately, see `settings.record`)."""
+    import hashlib
+    paths = [ROOT / "config.yaml", ROOT / "config.local.yaml"]
+    named = os.environ.get(CONFIG_OVERLAY_ENV, "").strip()
+    if named:
+        paths.append(Path(named))
+    return [{"file": str(p), "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
+            for p in paths if p.is_file()]
 
 
 CONFIG_OVERLAY_ENV = "HAENV_CONFIG_OVERLAY"
@@ -297,6 +310,9 @@ def _main(argv=None) -> int:
                          "Paired with `--no-physio` for an A/B: run the same job twice without copying the yaml")
     ap.add_argument("--no-physio", dest="physio", action="store_false",
                     help="force the physiology layer off (overrides job.yaml's `physio`)")
+    ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
+                    help="override one configuration value after config.local.yaml and the overlay "
+                         "(dotted key, YAML value; repeatable), e.g. --set eval.workers=4")
     ap.add_argument("--offline", action="store_true",
                     help="run only the offline deterministic reference (no real model calls); for smoke tests/CI")
     ap.add_argument("--judge-budget-usd", help="approved combined solver and semantic-judge API budget ceiling")
@@ -378,6 +394,11 @@ def _main(argv=None) -> int:
     if a.check and a.cmd != "tasks":
         ap.error("`--check` is only valid with `tasks`")
 
+    if getattr(a, "pooling", None):
+        a.set.append(f"eval.pooling={a.pooling}")    # `--pooling` is `--set eval.pooling=...`
+    if a.set:
+        from .settings import export_set
+        export_set(a.set)
     cfg = load_cfg()
     logging.basicConfig(level=[logging.WARNING, logging.INFO, logging.DEBUG][int(cfg.get("verbose", 1))],
                         format="%(levelname)s %(name)s: %(message)s")
@@ -389,15 +410,12 @@ def _main(argv=None) -> int:
     from .evaluate import run_eval
     from .report import write_report
 
-    from .evaluate import EVAL_WORKERS
+    from .evaluate import RUN
     # Worker count comes from the config when the flag is unset; there is no default in code.
     _w = int(getattr(a, "workers", 0) or 0)
     if _w <= 0:
         _w = int((cfg.get("eval") or {}).get("workers") or 1)
-    EVAL_WORKERS[0] = max(1, _w)
-    if getattr(a, "pooling", None):
-        from . import run_scheduler as _rs
-        _rs.POOLING_OVERRIDE[0] = a.pooling
+    RUN.workers = max(1, _w)
 
     # `inputs` is read-only: it lists every input the framework reads (config, job file,
     # registries, code constants) and where each comes from.
@@ -1102,6 +1120,9 @@ def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report) -> int:
             print(f"[haenv] Q-side data-check questions: {len(_qm)}/{len(built)} case(s) · "
                   f"distribution across the three classes {_kc} -- truth is computed by code, "
                   f"the answer is an enum/integer => anchor-exempt")
+        from .settings import append_record
+        Path(job.results_dir).mkdir(parents=True, exist_ok=True)
+        append_record(job.results_dir, cfg, config_layers())
         if a.offline:
             rows = run_eval(job, cfg, built, resume=not a.fresh)
         else:

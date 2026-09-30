@@ -101,7 +101,7 @@ def test_live_gated_path_uses_the_same_predicate(monkeypatch):
 
     monkeypatch.setattr(EV, "build_instance", lambda raw, T: (types.SimpleNamespace(), _VP()))
     monkeypatch.setattr(_g, "run_gated", lambda raw, T, solver, trace=None: (_Out(), _Tr()))
-    monkeypatch.setattr(EV, "RESP_PATH", [None])
+    monkeypatch.setattr(EV.RUN, "resp_path", None)
     monkeypatch.setattr(EV, "iron_law_precheck", lambda raw, sp, vp, solver: (lambda: (None, [])))
     row = EV._row_gated("C1", "m1", object(), 84, _Solver())
     assert row["overall"] == "ABORT(no_answer:budget)"

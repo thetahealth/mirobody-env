@@ -30,6 +30,14 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 #: The patients the page can switch between; each has its own exported random layer.
 PERSONAS = tuple(f"DEMO-{i:02d}" for i in range(1, 13))
 
+#: Extra random layers for the "parallel futures" fan: the same knobs rendered with other
+#: case ids. Only the weight-stream tables are exported for them.
+FAN_PERSONAS = tuple(f"DEMO-{i:02d}" for i in range(13, 33))
+
+#: Decimals kept for the carried-forward uniforms. The page compares them with a rate in
+#: 0.1 % steps; at 9 decimals a comparison flips only when a draw lies within 5e-10 of it.
+_CF_ND = 9
+
 #: Decimals kept for shock tables. Shocks lie in [-1, 1) and are scaled by at most 0.12 kg,
 #: so the rounding error (1e-7 kg) cannot change a value rounded to 0.01.
 _SHOCK_ND = 6
@@ -117,6 +125,9 @@ def _kernel() -> dict:
                               "cohort": {d: _ind.cohort_of(s, d, [])
                                          for d in DOM if s in DOM[d]}}
                           for s, v in B.CLINICAL_SPEC.items()},
+        # Reference range, abnormal side and diagnostic threshold per signal
+        # (`indicators.of` / `abnormal_side`), for the lab small multiples.
+        "clinical_ref": {s: _clinical_ref(s) for s in B.CLINICAL_SPEC},
         "clinical_cv": B._clinical_cv(),
         "by_device": {k: sorted(v) for k, v in B.CLINICAL_BY_DEVICE.items()},
         # Disease domains: value range, weekly slope limit, unit
@@ -158,11 +169,54 @@ def _kernel() -> dict:
     }
 
 
-def _personas() -> dict:
-    """Each persona's random layer, computed by the production functions.
+def _clinical_ref(sig: str) -> dict:
+    """`reference_range`, `direction` and `diagnostic_for` of one indicator dossier."""
+    from haenv import indicators as _ind
+    d = _ind.of(sig)
+    ref = d.get("reference_range") or {}
+    return {"low": ref.get("low"), "high": ref.get("high"),
+            "direction": str(d.get("direction", "higher_abnormal")),
+            "diagnostic": {k: v.get("ge") for k, v in (d.get("diagnostic_for") or {}).items()
+                           if isinstance(v, dict) and v.get("ge") is not None}}
+
+
+def _cf_uniforms(cid: str) -> list[float]:
+    """`post_inject._u01(<case>|weight|carried_forward, i)` for every point index."""
+    from haenv import build as B
+    from haenv.post_inject import _u01
+    return [round(_u01(f"{cid}|weight|carried_forward", i), _CF_ND) for i in range(B.END + 1)]
+
+
+def _weight_layer(cid: str) -> dict:
+    """The random tables the weight stream reads for one case id.
 
     `shock` starts at `k = -1` (the stationary start), so the browser reads `shock[k+1]`.
     """
+    from haenv import build as B
+    from haenv import events as E
+    return {
+        "shock": [round(E._det_shock(f"{cid}|weight|wobble", k), _SHOCK_ND)
+                  for k in range(-1, B.END + 1)],
+        # Whether the patient weighed in on day d (used only under daily sampling)
+        "weighed": [1 if B._weighed_on(d, cid) else 0 for d in range(0, B.END + 1)],
+        # Desired descent curvature, capped later by `feasibleK`
+        "descent_k": B._trajectory_shape(cid)[0],
+        # The weight skeleton's uniforms (`build._skeleton_draws`), exact: they steer
+        # guard decisions, so they are not rounded
+        "skel": B._skeleton_draws(cid),
+        # Carried-forward draws (`post_inject.carried_forward`), by point index
+        "cf_u": _cf_uniforms(cid),
+    }
+
+
+def _fan_personas() -> dict:
+    """Weight-stream random layers for `FAN_PERSONAS`, computed by production."""
+    sys.path.insert(0, str(ROOT))
+    return {cid: _weight_layer(cid) for cid in FAN_PERSONAS}
+
+
+def _personas() -> dict:
+    """Each persona's random layer, computed by the production functions."""
     sys.path.insert(0, str(ROOT))
     from haenv import build as B
     from haenv import drug_effects as DE
@@ -170,20 +224,12 @@ def _personas() -> dict:
 
     out = {}
     for cid in PERSONAS:
-        key = f"{cid}|weight|wobble"
         out[cid] = {
-            "shock": [round(E._det_shock(key, k), _SHOCK_ND) for k in range(-1, B.END + 1)],
-            # Whether the patient weighed in on day d (used only under daily sampling)
-            "weighed": [1 if B._weighed_on(d, cid) else 0 for d in range(0, B.END + 1)],
+            **_weight_layer(cid),
             # Per-draw measurement variation of each clinical signal, by draw index
             "meas": {sig: [round(E._det_shock(f"{cid}|{sig}|meas", i), _SHOCK_ND)
                            for i in range(64)]
                      for sig in sorted(B._clinical_cv())},
-            # Desired descent curvature, capped later by `feasibleK`
-            "descent_k": B._trajectory_shape(cid)[0],
-            # The weight skeleton's uniforms (`build._skeleton_draws`), exact: they steer
-            # guard decisions, so they are not rounded
-            "skel": B._skeleton_draws(cid),
             # Drug-response multiplier (`drug_effects.response_for`): the draw depends only
             # on `case_id`; the knobs pick the driver band and the drug, so production maps
             # it for every registered drug and for the non-response band.
@@ -256,6 +302,8 @@ def _golden() -> dict:
     from haenv import build as B
     from haenv import drug_effects as DE
     from haenv import gates as G
+    from haenv import indicators as IND
+    from haenv import post_inject as PI
 
     out = []
     for (label, cid, dis, start, nadir, T, outcome, rw, slope, mpw, adh_low, driver,
@@ -280,6 +328,7 @@ def _golden() -> dict:
                     sig, spec, w, ce, drug=drug, dose_mg=dose,
                     adherence_pts=adh, case_id=cid, response=resp)],
             }
+            clin[sig]["abn"] = [IND.abnormal_side(sig, v) for _, v in clin[sig]["pts"]]
         out.append({
             "label": label,
             "params": {"case_id": cid, "disease": dis, "start": start, "nadir": nadir,
@@ -295,10 +344,30 @@ def _golden() -> dict:
                                              "sustained_days", "reading")}},
             "adherence": [[p["ts"], p["value"]] for p in adh],
             "clinical": clin,
+            # The daily course the readings are sampled from (`_weight_render`'s final
+            # `base`, before the day-to-day wobble), for the page's "truth" view.
+            "base": [round(v, _BASE_ND) for v in wmeta["base"]],
+            # `post_inject.carried_forward` on this series: `[index, new value]` for every
+            # reading it changed, at the registered rate and at a second rate.
+            "carried_forward": [
+                {"rate": r, "changed": [[i, q["value"]] for i, (p0, q) in enumerate(zip(w, PI.carried_forward(
+                    w, rng_key=f"{cid}|weight|carried_forward", rate=r))) if q["value"] != p0["value"]]}
+                for r in _cf_rates()],
         })
     return {"cases": out, "overlay": _golden_overlay(), "tol": 0.005,
             "source": "haenv/build.py:_weight_render · _weight_overlay · render_clinical · "
                       "clinical_plan · haenv/gates.py:derive_outcome"}
+
+
+#: Decimals kept for the golden daily base; the page compares it within 1e-4.
+_BASE_ND = 5
+
+
+def _cf_rates() -> tuple[float, ...]:
+    """The registered carried-forward rate and a larger one, for the golden vectors."""
+    from haenv import post_inject as PI
+    rate = float((PI._rates().get("carried_forward") or {}).get("rate") or 0.0)
+    return (rate, 0.3)
 
 
 def _rule() -> dict:
