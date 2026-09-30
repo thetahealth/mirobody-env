@@ -1,0 +1,18 @@
+[project]
+name = "haenv-world-demo"
+version = "0.1.0"
+description = "Minimal end-to-end demo of a world-side haenv plugin (not part of haenv itself)"
+requires-python = ">=3.10"
+dependencies = []
+
+# The entire world-side plugin interface: one entry-point group -> one `() -> None` factory,
+# loaded by a job's `plugins: {world: ["haenv.world.demo"]}`.
+[project.entry-points."haenv.world.demo"]
+demo = "haenv_world_demo:world"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["haenv_world_demo"]

@@ -1,0 +1,41 @@
+# uv environment
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Question-generation model-output cache (key=sha256(model+prompt))
+cases/_llm_cache
+# Case-report rendering cache, kept apart from the question-generation cache
+cases/_record_cache
+# (no trailing slash: the path may be a symlink to a directory)
+
+# Run artifacts, archived per batch. The leading slash limits the match to the repo
+# root, so `docs/reports/` and `docs/results/` are not affected.
+/results/
+/reports/
+.tmpwork/
+
+# Text-extraction output; the two worked examples stay tracked.
+/derived/*
+!/derived/text_demo.job.yaml
+!/derived/text_retro.job.yaml
+
+# ---------------------------------------------------------------- The gold standard doesn't ship
+#
+# A distributed file never holds both the question (Q) and the world ground truth (W)
+# (`haenv/wq.py`). `pyproject.toml` applies the same rule to the sdist.
+#
+# `frozen/split_wq.py` splits each frozen `*.cases.jsonl` into `*.Q.jsonl` (tracked) and
+# `*.W.jsonl` (not distributed); `split_wq.py --join --verify` rebuilds the original bytes,
+# matching `MANIFEST.json`'s `file_sha256`.
+frozen/*.W.jsonl
+frozen/*.cases.jsonl
+
+# jsdom, for the demo page's manual render check (`web/demo/render_check.mjs`)
+node_modules/
+package.json
+package-lock.json
+
+# Deployment-specific overrides (endpoint, key names)
+config.local.yaml

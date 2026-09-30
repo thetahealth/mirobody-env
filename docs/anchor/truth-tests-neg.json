@@ -1,0 +1,202 @@
+{
+ "T8dab20967e": {
+  "case": "JD-01",
+  "model": "gpt-5.4",
+  "mutation": "original"
+ },
+ "T9268e222a1": {
+  "case": "JD-01",
+  "model": "gpt-5.4",
+  "mutation": "drop_one"
+ },
+ "Td8f3f4f294": {
+  "case": "JD-01",
+  "model": "gpt-5.4",
+  "mutation": "only_one"
+ },
+ "T8175dec278": {
+  "case": "JD-01",
+  "model": "gpt-5.4",
+  "mutation": "shotgun"
+ },
+ "T8a2e063d3a": {
+  "case": "JD-02",
+  "model": "gemini-3.1-pro",
+  "mutation": "original"
+ },
+ "T16b44c788e": {
+  "case": "JD-02",
+  "model": "gemini-3.1-pro",
+  "mutation": "drop_one"
+ },
+ "T9547184bc0": {
+  "case": "JD-02",
+  "model": "gemini-3.1-pro",
+  "mutation": "only_one"
+ },
+ "T0a0e7b2324": {
+  "case": "JD-02",
+  "model": "gemini-3.1-pro",
+  "mutation": "shotgun"
+ },
+ "Tc13ae65815": {
+  "case": "JD-03",
+  "model": "gemini-3.1-pro",
+  "mutation": "original"
+ },
+ "Tf425b00048": {
+  "case": "JD-03",
+  "model": "gemini-3.1-pro",
+  "mutation": "drop_one"
+ },
+ "Tac2959911d": {
+  "case": "JD-03",
+  "model": "gemini-3.1-pro",
+  "mutation": "only_one"
+ },
+ "T814ef2592f": {
+  "case": "JD-03",
+  "model": "gemini-3.1-pro",
+  "mutation": "shotgun"
+ },
+ "Tadedbc3599": {
+  "case": "JD-04",
+  "model": "gemini-3.1-pro",
+  "mutation": "original"
+ },
+ "T2325351026": {
+  "case": "JD-04",
+  "model": "gemini-3.1-pro",
+  "mutation": "drop_one"
+ },
+ "Tc350078254": {
+  "case": "JD-04",
+  "model": "gemini-3.1-pro",
+  "mutation": "only_one"
+ },
+ "T956f8f338e": {
+  "case": "JD-04",
+  "model": "gemini-3.1-pro",
+  "mutation": "shotgun"
+ },
+ "T03d1de188b": {
+  "case": "JD-05",
+  "model": "gemini-3.1-pro",
+  "mutation": "original"
+ },
+ "T28ab4f244c": {
+  "case": "JD-05",
+  "model": "gemini-3.1-pro",
+  "mutation": "drop_one"
+ },
+ "T64f0ff1c14": {
+  "case": "JD-05",
+  "model": "gemini-3.1-pro",
+  "mutation": "only_one"
+ },
+ "Te385e93359": {
+  "case": "JD-05",
+  "model": "gemini-3.1-pro",
+  "mutation": "shotgun"
+ },
+ "T8088c99c51": {
+  "case": "JD-06",
+  "model": "gemini-3.1-pro",
+  "mutation": "original"
+ },
+ "T8163417519": {
+  "case": "JD-06",
+  "model": "gemini-3.1-pro",
+  "mutation": "drop_one"
+ },
+ "T1372032328": {
+  "case": "JD-06",
+  "model": "gemini-3.1-pro",
+  "mutation": "only_one"
+ },
+ "T0a378a55db": {
+  "case": "JD-06",
+  "model": "gemini-3.1-pro",
+  "mutation": "shotgun"
+ },
+ "Tc0da91238a": {
+  "case": "JD-07",
+  "model": "gemini-3.1-pro",
+  "mutation": "original"
+ },
+ "T8d8f9d91df": {
+  "case": "JD-07",
+  "model": "gemini-3.1-pro",
+  "mutation": "drop_one"
+ },
+ "T04df625ffe": {
+  "case": "JD-07",
+  "model": "gemini-3.1-pro",
+  "mutation": "only_one"
+ },
+ "Tcafbec1368": {
+  "case": "JD-07",
+  "model": "gemini-3.1-pro",
+  "mutation": "shotgun"
+ },
+ "Tde23c900d2": {
+  "case": "JD-08",
+  "model": "gpt-5.4",
+  "mutation": "original"
+ },
+ "Te9e3c398bd": {
+  "case": "JD-08",
+  "model": "gpt-5.4",
+  "mutation": "drop_one"
+ },
+ "T6590c3b4f9": {
+  "case": "JD-08",
+  "model": "gpt-5.4",
+  "mutation": "only_one"
+ },
+ "Tf2db47fc2b": {
+  "case": "JD-08",
+  "model": "gpt-5.4",
+  "mutation": "shotgun"
+ },
+ "Tdbe22cd61a": {
+  "case": "JD-09",
+  "model": "gemini-3.1-pro",
+  "mutation": "original"
+ },
+ "T48ada8ef3e": {
+  "case": "JD-09",
+  "model": "gemini-3.1-pro",
+  "mutation": "drop_one"
+ },
+ "T4cf6221c0f": {
+  "case": "JD-09",
+  "model": "gemini-3.1-pro",
+  "mutation": "only_one"
+ },
+ "T326297c720": {
+  "case": "JD-09",
+  "model": "gemini-3.1-pro",
+  "mutation": "shotgun"
+ },
+ "T0eea678bb2": {
+  "case": "JD-10",
+  "model": "gemini-3.1-pro",
+  "mutation": "original"
+ },
+ "T7a7016af67": {
+  "case": "JD-10",
+  "model": "gemini-3.1-pro",
+  "mutation": "drop_one"
+ },
+ "T6ed037b18e": {
+  "case": "JD-10",
+  "model": "gemini-3.1-pro",
+  "mutation": "only_one"
+ },
+ "Tb011f56ced": {
+  "case": "JD-10",
+  "model": "gemini-3.1-pro",
+  "mutation": "shotgun"
+ }
+}

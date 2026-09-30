@@ -1,0 +1,25 @@
+# Machine-readable citation metadata. GitHub renders this as the "Cite this
+# repository" button; `cffconvert` turns it into BibTeX/APA.
+# Authorship follows LICENSE and NOTICE.md (the organisation).
+cff-version: 1.2.0
+message: If you use this harness or its benchmark data, please cite it.
+title: "Health Agent Environment"
+abstract: >-
+  An end-to-end pipeline for evaluating health agents: author cases with hidden
+  control variables, run many models against them, and produce a report. The
+  judging core is separable and versioned, so a score can be traced back to the
+  exact criteria that produced it.
+type: software
+authors:
+  - name: Theta Health
+    website: https://github.com/thetahealth
+version: 1.0.0
+license: MIT
+repository-code: https://github.com/thetahealth/mirobody-env
+url: https://github.com/thetahealth/mirobody-env
+keywords:
+  - evaluation
+  - benchmark
+  - llm-agents
+  - health
+  - reproducibility

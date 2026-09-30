@@ -1,0 +1,49 @@
+name: A number looks wrong
+description: A reading in the README, a report or the data card does not reproduce
+labels: ["numbers"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This project treats a wrong number as a defect with the same weight as a crash.
+        Corrections are recorded in [`CHANGELOG.md`](../blob/main/CHANGELOG.md); the number
+        you are looking at may already be corrected there.
+
+        Some readings are **not free to reproduce** (they need paid model calls) and some
+        cannot be reproduced at all from a clean clone. Which is which is listed in
+        [`docs/REPRODUCE.md`](../blob/main/docs/REPRODUCE.md).
+
+  - type: input
+    id: where
+    attributes:
+      label: Where the number appears
+      placeholder: "README.md line 103 / docs/DATA_CARD.md §4 / a report file"
+    validations:
+      required: true
+
+  - type: textarea
+    id: claimed
+    attributes:
+      label: What it claims
+      description: Quote it verbatim.
+    validations:
+      required: true
+
+  - type: textarea
+    id: got
+    attributes:
+      label: What you got instead
+      description: The command you ran and its output. If you could not run it, say what stopped you — that is also a finding.
+      render: shell
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Checked first
+      options:
+        - label: I looked in `CHANGELOG.md` and this number is not already corrected
+          required: true
+        - label: I checked `docs/REPRODUCE.md` for whether this reading is reproducible for free
+          required: true

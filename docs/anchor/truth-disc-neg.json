@@ -1,0 +1,254 @@
+{
+ "Dd6b6152516": {
+  "mutation": "original",
+  "case": "JD-02",
+  "spec": "JD-CUSH",
+  "solver": "gpt-5.4",
+  "n_tests": 9
+ },
+ "D617a23e32a": {
+  "mutation": "original",
+  "case": "JD-02",
+  "spec": "JD-CUSH",
+  "solver": "kimi-k3",
+  "n_tests": 7
+ },
+ "Dfd4a787517": {
+  "mutation": "original",
+  "case": "JD-04",
+  "spec": "JD-OSA",
+  "solver": "gpt-5.4",
+  "n_tests": 4
+ },
+ "Dd27c0f3bae": {
+  "mutation": "original",
+  "case": "JD-06",
+  "spec": "JD-ALDO",
+  "solver": "gemini-3.1-pro",
+  "n_tests": 6
+ },
+ "Dc13dc850ad": {
+  "mutation": "original",
+  "case": "JD-07",
+  "spec": "JD-HEMO",
+  "solver": "gpt-5.4",
+  "n_tests": 10
+ },
+ "D99c77e797b": {
+  "mutation": "original",
+  "case": "JD-07",
+  "spec": "JD-HEMO",
+  "solver": "kimi-k3",
+  "n_tests": 6
+ },
+ "D071ecef6a8": {
+  "mutation": "original",
+  "case": "JD-09",
+  "spec": "JD-PHEO",
+  "solver": "terra",
+  "n_tests": 5
+ },
+ "D5486627eb9": {
+  "mutation": "shotgun",
+  "case": "JD-09",
+  "spec": "JD-PHEO",
+  "solver": "kimi-k3",
+  "n_tests": 8
+ },
+ "Dbec7478667": {
+  "mutation": "shotgun",
+  "case": "JD-11",
+  "spec": "JD-PHPT",
+  "solver": "gemini-3.1-pro",
+  "n_tests": 8
+ },
+ "Dca068e8307": {
+  "mutation": "shotgun",
+  "case": "JD-11",
+  "spec": "JD-PHPT",
+  "solver": "terra",
+  "n_tests": 8
+ },
+ "D27bfff7cfe": {
+  "mutation": "drop_disc",
+  "case": "JD-12",
+  "spec": "JD-B12",
+  "solver": "gemini-3.1-pro",
+  "n_tests": 5
+ },
+ "D0f10d1ec22": {
+  "mutation": "only_disc",
+  "case": "JD-12",
+  "spec": "JD-B12",
+  "solver": "gemini-3.1-pro",
+  "n_tests": 1
+ },
+ "Dec4174c14b": {
+  "mutation": "drop_disc",
+  "case": "JD-12",
+  "spec": "JD-B12",
+  "solver": "gpt-5.4",
+  "n_tests": 9
+ },
+ "D2eb86b36a9": {
+  "mutation": "only_disc",
+  "case": "JD-12",
+  "spec": "JD-B12",
+  "solver": "gpt-5.4",
+  "n_tests": 1
+ },
+ "D43c0fc58ec": {
+  "mutation": "drop_disc",
+  "case": "JD-12",
+  "spec": "JD-B12",
+  "solver": "terra",
+  "n_tests": 2
+ },
+ "D06ad2caae1": {
+  "mutation": "only_disc",
+  "case": "JD-12",
+  "spec": "JD-B12",
+  "solver": "terra",
+  "n_tests": 3
+ },
+ "D742b7fc659": {
+  "mutation": "drop_disc",
+  "case": "JD-12",
+  "spec": "JD-B12",
+  "solver": "kimi-k3",
+  "n_tests": 7
+ },
+ "Dc7b8042e58": {
+  "mutation": "only_disc",
+  "case": "JD-12",
+  "spec": "JD-B12",
+  "solver": "kimi-k3",
+  "n_tests": 1
+ },
+ "De15c93a9c8": {
+  "mutation": "shotgun",
+  "case": "JD-13",
+  "spec": "JD-SLE",
+  "solver": "terra",
+  "n_tests": 8
+ },
+ "D51e9b337fc": {
+  "mutation": "shotgun",
+  "case": "JD-19",
+  "spec": "HD-COM-02",
+  "solver": "gpt-5.4",
+  "n_tests": 8
+ },
+ "Dcdc72f4b70": {
+  "mutation": "shotgun",
+  "case": "JD-18",
+  "spec": "HD-COM-01",
+  "solver": "gpt-5.4",
+  "n_tests": 8
+ },
+ "D4ee8bc3b29": {
+  "mutation": "shotgun",
+  "case": "JD-14",
+  "spec": "JD-LADA",
+  "solver": "terra",
+  "n_tests": 8
+ },
+ "Dffd60ea8d0": {
+  "mutation": "drop_disc",
+  "case": "JD-22",
+  "spec": "HD-COM-05",
+  "solver": "gpt-5.4",
+  "n_tests": 2
+ },
+ "Dd3cdff2047": {
+  "mutation": "only_disc",
+  "case": "JD-22",
+  "spec": "HD-COM-05",
+  "solver": "gpt-5.4",
+  "n_tests": 1
+ },
+ "Df17496e532": {
+  "mutation": "original",
+  "case": "JD-26",
+  "spec": "HD-COM-09",
+  "solver": "gpt-5.4",
+  "n_tests": 7
+ },
+ "D7b734fdffe": {
+  "mutation": "original",
+  "case": "JD-18",
+  "spec": "HD-COM-01",
+  "solver": "gemini-3.1-pro",
+  "n_tests": 5
+ },
+ "D8da3f7ab21": {
+  "mutation": "drop_disc",
+  "case": "JD-22",
+  "spec": "HD-COM-05",
+  "solver": "gemini-3.1-pro",
+  "n_tests": 5
+ },
+ "Dfb886ecaf1": {
+  "mutation": "only_disc",
+  "case": "JD-22",
+  "spec": "HD-COM-05",
+  "solver": "gemini-3.1-pro",
+  "n_tests": 1
+ },
+ "Df52ba56a7b": {
+  "mutation": "shotgun",
+  "case": "JD-20",
+  "spec": "HD-COM-03",
+  "solver": "terra",
+  "n_tests": 8
+ },
+ "D5013b11292": {
+  "mutation": "original",
+  "case": "JD-21",
+  "spec": "HD-COM-04",
+  "solver": "gemini-3.1-pro",
+  "n_tests": 4
+ },
+ "Ddc68827558": {
+  "mutation": "drop_disc",
+  "case": "JD-22",
+  "spec": "HD-COM-05",
+  "solver": "terra",
+  "n_tests": 4
+ },
+ "Dbc0360360c": {
+  "mutation": "only_disc",
+  "case": "JD-22",
+  "spec": "HD-COM-05",
+  "solver": "terra",
+  "n_tests": 2
+ },
+ "D6a5265cee9": {
+  "mutation": "drop_disc",
+  "case": "JD-22",
+  "spec": "HD-COM-05",
+  "solver": "kimi-k3",
+  "n_tests": 4
+ },
+ "D0903643047": {
+  "mutation": "only_disc",
+  "case": "JD-22",
+  "spec": "HD-COM-05",
+  "solver": "kimi-k3",
+  "n_tests": 1
+ },
+ "Daa900b1857": {
+  "mutation": "original",
+  "case": "JD-31",
+  "spec": "HD-COM-11",
+  "solver": "kimi-k3",
+  "n_tests": 5
+ },
+ "D1260a0662d": {
+  "mutation": "original",
+  "case": "JD-32",
+  "spec": "HD-COM-12",
+  "solver": "kimi-k3",
+  "n_tests": 6
+ }
+}

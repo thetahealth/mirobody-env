@@ -1,0 +1,116 @@
+# haenv configuration: models, backends, concurrency, timeouts and generation settings.
+# config.yaml is not covered by the freeze anchor; changing a model's settings changes the
+# measurement conditions of its readings without moving any fingerprint.
+
+# L0 kernel directory, relative to the repo root. Override with HAENV_KERNEL_PATH.
+kernel_path: core
+
+# Models under test. `vendor` is explicit because one vendor can route through several backends.
+# max_tokens follows the budget rule in haenv/llm.py (budget_for / recommended_budgets) and is
+# not silently lowered. Explicit provider-cap corrections define new run conditions;
+# historical responses retain their original declared budgets.
+models:
+  # max_tokens is the provider's published outputTokenLimit (65536).
+  gemini-3.1-pro:     {backend: google, vendor: google, model: gemini-3.1-pro-preview, max_tokens: 65536}
+  deepseek-v4-pro:    {backend: openrouter, vendor: deepseek, model: deepseek/deepseek-v4-pro, max_tokens: 72000}
+  terra:              {backend: openrouter, vendor: openai, model: openai/gpt-5.6-terra, max_tokens: 72000}
+  luna:               {backend: openai, vendor: openai, model: gpt-5.6-luna, max_tokens: 72000}
+  sol:                {backend: openai, vendor: openai, model: gpt-5.6-sol, max_tokens: 72000}
+  # Upstream rate limits on these arrive as HTTP 200 error bodies; extra retries absorb them.
+  gpt-6-sol:          {backend: openrouter, vendor: openai, model: openai/gpt-6-sol, max_tokens: 72000,
+                       retries: 5}
+  gpt-6-luna:         {backend: openrouter, vendor: openai, model: openai/gpt-6-luna, max_tokens: 72000,
+                       retries: 5}
+  deepseek-v4-flash:  {backend: openrouter, vendor: deepseek, model: deepseek/deepseek-v4-flash, max_tokens: 72000}
+  # Not in default_models (cost); run with --models claude-opus-4-8.
+  claude-opus-4-8:    {backend: relay,  vendor: anthropic, model: claude-opus-4-8, max_tokens: 72000}
+  # Also the default case-generation model (synth.gen_model).
+  gemini-3.8-flash:   {backend: google, vendor: google, model: gemini-3.8-flash, max_tokens: 65536}
+  qwen3.8-max:        {backend: relay,  vendor: alibaba, model: qwen3.8-max, max_tokens: 72000}
+  gemini-3.7-flash:   {backend: google, vendor: google, model: gemini-3.7-flash, max_tokens: 65536}
+  qwen3.7-flash:      {backend: dashscope, vendor: alibaba, model: qwen3.7-flash, max_tokens: 72000}
+  # Always reasons; stream so the gateway does not time out a long request.
+  glm-5.3:            {backend: relay,  vendor: zhipu, model: glm-5.3, max_tokens: 72000,
+                       stream: true, retries: 5}
+  glm-5.3-flash:      {backend: openrouter, vendor: zhipu, model: z-ai/glm-5.3-flash, max_tokens: 72000,
+                       stream: true, retries: 5}
+  # Reasoning arrives in <think> blocks in the body; reasoning_tokens reads 0.
+  minimax-m3:         {backend: openrouter, vendor: minimax, model: minimax/minimax-m3, max_tokens: 72000,
+                       stream: true}
+  # Streams can be truncated without finish_reason; retries recover most of them.
+  # The relay and OpenRouter-pinned-to-Moonshot serve the same weights from the same
+  # upstream (declared `upstream`, identical on both), so they answer as one solver; the
+  # OpenRouter route is the fallback when relay keys run out (runtime.yaml `routes` overrides).
+  kimi-k3:            {backend: relay,  vendor: moonshot, model: kimi-k3, max_tokens: 72000,
+                       stream: true, retries: 5, upstream: "Moonshot AI",
+                       fallback_routes: [{backend: openrouter, model: moonshotai/kimi-k3,
+                                          upstream: "Moonshot AI",
+                                          provider: {only: ["Moonshot AI"], allow_fallbacks: false}}]}
+default_models: ['gemini-3.1-pro', 'deepseek-v4-pro', 'gpt-6-sol', 'gpt-6-luna', 'kimi-k3',
+                 'gemini-3.7-flash', 'qwen3.7-flash', 'glm-5.3-flash', 'minimax-m3',
+                 'deepseek-v4-flash']
+
+# `backend: relay` is any OpenAI-compatible gateway. Configure it in config.local.yaml
+# (merged over this file, ignored by git); relay models are skipped until a url is set:
+#
+#   backends:
+#     relay:
+#       url: https://your-gateway.example/v1/chat/completions
+#       key_env_pool: RELAY_KEY_     # keys RELAY_KEY_1, RELAY_KEY_2, ... in env_file
+#       no_proxy_host: your-gateway.example
+#       quota_url: https://your-gateway.example   # optional: OneAPI-style billing endpoint
+backends: {}
+
+# Per-backend ceiling on cells in flight, summed over every model on that backend.
+# Throughput only; no cell's score depends on it. The defaults are conservative for a fresh
+# account; raise them against what your keys actually accept (config.local.yaml).
+backend_limits:
+  relay: 6
+  openai: 3
+  google: 3
+  openrouter: 2
+  _cli: 2
+  _offline: 8
+
+# Evaluation scheduling (haenv/run_scheduler.py). Throughput only.
+#   workers: cells in flight per model; each model gets min(workers, its backend's cap,
+#            its cell count) threads. --workers N overrides it; 1 runs serially.
+#   model_workers: per-model pool sizes that replace `workers` for the named models.
+#   pooling: model = one pool per model, longest expected cell first (from a timing table
+#            when one is present); backend = one pool per backend in task order.
+eval:
+  workers: 8
+  model_workers: {}
+  pooling: model
+
+# Paid requests in flight across every process that shares one budget ledger, and the part
+# of that ceiling solver requests may not take (kept for judge requests). A ledger records
+# the ceiling it runs under; change it explicitly with `paid_slots.set_capacity` while no
+# paid request is in flight.
+paid:
+  global_request_limit: 48
+  judge_reserved_lanes: 3
+
+ai_dispatcher: ~/.local/bin/ai
+# KEY=VALUE file with backend API keys, injected into subprocesses only and never logged.
+# Set HAENV_ENV_FILE; unset means no env file (not needed for --offline or --gen deterministic).
+env_file: ${HAENV_ENV_FILE}
+# Socket timeout per read (payloads can reach ~77k characters). A request still open after
+# its model's stall deadline (run_scheduler.stall_deadline_s) is closed and retried.
+timeout_s: 900
+max_retries: 2
+verbose: 1              # 0=WARNING 1=INFO 2=DEBUG
+
+synth:
+  max_rounds: 6         # GV-1 iterative generate-and-validate cap; not emitted if it never converges
+  # llm = a model generates the disease course and daily events; deterministic = formulaic,
+  # free and CI-safe. The default is deterministic so a fresh clone incurs no model charges;
+  # use --gen llm to generate with a model.
+  generator: deterministic
+  gen_model: gemini-3.8-flash  # which config.models key generates cases
+  gen_workers: 8        # results are collected in input order, identical to a serial run
+  gen_timeout_s: 900    # per-call timeout for case generation (a reasoning model is slower to produce long JSON)
+  gen_cache: true       # caches prompt -> response (cases/_llm_cache/) so a re-run doesn't pay twice; --regen forces regeneration
+report:
+  sample_cases: 5       # cases sampled into the report (3-10)
+  timeline_points: 6    # number of timepoints in a sampled case's progress timeline

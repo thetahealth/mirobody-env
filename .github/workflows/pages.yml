@@ -1,0 +1,116 @@
+# Publish the demo page to GitHub Pages.
+#
+# `web/demo/index.html` is a single self-contained page: its data and generator are inlined,
+# it makes no network requests, and it also opens from `file://`. This workflow checks it and
+# publishes it at https://thetahealth.github.io/mirobody-env/.
+#
+# The page recomputes patients in the browser (`web/demo/gen.mjs`) and compares them point
+# for point with golden vectors from `haenv/build.py`. Two checks gate every publish:
+#
+#   1. `check_page_data.py` recomputes the golden vectors, kernel constants and random-layer
+#      tables with production code and requires the page data to match them exactly;
+#   2. `gen_check.mjs` requires the browser generator to reproduce those golden vectors.
+#
+# `render_check.mjs` then renders the page in jsdom and moves every control, and
+# `layout_check.py` loads it in Chromium at several widths and checks the layout.
+#
+# A third check rebuilds `index.html` from `_template.html`, `data.json` and `gen.mjs` and
+# requires the committed page to be exactly that build, so the checks above are about the
+# page that gets published.
+#
+# Check 1 without check 2 would pass a page whose generator drifted; check 2 without check 1
+# would pass a generator that agrees with stale vectors. The workflow also runs when
+# `haenv/` or `registry/` changes, so a production change that the page no longer matches
+# fails here instead of leaving a stale page online.
+#
+# No step uses `|| true`: a failing check means no publish, and the site keeps its last good
+# version. `jsdom` is installed with `--no-save` so no `package.json` is written.
+
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/demo/**"
+      - "haenv/**"
+      - "registry/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false   # never cancel a deployment half way
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install haenv
+        run: |
+          python -m pip install -q --upgrade pip
+          python -m pip install -q -e .
+
+      - name: index.html is the build of its sources
+        run: |
+          set -euo pipefail
+          python web/demo/build.py
+          git diff --exit-code -- web/demo/index.html
+
+      - name: Page data matches production code (golden vectors, kernel, random layer)
+        run: python web/demo/check_page_data.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Browser generator reproduces the golden vectors
+        run: node web/demo/gen_check.mjs
+
+      - name: Install jsdom (render check only)
+        run: npm i --no-save jsdom
+
+      - name: Page renders and every control changes the output
+        run: node web/demo/render_check.mjs
+
+      - name: Layout holds in a real browser (and its negative controls are caught)
+        run: |
+          python -m pip install -q playwright==1.62.0
+          python -m playwright install --with-deps chromium
+          python web/demo/layout_check.py
+          python web/demo/layout_check.py --selftest
+
+      - name: The page makes no external requests
+        run: |
+          set -euo pipefail
+          n=$(grep -coE 'fetch\(|XMLHttpRequest|<script src=|<link [^>]*href="http' web/demo/index.html || true)
+          echo "external request patterns: $n"
+          test "$n" -eq 0
+
+      - name: Stage index.html only
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp web/demo/index.html _site/index.html
+          ls -l _site
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

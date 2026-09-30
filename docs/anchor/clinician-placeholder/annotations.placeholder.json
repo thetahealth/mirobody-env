@@ -1,0 +1,14 @@
+{
+  "_README": [
+    "PLACEHOLDER ANNOTATIONS: not usable for any reading.",
+    "These values are hand-written placeholders, not any clinician's judgment. They exist so that",
+    "the `--gold clinician` gold path runs end to end: the mechanism can be checked now, the content awaits a clinician.",
+    "Format: {case_id: {gold field: value}}. Field names must be in `provenance.GOLD_FIELDS`;",
+    "a non-gold field makes `fill_gold_clinician` raise (a clinician fills only B-class fields).",
+    "To fill it in: pass a real `--annotator` id, change every value below and delete this block."
+  ],
+  "PLACEHOLDER-01": {
+    "ddx_diagnosis": "PLACEHOLDER-待医生填",
+    "ddx_urgency": "🟡"
+  }
+}

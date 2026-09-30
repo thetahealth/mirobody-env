@@ -1,0 +1,18 @@
+{
+ "shotgun": {
+  "trivial": true,
+  "why": "the whole list is unrelated to the condition; judged at a glance, so neither side can err"
+ },
+ "only_disc": {
+  "trivial": true,
+  "why": "only the discriminating test is left; judged at a glance, so neither side can err"
+ },
+ "original": {
+  "trivial": false,
+  "why": "a real answer"
+ },
+ "drop_disc": {
+  "trivial": false,
+  "why": "only the discriminating test is removed; the hardest tier"
+ }
+}

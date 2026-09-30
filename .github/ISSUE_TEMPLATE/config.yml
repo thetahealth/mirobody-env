@@ -1,0 +1,12 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 🔒 Security, privacy, or licensing report
+    url: https://github.com/thetahealth/mirobody-env/security/advisories/new
+    about: >-
+      Suspected credential leak, data that may not be synthetic, or third-party text we
+      had no right to redistribute. Private thread — do not open a public issue.
+  - name: Clinical objection to a case
+    url: https://github.com/thetahealth/mirobody-env/blob/main/docs/ETHICS.md
+    about: >-
+      This is evaluation data, not medical advice. Clinical objections are welcome as a
+      normal issue — read ETHICS.md first for what the data does and does not claim.

@@ -1,0 +1,22 @@
+[project]
+name = "haenv-plugin-demo"
+version = "0.1.0"
+description = "Minimal end-to-end demo of an external haenv judge (a plugin, not part of haenv itself)"
+requires-python = ">=3.10"
+dependencies = []
+
+# This section is the entire interface for a plugin: one entry-point group name -> one `() -> Iterable[Judge]` factory.
+# `job.yaml` writes `plugins: ["haenv.judges.demo"]`, and `haenv/job.py:load_plugins`
+# calls `judges.load_judge_plugins("haenv.judges.demo")`, which finds the line below.
+#
+# The group name is not the default `haenv.judges`: the default group is shared and anyone might register into it,
+# while a specific name lets "which package is mounted on this board" be read at a glance in job.yaml (it goes into job_sha256).
+[project.entry-points."haenv.judges.demo"]
+verbosity = "haenv_plugin_demo:judges"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["haenv_plugin_demo"]

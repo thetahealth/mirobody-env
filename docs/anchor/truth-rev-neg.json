@@ -1,0 +1,254 @@
+{
+ "Rb7631f094b": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-02",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": true
+ },
+ "R9869fb3d3e": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-04",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": false
+ },
+ "R386b7a9161": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-05",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": true
+ },
+ "R3c30da10c1": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-06",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": false
+ },
+ "R4ef1f889ae": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-07",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": false
+ },
+ "R0e1f48f5f3": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-07",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": false
+ },
+ "R06920d86ec": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-08",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": false
+ },
+ "R3c80685b52": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-10",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": true
+ },
+ "Rc8cd0f3005": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-11",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": false
+ },
+ "R42cd4b4e88": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-13",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": false
+ },
+ "R40126e2ca0": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-13",
+  "solver": "gemini-3.1-pro",
+  "judge_changed": true
+ },
+ "Rbb96ec59cf": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-14",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R4886062d08": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-14",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R5cb7ef30f4": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-14",
+  "solver": "gpt-5.4",
+  "judge_changed": false
+ },
+ "Rd6cd59ff44": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-16",
+  "solver": "gpt-5.4",
+  "judge_changed": false
+ },
+ "R31b00c659b": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-16",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R2e454b10da": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-19",
+  "solver": "gpt-5.4",
+  "judge_changed": false
+ },
+ "R9dafb10ca4": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-23",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R95b64ada45": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-23",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "Rc68c4dddda": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-25",
+  "solver": "gpt-5.4",
+  "judge_changed": false
+ },
+ "R5afabeb047": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-25",
+  "solver": "gpt-5.4",
+  "judge_changed": false
+ },
+ "R41e43f01b1": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-24",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "Ra7e7667648": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-26",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R129bbbfc24": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-27",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R9055698a14": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-27",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R2efbbb4586": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-31",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R80b0a531c6": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-31",
+  "solver": "gpt-5.4",
+  "judge_changed": false
+ },
+ "R8abd6261e5": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-28",
+  "solver": "gpt-5.4",
+  "judge_changed": false
+ },
+ "R307cce9afd": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-28",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "Rc7c30b4166": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-33",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R6b12cb15d8": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-33",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "Rae768c16f6": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-29",
+  "solver": "gpt-5.4",
+  "judge_changed": false
+ },
+ "R492b138aaa": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-36",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "R952beae559": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-36",
+  "solver": "gpt-5.4",
+  "judge_changed": false
+ },
+ "R6b74a2f3a1": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-30",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ },
+ "Rbf2634bf38": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-30",
+  "solver": "gpt-5.4",
+  "judge_changed": true
+ }
+}

@@ -1,0 +1,14 @@
+{
+ "force_flip": {
+  "trivial": true,
+  "why": "the whole triple is changed; judged at a glance, so neither side can err"
+ },
+ "original": {
+  "trivial": false,
+  "why": "a real answer"
+ },
+ "force_hold": {
+  "trivial": false,
+  "why": "the triple is held fixed, so a change can only be in the text; the hardest tier"
+ }
+}

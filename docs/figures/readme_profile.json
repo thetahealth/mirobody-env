@@ -1,0 +1,1571 @@
+{
+ "rule": {
+  "alpha": 0.05,
+  "boot": 10000,
+  "letters": "shared letter = not separable on that row",
+  "seed": 20260929,
+  "tier": "composite tier 1"
+ },
+ "tracks": {
+  "ddx-timeline": {
+   "dims": {
+    "dx_listed": {
+     "letters": {
+      "deepseek-v4-flash": "d",
+      "deepseek-v4-pro": "ab",
+      "gemini-3.1-pro": "ab",
+      "gemini-3.7-flash": "ab",
+      "glm-5.3-flash": "e",
+      "gpt-6-luna": "bc",
+      "gpt-6-sol": "ab",
+      "kimi-k3": "a",
+      "minimax-m3": "c",
+      "qwen3.7-flash": "d"
+     },
+     "separable": [
+      [
+       "deepseek-v4-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "minimax-m3"
+      ],
+      [
+       "deepseek-v4-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "minimax-m3"
+      ],
+      [
+       "gemini-3.1-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "minimax-m3"
+      ],
+      [
+       "gemini-3.7-flash",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "minimax-m3"
+      ],
+      [
+       "gpt-6-sol",
+       "qwen3.7-flash"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "gpt-6-luna"
+      ],
+      [
+       "kimi-k3",
+       "minimax-m3"
+      ],
+      [
+       "kimi-k3",
+       "qwen3.7-flash"
+      ],
+      [
+       "minimax-m3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "minimax-m3",
+       "qwen3.7-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "glm-5.3-flash"
+      ]
+     ],
+     "separable_first_tier": 1,
+     "value": {
+      "deepseek-v4-flash": 0.608,
+      "deepseek-v4-pro": 0.92,
+      "gemini-3.1-pro": 0.943,
+      "gemini-3.7-flash": 0.92,
+      "glm-5.3-flash": 0.023,
+      "gpt-6-luna": 0.875,
+      "gpt-6-sol": 0.909,
+      "kimi-k3": 0.949,
+      "minimax-m3": 0.795,
+      "qwen3.7-flash": 0.648
+     }
+    },
+    "noop_ok": {
+     "letters": {
+      "deepseek-v4-flash": "b",
+      "deepseek-v4-pro": "a",
+      "gemini-3.1-pro": "a",
+      "gemini-3.7-flash": "a",
+      "glm-5.3-flash": "c",
+      "gpt-6-luna": "a",
+      "gpt-6-sol": "a",
+      "kimi-k3": "a",
+      "minimax-m3": "a",
+      "qwen3.7-flash": "a"
+     },
+     "separable": [
+      [
+       "deepseek-v4-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "minimax-m3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "glm-5.3-flash"
+      ]
+     ],
+     "separable_first_tier": 0,
+     "value": {
+      "deepseek-v4-flash": 0.674,
+      "deepseek-v4-pro": 1.0,
+      "gemini-3.1-pro": 1.0,
+      "gemini-3.7-flash": 1.0,
+      "glm-5.3-flash": 0.096,
+      "gpt-6-luna": 1.0,
+      "gpt-6-sol": 1.0,
+      "kimi-k3": 1.0,
+      "minimax-m3": 0.985,
+      "qwen3.7-flash": 0.978
+     }
+    },
+    "quant_ok": {
+     "letters": {
+      "deepseek-v4-flash": "b",
+      "deepseek-v4-pro": "a",
+      "gemini-3.1-pro": "a",
+      "gemini-3.7-flash": "a",
+      "glm-5.3-flash": "c",
+      "gpt-6-luna": "a",
+      "gpt-6-sol": "a",
+      "kimi-k3": "a",
+      "minimax-m3": "a",
+      "qwen3.7-flash": "a"
+     },
+     "separable": [
+      [
+       "deepseek-v4-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "minimax-m3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "glm-5.3-flash"
+      ]
+     ],
+     "separable_first_tier": 0,
+     "value": {
+      "deepseek-v4-flash": 0.438,
+      "deepseek-v4-pro": 0.826,
+      "gemini-3.1-pro": 0.819,
+      "gemini-3.7-flash": 0.847,
+      "glm-5.3-flash": 0.076,
+      "gpt-6-luna": 0.854,
+      "gpt-6-sol": 0.868,
+      "kimi-k3": 0.84,
+      "minimax-m3": 0.84,
+      "qwen3.7-flash": 0.847
+     }
+    },
+    "review_macro": {
+     "letters": {
+      "deepseek-v4-flash": "b",
+      "deepseek-v4-pro": "b",
+      "gemini-3.1-pro": "a",
+      "gemini-3.7-flash": "a",
+      "glm-5.3-flash": "b",
+      "gpt-6-luna": "b",
+      "gpt-6-sol": "b",
+      "kimi-k3": "b",
+      "minimax-m3": "b",
+      "qwen3.7-flash": "b"
+     },
+     "separable": [
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-pro"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "gpt-6-luna"
+      ],
+      [
+       "gemini-3.1-pro",
+       "gpt-6-sol"
+      ],
+      [
+       "gemini-3.1-pro",
+       "kimi-k3"
+      ],
+      [
+       "gemini-3.1-pro",
+       "minimax-m3"
+      ],
+      [
+       "gemini-3.1-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-pro"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "gpt-6-luna"
+      ],
+      [
+       "gemini-3.7-flash",
+       "gpt-6-sol"
+      ],
+      [
+       "gemini-3.7-flash",
+       "kimi-k3"
+      ],
+      [
+       "gemini-3.7-flash",
+       "minimax-m3"
+      ],
+      [
+       "gemini-3.7-flash",
+       "qwen3.7-flash"
+      ]
+     ],
+     "separable_first_tier": 8,
+     "value": {
+      "deepseek-v4-flash": 0.2,
+      "deepseek-v4-pro": 0.0,
+      "gemini-3.1-pro": 0.786,
+      "gemini-3.7-flash": 0.75,
+      "glm-5.3-flash": 0.04,
+      "gpt-6-luna": 0.179,
+      "gpt-6-sol": 0.25,
+      "kimi-k3": 0.107,
+      "minimax-m3": 0.036,
+      "qwen3.7-flash": 0.179
+     }
+    },
+    "score": {
+     "letters": {
+      "deepseek-v4-flash": "d",
+      "deepseek-v4-pro": "abc",
+      "gemini-3.1-pro": "a",
+      "gemini-3.7-flash": "abc",
+      "glm-5.3-flash": "e",
+      "gpt-6-luna": "abc",
+      "gpt-6-sol": "a",
+      "kimi-k3": "ab",
+      "minimax-m3": "bc",
+      "qwen3.7-flash": "c"
+     },
+     "separable": [
+      [
+       "deepseek-v4-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "minimax-m3"
+      ],
+      [
+       "gemini-3.1-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "minimax-m3"
+      ],
+      [
+       "gpt-6-sol",
+       "qwen3.7-flash"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "qwen3.7-flash"
+      ],
+      [
+       "minimax-m3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "glm-5.3-flash"
+      ]
+     ],
+     "separable_first_tier": 0,
+     "value": {
+      "deepseek-v4-flash": 0.434,
+      "deepseek-v4-pro": 0.652,
+      "gemini-3.1-pro": 0.724,
+      "gemini-3.7-flash": 0.678,
+      "glm-5.3-flash": 0.048,
+      "gpt-6-luna": 0.666,
+      "gpt-6-sol": 0.691,
+      "kimi-k3": 0.662,
+      "minimax-m3": 0.617,
+      "qwen3.7-flash": 0.589
+     }
+    },
+    "tests_recall_f1": {
+     "letters": {
+      "deepseek-v4-flash": "d",
+      "deepseek-v4-pro": "ab",
+      "gemini-3.1-pro": "abc",
+      "gemini-3.7-flash": "a",
+      "glm-5.3-flash": "e",
+      "gpt-6-luna": "abc",
+      "gpt-6-sol": "ab",
+      "kimi-k3": "b",
+      "minimax-m3": "cd",
+      "qwen3.7-flash": "d"
+     },
+     "separable": [
+      [
+       "deepseek-v4-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "minimax-m3"
+      ],
+      [
+       "deepseek-v4-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "kimi-k3"
+      ],
+      [
+       "gemini-3.7-flash",
+       "minimax-m3"
+      ],
+      [
+       "gemini-3.7-flash",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "minimax-m3"
+      ],
+      [
+       "gpt-6-sol",
+       "qwen3.7-flash"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "minimax-m3"
+      ],
+      [
+       "kimi-k3",
+       "qwen3.7-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "glm-5.3-flash"
+      ]
+     ],
+     "separable_first_tier": 1,
+     "value": {
+      "deepseek-v4-flash": 0.426,
+      "deepseek-v4-pro": 0.525,
+      "gemini-3.1-pro": 0.511,
+      "gemini-3.7-flash": 0.549,
+      "glm-5.3-flash": 0.005,
+      "gpt-6-luna": 0.504,
+      "gpt-6-sol": 0.538,
+      "kimi-k3": 0.498,
+      "minimax-m3": 0.456,
+      "qwen3.7-flash": 0.441
+     }
+    }
+   },
+   "first_tier": [
+    "gemini-3.1-pro",
+    "gpt-6-sol",
+    "gemini-3.7-flash",
+    "gpt-6-luna",
+    "kimi-k3",
+    "deepseek-v4-pro"
+   ],
+   "models": [
+    "gemini-3.1-pro",
+    "gpt-6-sol",
+    "gemini-3.7-flash",
+    "gpt-6-luna",
+    "kimi-k3",
+    "deepseek-v4-pro",
+    "minimax-m3",
+    "qwen3.7-flash",
+    "deepseek-v4-flash",
+    "glm-5.3-flash"
+   ],
+   "n_cases": 144
+  },
+  "ddx-workup": {
+   "dims": {
+    "dx_listed": {
+     "letters": {
+      "deepseek-v4-flash": "c",
+      "deepseek-v4-pro": "ab",
+      "gemini-3.1-pro": "ab",
+      "gemini-3.7-flash": "ab",
+      "glm-5.3-flash": "c",
+      "gpt-6-luna": "b",
+      "gpt-6-sol": "a",
+      "kimi-k3": "ab",
+      "minimax-m3": "b",
+      "qwen3.7-flash": "c"
+     },
+     "separable": [
+      [
+       "deepseek-v4-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "gpt-6-luna"
+      ],
+      [
+       "gpt-6-sol",
+       "minimax-m3"
+      ],
+      [
+       "gpt-6-sol",
+       "qwen3.7-flash"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "qwen3.7-flash"
+      ],
+      [
+       "minimax-m3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "minimax-m3",
+       "qwen3.7-flash"
+      ]
+     ],
+     "separable_first_tier": 2,
+     "value": {
+      "deepseek-v4-flash": 0.667,
+      "deepseek-v4-pro": 0.875,
+      "gemini-3.1-pro": 0.857,
+      "gemini-3.7-flash": 0.863,
+      "glm-5.3-flash": 0.577,
+      "gpt-6-luna": 0.804,
+      "gpt-6-sol": 0.893,
+      "kimi-k3": 0.869,
+      "minimax-m3": 0.798,
+      "qwen3.7-flash": 0.631
+     }
+    },
+    "noop_ok": {
+     "letters": {
+      "deepseek-v4-flash": "c",
+      "deepseek-v4-pro": "a",
+      "gemini-3.1-pro": "a",
+      "gemini-3.7-flash": "a",
+      "glm-5.3-flash": "c",
+      "gpt-6-luna": "a",
+      "gpt-6-sol": "a",
+      "kimi-k3": "a",
+      "minimax-m3": "a",
+      "qwen3.7-flash": "b"
+     },
+     "separable": [
+      [
+       "deepseek-v4-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "qwen3.7-flash"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "qwen3.7-flash"
+      ],
+      [
+       "minimax-m3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "minimax-m3",
+       "qwen3.7-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "glm-5.3-flash"
+      ]
+     ],
+     "separable_first_tier": 0,
+     "value": {
+      "deepseek-v4-flash": 0.492,
+      "deepseek-v4-pro": 0.992,
+      "gemini-3.1-pro": 1.0,
+      "gemini-3.7-flash": 1.0,
+      "glm-5.3-flash": 0.608,
+      "gpt-6-luna": 1.0,
+      "gpt-6-sol": 1.0,
+      "kimi-k3": 0.992,
+      "minimax-m3": 0.992,
+      "qwen3.7-flash": 0.815
+     }
+    },
+    "quant_ok": {
+     "letters": {
+      "deepseek-v4-flash": "b",
+      "deepseek-v4-pro": "a",
+      "gemini-3.1-pro": "a",
+      "gemini-3.7-flash": "a",
+      "glm-5.3-flash": "b",
+      "gpt-6-luna": "a",
+      "gpt-6-sol": "a",
+      "kimi-k3": "a",
+      "minimax-m3": "a",
+      "qwen3.7-flash": "b"
+     },
+     "separable": [
+      [
+       "deepseek-v4-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "qwen3.7-flash"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "qwen3.7-flash"
+      ],
+      [
+       "minimax-m3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "minimax-m3",
+       "qwen3.7-flash"
+      ]
+     ],
+     "separable_first_tier": 0,
+     "value": {
+      "deepseek-v4-flash": 0.348,
+      "deepseek-v4-pro": 0.862,
+      "gemini-3.1-pro": 0.855,
+      "gemini-3.7-flash": 0.884,
+      "glm-5.3-flash": 0.493,
+      "gpt-6-luna": 0.906,
+      "gpt-6-sol": 0.891,
+      "kimi-k3": 0.891,
+      "minimax-m3": 0.884,
+      "qwen3.7-flash": 0.42
+     }
+    },
+    "review_macro": {
+     "letters": {
+      "deepseek-v4-flash": "ab",
+      "deepseek-v4-pro": "d",
+      "gemini-3.1-pro": "a",
+      "gemini-3.7-flash": "a",
+      "glm-5.3-flash": "bcd",
+      "gpt-6-luna": "bc",
+      "gpt-6-sol": "cd",
+      "kimi-k3": "bc",
+      "minimax-m3": "cd",
+      "qwen3.7-flash": "cd"
+     },
+     "separable": [
+      [
+       "deepseek-v4-flash",
+       "deepseek-v4-pro"
+      ],
+      [
+       "deepseek-v4-flash",
+       "gpt-6-sol"
+      ],
+      [
+       "deepseek-v4-flash",
+       "minimax-m3"
+      ],
+      [
+       "deepseek-v4-flash",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-pro"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "gpt-6-luna"
+      ],
+      [
+       "gemini-3.1-pro",
+       "gpt-6-sol"
+      ],
+      [
+       "gemini-3.1-pro",
+       "kimi-k3"
+      ],
+      [
+       "gemini-3.1-pro",
+       "minimax-m3"
+      ],
+      [
+       "gemini-3.1-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-pro"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "gpt-6-luna"
+      ],
+      [
+       "gemini-3.7-flash",
+       "gpt-6-sol"
+      ],
+      [
+       "gemini-3.7-flash",
+       "kimi-k3"
+      ],
+      [
+       "gemini-3.7-flash",
+       "minimax-m3"
+      ],
+      [
+       "gemini-3.7-flash",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-pro"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-pro"
+      ]
+     ],
+     "separable_first_tier": 12,
+     "value": {
+      "deepseek-v4-flash": 0.889,
+      "deepseek-v4-pro": 0.148,
+      "gemini-3.1-pro": 1.0,
+      "gemini-3.7-flash": 1.0,
+      "glm-5.3-flash": 0.556,
+      "gpt-6-luna": 0.704,
+      "gpt-6-sol": 0.481,
+      "kimi-k3": 0.667,
+      "minimax-m3": 0.407,
+      "qwen3.7-flash": 0.296
+     }
+    },
+    "score": {
+     "letters": {
+      "deepseek-v4-flash": "c",
+      "deepseek-v4-pro": "a",
+      "gemini-3.1-pro": "a",
+      "gemini-3.7-flash": "a",
+      "glm-5.3-flash": "bc",
+      "gpt-6-luna": "a",
+      "gpt-6-sol": "a",
+      "kimi-k3": "a",
+      "minimax-m3": "a",
+      "qwen3.7-flash": "b"
+     },
+     "separable": [
+      [
+       "deepseek-v4-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "qwen3.7-flash"
+      ],
+      [
+       "kimi-k3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "qwen3.7-flash"
+      ],
+      [
+       "minimax-m3",
+       "deepseek-v4-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "minimax-m3",
+       "qwen3.7-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "deepseek-v4-flash"
+      ]
+     ],
+     "separable_first_tier": 0,
+     "value": {
+      "deepseek-v4-flash": 0.304,
+      "deepseek-v4-pro": 0.685,
+      "gemini-3.1-pro": 0.689,
+      "gemini-3.7-flash": 0.68,
+      "glm-5.3-flash": 0.375,
+      "gpt-6-luna": 0.696,
+      "gpt-6-sol": 0.673,
+      "kimi-k3": 0.697,
+      "minimax-m3": 0.673,
+      "qwen3.7-flash": 0.493
+     }
+    },
+    "tests_recall_f1": {
+     "letters": {
+      "deepseek-v4-flash": "bc",
+      "deepseek-v4-pro": "ab",
+      "gemini-3.1-pro": "bc",
+      "gemini-3.7-flash": "c",
+      "glm-5.3-flash": "d",
+      "gpt-6-luna": "ab",
+      "gpt-6-sol": "a",
+      "kimi-k3": "bc",
+      "minimax-m3": "c",
+      "qwen3.7-flash": "c"
+     },
+     "separable": [
+      [
+       "deepseek-v4-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "gemini-3.7-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "minimax-m3"
+      ],
+      [
+       "deepseek-v4-pro",
+       "qwen3.7-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "gemini-3.7-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-luna",
+       "minimax-m3"
+      ],
+      [
+       "gpt-6-luna",
+       "qwen3.7-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "deepseek-v4-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "gemini-3.1-pro"
+      ],
+      [
+       "gpt-6-sol",
+       "gemini-3.7-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "kimi-k3"
+      ],
+      [
+       "gpt-6-sol",
+       "minimax-m3"
+      ],
+      [
+       "gpt-6-sol",
+       "qwen3.7-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "glm-5.3-flash"
+      ]
+     ],
+     "separable_first_tier": 8,
+     "value": {
+      "deepseek-v4-flash": 0.457,
+      "deepseek-v4-pro": 0.508,
+      "gemini-3.1-pro": 0.457,
+      "gemini-3.7-flash": 0.427,
+      "glm-5.3-flash": 0.229,
+      "gpt-6-luna": 0.524,
+      "gpt-6-sol": 0.546,
+      "kimi-k3": 0.456,
+      "minimax-m3": 0.416,
+      "qwen3.7-flash": 0.419
+     }
+    },
+    "tool_target_grounded_rate": {
+     "letters": {
+      "deepseek-v4-flash": "bcde",
+      "deepseek-v4-pro": "e",
+      "gemini-3.1-pro": "b",
+      "gemini-3.7-flash": "bc",
+      "glm-5.3-flash": "f",
+      "gpt-6-luna": "cd",
+      "gpt-6-sol": "de",
+      "kimi-k3": "de",
+      "minimax-m3": "cde",
+      "qwen3.7-flash": "a"
+     },
+     "separable": [
+      [
+       "deepseek-v4-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "deepseek-v4-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "deepseek-v4-pro"
+      ],
+      [
+       "gemini-3.1-pro",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.1-pro",
+       "gpt-6-luna"
+      ],
+      [
+       "gemini-3.1-pro",
+       "gpt-6-sol"
+      ],
+      [
+       "gemini-3.1-pro",
+       "kimi-k3"
+      ],
+      [
+       "gemini-3.1-pro",
+       "minimax-m3"
+      ],
+      [
+       "gemini-3.7-flash",
+       "deepseek-v4-pro"
+      ],
+      [
+       "gemini-3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "gemini-3.7-flash",
+       "gpt-6-sol"
+      ],
+      [
+       "gemini-3.7-flash",
+       "kimi-k3"
+      ],
+      [
+       "gpt-6-luna",
+       "deepseek-v4-pro"
+      ],
+      [
+       "gpt-6-luna",
+       "glm-5.3-flash"
+      ],
+      [
+       "gpt-6-sol",
+       "glm-5.3-flash"
+      ],
+      [
+       "kimi-k3",
+       "glm-5.3-flash"
+      ],
+      [
+       "minimax-m3",
+       "glm-5.3-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "deepseek-v4-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "deepseek-v4-pro"
+      ],
+      [
+       "qwen3.7-flash",
+       "gemini-3.1-pro"
+      ],
+      [
+       "qwen3.7-flash",
+       "gemini-3.7-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "glm-5.3-flash"
+      ],
+      [
+       "qwen3.7-flash",
+       "gpt-6-luna"
+      ],
+      [
+       "qwen3.7-flash",
+       "gpt-6-sol"
+      ],
+      [
+       "qwen3.7-flash",
+       "kimi-k3"
+      ],
+      [
+       "qwen3.7-flash",
+       "minimax-m3"
+      ]
+     ],
+     "separable_first_tier": 9,
+     "value": {
+      "deepseek-v4-flash": 0.911,
+      "deepseek-v4-pro": 0.843,
+      "gemini-3.1-pro": 0.971,
+      "gemini-3.7-flash": 0.941,
+      "glm-5.3-flash": 0.655,
+      "gpt-6-luna": 0.904,
+      "gpt-6-sol": 0.87,
+      "kimi-k3": 0.861,
+      "minimax-m3": 0.887,
+      "qwen3.7-flash": 1.0
+     }
+    }
+   },
+   "first_tier": [
+    "kimi-k3",
+    "gpt-6-luna",
+    "gemini-3.1-pro",
+    "deepseek-v4-pro",
+    "gemini-3.7-flash",
+    "gpt-6-sol",
+    "minimax-m3"
+   ],
+   "models": [
+    "kimi-k3",
+    "gpt-6-luna",
+    "gemini-3.1-pro",
+    "deepseek-v4-pro",
+    "gemini-3.7-flash",
+    "gpt-6-sol",
+    "minimax-m3",
+    "qwen3.7-flash",
+    "glm-5.3-flash",
+    "deepseek-v4-flash"
+   ],
+   "n_cases": 138
+  }
+ }
+}

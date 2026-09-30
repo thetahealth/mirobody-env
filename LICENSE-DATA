@@ -1,0 +1,80 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+Copyright (c) 2026 Theta Health
+
+The benchmark **data** in this repository is licensed under CC BY 4.0.
+Full text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+You are free to share and adapt the material for any purpose, including
+commercially, provided you give appropriate credit, link to the license, and
+indicate if changes were made.
+
+================================================================================
+WHAT COUNTS AS "DATA" HERE
+================================================================================
+
+Covered by this file (CC BY 4.0):
+
+  inputs/*.job.yaml          task specifications
+  registry/*.yaml            clinical vocabularies, findings, scoring profiles
+  probes/**                  question framings
+  frozen/*.Q.jsonl           frozen reference packs -- the solver-visible half
+  frozen/MANIFEST.json       freeze record for those packs
+  docs/**                    documentation
+  docs/anchor/*.json         freeze snapshots
+  results/** reports/**      generated cases, model responses, per-cell
+                             judgements and rendered reports that you produce
+                             by running the pipeline on this data
+
+Covered by `LICENSE` (MIT) instead:
+
+  haenv/**  tools/**             the pipeline, judges and self-checks
+  verifier_core/**               domain-independent verifier primitives
+  frozen/split_wq.py             the Q/W splitter (code, not data)
+  config.yaml  pyproject.toml  uv.lock  .gitignore   config and build files
+
+================================================================================
+RESIDUAL RULE -- nothing is left unlicensed
+================================================================================
+
+  A file is under CC BY 4.0 if it is listed above, or if it is benchmark
+  **data** of the same kind: a generated case, a task specification, a model
+  response, a per-cell judgement, a rendered report, a freeze snapshot, or a
+  clinical vocabulary.
+
+  Everything else -- source code, build and config files -- is MIT.
+  See the RESIDUAL GRANT section of `LICENSE`.
+
+  `core/**` is governed by its own licence file, not by either of ours.
+
+================================================================================
+THIRD-PARTY CONTENT -- NOT COVERED BY THIS GRANT
+================================================================================
+
+Nothing in this repository transcribes published third-party case reports.
+
+================================================================================
+ATTRIBUTION
+================================================================================
+
+If you use the data, cite the repository and state the **freeze revision** the
+numbers came from -- every published board is pinned to one:
+
+    haenv benchmark (Theta Health, 2026), freeze rev<N>,
+    judging fingerprint <judging_sha16>.
+
+Both values are printed on every board and stored in
+`docs/anchor/freeze-*.json` and in each `eval.jsonl` row (`judging_sha16`).
+A number without them is not reproducible -- the judging code changes, and a
+board produced under a different fingerprint is a different measurement.
+
+================================================================================
+THE DATA IS SYNTHETIC. IT IS NOT MEDICAL ADVICE.
+================================================================================
+
+Every patient in this benchmark is generated. No row describes a real person.
+See `docs/ETHICS.md` for what that does and does not license you to conclude,
+and for the one place where real-EMR-derived material was used (calibration of
+baseline value ranges) and how it is handled.
+
+Do not use this data, or models evaluated on it, to make clinical decisions.

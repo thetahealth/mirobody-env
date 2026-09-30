@@ -1,0 +1,59 @@
+# Generated for the public release by tools/make_public_tree.py from the development pyproject.
+
+[project]
+name = "haenv"
+version = "1.0.0"
+description = "A health-agent evaluation harness: author cases with hidden control variables, run models, get a report"
+requires-python = ">=3.10"
+dependencies = ["pyyaml>=6.0"]
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "LICENSE-DATA", "core/LICENSE"]
+classifiers = ["Development Status :: 3 - Alpha", "Intended Audience :: Science/Research", "License :: OSI Approved :: MIT License", "Programming Language :: Python :: 3", "Topic :: Scientific/Engineering :: Artificial Intelligence"]
+
+[project.urls]
+Homepage = "https://github.com/thetahealth/mirobody-env"
+Documentation = "https://github.com/thetahealth/mirobody-env/blob/main/docs/README.md"
+"Data Card" = "https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md"
+
+[project.scripts]
+haenv = "haenv.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "docs", "core", "results", "reports", "frozen", "raw_cases", "inputs", "derived", "cases", "probes", "registry", "examples"]
+markers = ["world: world-layer contract tests (`tests/contracts/`): single-variable control cases that check each layer does only its own job; run with `pytest -m world`", "disk: fidelity checks that need paid evaluation batches on disk (`results/`, `reports/`, `frozen/`)", "slow: a single test that takes more than 5 s", "internal: repository governance checks (budget ratchets, house rules, migration ratchets)"]
+addopts = "-m 'not disk and not internal and not world'"
+
+[tool.hatch.build.targets.wheel]
+packages = ["haenv", "verifier_core"]
+exclude = ["**/__pycache__", "**/*.pyc"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"core" = "haenv/_kernel"
+"config.yaml" = "haenv/_data/config.yaml"
+"registry" = "haenv/_data/registry"
+"inputs" = "haenv/_data/inputs"
+"docs/anchor" = "haenv/_data/docs/anchor"
+"tools/make_freeze.py" = "haenv/_data/tools/make_freeze.py"
+"tools/attribute_failures.py" = "haenv/_data/tools/attribute_failures.py"
+"tools/relay_quota.py" = "haenv/_data/tools/relay_quota.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/frozen/*.cases.jsonl", "/frozen/*.W.jsonl", "/results/", "/reports/", "/tests/", "/config.local.yaml", "/docs/anchor/*", "!/docs/anchor/freeze-*.json", "!/docs/anchor/extract-replay/", "!/docs/anchor/clinician-placeholder/", "!/docs/anchor/CANARY.txt", "/.pytest_cache/", "**/__pycache__", "**/*.pyc"]
+
+[tool.uv.sources.haenv-plugin-demo]
+path = "examples/plugin_demo"
+editable = true
+
+[tool.uv.sources.haenv-llm-judge-demo]
+path = "examples/llm_judge_demo"
+editable = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+test = ["pytest>=8.0,<10", "haenv-plugin-demo", "haenv-llm-judge-demo", "tomli>=2.0; python_version < '3.11'"]
