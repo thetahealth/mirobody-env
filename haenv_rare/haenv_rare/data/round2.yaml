@@ -1,0 +1,75 @@
+# Round 2 of the rare-coding benchmark (2026-09-28): 60 new gold cases, JD-100..JD-159, built by
+# `haenv-rare-round2` (haenv_rare/round2.py) from the staged rare-os data. This file says WHAT is
+# built; the allocator in round2.py turns it into a per-case plan deterministically (case id =
+# seed). Gold is decided before any rendering. SYNTHETIC, evaluation only.
+round: r2
+first_id: 100
+# Language of case i (0-based, id order): cycle both / zh-only / en-only => 20 / 20 / 20.
+# rare_coding-p6-zh = both + zh-only (40), rare_coding-p7-en = both + en-only (40).
+lang_cycle: [both, zh, en]
+# Cases in id order: `n` consecutive ids per spec.
+specs:
+  # EEG-paired: CHB-MIT (paediatric drug-resistant epilepsy, 16 patients, one case each)
+  - {spec: RD-DRAVET, n: 2, eeg: chbmit}
+  - {spec: RD-TSC, n: 2, eeg: chbmit}
+  - {spec: RD-RETT, n: 2, eeg: chbmit}
+  - {spec: RD-CDKL5, n: 2, eeg: chbmit}
+  - {spec: RD-GLUT1, n: 2, eeg: chbmit}
+  - {spec: RD-KCNQ2, n: 2, eeg: chbmit}
+  - {spec: RD-ANGELMAN, n: 2, eeg: chbmit}
+  - {spec: RD-PCDH19, n: 2, eeg: chbmit}
+  # EEG-paired: CAP sleep (narcolepsy 5 recordings, NFLE 10; one case per recording at most)
+  - {spec: RD-NT1, n: 2, eeg: capslp/narco}
+  - {spec: RD-SHE, n: 2, eeg: capslp/nfle}
+  # the rest of the table (neurological ones may take a control recording, below)
+  - {spec: RD-L2HGA, n: 2}
+  - {spec: RD-GAUCHER, n: 2}
+  - {spec: RD-FHLH, n: 2}
+  - {spec: RD-ALS, n: 2}
+  - {spec: RD-LFS, n: 2}
+  - {spec: RD-WILSON, n: 2}
+  - {spec: RD-AIP, n: 2}
+  - {spec: RD-DMD, n: 2}
+  - {spec: RD-POMPE, n: 2}
+  - {spec: RD-NF1, n: 2}
+  - {spec: RD-MPS1, n: 2}
+  - {spec: RD-MPS2, n: 2}
+  - {spec: RD-XALD, n: 2}
+  - {spec: RD-MARFAN, n: 2}
+  - {spec: RD-NPC, n: 2}
+  - {spec: RD-FABRY, n: 2}
+  - {spec: RD-DANON, n: 2}
+  - {spec: RD-OTC, n: 2}
+  - {spec: RD-VHL, n: 2}
+  - {spec: RD-NMOSD, n: 1}
+  # the external Exomiser example, as staged (GRCh37 VCF refused by design; gold from its phenopacket)
+  - {spec: RD-PFEIFFER, n: 1, external: exomiser_pfeiffer}
+eeg:
+  # A CHB-MIT case gets that patient's seizure cut (EDF+C, seizure annotations from the summary)
+  # and seizure-free cut (plain EDF). A CAP case gets its recording as EDF+C with the scored sleep
+  # stages and CAP A-phases. Case sex and age come from the recording's patient.
+  chbmit_modes: {seizure: edfplus, no_seizure: plain}
+  capslp_mode: edfplus
+  # Control recordings (RBD is not an Orphanet rare disease; `n` are healthy sleepers): one per case
+  # of these neurological specs, attached as unrelated. They do not set the case's sex or age.
+  controls: {specs: [RD-L2HGA, RD-ALS, RD-WILSON, RD-XALD, RD-NPC, RD-NMOSD], groups: [rbd, n],
+             modes: {rbd: edfplus, n: plain}}
+  # De-identification test: every `phi_every`-th recording in allocation order carries a synthetic
+  # EDF+ patient field (`P<nnn> <sex> <DD-MMM-YYYY> Test_<Name>`) and phi_expected: true.
+  phi_every: 10
+imaging:
+  # Tumour-predisposition specs take a ReMIND tumour scan (exact_class); the sarcoma collection
+  # stays with LFS as in round 1. `histology` narrows the ReMIND patients.
+  exact:
+    RD-LFS: [{collection: ReMIND, histology: [Glioblastoma, Astrocytoma]}, {collection: Soft-tissue-Sarcoma}]
+    RD-NF1: [{collection: ReMIND, histology: [Astrocytoma]}]
+  # Brain MR paired by region only (region_match, neutral report wording), round-robin over the pool.
+  region: [RD-DRAVET, RD-TSC, RD-RETT, RD-CDKL5, RD-GLUT1, RD-KCNQ2, RD-ANGELMAN, RD-PCDH19,
+           RD-NT1, RD-SHE, RD-L2HGA, RD-ALS, RD-XALD, RD-NPC, RD-MPS1, RD-MPS2, RD-DANON]
+  region_pool: [UPENN-GBM, Vestibular-Schwannoma-SEG, ReMIND]
+genome:
+  # zh / both cases get East Asian backgrounds (12 CHS trios + GIAB Chinese trio); en-only cases the
+  # others (12 non-EAS 1kGP trios + GIAB Ashkenazi trio). Least-used background of the right child
+  # sex first.
+  zh_superpopulations: [EAS]
+  decoys: {carriers: 2, rival: 1}

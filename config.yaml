@@ -21,6 +21,18 @@ models:
                        retries: 5}
   gpt-6-luna:         {backend: openrouter, vendor: openai, model: openai/gpt-6-luna, max_tokens: 72000,
                        retries: 5}
+  # Rare-disease coding service behind an OpenAI-compatible shim. The `mirobody` backend is
+  # registered by the haenv_rare plugin (URL from HAENV_MIROBODY_URL, default 127.0.0.1:8765).
+  # Not an LLM; max_tokens only satisfies the budget check.
+  mirobody-coding:    {backend: mirobody, vendor: thetahealth, model: mirobody-rare-coding, max_tokens: 72000}
+  # The MiroBody chat agent answering the rare retrieval questions through its tools
+  # (docs/decisions/2026-09-30-rare-检索题.md). Backend registered by the haenv_rare plugin (URL from
+  # HAENV_MIROBODY_AGENT_URL, default 127.0.0.1:8776); `model` is the chat model's key in the SUT's
+  # config.llm.yaml, `oracle` answers from the tools without an LLM (the positive control).
+  mirobody-agent-gemini-3.8-flash:         {backend: mirobody-agent, vendor: thetahealth, model: gemini-flash, max_tokens: 72000}
+  mirobody-agent-glm-5.3-flash-high:       {backend: mirobody-agent, vendor: thetahealth, model: glm-flash-high, max_tokens: 72000}
+  mirobody-agent-deepseek-v4.1-flash-high: {backend: mirobody-agent, vendor: thetahealth, model: deepseek-flash-high, max_tokens: 72000}
+  mirobody-agent-oracle:                   {backend: mirobody-agent, vendor: thetahealth, model: oracle, max_tokens: 72000}
   deepseek-v4-flash:  {backend: openrouter, vendor: deepseek, model: deepseek/deepseek-v4-flash, max_tokens: 72000}
   # Not in default_models (cost); run with --models claude-opus-4-8.
   claude-opus-4-8:    {backend: relay,  vendor: anthropic, model: claude-opus-4-8, max_tokens: 72000}

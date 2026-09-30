@@ -1,0 +1,744 @@
+# ---------------------------------------------------------------------------
+# L2 · **罕见病编码条件**(rare):一条 = 一个 ORPHA 病种在 haenv 世界里的 overlay。
+#
+# 设计见 `docs/design/2026-09-20-rare-gen-full.md` §3.1;拍板见
+# `docs/decisions/2026-09-20-rare-coding-合成与评测.md`。装载期校验在本包的 `gen.py`
+# (default-deny:未登记字段 / orpha 不在 product1 / gene 不是 HGNC approved 一律拒收)。
+#
+# 🔴 **六条的临床内容由 haenv 侧起草,未经临床复核**(`clinical_review: pending`,
+#     与 `conditions_unified.yaml` 的 HD-UNI 六条同一先例,2026-09-18 / 2026-09-20 定)。
+#
+# 与 unified 条件的分工:本表**不进** `overlay.condition_registry`(字段域不同);
+# ddx 形状的那几个字段(diagnosis/aliases/tests/specialty/urgency)由本包的 `gen.py`
+# 抄进 `latent.ddx_*`,于是自带的 ddx 判据照跑;`rare_*` 键另走 `adjudication.rare`。
+#
+# 字段:
+#   case_id            冻结的对外编号(JD-50 起;`case_ids.yaml` 不收本表,编号在此冻结)
+#   orpha / gene       编码金标;omim / icd10 由 product1 xref 派生,**不手填**
+#   inheritance        AR | AD | XLR | de_novo | none
+#   phenotype_policy   HPO 抽样策略(读 phenotype.hpoa 的 ORPHA 行)
+#   rivals             鉴别病种的 ORPHA 码 —— 它们的高频表型进 **negated** 池
+#   modalities         genome: {skeleton, tier} · imaging: {collection, tier} | none
+#   weight             骑在代谢骨架上时体重族(与 unified 同域:down|up|stable, start, end)
+#   urgency / red_flag 病种级下限;例级红旗另由下面 `red_flag_hpo` 按抽到的表型推出
+#
+# red_flag_hpo:先证者本人出现(polarity=present, subject=proband)其中任一术语或其子孙术语
+# ⇒ 该例 red_flag=true、urgency=🔴。按术语本身判,不看渲染模板里的「近期 / 自述 / 较明显」。
+# 本身是进行性表现的术语(视力丧失、吞咽/延髓肌无力、呼吸功能不全)不列入。🔴 待专业复核。
+#
+# SYNTHETIC,仅评测用,非医疗建议。
+# ---------------------------------------------------------------------------
+version: 1
+red_flag_hpo:
+  HP:0006543: 心跳呼吸骤停
+  HP:0001645: 心脏性猝死
+  HP:0001279: 晕厥
+  HP:0002647: 主动脉夹层
+  HP:0002138: 蛛网膜下腔出血
+  HP:0002170: 颅内出血
+  HP:0002133: 癫痫持续状态
+  HP:0001259: 昏迷
+  HP:0001297: 卒中
+  HP:0002204: 肺栓塞
+  HP:0002383: 传染性脑炎
+  HP:0002878: 呼吸衰竭
+  HP:0002248: 呕血
+  HP:0002249: 黑便
+conditions:
+  RD-L2HGA:
+    clinical_review: pending
+    case_id: JD-50
+    diagnosis: L-2-羟基戊二酸尿症
+    aliases: [2-羟基戊二酸尿症, L-2-HGA, L2HGA, L-2-hydroxyglutaric aciduria, 羟基戊二酸尿症]
+    orpha: "79314"
+    gene: L2HGDH
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["141", "480"]            # Canavan · Kearns-Sayre
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 62.0, 61.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [尿有机酸GC-MS, 血酰基肉碱谱, 头颅MRI, L2HGDH基因检测]
+    specialty: [神经内科, 遗传代谢科]
+  RD-GAUCHER:
+    clinical_review: pending
+    case_id: JD-51
+    diagnosis: 戈谢病
+    aliases: [高雪病, Gaucher病, Gaucher disease, 葡糖脑苷脂酶缺乏症, 葡萄糖脑苷脂沉积病]
+    orpha: "355"
+    gene: GBA1
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["77293", "3002"]          # Niemann-Pick B · ITP
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [down, 58.0, 55.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血β-葡糖脑苷脂酶活性, 血葡糖鞘氨醇(lyso-Gb1), 骨髓涂片, GBA1基因检测]
+    specialty: [血液科, 遗传代谢科]
+  RD-TSC:
+    clinical_review: pending
+    case_id: JD-52
+    diagnosis: 结节性硬化症
+    aliases: [结节性硬化, TSC, tuberous sclerosis, Bourneville病, 结节性硬化综合征]
+    orpha: "805"
+    gene: TSC2
+    inheritance: de_novo
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ["636"]                    # NF1
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 66.0, 65.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [头颅MRI, 肾脏超声, 皮肤科检查, 脑电图, TSC1/TSC2基因检测]
+    specialty: [神经内科, 遗传科]
+  RD-FHLH:
+    clinical_review: pending
+    case_id: JD-53
+    diagnosis: 家族性噬血细胞性淋巴组织细胞增生症
+    aliases: [噬血细胞综合征, HLH, 家族性HLH, familial hemophagocytic lymphohistiocytosis, 噬血细胞性淋巴组织细胞增多症]
+    orpha: "540"
+    gene: PRF1
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["2331"]                   # Kawasaki
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [down, 60.0, 56.0]
+    urgency: "🔴"                  # red_flag=true ⇒ 🔴(haenv 铁律:urgency 由 red_flag_present 推出;写 🟠 会被 wq 判金标自相矛盾)
+    red_flag: true
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血清铁蛋白, 甘油三酯与纤维蛋白原, sCD25, NK细胞活性, 骨髓涂片, PRF1/UNC13D基因检测]
+    specialty: [血液科, 免疫科]
+  RD-ALS:
+    clinical_review: pending
+    case_id: JD-54
+    diagnosis: 肌萎缩侧索硬化
+    aliases: [肌萎缩侧索硬化症, ALS, 渐冻症, 运动神经元病, amyotrophic lateral sclerosis, Charcot病]
+    orpha: "803"
+    gene: SOD1
+    inheritance: AD
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [1, 1]}
+    rivals: ["641", "589"]             # 多灶性运动神经病 · 重症肌无力
+    modalities: {genome: {skeleton: single, tier: exact_variant}, imaging: none}
+    weight: [down, 64.0, 59.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [肌电图与神经传导, 颈椎MRI, 血清抗GM1抗体, 重复神经电刺激, SOD1/C9orf72基因检测]
+    specialty: [神经内科]
+  RD-LFS:
+    clinical_review: pending
+    case_id: JD-55
+    diagnosis: Li-Fraumeni综合征
+    aliases: [利-弗劳梅尼综合征, LFS, Li-Fraumeni syndrome, TP53相关癌症易感综合征]
+    orpha: "524"
+    gene: TP53
+    inheritance: AD
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [1, 2], negated: [1, 2], family: [1, 2]}
+    rivals: ["636"]                    # NF1
+    modalities: {genome: {skeleton: single, tier: exact_variant}, imaging: {collection: Soft-tissue-Sarcoma, tier: exact_class}}
+    weight: [stable, 70.0, 69.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [软组织肿块MRI, 全身MRI筛查, 活检病理, TP53胚系基因检测]
+    specialty: [肿瘤科, 遗传科]
+  # ---- P1 扩容 24 条(2026-09-20):病种按 rareDieaseCollect 语料出现频次选(NMOSD 106 · MG 55 ·
+  #      血友病 54 · SMA 43 · DMD 24 · AIP 22 · HD 16 · Pompe 15 · NF1 15 · MPS 11 · HAE 11 · Wilson 10 …),
+  #      去掉无 ORPHA/hpoa 或重复扩增类(HD/FRDA/SCA:VCF 表示不标准)。gene: null = 获得性罕见病。
+  RD-WILSON:
+    clinical_review: pending
+    case_id: JD-56
+    diagnosis: 肝豆状核变性
+    aliases: [Wilson病, 威尔逊病, Wilson disease, 肝豆状核变性病, 铜代谢障碍]
+    orpha: "905"
+    gene: ATP7B
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["2137", "646"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 63.0, 62.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血清铜蓝蛋白, 24小时尿铜, 眼科裂隙灯K-F环, 肝脏超声, ATP7B基因检测]
+    specialty: [神经内科, 消化内科]
+  RD-AIP:
+    clinical_review: pending
+    case_id: JD-57
+    diagnosis: 急性间歇性卟啉病
+    aliases: [急性间歇性卟啉症, AIP, acute intermittent porphyria, 卟啉病]
+    orpha: "79276"
+    gene: HMBS
+    inheritance: AD
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [1, 1]}
+    rivals: ["23", "536"]
+    modalities: {genome: {skeleton: single, tier: exact_variant}, imaging: none}
+    weight: [down, 58.0, 55.0]
+    urgency: "🔴"
+    red_flag: true
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [尿卟胆原PBG定量, 尿δ-氨基乙酰丙酸, 血钠, HMBS基因检测]
+    specialty: [消化内科, 神经内科]
+  RD-DMD:
+    clinical_review: pending
+    case_id: JD-58
+    diagnosis: 杜氏肌营养不良
+    aliases: [杜兴氏肌营养不良, Duchenne肌营养不良, DMD, Duchenne muscular dystrophy, 假肥大型肌营养不良]
+    orpha: "98896"
+    gene: DMD
+    inheritance: XLR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["98895", "70"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 60.0, 59.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血清肌酸激酶, 肌电图, 心脏超声, DMD基因MLPA与测序]
+    specialty: [神经内科, 儿科]
+  RD-POMPE:
+    clinical_review: pending
+    case_id: JD-59
+    diagnosis: 庞贝病
+    aliases: [Pompe病, 糖原贮积症II型, 酸性α-葡萄糖苷酶缺乏症, Pompe disease, 糖原累积病2型]
+    orpha: "365"
+    gene: GAA
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["70", "98896"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [down, 62.0, 58.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [干血片GAA酶活性, 血清肌酸激酶, 肺功能, GAA基因检测]
+    specialty: [神经内科, 遗传代谢科]
+  RD-NF1:
+    clinical_review: pending
+    case_id: JD-60
+    diagnosis: 1型神经纤维瘤病
+    aliases: [神经纤维瘤病1型, NF1, neurofibromatosis type 1, von Recklinghausen病, 神经纤维瘤病]
+    orpha: "636"
+    gene: NF1
+    inheritance: AD
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [1, 1]}
+    rivals: ["805", "3205"]
+    modalities: {genome: {skeleton: single, tier: exact_variant}, imaging: none}
+    weight: [stable, 66.0, 65.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [皮肤科检查, 眼科裂隙灯Lisch结节, 头颅MRI, NF1基因检测]
+    specialty: [遗传科, 神经内科]
+  RD-MPS1:
+    clinical_review: pending
+    case_id: JD-61
+    diagnosis: 黏多糖贮积症I型
+    aliases: [粘多糖贮积症I型, MPS I, Hurler综合征, mucopolysaccharidosis type 1, 黏多糖病]
+    orpha: "579"
+    gene: IDUA
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["580", "583"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 55.0, 54.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [尿糖胺聚糖定量, 白细胞IDUA酶活性, 骨骼X线, IDUA基因检测]
+    specialty: [遗传代谢科, 儿科]
+  RD-MPS2:
+    clinical_review: pending
+    case_id: JD-62
+    diagnosis: 黏多糖贮积症II型
+    aliases: [粘多糖贮积症II型, MPS II, Hunter综合征, mucopolysaccharidosis type 2, 黏多糖病II型]
+    orpha: "580"
+    gene: IDS
+    inheritance: XLR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["579", "583"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 56.0, 55.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [尿糖胺聚糖定量, 血浆IDS酶活性, 心脏超声, IDS基因检测]
+    specialty: [遗传代谢科, 儿科]
+  RD-XALD:
+    clinical_review: pending
+    case_id: JD-63
+    diagnosis: X连锁肾上腺脑白质营养不良
+    aliases: [肾上腺脑白质营养不良, X-ALD, ALD, adrenoleukodystrophy, 肾上腺脑白质病]
+    orpha: "43"
+    gene: ABCD1
+    inheritance: XLR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["512", "58"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [down, 60.0, 57.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血浆极长链脂肪酸, 头颅MRI, ACTH兴奋试验, ABCD1基因检测]
+    specialty: [神经内科, 内分泌科]
+  RD-MARFAN:
+    clinical_review: pending
+    case_id: JD-64
+    diagnosis: 马凡综合征
+    aliases: [马方综合征, Marfan综合征, Marfan syndrome, 马凡氏综合征]
+    orpha: "558"
+    gene: FBN1
+    inheritance: AD
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [1, 1]}
+    rivals: ["60030", "394"]
+    modalities: {genome: {skeleton: single, tier: exact_variant}, imaging: none}
+    weight: [stable, 68.0, 67.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [心脏超声主动脉根部, 眼科晶状体检查, 脊柱X线, FBN1基因检测]
+    specialty: [心血管内科, 遗传科]
+  RD-NPC:
+    clinical_review: pending
+    case_id: JD-65
+    diagnosis: C型尼曼-匹克病
+    aliases: [尼曼匹克病C型, Niemann-Pick病C型, NPC, Niemann-Pick disease type C, 尼曼-皮克病]
+    orpha: "646"
+    gene: NPC1
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["355", "905"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [down, 57.0, 54.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血浆氧化固醇, 皮肤成纤维细胞Filipin染色, 腹部超声, NPC1/NPC2基因检测]
+    specialty: [神经内科, 遗传代谢科]
+  RD-FABRY:
+    clinical_review: pending
+    case_id: JD-66
+    diagnosis: 法布里病
+    aliases: [Fabry病, 法布雷病, Anderson-Fabry病, Fabry disease, α-半乳糖苷酶A缺乏症]
+    orpha: "324"
+    gene: GLA
+    inheritance: XLR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["342", "536"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 65.0, 64.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血浆α-半乳糖苷酶A活性, 血浆lyso-Gb3, 尿常规与肾功能, GLA基因检测]
+    specialty: [肾内科, 心血管内科]
+  RD-DANON:
+    clinical_review: pending
+    case_id: JD-67
+    diagnosis: Danon病
+    aliases: [达农病, Danon disease, LAMP2缺乏症, 糖原贮积症IIb型]
+    orpha: "34587"
+    gene: LAMP2
+    inheritance: XLR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["365", "324"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 62.0, 61.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [心脏超声, 心电图预激, 血清肌酸激酶, LAMP2基因检测]
+    specialty: [心血管内科, 神经内科]
+  RD-DRAVET:
+    clinical_review: pending
+    case_id: JD-68
+    diagnosis: Dravet综合征
+    aliases: [婴儿严重肌阵挛性癫痫, Dravet syndrome, SMEI, 德拉韦综合征]
+    orpha: "33069"
+    gene: SCN1A
+    inheritance: de_novo
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ["2382", "72"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 52.0, 51.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [脑电图, 头颅MRI, 癫痫基因panel, SCN1A基因检测]
+    specialty: [神经内科, 儿科]
+  RD-RETT:
+    clinical_review: pending
+    case_id: JD-69
+    sex: F
+    diagnosis: Rett综合征
+    aliases: [雷特综合征, Rett syndrome, MECP2相关疾病]
+    orpha: "778"
+    gene: MECP2
+    inheritance: de_novo
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ["72", "33069"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 50.0, 49.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [脑电图, 发育评估, 头颅MRI, MECP2基因检测]
+    specialty: [神经内科, 儿科]
+  RD-OTC:
+    clinical_review: pending
+    case_id: JD-70
+    diagnosis: 鸟氨酸氨甲酰基转移酶缺乏症
+    aliases: [OTC缺乏症, 鸟氨酸转氨甲酰酶缺乏症, ornithine transcarbamylase deficiency, 尿素循环障碍]
+    orpha: "664"
+    gene: OTC
+    inheritance: XLR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["23", "79276"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [down, 55.0, 52.0]
+    urgency: "🔴"
+    red_flag: true
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血氨, 血氨基酸谱, 尿乳清酸, OTC基因检测]
+    specialty: [遗传代谢科, 急诊科]
+  RD-MEN1:
+    clinical_review: pending
+    case_id: JD-71
+    diagnosis: 1型多发性内分泌腺瘤病
+    aliases: [多发性内分泌腺瘤病1型, MEN1, multiple endocrine neoplasia type 1, Wermer综合征]
+    orpha: "652"
+    gene: MEN1
+    inheritance: AD
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [1, 1]}
+    rivals: ["892", "536"]
+    modalities: {genome: {skeleton: single, tier: exact_variant}, imaging: none}
+    weight: [stable, 64.0, 63.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血钙与PTH, 胃泌素与胰岛素, 垂体MRI, MEN1基因检测]
+    specialty: [内分泌科, 遗传科]
+  RD-FMF:
+    clinical_review: pending
+    case_id: JD-72
+    diagnosis: 家族性地中海热
+    aliases: [FMF, familial Mediterranean fever, 地中海热, 周期性发热综合征]
+    orpha: "342"
+    gene: MEFV
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["32960", "117"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 61.0, 60.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [发作期CRP与SAA, 尿蛋白, 腹部超声, MEFV基因检测]
+    specialty: [风湿免疫科]
+  RD-CF:
+    clinical_review: pending
+    case_id: JD-73
+    diagnosis: 囊性纤维化
+    aliases: [囊性纤维化病, CF, cystic fibrosis, 囊性纤维性变]
+    orpha: "586"
+    gene: CFTR
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["244", "60"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [down, 54.0, 51.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [汗液氯化物试验, 胸部CT, 粪弹性蛋白酶, CFTR基因检测]
+    specialty: [呼吸内科, 儿科]
+  RD-VHL:
+    clinical_review: pending
+    case_id: JD-74
+    diagnosis: 希佩尔-林道综合征
+    aliases: [VHL综合征, von Hippel-Lindau病, VHL, von Hippel-Lindau disease, 脑视网膜血管瘤病]
+    orpha: "892"
+    gene: VHL
+    inheritance: AD
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [1, 1]}
+    rivals: ["652", "636"]
+    modalities: {genome: {skeleton: single, tier: exact_variant}, imaging: none}
+    weight: [stable, 67.0, 66.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [眼底检查, 头颅与脊髓MRI, 腹部增强CT, 血浆游离甲氧基肾上腺素, VHL基因检测]
+    specialty: [遗传科, 神经外科]
+  RD-HHT:
+    clinical_review: pending
+    case_id: JD-75
+    diagnosis: 遗传性出血性毛细血管扩张症
+    aliases: [HHT, Osler-Weber-Rendu病, hereditary hemorrhagic telangiectasia, 遗传性毛细血管扩张]
+    orpha: "774"
+    gene: ENG
+    inheritance: AD
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [1, 1]}
+    rivals: ["903", "98878"]
+    modalities: {genome: {skeleton: single, tier: exact_variant}, imaging: none}
+    weight: [stable, 63.0, 62.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血常规与铁蛋白, 胸部增强CT肺动静脉畸形, 头颅MRI, ENG/ACVRL1基因检测]
+    specialty: [血液科, 呼吸内科]
+  RD-HEMA:
+    clinical_review: pending
+    case_id: JD-76
+    diagnosis: 血友病A
+    aliases: [甲型血友病, 凝血因子VIII缺乏症, hemophilia A, 血友病]
+    orpha: "98878"
+    gene: F8
+    inheritance: XLR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["98879", "903"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 62.0, 61.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [APTT, 凝血因子VIII活性, vWF抗原, F8基因检测]
+    specialty: [血液科]
+  RD-SMA:
+    clinical_review: pending
+    case_id: JD-77
+    diagnosis: 脊髓性肌萎缩症
+    aliases: [脊肌萎缩症, SMA, spinal muscular atrophy, 近端脊髓性肌萎缩]
+    orpha: "70"
+    gene: SMN1
+    inheritance: AR
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 1]}
+    rivals: ["98896", "365"]
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [down, 56.0, 53.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [肌电图, 血清肌酸激酶, SMN1拷贝数MLPA, SMN2拷贝数]
+    specialty: [神经内科, 儿科]
+  RD-NMOSD:
+    clinical_review: pending
+    case_id: JD-78
+    diagnosis: 视神经脊髓炎谱系疾病
+    aliases: [视神经脊髓炎, NMOSD, NMO, neuromyelitis optica spectrum disorder, Devic病]
+    orpha: "71211"
+    gene: null
+    inheritance: none
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ["589", "536"]
+    modalities: {genome: none, imaging: none}
+    weight: [stable, 60.0, 59.0]
+    urgency: "🔴"
+    red_flag: true
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血清AQP4-IgG, 血清MOG-IgG, 脊髓MRI, 视觉诱发电位]
+    specialty: [神经内科, 眼科]
+  RD-MG:
+    clinical_review: pending
+    case_id: JD-79
+    diagnosis: 重症肌无力
+    aliases: [MG, myasthenia gravis, 肌无力, 获得性自身免疫性重症肌无力]
+    orpha: "589"
+    gene: null
+    inheritance: none
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ["43393", "803"]
+    modalities: {genome: none, imaging: none}
+    weight: [stable, 64.0, 63.0]
+    urgency: "🟡"
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [血清AChR抗体, 重复神经电刺激, 新斯的明试验, 胸腺CT]
+    specialty: [神经内科]
+  # ---- round 2 (2026-09-28): specs the EEG-paired round needs. Which EEG source a spec is paired
+  # with lives in data/round2.yaml (one source of truth); `sex` pins the sex the condition presents
+  # in (females for the X-linked epilepsies). Old packs ignore `sex`. `weight` is haenv's adult
+  # metabolic weight course (its physiology gate refuses < 40 kg), not the child's weight.
+  RD-CDKL5:
+    clinical_review: pending
+    case_id: JD-106
+    diagnosis: CDKL5缺乏症
+    aliases: [CDKL5-deficiency disorder, CDKL5 deficiency disorder, CDKL5相关癫痫性脑病]
+    orpha: '505652'
+    gene: CDKL5
+    inheritance: de_novo
+    sex: F
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [3, 5], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ['778', '33069']
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 45.0, 45.0]
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [视频脑电图, 头颅MRI, 癫痫基因panel, CDKL5基因检测]
+    specialty: [神经内科, 儿科]
+  RD-GLUT1:
+    clinical_review: pending
+    case_id: JD-108
+    diagnosis: 葡萄糖转运体1缺陷综合征
+    aliases: [GLUT1缺陷综合征, GLUT1 deficiency syndrome, Classic glucose transporter type 1 deficiency syndrome, GLUT1DS, De Vivo病]
+    orpha: '71277'
+    gene: SLC2A1
+    inheritance: de_novo
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ['33069', '2382']
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 50.0, 49.0]
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [脑脊液葡萄糖与血糖比值, 视频脑电图, SLC2A1基因检测]
+    specialty: [神经内科, 儿科]
+  RD-KCNQ2:
+    clinical_review: pending
+    case_id: JD-110
+    diagnosis: KCNQ2相关发育性癫痫性脑病
+    aliases: [KCNQ2-related developmental and epileptic encephalopathy, KCNQ2脑病, KCNQ2-DEE]
+    orpha: '439218'
+    gene: KCNQ2
+    inheritance: de_novo
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ['33069', '505652']
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 48.0, 48.0]
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [视频脑电图, 头颅MRI, 癫痫基因panel, KCNQ2基因检测]
+    specialty: [神经内科, 儿科]
+  RD-ANGELMAN:
+    clinical_review: pending
+    case_id: JD-112
+    diagnosis: 天使综合征
+    aliases: [Angelman综合征, Angelman syndrome, 快乐木偶综合征]
+    orpha: '72'
+    gene: UBE3A
+    inheritance: de_novo
+    phenotype_policy: {obligate: all, very_frequent: [4, 6], frequent: [1, 3], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ['778', '33069']
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 50.0, 50.0]
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [视频脑电图, 15q11-q13甲基化分析, UBE3A基因检测]
+    specialty: [神经内科, 儿科, 医学遗传科]
+  RD-PCDH19:
+    clinical_review: pending
+    case_id: JD-114
+    diagnosis: PCDH19簇集性癫痫
+    aliases: [PCDH19 clustering epilepsy, PCDH19相关癫痫, 女性限制性癫痫伴智力障碍]
+    orpha: '714652'
+    gene: PCDH19
+    inheritance: de_novo
+    sex: F
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [1, 2], negated: [1, 3], family: [0, 0]}
+    rivals: ['33069', '2382']
+    modalities: {genome: {skeleton: trio, tier: exact_variant}, imaging: none}
+    weight: [stable, 46.0, 46.0]
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [视频脑电图, 头颅MRI, PCDH19基因检测]
+    specialty: [神经内科, 儿科]
+  RD-NT1:
+    clinical_review: pending
+    case_id: JD-116
+    diagnosis: 1型发作性睡病
+    aliases: [发作性睡病1型, 发作性睡病, Narcolepsy type 1, narcolepsy with cataplexy, 发作性睡病伴猝倒]
+    orpha: '2073'
+    gene: null
+    inheritance: none
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: [2, 4], occasional: [0, 1], negated: [1, 3], family: [0, 0]}
+    rivals: ['83465', '33208', '33543']
+    modalities: {genome: none, imaging: none}
+    weight: [stable, 64.0, 64.0]
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [多导睡眠图, 多次小睡睡眠潜伏期试验, 脑脊液下丘脑分泌素-1, HLA-DQB1*06:02分型]
+    specialty: [神经内科, 睡眠医学科]
+  RD-SHE:
+    clinical_review: pending
+    case_id: JD-118
+    diagnosis: 睡眠相关过度运动性癫痫
+    aliases: [Sleep-related hypermotor epilepsy, 常染色体显性遗传夜间额叶癫痫, 夜间额叶癫痫, ADNFLE, nocturnal frontal lobe epilepsy]
+    orpha: '98784'
+    gene: CHRNA4
+    inheritance: AD
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: all, occasional: [2, 4], negated: [1, 3], family: [0, 1]}
+    rivals: ['2073', '98820']
+    modalities: {genome: {skeleton: single, tier: exact_variant}, imaging: none}
+    weight: [stable, 62.0, 62.0]
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [视频多导睡眠图, 头颅MRI, CHRNA4基因检测]
+    specialty: [神经内科, 睡眠医学科]
+  # ---- round 2 external case: the Exomiser Pfeiffer example (GRCh37 VCF, gold from its
+  # phenopacket). Not sampled: `haenv_rare/round2.py` builds it from the staged files as they are.
+  RD-PFEIFFER:
+    clinical_review: pending
+    case_id: JD-159
+    diagnosis: Pfeiffer综合征
+    aliases: [Pfeiffer syndrome, 尖头并指畸形V型, acrocephalosyndactyly type V]
+    orpha: '710'
+    gene: FGFR2
+    inheritance: AD
+    sex: M
+    phenotype_policy: {obligate: all, very_frequent: all, frequent: all, occasional: all, negated: [0, 0], family: [0, 0]}
+    rivals: ['2634']
+    modalities: {genome: none, imaging: none}
+    weight: [stable, 70.0, 70.0]
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    outcome_label: event_occurred
+    tests: [头颅CT三维重建, 手足X线, FGFR2基因检测]
+    specialty: [医学遗传科, 颅面外科]

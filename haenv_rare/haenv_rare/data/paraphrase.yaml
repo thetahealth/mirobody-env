@@ -1,0 +1,11 @@
+# haenv-rare-paraphrase: the model that writes the held-out English case reports.
+# Override any key with a `rare_paraphrase:` section in config.yaml or config.local.yaml.
+# SYNTHETIC, evaluation only.
+model: openai/gpt-5.4        # via OpenRouter (the OPENAI_API_KEY in the env file was rejected by api.openai.com, 2026-09-23)
+base_url: https://openrouter.ai/api/v1
+api_key_env: OPENROUTER_API_KEY
+env_file: ~/caill/.mirobody_rare_env
+concurrency: 4
+max_retries: 4
+timeout_s: 300
+verbose: 1              # 0=WARNING 1=INFO 2=DEBUG

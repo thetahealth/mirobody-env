@@ -1,0 +1,47 @@
+# Judge catalogue fragment of the haenv_rare plugin: what each `rc_*` / `rr_*` field of `eval.jsonl`
+# means. Merged over `registry/judges_catalog.yaml` by `tools/judges_readout.py:load_catalog`
+# (a judge plugin's package may ship one `judges_catalog.yaml`; keys may not repeat the
+# main catalogue). Kept in the plugin because the plugin is held back from the public tree.
+# SYNTHETIC data, evaluation only; not medical advice.
+
+families:
+  rare_retrieval: "rare-disease retrieval -- questions whose answers are facts in the attachments (seizure onsets, sleep-stage totals, imaging series, P/LP calls, their origin), answered by the system under test through its tools"
+  rare: "rare-disease coding -- HPO assertions per ledger sentence, ORPHA and gene codes, variants from the VCF/PED attachments, imaging pointers, and coding of the narrative case report"
+
+fields:
+  rc_n_gold: {family: rare, kind: count, dir: none, def: "gold HPO terms of the case (denominator; a property of the question)"}
+  rc_n_assert: {family: rare, kind: count, dir: none, def: "assertions the solver output (behavioural)"}
+  rc_coverage: {family: rare, kind: score01, dir: higher_better, def: "share of gold terms whose ledger sentence got an assertion"}
+  rc_hpo_strict: {family: rare, kind: score01, dir: higher_better, def: "share of gold terms coded with exactly the gold HPO id (obsolete ids resolved)"}
+  rc_hpo_hier: {family: rare, kind: score01, dir: higher_better, def: "mean ancestor-set F1 between the coded and the gold HPO term"}
+  rc_polarity_ok: {family: rare, kind: score01, dir: higher_better, def: "of the matched assertions, share with the gold polarity (present / absent)"}
+  rc_subject_ok: {family: rare, kind: score01, dir: higher_better, def: "of the matched assertions, share with the gold subject (proband / relative)"}
+  rc_wrong_rate: {family: rare, kind: score01, dir: lower_better, def: "share of gold terms coded wrongly (far term, wrong polarity or wrong subject); abstaining is not wrong"}
+  rc_negation_trap: {family: rare, kind: count, dir: lower_better, def: "negated gold terms coded as present"}
+  rc_orpha_top1: {family: rare, kind: binary, dir: higher_better, def: "the output ORPHA code is the gold one"}
+  rc_hgnc_ok: {family: rare, kind: binary, dir: higher_better, def: "the output gene is the gold HGNC symbol (alias / previous symbol accepted); null for acquired diseases"}
+  rc_n_variants: {family: rare, kind: count, dir: none, def: "variants the solver listed from the attachments (behavioural)"}
+  rc_variant_hit: {family: rare, kind: binary, dir: higher_better, def: "the spiked causal variant (chrom, pos, ref, alt) is in the list; null without a genome attachment"}
+  rc_variant_gt_ok: {family: rare, kind: binary, dir: higher_better, def: "its proband genotype is right; null when the variant was not listed"}
+  rc_variant_inh_ok: {family: rare, kind: binary, dir: higher_better, def: "its inheritance matches the trio genotypes; null without parents"}
+  rc_gene_from_variant: {family: rare, kind: binary, dir: higher_better, def: "the gene is right, declared as variant evidence, and the causal variant is listed"}
+  rc_signal_index_ok: {family: rare, kind: binary, dir: higher_better, def: "every imaging series was indexed as de-identified and matched by sha256; null without imaging"}
+  rc_signal_phi_free: {family: rare, kind: binary, dir: higher_better, def: "no patient identifier from the DICOM headers appears in the solver's imaging records"}
+  rc_narr_recall: {family: rare, kind: score01, dir: higher_better, def: "share of gold sentences of the narrative whose term was coded anywhere; null without a narrative"}
+  rc_narr_span_ok: {family: rare, kind: score01, dir: higher_better, def: "share of gold sentences coded with a char_span overlapping the gold sentence"}
+  rc_narr_polarity_ok: {family: rare, kind: score01, dir: higher_better, def: "of the span-matched narrative assertions, share with the gold polarity"}
+  rc_narr_noise_abstain: {family: rare, kind: score01, dir: higher_better, def: "share of life-event noise sentences left uncoded"}
+  rc_eeg_index_ok: {family: rare, kind: binary, dir: higher_better, def: "every EEG recording was indexed as de-identified and matched by sha256; null without recordings"}
+  rc_eeg_phi_hidden: {family: rare, kind: binary, dir: higher_better, def: "every recording whose header carries an identity is hidden from the solver's index; null when none does"}
+  rc_vcf_build_refused: {family: rare, kind: binary, dir: higher_better, def: "a VCF that is not GRCh38 by design (the external case) was refused rather than read; null otherwise"}
+  rr_n: {family: rare_retrieval, kind: count, dir: none, def: "retrieval questions emitted for the case (a property of the question)"}
+  rr_correct: {family: rare_retrieval, kind: score01, dir: higher_better, def: "share of the case's retrieval questions answered right, every field of the answer checked"}
+  rr_parse_ok: {family: rare_retrieval, kind: score01, dir: higher_better, def: "share of questions whose reply carried a JSON answer object"}
+  rr_tool_use: {family: rare_retrieval, kind: score01, dir: higher_better, def: "share of questions on which a retrieval tool was called"}
+  rr_eeg_seizure: {family: rare_retrieval, kind: score01, dir: higher_better, def: "seizure question right: every annotated seizure with its recording, onset and duration (0.5 s); null without recordings"}
+  rr_sleep_stages: {family: rare_retrieval, kind: score01, dir: higher_better, def: "sleep-stage question right: W/N1/N2/N3/R totals of one recording within 1 s; null without a staged recording"}
+  rr_imaging: {family: rare_retrieval, kind: score01, dir: higher_better, def: "imaging question right: the multiset of series (modality, instance count); null without imaging"}
+  rr_variants: {family: rare_retrieval, kind: score01, dir: higher_better, def: "variants question right: every planted P/LP call of the proband with its genotype; null without a proband VCF"}
+  rr_inheritance: {family: rare_retrieval, kind: score01, dir: higher_better, def: "inheritance question right: the origin of every planted call; trios only"}
+  rr_variant_recall: {family: rare_retrieval, kind: score01, dir: higher_better, def: "share of planted calls listed with the right genotype"}
+  rr_variant_extra: {family: rare_retrieval, kind: count, dir: none, def: "P/LP calls listed that the generator did not plant (real carriers of the background genome; not scored)"}
