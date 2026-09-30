@@ -329,7 +329,7 @@ value is neither a score of 0 nor evidence that the track does not exist.
 
 ## Citing
 
-    HAEnv benchmark (Theta Health, 2026), v1.0.1,
+    HAEnv benchmark (Theta Health, 2026), v1.1.0,
     judging fingerprint <judging_sha16>, world fingerprint <world_sha16>.
 
 Both fingerprints are printed on every board and stored in each `eval.jsonl` row; the values for

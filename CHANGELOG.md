@@ -6,6 +6,66 @@ The package version (`pyproject.toml`) versions the code. Scores are versioned s
 score row carries the judging fingerprint of the code that produced it, and boards produced under
 different fingerprints are not comparable (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [1.1.0] - 2026-09-30
+
+The judging fingerprint (`67dd5866790e9cb9`), the world fingerprint (`25f31527b09e6abe`), the
+frozen question packs and the board are those of 1.0.1. The solving code changed: a billed batch
+started under 1.0.1 does not resume under 1.1.0; finish it under 1.0.1, or run it again with
+`--fresh`.
+
+### Added
+
+- A model on a backend of your own can take part in a billed run. Its configuration entry
+  declares `price` (`input_per_million_usd`, `output_per_million_usd`; 0 for a free endpoint);
+  each request is reserved at that price and counted from the token counts the endpoint returns
+  in `usage`, against the same `--judge-budget-usd` as the semantic judge. The ledger books these
+  costs as tariff bounds (a declared price is not an invoice). A batch keeps the price it was
+  created with: a changed `price` does not resume it. On `openrouter`, `relay`, `google` and
+  `dashscope` the price still comes from the provider, and a declared `price` there is refused.
+- Three agent skills ship under `skills/`, in the Agent Skills layout (`skills/<name>/SKILL.md`):
+  `haenv-synth` (generate patients and questions), `haenv-bench` (run a pack and read the board),
+  `haenv-extend` (add a judge, a stream, an event or a task type from outside the repository). The
+  README says what they are for; the repository keeps untracked symlinks where one vendor's tool
+  looks for them.
+- The README states what a *task* is here: a gold-standard shape plus an answer contract, with the
+  format (`single` / `gated` / `slices` / `multi`) a condition inside it, and one pipeline generating,
+  gating and scoring all of them. A case is assigned to a task by the gold it carries, not by the
+  job file's label.
+
+### Changed
+
+- `haenv run` with a real model checks its keys before it opens a batch. A model or the semantic
+  judge without a key is named with the variable it needs and the state of the key file, and the
+  run exits 2 with nothing sent. A run with `--limit` is not judged and needs no judge key.
+- A refusal from the billed-run accounting (an unverified route, an unreachable price endpoint,
+  a changed run identity) is one printed line and exit code 2 instead of a traceback. The Google
+  capacity check says whether the endpoint was not reached or answered with an HTTP error, and
+  gives up after 45 s as a whole: its 30 s timeout applied to each connection attempt, and with the
+  route to the endpoint dropped it waited for more than six minutes.
+- On a release, the package description names the release tag instead of `main` in its figure
+  and link addresses, so each version's PyPI page keeps that version's files.
+- The README (English and Chinese) returns to the 1.0.0 layout, and its one animation is the
+  terminal recording of the quick start. The demo animations, the first-screen buttons and the
+  comparison matrix are no longer in it. The corrections made for 1.0.1 remain: nine hard gates
+  enter the multiplier and `acted_on_unverified_signal` is reported only; the semantic dimensions
+  are judged by one LLM judge, whose OpenRouter key the env file needs; the token scale is per
+  answered cell; figures and documents are linked by absolute URL.
+
+### Fixed
+
+- README: the "Evaluate your own agent" example stopped with "Cannot budget unverified solver
+  route(s)": no price source existed for a backend of one's own. The example now declares `price`.
+- README: the "Install from PyPI" commands run again in the same directory (`build` opens a new
+  batch with `--fresh`).
+- README: after `pip install`, your own backends and models go in a file named by
+  `HAENV_CONFIG_OVERLAY`, since the packaged `config.yaml` is inside the installed package.
+- README: regenerating a diagnosis pack offline (`--gen deterministic`) emits 144 of its 145
+  specifications; `JD-32v2` fails its anchor check.
+- CONTRIBUTING: commit types are `feat`, `fix`, `refactor`, `docs`, `test` and `chore`; CI,
+  packaging and release changes are `chore`. It listed `ci` and `build` as types of their own.
+  A release reaches `main` as a short series of commits, one per change, ending in the
+  commit that sets the version.
+
 ## [1.0.1] - 2026-09-30
 
 The judging fingerprint moves from `25ced8ada8427f45` to `67dd5866790e9cb9`; the world fingerprint
