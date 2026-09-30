@@ -2,36 +2,7 @@
 
 <p align="center">
   <strong>Generation and Evaluation in One Pipeline</strong><br>
-  Evaluate health agents on synthetic patients whose future is known.<br>
-  Cut the record at day <code>T</code>, ask what happens next, and score the answer against ground truth derived by code.
-</p>
-
-<p align="center">
-  <sub><strong>English</strong> &middot; <a href="https://github.com/thetahealth/mirobody-env/blob/main/README.zh-CN.md">简体中文</a>
-  &nbsp;|&nbsp;
-  Part of the Mirobody family:
-  <a href="https://github.com/thetahealth/mirobody">mirobody</a> &middot;
-  <a href="https://github.com/thetahealth/mirobody-eval">mirobody-eval</a> &middot;
-  <strong>mirobody-env</strong></sub>
-</p>
-
-<p align="center">
-  <a href="https://thetahealth.github.io/mirobody-env/">
-    <picture>
-      <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_today.png">
-      <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_today.gif" alt="Demo step 4: dragging the 'today' line across a synthetic patient's weight, HbA1c, fasting glucose and adherence lanes; the fog after today recedes to reveal the weight regain, and a dashed line marks the day the regain starts" width="100%">
-    </picture>
-  </a>
-</p>
-<p align="center"><sub>Demo step 4. The line is “today”: the record to its left is the prompt, the fog to its
-right is withheld and used for grading, and the dashed line is the day the answer happens.</sub></p>
-
-<p align="center">
-  <a href="https://thetahealth.github.io/mirobody-env/"><img src="https://img.shields.io/badge/%E2%96%B6%20Live%20demo-C8412F?style=for-the-badge" alt="Live demo"></a>
-  &nbsp;
-  <a href="#quick-start"><img src="https://img.shields.io/badge/Quick%20start-no%20API%20key-141416?style=for-the-badge" alt="Quick start, no API key"></a>
-  &nbsp;
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md"><img src="https://img.shields.io/badge/Data%20card-141416?style=for-the-badge" alt="Data card"></a>
+  Generate synthetic patients and clinical scenarios, then evaluate health agents against code-derived ground truth.
 </p>
 
 <p align="center">
@@ -40,19 +11,32 @@ right is withheld and used for grading, and the dashed line is the day the answe
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-3776AB.svg?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="https://pypi.org/project/haenv/"><img src="https://img.shields.io/pypi/v/haenv.svg" alt="PyPI"></a>
   <a href="https://github.com/thetahealth/mirobody-env/actions/workflows/ci.yml"><img src="https://github.com/thetahealth/mirobody-env/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://thetahealth.github.io/mirobody-env/"><img src="https://img.shields.io/badge/demo-live-black.svg" alt="Live demo"></a>
 </p>
 
 <p align="center">
-  <a href="#what-it-measures">What it measures</a> &middot;
-  <a href="#why-haenv">Why HAEnv</a> &middot;
+  <strong>English</strong> &middot; <a href="https://github.com/thetahealth/mirobody-env/blob/main/README.zh-CN.md">简体中文</a>
+  &nbsp;|&nbsp;
+  <a href="https://thetahealth.github.io/mirobody-env/">Live demo</a> &middot;
   <a href="#synthetic-patients">Patients</a> &middot;
   <a href="#quick-start">Quick start</a> &middot;
   <a href="#how-it-works">How it works</a> &middot;
   <a href="#scoring">Scoring</a> &middot;
   <a href="#leaderboard">Results</a> &middot;
   <a href="#evaluate-your-own-agent">Your agent</a> &middot;
+  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md">Data card</a> &middot;
   <a href="#citation">Cite</a>
 </p>
+
+> Answer-bearing files carry canary strings ([`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md)). Please exclude them from
+> training data.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_patient.png" alt="One synthetic patient with type 2 diabetes on tirzepatide: daily home weight and clinic weight, steps and resting heart rate, dose and adherence, and reported events; the record after index time T is shaded as hidden" width="92%">
+</p>
+<p align="center"><sub>One synthetic patient. Left of <code>T</code> is the prompt; right of <code>T</code>
+is hidden and used for grading. Adherence falls before <code>T</code>, and the weight regain it drives
+begins after <code>T</code> at the latent reversal point.</sub></p>
 
 ## What it measures
 
@@ -82,19 +66,14 @@ existing system against published health benchmarks such as ESL-Bench, use
   `acted_on_unverified_signal` (escalating on a reading the gold marks as an artifact), is graded
   and reported but does not enter the multiplier.
 
-<details>
-<summary>Terms</summary>
-
 | Term | Meaning |
 |---|---|
 | index time `T` | the cut: the prompt holds the record up to `T`; grading uses what follows |
 | latent variables | outcome, driver, reversal point, adherence and noise, set in the job file before the course is rendered |
 | emission gate | the checks a generated case must pass to be released: premise check, per-item verification, leak probe |
-| hard gate | a safety failure graded by code that zeroes its scoring unit |
+| hard gate | a safety failure that zeroes its scoring unit |
 | format (`geometry` in code) | how questions are posed: `single`, `gated`, `slices` or `multi` |
 | batch | one run directory: its cases, answers, scores and fingerprints |
-
-</details>
 
 ### What ships
 
@@ -114,83 +93,10 @@ their case counts and the known gaps are in the [data card](https://github.com/t
 fields of the record (reported symptoms, context, events). Field names, stream names, enumerated
 answer values and identifiers are in English.
 
-## Why HAEnv
-
-| | Over time | Cut at `T` | Generated gold | Code scoring | Regenerable | Difficulty knob | Hard gates | Tool queries |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **HAEnv** | ✅ | ✅¹ | ✅ | ◐² | ✅ | ◐³ | ✅⁴ | ◐⁵ |
-| ESL-Bench⁶ | ✅ | — | ✅ | ◐⁷ | —⁸ | ◐ | — | ✅ |
-| MedAgentBench | ✅ | — | ◐ | ✅ | — | — | — | ✅ |
-| HealthBench | — | — | — | — | — | — | — | — |
-| AgentClinic | — | — | — | — | ◐ | — | — | ◐ |
-| LongHealth | ✅ | — | — | ✅ | — | — | — | — |
-| EHRSHOT | ✅ | ✅ | — | ✅ | — | — | — | — |
-
-<sub>✅ yes · ◐ partly · — no.<br>
-¹ Forecast and follow-up answers lie after `T`; in the diagnosis formats the gold is a diagnosis
-fixed before `T` and hidden from the agent.<br>
-² The gold standard is derived by code and the deterministic dimensions are scored by code; the
-default composite includes semantic dimensions judged by a single-vendor LLM judge.<br>
-³ Artifacts, distractor events and the timing of the clinical turn are job-file settings; the
-released packs are fixed at one level.<br>
-⁴ Nine gates zero their scoring unit; the tenth (`acted_on_unverified_signal`) is graded and
-reported but does not enter the multiplier.<br>
-⁵ `gated` format only, where the agent orders tests against a price list and a budget; the other
-formats put the record up to `T` in the prompt.<br>
-⁶ Prior work from the same group.<br>
-⁷ The paper (v1) scores every answer that passes its gate with an LLM rubric; the current dataset card
-uses an LLM judge for text answers only.<br>
-⁸ The generator is not public; the maintainers release new batches.<br></sub>
-
-<details>
-<summary>What each column means</summary>
-
-| Column | ✅ when |
-|---|---|
-| Over time | each case is a record of many time points spanning months to years |
-| Cut at `T` | the prompt stops at an index time `T` and the answer is what happens after it |
-| Generated gold | the answer is fixed by construction or generation parameters, not by later annotation or real outcomes |
-| Code scoring | the main score does not depend on an LLM judge |
-| Regenerable | a released generator lets users make new cases from new seeds |
-| Difficulty knob | a setting acts on the generated cases, and the released packs exercise several levels with a measured effect (partly: the knob exists but the packs fix one level, or tiers are designed at authoring time; no: post-hoc subsets, or settings that change only the evaluation conditions) |
-| Hard gates | a safety failure vetoes the score rather than being averaged with other dimensions |
-| Tool queries | the agent under test retrieves patient data through tools or an API (the whole record in the prompt counts as no) |
-
-</details>
-
-- **ESL-Bench** ([arXiv:2604.02834](https://arxiv.org/abs/2604.02834), [dataset](https://huggingface.co/datasets/mirobody/ESL-Bench)):
-  100 synthetic users with 1–5 year device, exam and event trajectories; 100 queries each across
-  lookup, trend, comparison, anomaly and explanation, with programmatically computed answers.
-  Leaderboard: [Health Memory Arena](https://healthmemoryarena.ai).
-- **MedAgentBench** ([arXiv:2501.14654](https://arxiv.org/abs/2501.14654)): 300 agent tasks in a FHIR virtual EHR.
-- **HealthBench** ([arXiv:2505.08775](https://arxiv.org/abs/2505.08775)): 5,000 health conversations graded by a model against physician-written rubrics.
-- **AgentClinic** ([arXiv:2405.07960](https://arxiv.org/abs/2405.07960)): history-taking and diagnosis in dialogue with LLM-simulated patients, as in CRAFT-MD ([doi:10.1038/s41591-024-03328-5](https://doi.org/10.1038/s41591-024-03328-5)).
-- **LongHealth** ([arXiv:2401.14490](https://arxiv.org/abs/2401.14490)): 400 multiple-choice questions over 20 long fictional records.
-- **EHRSHOT** ([arXiv:2307.02028](https://arxiv.org/abs/2307.02028)): few-shot prediction on longitudinal EHR of 6,739 real patients.
-- **mirobody-eval** ([GitHub](https://github.com/thetahealth/mirobody-eval)): a harness that reproduces published health benchmarks, ESL-Bench included, against an existing system, with pluggable virtual user, target and judge.
-
 ## Synthetic patients
 
 The [live demo](https://thetahealth.github.io/mirobody-env/) renders a patient in the browser; its knobs
 change the course, the labs and adherence.
-The same page ships as [`web/demo/index.html`](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/index.html) and also opens offline.
-In step 1, click “Generate this patient” to reveal steps 2–5.
-
-<p align="center">
-  <picture>
-    <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_fan.png">
-    <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_fan.gif" alt="Demo steps 1 and 2: moving the 'week regain starts' and 'regain speed' knobs; the patient's parallel futures, their median and bands, move with every change" width="100%">
-  </picture>
-</p>
-<p align="center"><sub>Demo steps 1–2: two course knobs from step 1, shown above the step-2 fan they move. The
-futures share every setting and differ only in their random layer.</sub></p>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_patient.png" alt="One synthetic patient with type 2 diabetes on tirzepatide: daily home weight and clinic weight, steps and resting heart rate, dose and adherence, and reported events; the record after index time T is shaded as hidden" width="92%">
-</p>
-<p align="center"><sub>One synthetic patient. Left of <code>T</code> is the prompt; right of <code>T</code>
-is hidden and used for grading. Adherence falls before <code>T</code>, and the weight regain it drives
-begins after <code>T</code> at the latent reversal point.</sub></p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_cohort.png" alt="Three panels: individual drug response for 60 maintainers on tirzepatide and 60 low responders on semaglutide; change in HbA1c against change in fasting glucose over 90 days; weight trajectories of 12 patients, aligned on each index time T, that separate into regain and maintenance after T" width="100%">
@@ -215,8 +121,8 @@ distractor level adds unrelated symptoms in the same text format as real ones; i
 rate is raised to 0.5 to match, otherwise the gate refuses the case.</sub></p>
 
 <!-- Figures: uv run --with matplotlib python docs/scripts/make_readme_figures.py
-     (deterministic generator, no model calls). Animations: python docs/scripts/make_readme_gifs.py
-     (needs Playwright, Pillow and a Chromium; HAENV_CHROME points at the browser). -->
+     (deterministic generator, no model calls). Animation: python docs/scripts/make_readme_gifs.py
+     --only quickstart (needs Playwright, Pillow and a Chromium; HAENV_CHROME points at the browser). -->
 
 ## Quick start
 
@@ -386,6 +292,55 @@ across the four formats, alongside format-specific probes.
 
 Self-checks run in seconds without model calls; see [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#4-self-checks).
 
+## Evaluate your own agent
+
+The model under test is an entry under `models:` in `config.yaml`, served by any OpenAI-compatible
+endpoint declared under `backends:`. Each turn is one chat request carrying the prompt; an agent
+behind such an endpoint is evaluated the same way, and its internal tool use is not visible to the
+judges. It receives the same patients, the same cut at `T` and the same judges. Plugins are
+registered explicitly in the job file.
+
+To add an endpoint, put it in `config.local.yaml` next to `config.yaml` (merged over it, ignored
+by git). A new backend name registers an OpenAI-compatible backend; its key is read from the file
+named by `HAENV_ENV_FILE`:
+
+```yaml
+backends:
+  my-endpoint:
+    url: http://localhost:8000/v1/chat/completions
+    key_env: MY_ENDPOINT_KEY          # MY_ENDPOINT_KEY=... in $HAENV_ENV_FILE
+models:
+  my-agent: {backend: my-endpoint, model: my-agent-v1, max_tokens: 8000}
+```
+
+```bash
+uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
+  --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
+```
+
+The semantic dimensions of the score are judged by `openai/gpt-6-luna` through OpenRouter, so the
+same env file also needs an OpenRouter key, and the judge's cost counts against the same budget.
+
+| To change | Where | Code |
+|---|---|---|
+| the model or agent under test | `config.yaml` (`models:`, `backends:`) | no |
+| weighting and normalisation | one config file per board | no |
+| add a judge or a new kind of gold standard | a registered function | yes |
+| what the judges observe (a new view of the run) | subject plugin | yes |
+| streams, events, drug effects, artifacts | world plugin | yes |
+
+[`examples/`](https://github.com/thetahealth/mirobody-env/blob/main/examples/README.md) has five plugin packages. Each runs offline and is paired with a
+negative control.
+Guides: [judge plugins](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/llm-judge-plugin.md) ·
+[external task types](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md).
+
+## Cost and caching
+
+- Generation is cached by model and prompt in `cases/_llm_cache/`; rebuilding a pack from the same job makes no model calls.
+- A run resumes by default and sends only the cells that have no answer yet. Raw responses are stored, so a judging change is a recompute, not a re-run of the models under test.
+- For models with a measured basis, `max_tokens` must clear a floor derived from their output lengths. This reduces truncation risk but does not guarantee that every answer will finish within budget. `batch.json` records generation and evaluation usage (`gen_usage`, `eval_usage`): measured totals where available, and an explicit status otherwise.
+- Scale: an answered `ddx-timeline` cell averages about 85,860 input and 42,587 output tokens; a `ddx-workup` cell about 14,579 input and 11,831 output (main batches, pooled over every cell with measured usage across the ten models). Details and the recompute command are in [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching).
+
 ## Leaderboard
 
 Ten models answer the same 145 synthetic cases (64 conditions) on two packs: `ddx-timeline`
@@ -513,19 +468,6 @@ Steps 6–9 of the [live demo](https://thetahealth.github.io/mirobody-env/) show
 tool trace and the score breakdown. The demo also removes unanswered cells by failure cause and
 recomputes the board in the browser.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_answers.png">
-    <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_answers.gif" alt="Demo step 6: a recorded case on a multi-lane timeline above a table of the models' answers; selecting a model rings the ledger entries it cited, and switching the answer day moves the fog" width="100%">
-  </picture>
-</p>
-<p align="center"><sub>Demo step 6: the case timeline and the answer table, stacked. The models answered a
-recorded case at several points in time.
-Selecting a model rings the entries it cited, and the table flags a citation that is not in the
-case's ledger or is dated after the answer day; on this case two citations are flagged, both by one
-model on one answer day (stream names cited as if they were ledger entries). Steps 7–9 of the <a href="https://thetahealth.github.io/mirobody-env/">live
-demo</a> show a tool trace and the score breakdown.</sub></p>
-
 ## Limitations
 
 - **`glm-5.3-flash` ran out of time, not out of accuracy.** It reasons far longer than the other
@@ -560,54 +502,22 @@ demo</a> show a tool trace and the score breakdown.</sub></p>
 The full list, with the scoring, generation and world-layer gaps, is in the
 [data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#known-gaps).
 
-## Evaluate your own agent
+## Related work
 
-The model under test is an entry under `models:` in `config.yaml`, served by any OpenAI-compatible
-endpoint declared under `backends:`. Each turn is one chat request carrying the prompt; an agent
-behind such an endpoint is evaluated the same way, and its internal tool use is not visible to the
-judges. It receives the same patients, the same cut at `T` and the same judges. Plugins are
-registered explicitly in the job file.
+| Work | Evaluates |
+|---|---|
+| ESL-Bench ([arXiv:2604.02834](https://arxiv.org/abs/2604.02834), [dataset](https://huggingface.co/datasets/mirobody/ESL-Bench)) | 100 synthetic users with 1–5 year device, exam and event trajectories; 100 queries each across lookup, trend, comparison, anomaly and explanation, with programmatically computed answers. Leaderboard: [Health Memory Arena](https://healthmemoryarena.ai) |
+| mirobody-eval ([GitHub](https://github.com/thetahealth/mirobody-eval)) | a harness that reproduces published health benchmarks, ESL-Bench included, against an existing system, with pluggable virtual user, target and judge |
+| MedAgentBench ([arXiv:2501.14654](https://arxiv.org/abs/2501.14654)) | 300 agent tasks in a FHIR virtual EHR |
+| EHRSHOT ([arXiv:2307.02028](https://arxiv.org/abs/2307.02028)) | few-shot prediction on longitudinal EHR of 6,739 real patients |
+| LongHealth ([arXiv:2401.14490](https://arxiv.org/abs/2401.14490)) | 400 multiple-choice questions over 20 long fictional records |
+| HealthBench ([arXiv:2505.08775](https://arxiv.org/abs/2505.08775)) | 5,000 health conversations graded by a model against physician-written rubrics |
+| AgentClinic ([arXiv:2405.07960](https://arxiv.org/abs/2405.07960)), CRAFT-MD ([doi:10.1038/s41591-024-03328-5](https://doi.org/10.1038/s41591-024-03328-5)) | history-taking and diagnosis in dialogue with LLM-simulated patients |
 
-To add an endpoint, put it in `config.local.yaml` next to `config.yaml` (merged over it, ignored
-by git). A new backend name registers an OpenAI-compatible backend; its key is read from the file
-named by `HAENV_ENV_FILE`:
-
-```yaml
-backends:
-  my-endpoint:
-    url: http://localhost:8000/v1/chat/completions
-    key_env: MY_ENDPOINT_KEY          # MY_ENDPOINT_KEY=... in $HAENV_ENV_FILE
-models:
-  my-agent: {backend: my-endpoint, model: my-agent-v1, max_tokens: 8000}
-```
-
-```bash
-uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
-  --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
-```
-
-The semantic dimensions of the score are judged by `openai/gpt-6-luna` through OpenRouter, so the
-same env file also needs an OpenRouter key, and the judge's cost counts against the same budget.
-
-| To change | Where | Code |
-|---|---|---|
-| the model or agent under test | `config.yaml` (`models:`, `backends:`) | no |
-| weighting and normalisation | one config file per board | no |
-| add a judge or a new kind of gold standard | a registered function | yes |
-| what the judges observe (a new view of the run) | subject plugin | yes |
-| streams, events, drug effects, artifacts | world plugin | yes |
-
-[`examples/`](https://github.com/thetahealth/mirobody-env/blob/main/examples/README.md) has five plugin packages. Each runs offline and is paired with a
-negative control.
-Guides: [judge plugins](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/llm-judge-plugin.md) ·
-[external task types](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md).
-
-## Cost and caching
-
-- Generation is cached by model and prompt in `cases/_llm_cache/`; rebuilding a pack from the same job makes no model calls.
-- A run resumes by default and sends only the cells that have no answer yet. Raw responses are stored, so a judging change is a recompute, not a re-run of the models under test.
-- For models with a measured basis, `max_tokens` must clear a floor derived from their output lengths. This reduces truncation risk but does not guarantee that every answer will finish within budget. `batch.json` records generation and evaluation usage (`gen_usage`, `eval_usage`): measured totals where available, and an explicit status otherwise.
-- Scale: an answered `ddx-timeline` cell averages about 85,860 input and 42,587 output tokens; a `ddx-workup` cell about 14,579 input and 11,831 output (main batches, pooled over every cell with measured usage across the ten models). Details and the recompute command are in [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching).
+HAEnv combines a longitudinal record, a prompt cut at `T`, a gold standard fixed before the data,
+code scoring for every dimension except the semantic ones (one LLM judge) and regenerable
+synthetic cases. The `pass^k` reliability metric is from τ-bench
+([arXiv:2406.12045](https://arxiv.org/abs/2406.12045)).
 
 ## Data, ethics and reproduction
 
@@ -619,8 +529,6 @@ All patients are synthetic. Nothing here is medical advice or suitable for clini
   self-checks.
 - [`docs/ETHICS.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/ETHICS.md): data sources and limits of use.
 - [`CONTRIBUTING.md`](https://github.com/thetahealth/mirobody-env/blob/main/CONTRIBUTING.md): how to change scoring or generation code.
-
-<sub>Answer-bearing files carry canary strings ([`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md)); please exclude them from training data.</sub>
 
 ## Citation
 

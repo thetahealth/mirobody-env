@@ -2,35 +2,7 @@
 
 <p align="center">
   <strong>生成与评测，一条流程贯通</strong><br>
-  在未来已知的合成病人上评测健康智能体。<br>
-  在第 <code>T</code> 天截断病历，问接下来会发生什么，再用代码推出的标准答案判分。
-</p>
-
-<p align="center">
-  <sub><a href="https://github.com/thetahealth/mirobody-env/blob/main/README.md">English</a> &middot; <strong>简体中文</strong>
-  &nbsp;|&nbsp;
-  Mirobody 系列：
-  <a href="https://github.com/thetahealth/mirobody">mirobody</a> &middot;
-  <a href="https://github.com/thetahealth/mirobody-eval">mirobody-eval</a> &middot;
-  <strong>mirobody-env</strong></sub>
-</p>
-
-<p align="center">
-  <a href="https://thetahealth.github.io/mirobody-env/">
-    <picture>
-      <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_today.png">
-      <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_today.gif" alt="演示第 4 步：在一个合成病人的体重、HbA1c、空腹血糖和依从性泳道上拖动「today」线；today 之后的雾向后退，露出体重回升，虚线标出回升开始的那一天" width="100%">
-    </picture>
-  </a>
-</p>
-<p align="center"><sub>演示第 4 步（界面为英文）。竖线是「today」：左侧的记录就是题面，右侧的雾对 agent 隐藏、用于判分，虚线是答案发生的那一天。</sub></p>
-
-<p align="center">
-  <a href="https://thetahealth.github.io/mirobody-env/"><img src="https://img.shields.io/badge/%E2%96%B6%20%E5%9C%A8%E7%BA%BF%E6%BC%94%E7%A4%BA-C8412F?style=for-the-badge" alt="在线演示"></a>
-  &nbsp;
-  <a href="#快速开始"><img src="https://img.shields.io/badge/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B-%E6%97%A0%E9%9C%80%20API%20key-141416?style=for-the-badge" alt="快速开始，无需 API key"></a>
-  &nbsp;
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md"><img src="https://img.shields.io/badge/%E6%95%B0%E6%8D%AE%E5%8D%A1-141416?style=for-the-badge" alt="数据卡"></a>
+  生成合成病人与临床场景，再依据代码推导的标准答案评测健康智能体。
 </p>
 
 <p align="center">
@@ -39,19 +11,30 @@
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-3776AB.svg?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="https://pypi.org/project/haenv/"><img src="https://img.shields.io/pypi/v/haenv.svg" alt="PyPI"></a>
   <a href="https://github.com/thetahealth/mirobody-env/actions/workflows/ci.yml"><img src="https://github.com/thetahealth/mirobody-env/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://thetahealth.github.io/mirobody-env/"><img src="https://img.shields.io/badge/demo-live-black.svg" alt="Live demo"></a>
 </p>
 
 <p align="center">
-  <a href="#测什么">测什么</a> &middot;
-  <a href="#为什么是-haenv">为什么是 HAEnv</a> &middot;
+  <a href="https://github.com/thetahealth/mirobody-env/blob/main/README.md">English</a> &middot; <strong>简体中文</strong>
+  &nbsp;|&nbsp;
+  <a href="https://thetahealth.github.io/mirobody-env/">在线演示</a> &middot;
   <a href="#合成病人">合成病人</a> &middot;
   <a href="#快速开始">快速开始</a> &middot;
   <a href="#工作原理">工作原理</a> &middot;
   <a href="#计分">计分</a> &middot;
   <a href="#排行榜">评测结果</a> &middot;
   <a href="#评测你自己的-agent">评测你的 agent</a> &middot;
+  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md">数据卡</a> &middot;
   <a href="#引用">引用</a>
 </p>
+
+> 带答案的文件都带有 canary 串（[`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md)），请勿将其放入训练数据。
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_patient.png" alt="一个合成病人：2 型糖尿病，使用替尔泊肽。家用秤与诊室秤体重、步数与静息心率、剂量与依从性、上报事件；T 之后的记录以灰底标为隐藏" width="92%">
+</p>
+<p align="center"><sub>一个合成病人（图中标注为英文）。<code>T</code> 左侧是题面，右侧对 agent 隐藏、用于判分。
+依从性在 <code>T</code> 之前下降，由此引起的体重回升在 <code>T</code> 之后、隐藏的反转点开始出现。</sub></p>
 
 ## 测什么
 
@@ -69,19 +52,14 @@ HAEnv 负责生成病人、设定难度、推出金标。要用已发表的健�
 - **难度是参数。** 测量伪影、干扰事件、临床转折的时点都是 job 文件里的设置。
 - **安全失误不会被平均掉。** 九道硬性门槛（包括越权改药、编造证据、漏掉红旗症状、过度分诊和过早下结论）命中任何一道，整例记零分，其他得分无法抵消；`slices` 形式中部分动作类门槛（包括漏请临床复核）只清零触发它的那个时间片。第十道 `acted_on_unverified_signal`（在金标标为伪影的读数上升级处理）照常判出并报告，但不进乘子。
 
-<details>
-<summary>术语</summary>
-
 | 术语 | 含义 |
 |---|---|
 | 截断时点 `T` | 题面只含 `T` 之前的记录；判分用 `T` 之后的部分 |
 | 隐变量 | 结局、驱动因素、反转点、依从性、噪声，在渲染病程之前写在 job 文件里 |
 | 出题闸门 | 生成的病例发布前必须通过的检查：前提校验、逐项校验、泄漏探针 |
-| 硬性门槛 | 由代码判定、使所在计分单元记零分的安全失误 |
+| 硬性门槛 | 使所在计分单元记零分的安全失误 |
 | 形式（代码中称 `geometry`） | 提问方式：`single`、`gated`、`slices` 或 `multi` |
 | 批次 | 一次运行的目录：病例、回答、得分与指纹 |
-
-</details>
 
 ### 发布内容
 
@@ -96,71 +74,9 @@ HAEnv 负责生成病人、设定难度、推出金标。要用已发表的健�
 
 **语言。** 题面与病例内容为中文：指令部分，以及病历中的自由文本字段（上报症状、情境、事件）。字段名、数据流名、答案枚举值与各类编号为英文。
 
-## 为什么是 HAEnv
-
-| | 纵向病历 | 在 `T` 截断 | 程序化金标 | 代码判分 | 可重新生成 | 难度参数 | 安全硬门 | 工具查数 |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **HAEnv** | ✅ | ✅¹ | ✅ | ◐² | ✅ | ◐³ | ✅⁴ | ◐⁵ |
-| ESL-Bench⁶ | ✅ | — | ✅ | ◐⁷ | —⁸ | ◐ | — | ✅ |
-| MedAgentBench | ✅ | — | ◐ | ✅ | — | — | — | ✅ |
-| HealthBench | — | — | — | — | — | — | — | — |
-| AgentClinic | — | — | — | — | ◐ | — | — | ◐ |
-| LongHealth | ✅ | — | — | ✅ | — | — | — | — |
-| EHRSHOT | ✅ | ✅ | — | ✅ | — | — | — | — |
-
-<sub>✅ 具备 · ◐ 部分 · — 不具备。<br>
-¹ 预测与随访格式的答案在 `T` 之后；诊断格式的金标是 `T` 之前已定、对 agent 隐藏的诊断。<br>
-² 金标由代码派生，确定性维度由代码判分；默认综合分含由单家 LLM 裁判判定的语义维度。<br>
-³ 伪影、干扰事件、临床转折时点是 job 文件里的设置；当前发布包固定在一档。<br>
-⁴ 九道硬门把所在计分单元清零；第十道（`acted_on_unverified_signal`）照常判出并报告，但不进乘子。<br>
-⁵ 仅 `gated` 形式：agent 在预算内按价目表开检查；其余形式把 `T` 之前的病历整份放进题面。<br>
-⁶ 同一团队的前作。<br>
-⁷ 论文 v1 对所有过门回答用 LLM 量表评分；现行数据卡只对文本类答案用 LLM 判官。<br>
-⁸ 生成器未公开，由维护方按批次发布新题。</sub>
-
-<details>
-<summary>各列含义</summary>
-
-| 列 | 判 ✅ 的条件 |
-|---|---|
-| 纵向病历 | 每个病例是跨数月到数年的多时点记录 |
-| 在 `T` 截断 | 题面只给到索引时点 `T`，答案是 `T` 之后发生的事 |
-| 程序化金标 | 答案由构造或生成参数确定，而非事后标注或真实结局 |
-| 代码判分 | 主评分不依赖 LLM 判官 |
-| 可重新生成 | 发布了生成器，用户可用新种子生成新病例 |
-| 难度参数 | 设置作用在生成出的病例上，且发布包行使多档并实测了效应（部分：设置存在但发布包固定一档，或出题时设计分档；不具备：事后挑出的子集，或只改评测条件） |
-| 安全硬门 | 安全失误一票否决，不与其他维度平均 |
-| 工具查数 | 被测 agent 经工具或 API 主动检索病人数据（整份病历放进题面算不具备） |
-
-</details>
-
-- **ESL-Bench**（[arXiv:2604.02834](https://arxiv.org/abs/2604.02834)，[数据集](https://huggingface.co/datasets/mirobody/ESL-Bench)）：100 名合成用户，各有 1–5 年的设备、体检与事件轨迹；每人 100 道题，覆盖查找、趋势、比较、异常、解释五个维度，答案由程序计算。排行榜：[Health Memory Arena](https://healthmemoryarena.ai)。
-- **MedAgentBench**（[arXiv:2501.14654](https://arxiv.org/abs/2501.14654)）：FHIR 虚拟 EHR 中的 300 个 agent 任务。
-- **HealthBench**（[arXiv:2505.08775](https://arxiv.org/abs/2505.08775)）：5,000 段健康对话，由模型按医生编写的细则评分。
-- **AgentClinic**（[arXiv:2405.07960](https://arxiv.org/abs/2405.07960)）：与 LLM 扮演的病人对话，完成问诊与诊断；CRAFT-MD（[doi:10.1038/s41591-024-03328-5](https://doi.org/10.1038/s41591-024-03328-5)）同属此类。
-- **LongHealth**（[arXiv:2401.14490](https://arxiv.org/abs/2401.14490)）：20 份长篇虚构病历上的 400 道选择题。
-- **EHRSHOT**（[arXiv:2307.02028](https://arxiv.org/abs/2307.02028)）：6,739 名真实病人纵向 EHR 上的少样本预测。
-- **mirobody-eval**（[GitHub](https://github.com/thetahealth/mirobody-eval)）：用已发表的健康基准（含 ESL-Bench）评测现成系统的框架，虚拟用户、被测对象、评分器均可替换。
-
 ## 合成病人
 
 [在线演示](https://thetahealth.github.io/mirobody-env/)在浏览器里生成病人，拖动参数即可改变病程、化验与依从性。
-同一页面也随仓库提供（[`web/demo/index.html`](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/index.html)），可离线打开。
-在第 1 步点击 “Generate this patient” 后，第 2–5 步才会展开。
-
-<p align="center">
-  <picture>
-    <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_fan.png">
-    <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_fan.gif" alt="演示第 1–2 步：拨动「回升开始周」与「回升速度」两个旋钮，病人的平行未来连同中位线与分位带随之移动" width="100%">
-  </picture>
-</p>
-<p align="center"><sub>演示第 1–2 步（界面为英文）：第 1 步的两个病程旋钮放在它们驱动的第 2 步扇形图上方。这些未来设置完全相同，只有随机层不同。</sub></p>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_patient.png" alt="一个合成病人：2 型糖尿病，使用替尔泊肽。家用秤与诊室秤体重、步数与静息心率、剂量与依从性、上报事件；T 之后的记录以灰底标为隐藏" width="92%">
-</p>
-<p align="center"><sub>一个合成病人（图中标注为英文）。<code>T</code> 左侧是题面，右侧对 agent 隐藏、用于判分。
-依从性在 <code>T</code> 之前下降，由此引起的体重回升在 <code>T</code> 之后、隐藏的反转点开始出现。</sub></p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_cohort.png" alt="三幅图：替尔泊肽维持者与司美格鲁肽低应答者各 60 人的个体药效分布；90 天内 HbA1c 变化与空腹血糖变化的散点；12 个病人按各自的 T 对齐的体重轨迹，在 T 之后分化为回升与维持" width="100%">
@@ -176,7 +92,7 @@ HAEnv 负责生成病人、设定难度、推出金标。要用已发表的健�
 每处瞬时尖峰在金标里记为一个陷阱：多轮形式中，agent 若在伪影处把风险调高，会被扣逆转跟踪分；单问形式中，若在未标记可疑的伪影读数上升级处理，会触发 <code>acted_on_unverified_signal</code> 门，这道门照常报告，但不清零该例。
 高干扰档加入与真实症状文本格式相同的无关症状，同时把声明的症状率提高到 0.5 与之匹配，否则出题闸门会拒绝该病例。</sub></p>
 
-<!-- 重建图：uv run --with matplotlib python docs/scripts/make_readme_figures.py（确定性生成器，不调用模型）；动图：python docs/scripts/make_readme_gifs.py（需要 Playwright、Pillow 与 Chromium，HAENV_CHROME 指向浏览器） -->
+<!-- 重建图：uv run --with matplotlib python docs/scripts/make_readme_figures.py（确定性生成器，不调用模型）；动图：python docs/scripts/make_readme_gifs.py --only quickstart（需要 Playwright、Pillow 与 Chromium，HAENV_CHROME 指向浏览器） -->
 
 ## 快速开始
 
@@ -322,6 +238,48 @@ job 文件声明病人事实（病种、药物、剂量阶梯、设备、起始�
 
 自检不调用模型，几秒内完成，见 [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#4-self-checks)。
 
+## 评测你自己的 agent
+
+被测模型是 `config.yaml` 里 `models:` 下的一项，可以接任何在 `backends:` 中声明的 OpenAI 兼容接口。每一轮是一次携带题面的对话请求；
+挂在这类接口后面的 agent 也用同样方式评测，它内部的工具调用判分器看不到。它拿到同样的病人、同样在 `T` 处截断、同样的判分器。插件都在 job 文件里显式登记。
+
+新接口写在 `config.yaml` 旁边的 `config.local.yaml` 里（合并覆盖 `config.yaml`，不进 git）。
+新的后端名会登记为一个 OpenAI 兼容后端；密钥从 `HAENV_ENV_FILE` 指向的文件读取：
+
+```yaml
+backends:
+  my-endpoint:
+    url: http://localhost:8000/v1/chat/completions
+    key_env: MY_ENDPOINT_KEY          # 在 $HAENV_ENV_FILE 里写 MY_ENDPOINT_KEY=...
+models:
+  my-agent: {backend: my-endpoint, model: my-agent-v1, max_tokens: 8000}
+```
+
+```bash
+uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
+  --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
+```
+
+得分中的语义维度由 `openai/gpt-6-luna` 经 OpenRouter 判定，所以同一个密钥文件里还要有 OpenRouter 的密钥，裁判费用计入同一个预算。
+
+| 要改的 | 位置 | 是否写代码 |
+|---|---|---|
+| 被测模型或 agent | `config.yaml`（`models:`、`backends:`） | 否 |
+| 权重与归一化 | 每个榜一个配置文件 | 否 |
+| 新增判分器或新的金标类型 | 登记一个函数 | 是 |
+| 判分器观察的内容（运行过程的新视图） | 被观察对象插件 | 是 |
+| 数据流、事件、药效、伪影 | 环境侧插件 | 是 |
+
+[`examples/`](https://github.com/thetahealth/mirobody-env/blob/main/examples/README.md) 中有五个插件示例包，均可离线运行，各配一个负对照。
+指南：[判分器插件](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/llm-judge-plugin.md) · [外部任务类型](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md)。
+
+## 成本与缓存
+
+- 出题的模型输出按「模型 + 提示词」缓存在 `cases/_llm_cache/`；用同一份 job 重出题包不调用模型。
+- 评测默认断点续跑，只补发还没有回答的格子。原始回答全部落盘，判分代码改了只需重算，不必重跑被测模型。
+- 对已有实测依据的模型，`max_tokens` 不得低于按输出长度推出的下限。这能降低截断风险，但不能保证每次回答都在预算内完成。`batch.json` 记录出题与评测用量（`gen_usage`、`eval_usage`）：有实测值时记总量，否则显式记录状态（缺失、不适用或错误）。
+- 量级：一个已作答的 `ddx-timeline` 格子平均约 85,860 输入 token、42,587 输出 token；`ddx-workup` 格子约 14,579 输入、11,831 输出（主批次，十个模型所有有实测用量的格子合并计算）。细节与重算命令见 [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching)。
+
 ## 排行榜
 
 十个模型回答同一批 145 个合成病例（64 个病种），分两个题包：`ddx-timeline`（在多个时点提问）和
@@ -430,14 +388,6 @@ uv run --with matplotlib python docs/scripts/make_readme_results.py
 [在线 demo](https://thetahealth.github.io/mirobody-env/) 的第 6–9 步展示已记录的回答、工具轨迹和得分拆解。
 demo 还能按失败原因逐类剔除未作答的格子，并在浏览器里重算榜单。
 
-<p align="center">
-  <picture>
-    <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_answers.png">
-    <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_answers.gif" alt="演示第 6 步：一个录制病例的多泳道时间线，下方是各模型回答的对比表；选中一个模型，时间线上圈出它引用的记录，切换作答日时雾随之移动" width="100%">
-  </picture>
-</p>
-<p align="center"><sub>演示第 6 步（界面为英文）：病例时间线与回答对比表上下拼在一起。各模型在多个时点回答了一个录制病例。选中一个模型，时间线上圈出它引用的记录；不在本例证据台账里、或晚于作答日的引用会在表中标出。这个病例上有两条被标出，都来自同一个模型的同一个作答日（把数据流名称当成台账条目来引用）。<a href="https://thetahealth.github.io/mirobody-env/">在线演示</a>第 7–9 步还有工具轨迹和评分明细。</sub></p>
-
 ## 局限
 
 - **`glm-5.3-flash` 输在超时，不在正确率。** 它的推理时间远长于其他模型：`ddx-timeline` 上已作答格的耗时中位 69 分钟
@@ -459,47 +409,20 @@ demo 还能按失败原因逐类剔除未作答的格子，并在浏览器里重
 
 完整清单（含计分、生成与世界层的缺口）见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#known-gaps)。
 
-## 评测你自己的 agent
+## 相关工作
 
-被测模型是 `config.yaml` 里 `models:` 下的一项，可以接任何在 `backends:` 中声明的 OpenAI 兼容接口。每一轮是一次携带题面的对话请求；
-挂在这类接口后面的 agent 也用同样方式评测，它内部的工具调用判分器看不到。它拿到同样的病人、同样在 `T` 处截断、同样的判分器。插件都在 job 文件里显式登记。
+| 工作 | 评测内容 |
+|---|---|
+| ESL-Bench（[arXiv:2604.02834](https://arxiv.org/abs/2604.02834)，[数据集](https://huggingface.co/datasets/mirobody/ESL-Bench)） | 100 名合成用户，各有 1–5 年的设备、体检与事件轨迹；每人 100 道题，覆盖查找、趋势、比较、异常、解释五个维度，答案由程序计算。排行榜：[Health Memory Arena](https://healthmemoryarena.ai) |
+| mirobody-eval（[GitHub](https://github.com/thetahealth/mirobody-eval)） | 用已发表的健康基准（含 ESL-Bench）评测现成系统的框架，虚拟用户、被测对象、评分器均可替换 |
+| MedAgentBench（[arXiv:2501.14654](https://arxiv.org/abs/2501.14654)） | FHIR 虚拟 EHR 中的 300 个 agent 任务 |
+| EHRSHOT（[arXiv:2307.02028](https://arxiv.org/abs/2307.02028)） | 6,739 名真实病人纵向 EHR 上的少样本预测 |
+| LongHealth（[arXiv:2401.14490](https://arxiv.org/abs/2401.14490)） | 20 份长篇虚构病历上的 400 道选择题 |
+| HealthBench（[arXiv:2505.08775](https://arxiv.org/abs/2505.08775)） | 5,000 段健康对话，由模型按医生编写的细则评分 |
+| AgentClinic（[arXiv:2405.07960](https://arxiv.org/abs/2405.07960)）、CRAFT-MD（[doi:10.1038/s41591-024-03328-5](https://doi.org/10.1038/s41591-024-03328-5)） | 与 LLM 扮演的病人对话，完成问诊与诊断 |
 
-新接口写在 `config.yaml` 旁边的 `config.local.yaml` 里（合并覆盖 `config.yaml`，不进 git）。
-新的后端名会登记为一个 OpenAI 兼容后端；密钥从 `HAENV_ENV_FILE` 指向的文件读取：
-
-```yaml
-backends:
-  my-endpoint:
-    url: http://localhost:8000/v1/chat/completions
-    key_env: MY_ENDPOINT_KEY          # 在 $HAENV_ENV_FILE 里写 MY_ENDPOINT_KEY=...
-models:
-  my-agent: {backend: my-endpoint, model: my-agent-v1, max_tokens: 8000}
-```
-
-```bash
-uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
-  --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
-```
-
-得分中的语义维度由 `openai/gpt-6-luna` 经 OpenRouter 判定，所以同一个密钥文件里还要有 OpenRouter 的密钥，裁判费用计入同一个预算。
-
-| 要改的 | 位置 | 是否写代码 |
-|---|---|---|
-| 被测模型或 agent | `config.yaml`（`models:`、`backends:`） | 否 |
-| 权重与归一化 | 每个榜一个配置文件 | 否 |
-| 新增判分器或新的金标类型 | 登记一个函数 | 是 |
-| 判分器观察的内容（运行过程的新视图） | 被观察对象插件 | 是 |
-| 数据流、事件、药效、伪影 | 环境侧插件 | 是 |
-
-[`examples/`](https://github.com/thetahealth/mirobody-env/blob/main/examples/README.md) 中有五个插件示例包，均可离线运行，各配一个负对照。
-指南：[判分器插件](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/llm-judge-plugin.md) · [外部任务类型](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md)。
-
-## 成本与缓存
-
-- 出题的模型输出按「模型 + 提示词」缓存在 `cases/_llm_cache/`；用同一份 job 重出题包不调用模型。
-- 评测默认断点续跑，只补发还没有回答的格子。原始回答全部落盘，判分代码改了只需重算，不必重跑被测模型。
-- 对已有实测依据的模型，`max_tokens` 不得低于按输出长度推出的下限。这能降低截断风险，但不能保证每次回答都在预算内完成。`batch.json` 记录出题与评测用量（`gen_usage`、`eval_usage`）：有实测值时记总量，否则显式记录状态（缺失、不适用或错误）。
-- 量级：`ddx-timeline` 平均每个模型每例约 85,860 输入 token、42,587 输出 token；`ddx-workup` 约 14,579 输入、11,831 输出（主批次，对有实测用量的模型取平均）。细节与重算命令见 [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching)。
+HAEnv 同时具备纵向病历、在 `T` 处截断的题面、先于数据确定的金标、除语义维度（由一个 LLM 裁判判定）外全部由代码计分，以及可重新生成的合成病例。
+可靠性指标 `pass^k` 来自 τ-bench（[arXiv:2406.12045](https://arxiv.org/abs/2406.12045)）。
 
 ## 数据、伦理与复现
 
@@ -509,8 +432,6 @@ uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
 - [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md)：哪些可免费复现、哪些计费，以及自检。
 - [`docs/ETHICS.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/ETHICS.md)：数据来源与使用边界。
 - [`CONTRIBUTING.md`](https://github.com/thetahealth/mirobody-env/blob/main/CONTRIBUTING.md)：如何修改计分或生成代码。
-
-<sub>带答案的文件都带有 canary 串（[`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md)），请勿将其放入训练数据。</sub>
 
 ## 引用
 

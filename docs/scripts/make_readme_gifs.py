@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The four README animations. Generated files, do not hand-edit; re-run this script.
+"""The README animations. Generated files, do not hand-edit; re-run this script.
 
     python docs/scripts/make_readme_gifs.py                       # all four
     python docs/scripts/make_readme_gifs.py --only today fan      # some of them
@@ -15,6 +15,9 @@ Output in `docs/figures/`, each GIF with a PNG still of the same size (the stati
 * `readme_answers`    demo step 6: selecting models in the answer matrix rings the
                       evidence each one cited on the recorded case's timeline;
 * `readme_quickstart` the four quick-start commands and what they print.
+
+The README shows `readme_quickstart`. The three demo animations are not in it; they stay
+because the 1.0.1 package description on PyPI loads them from `main`.
 
 The three demo animations drive the shipped page `web/demo/index.html` in a headless
 browser at its default settings and screenshot it; no page content or data is edited.
