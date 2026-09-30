@@ -24,7 +24,7 @@
   <a href="#计分">计分</a> &middot;
   <a href="#排行榜">评测结果</a> &middot;
   <a href="#评测你自己的-agent">评测你的 agent</a> &middot;
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md">数据卡</a> &middot;
+  <a href="#agent-skills">技能</a> &middot;
   <a href="#引用">引用</a>
 </p>
 
@@ -70,7 +70,11 @@ HAEnv 负责生成病人、设定难度、推出金标。要用已发表的健�
 | 鉴别诊断、检查、紧急程度、信息不足判断 | `inputs/ddx-timeline.job.yaml` | 145 | 在多个时点分别提问 |
 | 限预算开检查 | `inputs/ddx-workup.job.yaml` | 145 | agent 在预算内自行开检查 |
 
-规格通过出题闸门才会成为病例；两个诊断题包收齐了各自 job 文件里的 145 条规格。诊断类任务背后的临床登记表含 67 条病种规格（单病种与共病组合）。冻结题包、病例数和已知缺口见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md)。
+规格通过出题闸门才会成为病例；两个诊断题包收齐了各自 job 文件里的 145 条规格。这两个题包由 LLM 生成器出题；用离线生成器（`--gen deterministic`）重出任一题包会得到 144 例，因为 `JD-32v2` 过不了锚点检查（`anchor_not_honored`）。诊断类任务背后的临床登记表含 67 条病种规格（单病种与共病组合）。冻结题包、病例数和已知缺口见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md)。
+
+**一条流水线，多个任务。** 上表那四行是四个**任务**，不是四套程序。一个任务 = 一种金标形状 + 一份作答契约：预测结局并指认驱动因素；给出排序的鉴别诊断并判断各条线索是同一病理过程、多病共存还是彼此无关；在预算内自行开检查。它们的病人由同一个生成器渲染，过同一道逐项校验的发射门，由同一张判据表打分；不同的只是金标形状与问法措辞，而一个病例归到哪个任务，看的是**它自己带的金标**，不是 job 文件上的标签。
+
+同一批病人还能以四种形式提问：`single` / `gated` / `slices` / `multi`（见[工作原理](#工作原理)）。形式是任务**内部**的一个条件，所以同一个诊断题包可以把病例问成 `T` 处的一次提问、多个时点的分别提问，或可修正的多轮推进。判据登记在同一张挂载表上、横跨这四种形式，每条都带着自己挂了哪些形式。自己加一个任务类型不需要改本仓，而是一个仓外的包：见[评测你自己的 agent](#评测你自己的-agent) 与 [`docs/design/external-task-contract.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md)。
 
 **语言。** 题面与病例内容为中文：指令部分，以及病历中的自由文本字段（上报症状、情境、事件）。字段名、数据流名、答案枚举值与各类编号为英文。
 
@@ -145,11 +149,12 @@ uv run haenv report inputs/example-ew.job.yaml --offline                     # �
 pip install haenv
 JOBS=$(python -c "import haenv,pathlib;print(pathlib.Path(haenv.__file__).parent/'_data'/'inputs')")
 cd ~/my-workdir                     # 产物写到当前目录
-haenv build "$JOBS/example-ew.job.yaml" --gen deterministic
+haenv build "$JOBS/example-ew.job.yaml" --gen deterministic --fresh
 haenv run   "$JOBS/example-ew.job.yaml" --offline
 ```
 
 `HAENV_DATA_ROOT` 设只读资源根目录，`HAENV_OUTPUT_ROOT` 设产物根目录。
+`HAENV_CONFIG_OVERLAY` 指向你自己的一个 YAML 文件，合并覆盖包内自带的 `config.yaml`（写你自己的后端与模型，见[评测你自己的 agent](#评测你自己的-agent)）。
 </details>
 
 <details>
@@ -243,7 +248,7 @@ job 文件声明病人事实（病种、药物、剂量阶梯、设备、起始�
 被测模型是 `config.yaml` 里 `models:` 下的一项，可以接任何在 `backends:` 中声明的 OpenAI 兼容接口。每一轮是一次携带题面的对话请求；
 挂在这类接口后面的 agent 也用同样方式评测，它内部的工具调用判分器看不到。它拿到同样的病人、同样在 `T` 处截断、同样的判分器。插件都在 job 文件里显式登记。
 
-新接口写在 `config.yaml` 旁边的 `config.local.yaml` 里（合并覆盖 `config.yaml`，不进 git）。
+新接口写在 `config.yaml` 旁边的 `config.local.yaml` 里（合并覆盖 `config.yaml`，不进 git）。用 `pip install` 安装时 `config.yaml` 在安装好的包里，改为把同样的 YAML 写进你自己的一个文件，并用 `HAENV_CONFIG_OVERLAY` 指向它。
 新的后端名会登记为一个 OpenAI 兼容后端；密钥从 `HAENV_ENV_FILE` 指向的文件读取：
 
 ```yaml
@@ -252,8 +257,14 @@ backends:
     url: http://localhost:8000/v1/chat/completions
     key_env: MY_ENDPOINT_KEY          # 在 $HAENV_ENV_FILE 里写 MY_ENDPOINT_KEY=...
 models:
-  my-agent: {backend: my-endpoint, model: my-agent-v1, max_tokens: 8000}
+  my-agent:
+    backend: my-endpoint
+    model: my-agent-v1
+    max_tokens: 8000
+    price: {input_per_million_usd: 0, output_per_million_usd: 0}   # 美元/百万 token
 ```
+
+付费运行的每个请求都计入 `--judge-budget-usd`。`openrouter`、`relay`、`google`、`dashscope` 的价格来自服务商；自建后端按每个模型声明的 `price`，乘以接口在 `usage` 里返回的 token 数计费，免费的本地接口填 0。自建后端上没有声明 `price` 的模型，在发出任何请求之前就会被拒绝。
 
 ```bash
 uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
@@ -272,6 +283,18 @@ uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
 
 [`examples/`](https://github.com/thetahealth/mirobody-env/blob/main/examples/README.md) 中有五个插件示例包，均可离线运行，各配一个负对照。
 指南：[判分器插件](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/llm-judge-plugin.md) · [外部任务类型](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md)。
+
+## Agent skills
+
+仓里带三份技能，放在 [`skills/`](https://github.com/thetahealth/mirobody-env/tree/main/skills) 下，采用 [Agent Skills](https://agentskills.io) 版式（`skills/<名字>/SKILL.md`；这份标准不止一家 agent 工具在读）。它们是「从对话里驱动整条流水线」的短路径，也能单独当说明看：
+
+| 技能 | 什么时候用它 |
+|---|---|
+| [`haenv-synth`](https://github.com/thetahealth/mirobody-env/blob/main/skills/haenv-synth/SKILL.md) | **造**病人与题 —— 从你自己写的 job 文件，或从一段病例描述文本 —— 以及读懂被发射门拒掉的原因 |
+| [`haenv-bench`](https://github.com/thetahealth/mirobody-env/blob/main/skills/haenv-bench/SKILL.md) | **跑**题包出榜并读结果：断点续跑、按批次归档的产物、工具调用轨迹、这一批花了多少 |
+| [`haenv-extend`](https://github.com/thetahealth/mirobody-env/blob/main/skills/haenv-extend/SKILL.md) | **加自己的**判据、指标流、事件或任务类型，走仓外的包 |
+
+每份都是索引，不是第二份权威：它对流水线的每句描述都对着代码和它引用的文档核过。按标准的说法，一个技能就是一个 Markdown 目录，可选带 `scripts/`、`references/`、`assets/`；它们不含任何绑定某一家工具的东西。用读这份标准的 agent 时，把仓库路径给它，直接用大白话说要做什么 ——「从这份病人造一批题」「跑一批评测并告诉我花了多少」「加一条能抓住 X 的判据」—— 对应的技能会把口径、命令和坑一并给出。
 
 ## 成本与缓存
 

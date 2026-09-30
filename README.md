@@ -24,7 +24,7 @@
   <a href="#scoring">Scoring</a> &middot;
   <a href="#leaderboard">Results</a> &middot;
   <a href="#evaluate-your-own-agent">Your agent</a> &middot;
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md">Data card</a> &middot;
+  <a href="#agent-skills">Skills</a> &middot;
   <a href="#citation">Cite</a>
 </p>
 
@@ -85,9 +85,26 @@ existing system against published health benchmarks such as ESL-Bench, use
 | Budgeted test ordering | `inputs/ddx-workup.job.yaml` | 145 | the agent orders tests against a budget |
 
 A specification becomes a case only if it passes the emission gate; both diagnosis packs hold
-all 145 specifications of their job files. The clinical registry behind the diagnosis tasks holds 67
+all 145 specifications of their job files. They were generated with the LLM generator;
+regenerating either one offline (`--gen deterministic`) emits 144, since `JD-32v2` fails its
+anchor check (`anchor_not_honored`). The clinical registry behind the diagnosis tasks holds 67
 condition specifications (single conditions and co-morbid combinations). The frozen question packs,
 their case counts and the known gaps are in the [data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md).
+
+**One pipeline, several tasks.** Those four rows are four *tasks*, not four programs. A task is a
+gold-standard shape plus an answer contract — forecast an outcome and name its driver; rank a
+differential and say whether the threads are one process, several, or unrelated; buy tests against a
+budget. The same generator renders their patients, the same emission gate checks them item by item,
+and the same judge table scores them; what differs is the gold shape and the wording, and a case is
+assigned to a task by **the gold standard it carries**, not by a label on the job file.
+
+The same patients are also posed in four formats, `single` / `gated` / `slices` / `multi` (see
+[How it works](#how-it-works)); format is a condition *inside* a task, so a diagnosis pack can pose
+its cases as one question at `T`, as several time points, or as rounds the agent may revise. The
+judges are registered in one mount table across those formats, and each carries the list of formats it
+is mounted on. Adding a task type of your own is a package outside this repository, not a change to
+it: [Evaluate your own agent](#evaluate-your-own-agent) and
+[`docs/design/external-task-contract.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md).
 
 **Language.** Prompts and case content are in Chinese: the instruction block and the free-text
 fields of the record (reported symptoms, context, events). Field names, stream names, enumerated
@@ -178,11 +195,13 @@ regenerating its questions would score new questions against old answers. For th
 pip install haenv
 JOBS=$(python -c "import haenv,pathlib;print(pathlib.Path(haenv.__file__).parent/'_data'/'inputs')")
 cd ~/my-workdir                     # artifacts go to the current directory
-haenv build "$JOBS/example-ew.job.yaml" --gen deterministic
+haenv build "$JOBS/example-ew.job.yaml" --gen deterministic --fresh
 haenv run   "$JOBS/example-ew.job.yaml" --offline
 ```
 
 `HAENV_DATA_ROOT` sets the read-only resource root and `HAENV_OUTPUT_ROOT` the artifact root.
+`HAENV_CONFIG_OVERLAY` names a YAML file of your own, merged over the packaged `config.yaml`
+(your backends and models; see [Evaluate your own agent](#evaluate-your-own-agent)).
 </details>
 
 <details>
@@ -301,8 +320,9 @@ judges. It receives the same patients, the same cut at `T` and the same judges. 
 registered explicitly in the job file.
 
 To add an endpoint, put it in `config.local.yaml` next to `config.yaml` (merged over it, ignored
-by git). A new backend name registers an OpenAI-compatible backend; its key is read from the file
-named by `HAENV_ENV_FILE`:
+by git). After `pip install`, `config.yaml` is inside the installed package: put the same YAML in
+a file of your own and name that file in `HAENV_CONFIG_OVERLAY`. A new backend name registers an
+OpenAI-compatible backend; its key is read from the file named by `HAENV_ENV_FILE`:
 
 ```yaml
 backends:
@@ -310,8 +330,17 @@ backends:
     url: http://localhost:8000/v1/chat/completions
     key_env: MY_ENDPOINT_KEY          # MY_ENDPOINT_KEY=... in $HAENV_ENV_FILE
 models:
-  my-agent: {backend: my-endpoint, model: my-agent-v1, max_tokens: 8000}
+  my-agent:
+    backend: my-endpoint
+    model: my-agent-v1
+    max_tokens: 8000
+    price: {input_per_million_usd: 0, output_per_million_usd: 0}   # USD per million tokens
 ```
+
+A billed run counts every request against `--judge-budget-usd`. On `openrouter`, `relay`, `google`
+and `dashscope` the price comes from the provider; on a backend of your own it is the `price`
+declared for each model, applied to the token counts the endpoint returns in `usage` (0 for a
+free local endpoint). A model there without a `price` is refused before any request is sent.
 
 ```bash
 uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
@@ -333,6 +362,27 @@ same env file also needs an OpenRouter key, and the judge's cost counts against 
 negative control.
 Guides: [judge plugins](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/llm-judge-plugin.md) ·
 [external task types](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md).
+
+## Agent skills
+
+The repository carries three skills under [`skills/`](https://github.com/thetahealth/mirobody-env/tree/main/skills), in the
+[Agent Skills](https://agentskills.io) layout (`skills/<name>/SKILL.md`; the standard is read by more
+than one agent tool). They are the short path to driving the pipeline from a conversation, and they
+are written to be read on their own:
+
+| Skill | Use it when you want to |
+|---|---|
+| [`haenv-synth`](https://github.com/thetahealth/mirobody-env/blob/main/skills/haenv-synth/SKILL.md) | **generate** patients and questions — from a job file you write, or from a piece of case-description text — and read what the emission gate rejects |
+| [`haenv-bench`](https://github.com/thetahealth/mirobody-env/blob/main/skills/haenv-bench/SKILL.md) | **run** a pack against models and read the board: resumable runs, per-batch artifacts, the tool-call trace, what a batch cost |
+| [`haenv-extend`](https://github.com/thetahealth/mirobody-env/blob/main/skills/haenv-extend/SKILL.md) | **add your own** judge, indicator stream, event or task type, from a package outside the repository |
+
+Each is an index, not a second source of truth: what it says about the pipeline is checked against
+the code and the documents linked from it. A skill is a directory of Markdown plus, in the standard's
+terms, optional `scripts/`, `references/` and `assets/`; nothing about them is specific to one
+vendor's tool. If you use an agent that reads the standard, point it at the repository and ask in
+plain words — "generate a batch of questions from this patient", "run a batch and show me what it
+cost", "add a judge that catches X" — and the matching skill supplies the conventions, the commands
+and the failure modes.
 
 ## Cost and caching
 
