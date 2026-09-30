@@ -145,10 +145,19 @@ haenv run   "$JOBS/example-ew.job.yaml" --offline
 <details>
 <summary>用真实模型评测（计费）</summary>
 
+计费运行要两个参数：一个上限，以及记录花费的共享账本。两个都得给，否则在发第一个请求之前就会停。
+
 ```bash
-uv run haenv run inputs/example-ew.job.yaml --models gemini-3.1-pro --limit 1   # 先跑一个病例、一个模型
-uv run haenv run inputs/example-ew.job.yaml                                     # 全量，可断点续跑
+# 先跑一个病例、一个模型
+uv run haenv run inputs/example-ew.job.yaml --models gemini-3.1-pro --limit 1 \
+  --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
+
+# 全量，可断点续跑；重跑只发还没有答案的格子
+uv run haenv run inputs/example-ew.job.yaml --judge-budget-usd 50 \
+  --judge-budget-ledger ~/.haenv/budget.json
 ```
+
+密钥从 `HAENV_ENV_FILE` 指向的文件读取（见[评测你自己的 agent](#评测你自己的-agent)）；没有密钥时，请求在发出之前就失败。
 </details>
 
 ## 一个病例，从头到尾
@@ -237,7 +246,8 @@ models:
 ```
 
 ```bash
-uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1
+uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
+  --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
 ```
 
 | 要改的 | 位置 | 是否写代码 |

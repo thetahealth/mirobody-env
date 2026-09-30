@@ -172,10 +172,22 @@ haenv run   "$JOBS/example-ew.job.yaml" --offline
 <details>
 <summary>Run against real models (billed)</summary>
 
+A paid run needs two flags: a ceiling and the shared ledger that keeps the spend. Give both, or
+the run stops before the first call.
+
 ```bash
-uv run haenv run inputs/example-ew.job.yaml --models gemini-3.1-pro --limit 1   # one case, one model
-uv run haenv run inputs/example-ew.job.yaml                                     # full sweep, resumable
+# one case, one model
+uv run haenv run inputs/example-ew.job.yaml --models gemini-3.1-pro --limit 1 \
+  --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
+
+# full sweep, resumable; rerunning sends only the cells that have no answer yet
+uv run haenv run inputs/example-ew.job.yaml --judge-budget-usd 50 \
+  --judge-budget-ledger ~/.haenv/budget.json
 ```
+
+Keys are read from the file named by `HAENV_ENV_FILE` (see
+[Evaluate your own agent](#evaluate-your-own-agent)); without one, the call fails before it is
+sent.
 </details>
 
 ## One case, end to end
@@ -286,7 +298,8 @@ models:
 ```
 
 ```bash
-uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1
+uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
+  --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
 ```
 
 | To change | Where | Code |
