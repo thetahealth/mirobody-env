@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import fcntl
 from dataclasses import asdict
+import functools
 import hashlib
 import json
 import os
@@ -839,6 +840,25 @@ def _changed_only_in(root, old_sha: str, new_sha: str, path: str, functions) -> 
     return all(_gate_body_is_inert(body) for body in new_bodies)
 
 
+class AccountingRefused(ValueError):
+    """`prepare_accounting` refused the run; no billed request was sent."""
+
+
+def _refusals(prepare):
+    """Re-raise a plain `ValueError` from `prepare` as `AccountingRefused`, so the command line
+    can print the refusal as one line; subclasses keep their own type."""
+    @functools.wraps(prepare)
+    def checked(*args, **kwargs):
+        try:
+            return prepare(*args, **kwargs)
+        except ValueError as error:
+            if type(error) is not ValueError:
+                raise
+            raise AccountingRefused(str(error)) from error
+    return checked
+
+
+@_refusals
 def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
                        ledger_path: Path, limit_usd: str, identity: dict,
                        legacy_roots: list[str] | None = None) -> BatchAccounting:
@@ -855,7 +875,11 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
                    if not isinstance(s, (OpenAICompatSolver, GoogleSolver))
                    or s.backend not in {"openrouter", "relay", "google", "dashscope"}]
     if unsupported:
-        raise ValueError("Cannot budget unverified solver route(s): " + ", ".join(unsupported))
+        raise ValueError(
+            "Cannot budget unverified solver route(s): "
+            + ", ".join(f"{name} (backend {getattr(live[name], 'backend', '?')})" for name in unsupported)
+            + "; a billed run is metered against --judge-budget-usd, and verified price data "
+              "exists for the openrouter, relay, google and dashscope backends only")
     ledger = BudgetLedger(Path(ledger_path).resolve(), limit_usd=limit_usd)
     if ledger.snapshot()["halt_reason"]:
         raise BudgetExceeded(ledger.snapshot()["halt_reason"])

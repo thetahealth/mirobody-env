@@ -161,6 +161,43 @@ def test_native_host_and_live_google_capacity_must_match(monkeypatch):
         preflight_native(s,'google','https://generativelanguage.googleapis.com/v1beta/models')
 
 
+def test_unverified_google_capacity_says_why_without_the_key(monkeypatch):
+    import urllib.error
+    from types import SimpleNamespace
+    from haenv.native_accounting import preflight_native
+    from haenv.transport import PreSendFailure
+    s=SimpleNamespace(model='gemini-3.1-pro-preview',api_key='secret-key',max_tokens=65536)
+    url='https://generativelanguage.googleapis.com/v1beta/models'
+    def refused(*a,**k):raise urllib.error.HTTPError(url,403,'Forbidden',{},None)
+    monkeypatch.setattr('urllib.request.urlopen',refused)
+    with pytest.raises(ValueError,match='HTTP 403') as error:
+        preflight_native(s,'google',url)
+    assert 'secret-key' not in str(error.value)
+    def unreachable(*a,**k):raise urllib.error.URLError(PreSendFailure(TimeoutError()))
+    monkeypatch.setattr('urllib.request.urlopen',unreachable)
+    with pytest.raises(ValueError,match=r'not reached \(TimeoutError\)'):
+        preflight_native(s,'google',url)
+
+
+def test_google_capacity_check_is_bounded_as_a_whole(monkeypatch):
+    # urlopen's timeout is per connection attempt; a dropped route to a many-address host
+    # multiplies it, so the check has one deadline of its own.
+    import threading,time
+    from types import SimpleNamespace
+    from haenv import native_accounting as native
+    s=SimpleNamespace(model='gemini-3.1-pro-preview',api_key='k',max_tokens=65536)
+    release=threading.Event()
+    monkeypatch.setattr('urllib.request.urlopen',lambda *a,**k:release.wait(30))
+    monkeypatch.setattr(native,'CAPACITY_DEADLINE_S',0.2)
+    started=time.monotonic()
+    try:
+        with pytest.raises(ValueError,match=r'not reached \(TimeoutError\)'):
+            native.preflight_native(s,'google','https://generativelanguage.googleapis.com/v1beta/models')
+    finally:
+        release.set()
+    assert time.monotonic()-started<5
+
+
 def test_google_normalized_usage_preserves_measured_cache_tokens():
     from haenv.evaluate import _google_usage,billed_tokens
     usage=_google_usage({'usageMetadata':{'promptTokenCount':1000,'candidatesTokenCount':100,

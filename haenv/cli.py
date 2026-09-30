@@ -478,6 +478,13 @@ def _main(argv=None) -> int:
             print(_bf)
             return 3                               # 3 = refused by a gate, distinct from 2 (usage error)
 
+    # ---- keys: a billed run whose requests would go out without a key stops before a batch opens ----
+    if a.cmd == "run" and not a.offline:
+        _keyless = _missing_credentials(job, cfg, judged=not a.limit)
+        if _keyless:
+            print(_keyless)
+            return 2
+
     # ---- batch directory: archived by run timestamp; the latest batch is reused to resume ----
     try:
         # `--batch <old> --fresh` would delete that batch's evaluation rows, so the
@@ -1126,8 +1133,13 @@ def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report) -> int:
         if a.offline:
             rows = run_eval(job, cfg, built, resume=not a.fresh)
         else:
-            rows = run_eval(job, cfg, built, resume=not a.fresh,
-                            budget_ledger=a.judge_budget_ledger, budget_usd=a.judge_budget_usd)
+            from .solver_accounting import AccountingRefused
+            try:
+                rows = run_eval(job, cfg, built, resume=not a.fresh,
+                                budget_ledger=a.judge_budget_ledger, budget_usd=a.judge_budget_usd)
+            except AccountingRefused as e:
+                print(f"[haenv] cannot start a billed run: {e}; no billed request was sent")
+                return 2
     else:  # report: read the existing JSONL
         from .evaluate import load_rows
         p = job.results_file
@@ -1197,6 +1209,53 @@ def _report_semantic_state(rows: list[dict], semantic_dir) -> dict:
             "cells": len(live), "states": dict(sorted(states.items())),
             "pending": states["pending"], "unresolved": states["unresolved"],
             "no_answer": sum(states[s] for s in _NO_ANSWER)}
+
+
+def _missing_credentials(job, cfg: dict, *, judged: bool) -> str | None:
+    """What a billed run lacks before anything is opened or sent, as a message; None if nothing.
+
+    Solver keys are read off the solvers `build_solvers` makes, so the lookup is the run's own
+    (key pool, then `key_env`, from `config.env_file`). The judge key is the one
+    `semantic_pipeline.fetch_prices` reads; a `--limit` run is not judged.
+    """
+    from .baselines import BASELINE_NAMES
+    from .evaluate import BACKENDS, _ensure_backends_registered, build_solvers, load_env_file
+    try:
+        live = [(n, make()) for n, make in build_solvers(job, cfg) if n not in BASELINE_NAMES]
+    except ValueError as e:
+        return f"[haenv] cannot start: {e}"
+
+    def needs(label: str, backend: str) -> str:
+        bdef = BACKENDS.get(backend) or {}
+        pool = bdef.get("key_env_pool")
+        return (f"        · {label} (backend {backend}): {bdef.get('key_env', '?')}"
+                + (f" or {pool}1, {pool}2, ..." if pool else ""))
+
+    lines = [needs(n, s.backend) for n, s in live if hasattr(s, "api_key") and not s.api_key]
+    judge_missing = False
+    if judged and live:
+        from .semantic_rubric import load_policy
+        _ensure_backends_registered(cfg)
+        judge = load_policy()["judge"]
+        spec = (cfg.get("models") or {}).get(judge["model_key"]) or {}
+        key_env = (BACKENDS.get(spec.get("backend")) or {}).get("key_env")
+        if key_env and not load_env_file(cfg.get("env_file")).get(key_env):
+            lines.append(needs(f"semantic judge {judge['model_id']}", spec["backend"]))
+            judge_missing = True
+    if not lines:
+        return None
+    raw = str(cfg.get("env_file") or "")
+    path = os.path.expandvars(raw)
+    if not path.strip() or "$" in path:
+        where = "HAENV_ENV_FILE is not set" if "HAENV_ENV_FILE" in raw else f"env_file is {raw!r}"
+    else:
+        p = Path(path).expanduser()
+        where = f"{p} does not exist" if not p.is_file() else f"{p} has no such line"
+    return ("[haenv] cannot start a billed run: no API key for\n" + "\n".join(lines) + "\n"
+            "        keys are read from the file named by config.env_file (by default "
+            f"$HAENV_ENV_FILE), one KEY=VALUE per line: {where}"
+            + ("\n        a run with --limit is not judged and needs no judge key"
+               if judge_missing else ""))
 
 
 def _limited_run_semantic(rows: list[dict]) -> dict:

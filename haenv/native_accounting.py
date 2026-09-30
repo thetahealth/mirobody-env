@@ -13,6 +13,8 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 import hashlib
 import json
+import threading
+import urllib.error
 import urllib.request
 from urllib.parse import urlparse
 
@@ -206,6 +208,37 @@ class NativePrices:
                 'price_tier':tier or 'top_tier'}
 
 
+def _unverified_because(error) -> str:
+    """Why the capacity request failed, named without the request (its header holds the key)."""
+    if isinstance(error,urllib.error.HTTPError):
+        return f'HTTP {error.code} from the endpoint (a missing or invalid key reads as 400 or 403)'
+    reason=getattr(error,'reason',error)
+    reason=getattr(reason,'cause',reason)
+    return f'the endpoint was not reached ({type(reason).__name__}); check the network or the proxy'
+
+
+#: Whole-request bound on the capacity check. `urlopen`'s timeout applies per connection
+#: attempt, and a host with many addresses behind a dropped route multiplies it.
+CAPACITY_DEADLINE_S=45
+
+
+def _capacity_metadata(req) -> dict:
+    """The capacity response, or the error it raised, within `CAPACITY_DEADLINE_S`."""
+    got={}
+    def fetch():
+        try:
+            with urllib.request.urlopen(req,timeout=30) as r:got['metadata']=json.loads(r.read())
+        except Exception as error:                     # noqa: BLE001 -- re-raised below
+            got['error']=error
+    worker=threading.Thread(target=fetch,daemon=True)
+    worker.start();worker.join(CAPACITY_DEADLINE_S)
+    if worker.is_alive():
+        raise TimeoutError(f'no answer within {CAPACITY_DEADLINE_S} s')
+    if 'error' in got:
+        raise got['error']
+    return got['metadata']
+
+
 def preflight_native(solver, backend: str, url: str, require_current: bool = True) -> NativePrices:
     """Verify exact direct route and capacity without a generation request.
 
@@ -222,9 +255,9 @@ def preflight_native(solver, backend: str, url: str, require_current: bool = Tru
         req=urllib.request.Request(url.rstrip('/')+'/'+solver.model,
                                    headers={'x-goog-api-key':solver.api_key})
         try:
-            with urllib.request.urlopen(req,timeout=30) as r:metadata=json.loads(r.read())
-        except Exception:
-            raise ValueError('Google capacity metadata cannot be verified') from None
+            metadata=_capacity_metadata(req)
+        except Exception as error:
+            raise ValueError('Google capacity metadata cannot be verified: '+_unverified_because(error)) from None
         if (metadata.get('name')!='models/'+solver.model
                 or metadata.get('outputTokenLimit')!=prices.max_output_tokens
                 or metadata.get('inputTokenLimit')!=prices.max_input_tokens):
