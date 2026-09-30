@@ -42,6 +42,7 @@ exclude = ["**/__pycache__", "**/*.pyc"]
 "tools/relay_quota.py" = "haenv/_data/tools/relay_quota.py"
 
 [tool.hatch.build.targets.sdist]
+core-metadata-version = "2.3"
 exclude = ["/frozen/*.cases.jsonl", "/frozen/*.W.jsonl", "/results/", "/reports/", "/tests/", "/config.local.yaml", "/docs/anchor/*", "!/docs/anchor/freeze-*.json", "!/docs/anchor/extract-replay/", "!/docs/anchor/clinician-placeholder/", "!/docs/anchor/CANARY.txt", "/.pytest_cache/", "**/__pycache__", "**/*.pyc"]
 
 [tool.uv.sources.haenv-plugin-demo]
