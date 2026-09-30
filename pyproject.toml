@@ -28,6 +28,7 @@ addopts = "-m 'not disk and not internal and not world'"
 
 [tool.hatch.build.targets.wheel]
 packages = ["haenv", "verifier_core"]
+core-metadata-version = "2.3"
 exclude = ["**/__pycache__", "**/*.pyc"]
 
 [tool.hatch.build.targets.wheel.force-include]
