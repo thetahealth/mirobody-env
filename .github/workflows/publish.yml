@@ -18,6 +18,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+      # The package description is the README. On a release its figures and links name the
+      # release tag instead of `main`, so each version's PyPI page keeps that version's files.
+      - name: Point the package description at the release tag
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          sed -i -e "s#/thetahealth/mirobody-env/main/#/thetahealth/mirobody-env/${TAG}/#g" \
+                 -e "s#/thetahealth/mirobody-env/blob/main/#/thetahealth/mirobody-env/blob/${TAG}/#g" README.md
+          test "$(grep -c -E '/thetahealth/mirobody-env/(blob/)?main/' README.md)" = 0
       - run: uv build
       - name: Check the built distributions
         run: |
