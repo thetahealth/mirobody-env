@@ -57,6 +57,14 @@ class RouteSpec(_Section):
     max_tokens_field: str | None = _f("route")
 
 
+class PriceSpec(_Section):
+    """`config.models.<name>.price`: what the model costs on a backend with no verified price
+    data, in USD per million tokens (0 for a free endpoint). Billed requests on that backend
+    are counted at this price; on `openrouter`, `relay`, `google` and `dashscope` it is refused."""
+    input_per_million_usd: float = _f("route", ..., ge=0, allow_inf_nan=False)
+    output_per_million_usd: float = _f("route", ..., ge=0, allow_inf_nan=False)
+
+
 class ModelSpec(_Section):
     """`config.models.<name>`."""
     backend: str = _f("answer", "openrouter")
@@ -68,6 +76,7 @@ class ModelSpec(_Section):
     stream: bool = _f("route", False)
     retries: int | None = _f("route")
     fallback_routes: list[RouteSpec] = _f("route", [])
+    price: PriceSpec | None = _f("route")
     vendor: str | None = _f("provenance")
     retired: str | None = _f("provenance")
 

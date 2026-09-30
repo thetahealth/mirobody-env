@@ -125,6 +125,10 @@ HTTP_ERROR_UNBILLED = {
         "rule": "If your request fails with a 400 or 500 error, you won't be charged for the tokens used."},
 }
 ERROR_BODY_CHARS = 500
+#: Cost receipts priced from a tariff rather than invoiced: a published tariff
+#: (`native_accounting`) or a price declared in the configuration (`solver_accounting`).
+#: The ledger books them as bounds (`settle_bound`, status `tariff_capped`).
+TARIFF_RECEIPT_KINDS = ("published_tariff_upper_bound", "declared_price")
 
 
 def _redact(text: str) -> str:
@@ -367,7 +371,7 @@ class AccountedCompletion:
         saved = json.loads((receipt if receipt.is_file() else failed).read_text())
         if not same_request(saved.get("request"), identity, self.upstream_declared):
             raise ReceiptSequenceMismatch("Receipt identity differs from the requested payload")
-        self.ledger.book_replayed(request_id, str(bound))
+        self.ledger.book_replayed(request_id, str(bound), zero_basis=self._zero_basis(bound))
         settlement = saved.get("settlement") or {}
         if not receipt.is_file() and settlement.get("kind") in (
                 "http_error_before_generation", "relay_quota_exhausted_usage_unchanged"):
@@ -375,6 +379,10 @@ class AccountedCompletion:
                 f"replayed from receipt: HTTP {settlement.get('http_status')} before generation; "
                 f"{settlement.get('rule')}"))
         return self.ledger.snapshot()["requests"][request_id]
+
+    def _zero_basis(self, bound):
+        """The price schedule's reason a $0 bound is right (a declared price of 0), else None."""
+        return getattr(self.prices, "zero_bound_basis", None) if not bound else None
 
     def _reserve(self, request_id, bound):
         """Reserve at the ledger's cap; at the cap pause (poll) instead of stopping the batch."""
@@ -385,7 +393,7 @@ class AccountedCompletion:
             request_id, str(bound), poll_s=float(knobs.get("pause_poll_s", 30)),
             timeout_s=float(knobs.get("pause_timeout_s", 0)), sleep=self._sleep, clock=self._clock,
             on_pause=lambda p: ops_log(self.ledger.path, "budget_paused", **p),
-            check=lambda: check_dispatch(self.ledger.path))
+            check=lambda: check_dispatch(self.ledger.path), zero_basis=self._zero_basis(bound))
         if pause is not None:
             ops_log(self.ledger.path, "budget_resumed", **pause)
 
@@ -544,7 +552,7 @@ class AccountedCompletion:
                     bill["completion_sha256"] = hashlib.sha256(receipt.read_bytes()).hexdigest()
                     self._persist(bill_path, bill)
                 cost = bill.get("actual_usd")
-                if cost is None and bill.get("kind") == "published_tariff_upper_bound":
+                if cost is None and bill.get("kind") in TARIFF_RECEIPT_KINDS:
                     cost = bill.get("upper_bound_usd")
                     bounded = True
             if cost is None:

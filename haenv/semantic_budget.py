@@ -365,8 +365,11 @@ class BudgetLedger:
         return sum((_amount(r["actual_usd"] if r["actual_usd"] is not None else r["reserved_usd"])
                     for r in state["requests"].values()), Decimal("0"))
 
-    def reserve(self, request_id: str, maximum_usd: str) -> None:
-        maximum = _amount(maximum_usd, positive=True)
+    def reserve(self, request_id: str, maximum_usd: str, *, zero_basis: str | None = None) -> None:
+        """Reserve `maximum_usd` for one request. A $0 reservation needs `zero_basis`, the
+        recorded reason the route is free (a declared price of 0); without one it is refused,
+        so a price schedule that wrongly returns 0 cannot pass requests through unmetered."""
+        maximum = _amount(maximum_usd, positive=not zero_basis)
         if not isinstance(request_id, str) or not request_id:
             raise ValueError("A nonempty independent request id is required")
         with self._locked() as state:
@@ -383,27 +386,31 @@ class BudgetLedger:
                     f"Budget exhausted: request upper bound ${maximum} would exceed the approved "
                     f"budget (committed ${committed} of ${limit})")
             state["requests"][request_id] = {
-                "reserved_usd": str(maximum), "actual_usd": None, "status": "reserved"}
+                "reserved_usd": str(maximum), "actual_usd": None, "status": "reserved",
+                **({"zero_bound_basis": zero_basis} if not maximum else {})}
             self._write(state)
 
-    def book_replayed(self, request_id: str, maximum_usd: str) -> dict:
+    def book_replayed(self, request_id: str, maximum_usd: str, *,
+                      zero_basis: str | None = None) -> dict:
         """Book a request whose durable receipt exists but which this ledger never saw (the
         ledger was rebuilt or the batch copied): `reserved` at its bound, marked
         `booked_from_receipt`, for the caller to settle from the receipt's cost evidence.
-        No cap check: the money was already spent, refusing the entry would hide it."""
-        maximum = _amount(maximum_usd, positive=True)
+        No cap check: the money was already spent, refusing the entry would hide it.
+        `zero_basis` as in `reserve`."""
+        maximum = _amount(maximum_usd, positive=not zero_basis)
         with self._locked() as state:
             if request_id in state["requests"]:
                 raise ValueError("Request id has already been reserved")
             record = {"reserved_usd": str(maximum), "actual_usd": None, "status": "reserved",
-                      "booked_from_receipt": True}
+                      "booked_from_receipt": True,
+                      **({"zero_bound_basis": zero_basis} if not maximum else {})}
             state["requests"][request_id] = record
             self._write(state)
             return dict(record)
 
     def reserve_or_pause(self, request_id: str, maximum_usd: str, *, poll_s: float = 30.0,
                          timeout_s: float = 1800.0, sleep=None, clock=None, on_pause=None,
-                         check=None) -> dict | None:
+                         check=None, zero_basis: str | None = None) -> dict | None:
         """`reserve`, but at the cap wait (paused) for a raise instead of failing at once.
 
         Re-reads the ledger every `poll_s`; after `timeout_s` without room the original
@@ -417,7 +424,7 @@ class BudgetLedger:
             if check is not None:
                 check()
             try:
-                self.reserve(request_id, maximum_usd)
+                self.reserve(request_id, maximum_usd, zero_basis=zero_basis)
                 if pause is not None:
                     pause["resumed_after_s"] = round(clock() - started, 3)
                 return pause

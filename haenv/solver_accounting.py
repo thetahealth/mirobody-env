@@ -6,7 +6,8 @@ receipts. Google/Dashscope use dated tariff upper bounds, never fake USD invoice
 from __future__ import annotations
 
 import fcntl
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
+from decimal import Decimal, InvalidOperation
 import functools
 import hashlib
 import json
@@ -646,7 +647,7 @@ class BatchAccounting:
             _ensure_backends_registered(self.cfg)
             base = BACKENDS["relay"].get("quota_url")
             probe = usage_probe(base) if base else None
-        elif solver.backend in {"google", "dashscope"}:
+        elif solver.backend in {"google", "dashscope"} or isinstance(prices, DeclaredPrices):
             reader = prices.cost_receipt
         lookup = generation_cost_lookup(self.cfg) if solver.backend == "openrouter" else None
         return AccountedCompletion(prices, self.ledger, self.root / "receipts",
@@ -840,6 +841,98 @@ def _changed_only_in(root, old_sha: str, new_sha: str, path: str, functions) -> 
     return all(_gate_body_is_inert(body) for body in new_bodies)
 
 
+#: Backends priced from their provider: a price list (openrouter), gateway receipts (relay) or
+#: a published tariff (google, dashscope). A model on any other backend needs a declared price.
+VERIFIED_PRICE_BACKENDS = frozenset({"openrouter", "relay", "google", "dashscope"})
+
+
+@dataclass(frozen=True)
+class DeclaredPrices:
+    """The price `config.models.<config_key>.price` declares for a model on a backend with no
+    verified price data, in USD per million tokens.
+
+    A request is reserved at the envelope the verified schedules use (prompt bytes + 2048 input
+    tokens, the full output cap) and counted from the token counts the endpoint returns in
+    `usage`. The price is the operator's statement, not a provider invoice, so the ledger books
+    it as a bound (`tariff_capped`) under `basis`.
+    """
+    model: str
+    backend: str
+    config_key: str
+    input_per_million_usd: str
+    output_per_million_usd: str
+
+    @classmethod
+    def of(cls, config_key: str, solver, price: dict) -> "DeclaredPrices":
+        rates = []
+        for field in ("input_per_million_usd", "output_per_million_usd"):
+            try:
+                rate = Decimal(str((price or {})[field]))
+            except (KeyError, InvalidOperation, ValueError):
+                raise ValueError(f"config.models.{config_key}.price needs a number for {field}") from None
+            if not rate.is_finite() or rate < 0:
+                raise ValueError(f"config.models.{config_key}.price.{field} must be finite and nonnegative")
+            rates.append(str(rate))
+        return cls(solver.model, solver.backend, config_key, *rates)
+
+    @property
+    def fingerprint(self) -> str:
+        return _hash(asdict(self))
+
+    @property
+    def zero_bound_basis(self) -> str | None:
+        """Why a $0 reservation is right on this route: both declared rates are 0."""
+        if Decimal(self.input_per_million_usd) or Decimal(self.output_per_million_usd):
+            return None
+        return (f"declared price 0 (config.models.{self.config_key}.price) for {self.model} "
+                f"on {self.backend}")
+
+    def upper_bound(self, prompt: str, max_output_tokens: int) -> Decimal:
+        if type(max_output_tokens) is not int or max_output_tokens <= 0:
+            raise ValueError("A declared-price request needs a positive output cap")
+        return ((len(prompt.encode()) + 2048) * Decimal(self.input_per_million_usd)
+                + max_output_tokens * Decimal(self.output_per_million_usd)) / 1000000
+
+    def cost_receipt(self, response: dict) -> dict:
+        """The request's cost at the declared price, from the endpoint's `usage`.
+
+        With both rates at 0 the cost is 0 whatever `usage` holds. Otherwise missing or
+        invalid token counts raise, and the request is counted at its reserved bound.
+        """
+        usage = response.get("usage") if isinstance(response, dict) else None
+        prompt = usage.get("prompt_tokens") if isinstance(usage, dict) else None
+        output = usage.get("completion_tokens") if isinstance(usage, dict) else None
+        counted = all(type(n) is int and n >= 0 for n in (prompt, output))
+        free = self.zero_bound_basis is not None
+        if not counted and not free:
+            raise ValueError("The endpoint reported no usable token counts in `usage`")
+        cost = Decimal(0) if free else (prompt * Decimal(self.input_per_million_usd)
+                                        + output * Decimal(self.output_per_million_usd)) / 1000000
+        return {"kind": "declared_price", "basis": self.fingerprint, "model": self.model,
+                "backend": self.backend, "declared_in": f"config.models.{self.config_key}.price",
+                "actual_usd": None, "upper_bound_usd": str(cost),
+                "input_per_million_usd": self.input_per_million_usd,
+                "output_per_million_usd": self.output_per_million_usd,
+                "prompt_tokens": prompt if counted else None,
+                "output_tokens": output if counted else None}
+
+
+def declared_price(cfg: dict, name: str, solver) -> DeclaredPrices | None:
+    """The price `config.models.<name>.price` declares for `solver`, or None.
+
+    It covers the model's own route (its configured `backend` and `model`) and no other: a
+    fallback route to another backend or model is not priced by it.
+    """
+    models = cfg.get("models")
+    spec = models.get(name) if isinstance(models, dict) else None
+    if not isinstance(spec, dict) or spec.get("price") is None:
+        return None
+    if (getattr(solver, "backend", None) != spec.get("backend", "openrouter")
+            or getattr(solver, "model", None) != spec.get("model")):
+        return None
+    return DeclaredPrices.of(name, solver, spec["price"])
+
+
 class AccountingRefused(ValueError):
     """`prepare_accounting` refused the run; no billed request was sent."""
 
@@ -871,15 +964,24 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
     from .baselines import BASELINE_NAMES
     from .evaluate import OpenAICompatSolver, GoogleSolver
     live = {name: make() for name, make in solvers if name not in BASELINE_NAMES}
+    declared_prices = {name: declared_price(cfg, name, s) for name, s in live.items()}
+    misplaced = [name for name, s in live.items()
+                 if declared_prices[name] is not None and s.backend in VERIFIED_PRICE_BACKENDS]
+    if misplaced:
+        raise ValueError(
+            "config.models.<name>.price is read only on a backend without verified price data; "
+            "remove it from " + ", ".join(f"{name} (backend {live[name].backend})" for name in misplaced))
     unsupported = [name for name, s in live.items()
                    if not isinstance(s, (OpenAICompatSolver, GoogleSolver))
-                   or s.backend not in {"openrouter", "relay", "google", "dashscope"}]
+                   or (s.backend not in VERIFIED_PRICE_BACKENDS and declared_prices[name] is None)]
     if unsupported:
         raise ValueError(
             "Cannot budget unverified solver route(s): "
             + ", ".join(f"{name} (backend {getattr(live[name], 'backend', '?')})" for name in unsupported)
             + "; a billed run is metered against --judge-budget-usd, and verified price data "
-              "exists for the openrouter, relay, google and dashscope backends only")
+              "exists for the openrouter, relay, google and dashscope backends only. On another "
+              "backend, declare the model's price as config.models.<name>.price "
+              "(input_per_million_usd, output_per_million_usd; 0 for a free endpoint)")
     ledger = BudgetLedger(Path(ledger_path).resolve(), limit_usd=limit_usd)
     if ledger.snapshot()["halt_reason"]:
         raise BudgetExceeded(ledger.snapshot()["halt_reason"])
@@ -978,12 +1080,22 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
                     current = asdict(preflight_native(s, s.backend, s.URL, False))
                     if metadata[name].get("native_tariff") != current:
                         raise ValueError("Native tariff metadata changed; use a newly verified batch")
+                if "declared_price" in metadata[name]:
+                    # The batch is counted at the price it was created with: a changed
+                    # declaration would count the same answers at two prices.
+                    now = declared_prices[name]
+                    if now is None or asdict(now) != metadata[name]["declared_price"]:
+                        raise ValueError(f"The declared price of {name} changed since this batch "
+                                         "was created; use a new batch (--fresh)")
         else:
             catalog = fetch_catalog(cfg) if any(s.backend == "openrouter" for s in live.values()) else []
             metadata = {name: _route_metadata(cfg, s, name, catalog) for name, s in live.items()}
         resumed = manifest.exists()
         prices = {}
         for name, s in live.items():
+            if "declared_price" in metadata[name]:
+                prices[name] = DeclaredPrices(**metadata[name]["declared_price"])
+                continue
             if s.backend in {"google", "dashscope"}:
                 from .native_accounting import NativePrices
                 prices[name] = NativePrices(**metadata[name]["native_tariff"])
@@ -1016,6 +1128,8 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
 
 def _route_prices(s, name: str, meta: dict):
     """Verified price schedule of one route (the same checks as the primary's)."""
+    if "declared_price" in meta:
+        return DeclaredPrices(**meta["declared_price"])
     if s.backend in {"google", "dashscope"}:
         from .native_accounting import NativePrices
         return NativePrices(**meta["native_tariff"])
@@ -1121,6 +1235,8 @@ def _route_metadata(cfg: dict, s, name: str, catalog) -> dict:
     elif s.backend == "relay":
         from .relay_accounting import fetch_metadata
         out = fetch_metadata(cfg, s)
+    elif s.backend not in VERIFIED_PRICE_BACKENDS and declared_price(cfg, name, s) is not None:
+        out = {"declared_price": asdict(declared_price(cfg, name, s))}
     else:
         matches = [m for m in (catalog or []) if m.get("id") == s.model]
         if len(matches) != 1:
