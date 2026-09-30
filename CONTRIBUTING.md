@@ -96,9 +96,10 @@ A commit should be describable in one sentence that names what changed. If the s
 own commit so they never sit between a semantic change and its evidence.
 
 Titles follow `type(scope): what changed`, imperative, lower case, no trailing period, 72 characters
-at most. `type` is one of `feat`, `fix`, `docs`, `ci`, `build`, `refactor`, `test`, `chore`; `scope`
-names the directory or component touched (`build`, `cli`, `judge`, `demo`, `readme`). The commit body
-carries the *why* — the diff already carries the what.
+at most. `type` is one of `feat`, `fix`, `refactor`, `docs`, `test`, `chore`; CI, packaging and
+release changes are `chore` (`chore(ci): …`, `chore(release): …`). `scope` names the directory or
+component touched (`cli`, `judge`, `demo`, `readme`, `ci`). The commit body carries the *why* — the
+diff already carries the what.
 
 Changes to anything a reader of the published scores relies on — `README.md`, `docs/DATA_CARD.md`,
 `docs/REPRODUCE.md`, the leaderboard data, the frozen packs — name that surface in their scope, so
@@ -106,10 +107,10 @@ that "which commit moved a published reading" stays answerable later.
 
 ### How releases reach `main`
 
-Each release reaches `main` as one self-contained commit with a written summary, and the history
-of `main` is not rewritten: a release commit is what a downstream project rebases onto, and a
-published tag points at the commit its package was built from. Work in progress does not land on
-`main`.
+A release reaches `main` as a short series of commits, one per change and each titled as above.
+The last one sets the version and the changelog; the release tag points at it, the commit the
+package is built from. The history of `main` is not rewritten, since downstream projects rebase
+onto it. Work in progress does not land on `main`.
 
 ### Reviews
 
