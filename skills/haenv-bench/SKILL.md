@@ -1,7 +1,7 @@
 ---
 name: haenv-bench
-description: Run models against an existing question pack and produce a board: offline smoke tests, real models, resumable runs, per-batch archiving, how to read cost, how to read the artifacts (eval/responses/**trace**/cases/batch), and why changing a judge means recomputing, not re-running. Triggers when the user says things like "run an eval batch", "produce a report", "backfill a model", "how much did this batch cost", "show a model's tool-call trace".
-argument-hint: "[job.yaml] [--offline|--models A,B|--batch <timestamp>]"
+description: >-
+  Run models against an existing question pack and produce a board: offline smoke tests, real models, resumable runs, per-batch archiving, how to read cost, how to read the artifacts (eval/responses/**trace**/cases/batch), and why changing a judge means recomputing, not re-running. Triggers when the user says things like "run an eval batch", "produce a report", "backfill a model", "how much did this batch cost", "show a model's tool-call trace".
 ---
 
 # haenv-bench — run a question pack against models: evaluation · resumable runs · cost · boards

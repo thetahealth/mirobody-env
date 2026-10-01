@@ -1,7 +1,7 @@
 ---
 name: haenv-extend
-description: Wire your own thing in from a package outside the repo, without changing one line of haenv -- two sides: the judge side (judges/observed subjects/gold-kind rules) and the world side (indicator streams/devices/events/drug effects/dirty-data injectors). Entry-point groups + job.yaml's `plugins: {judges, world}` + fail-closed registration entry points, including the one seam that will bite you: "registered but not mounted = never runs, and the output can't tell." Triggers when the user says things like "add my own judge", "add my own indicator stream/device/drug", "wire in an external benchmark", "how do I write a plugin", "register an observed subject", "custom dirty data".
-argument-hint: "[what judge to add]"
+description: >-
+  Wire your own thing in from a package outside the repo, without changing one line of haenv -- two sides: the judge side (judges/observed subjects/gold-kind rules) and the world side (indicator streams/devices/events/drug effects/dirty-data injectors). Entry-point groups + job.yaml's `plugins: {judges, world}` + fail-closed registration entry points, including the one seam that will bite you: "registered but not mounted = never runs, and the output can't tell." Triggers when the user says things like "add my own judge", "add my own indicator stream/device/drug", "wire in an external benchmark", "how do I write a plugin", "register an observed subject", "custom dirty data".
 ---
 
 # haenv-extend — add your own judge: a package outside the repo, not one line of haenv changed

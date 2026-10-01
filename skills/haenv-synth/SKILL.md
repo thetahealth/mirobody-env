@@ -1,7 +1,7 @@
 ---
 name: haenv-synth
-description: Generate patients and generate questions -- from a set of settings (`job.yaml`) or a piece of case-description text, produce a whole longitudinal trajectory that satisfies those constraints plus a machine-adjudicable gold standard, verifying item by item that "does this question even hold together" before it's handed to a model. Covers two entry points (hand-written job / text extraction), the three kinds of thing that must never be mixed (patient facts / gold standard / generation knobs), whether generating questions costs money (the deterministic tier is free, the LLM tier is cached), and how to read a question blocked by the emission gate. Triggers when the user says things like "generate a batch of questions", "synthesize data", "generate from this case", "question generation got blocked", "generate a patient".
-argument-hint: "[question pack or case text] [--gen deterministic|llm]"
+description: >-
+  Generate patients and generate questions -- from a set of settings (`job.yaml`) or a piece of case-description text, produce a whole longitudinal trajectory that satisfies those constraints plus a machine-adjudicable gold standard, verifying item by item that "does this question even hold together" before it's handed to a model. Covers two entry points (hand-written job / text extraction), the three kinds of thing that must never be mixed (patient facts / gold standard / generation knobs), whether generating questions costs money (the deterministic tier is free, the LLM tier is cached), and how to read a question blocked by the emission gate. Triggers when the user says things like "generate a batch of questions", "synthesize data", "generate from this case", "question generation got blocked", "generate a patient".
 ---
 
 # haenv-synth — generate patients, generate questions: longitudinal data and gold standards from settings or case text
