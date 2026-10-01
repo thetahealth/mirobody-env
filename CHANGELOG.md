@@ -6,6 +6,36 @@ The package version (`pyproject.toml`) versions the code. Scores are versioned s
 score row carries the judging fingerprint of the code that produced it, and boards produced under
 different fingerprints are not comparable (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [1.1.1] - 2026-10-01
+
+The judging fingerprint (`67dd5866790e9cb9`), the world fingerprint (`25f31527b09e6abe`), the
+frozen question packs and the board are those of 1.1.0. The solving code changed: a billed batch
+started under 1.1.0 does not resume under 1.1.1; finish it under 1.1.0, or run it again with
+`--fresh`.
+
+### Fixed
+
+- On Python 3.10 the fingerprints of unchanged code differed from those computed on 3.11 and
+  later: under 1.1.0 the judging fingerprint read `275d059bec243917` instead of `67dd5866790e9cb9`
+  and the world fingerprint `6966e2d16b58a0ca` instead of `25f31527b09e6abe`. Rows scored on 3.10
+  could not share a board with rows scored on 3.11 or later, and a billed batch could not resume
+  across the two. The fingerprints hash source normalised by `ast.unparse`; Python 3.11 changed
+  its output, and 3.10's Unicode 13.0 database escapes the characters Unicode 14.0 added. On 3.10
+  the normalisation now follows 3.11's rules, and Python 3.10 to 3.14 give this release the same
+  judging, world and solving fingerprints.
+- The agent skills' frontmatter is valid YAML holding only the fields the Agent Skills standard
+  defines. Two descriptions contained `: `, which strict YAML parsers reject, and `argument-hint`
+  is not a field of the standard.
+- README: the "Evaluate your own agent" example runs with `--limit 1`, which skips semantic
+  judging, needs no OpenRouter key and exits 6 to mark the scores incomplete. The README says so;
+  the OpenRouter key and the judge's cost belong to a run without `--limit`.
+- On a release, the package description's `tree/` links name the release tag, as its `blob/` links
+  and figure addresses already did.
+
+### Changed
+
+- CI installs and runs the wheel built from the sdist, the same way the release builds it.
+
 ## [1.1.0] - 2026-09-30
 
 The judging fingerprint (`67dd5866790e9cb9`), the world fingerprint (`25f31527b09e6abe`), the
