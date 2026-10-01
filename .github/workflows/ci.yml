@@ -75,10 +75,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build the wheel
+      # As the release does: the sdist, then the wheel built from it, so this job installs the
+      # same files that are published.
+      - name: Build the sdist and, from it, the wheel
         run: |
           python -m pip install -q --upgrade pip build
-          python -m build --wheel --outdir dist
+          python -m build --outdir dist
 
       - name: Install into a clean venv outside the repository and run it
         run: |
