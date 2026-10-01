@@ -25,9 +25,8 @@ jobs:
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
-          sed -i -e "s#/thetahealth/mirobody-env/main/#/thetahealth/mirobody-env/${TAG}/#g" \
-                 -e "s#/thetahealth/mirobody-env/blob/main/#/thetahealth/mirobody-env/blob/${TAG}/#g" README.md
-          test "$(grep -c -E '/thetahealth/mirobody-env/(blob/)?main/' README.md)" = 0
+          sed -i -E "s#/thetahealth/mirobody-env/((blob|tree|raw)/)?main/#/thetahealth/mirobody-env/\\1${TAG}/#g" README.md
+          test "$(grep -c -E '/thetahealth/mirobody-env/((blob|tree|raw)/)?main/' README.md)" = 0
       - run: uv build
       - name: Check the built distributions
         run: |
