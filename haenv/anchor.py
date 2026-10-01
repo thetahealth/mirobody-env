@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import sys
 import threading
 
 from haenv import data_root as _data_root
@@ -151,7 +152,7 @@ def _semantic_of(raw: bytes, suf: str) -> bytes:
                         and isinstance(body[0].value, ast.Constant)
                         and isinstance(body[0].value.value, str)):
                     node.body = body[1:] or [ast.Pass()]
-            return ast.unparse(ast.fix_missing_locations(tree)).encode("utf-8")
+            return _unparse(ast.fix_missing_locations(tree)).encode("utf-8")
         if suf in (".yaml", ".yml"):
             import json
 
@@ -163,6 +164,15 @@ def _semantic_of(raw: bytes, suf: str) -> bytes:
     except Exception:                                            # noqa: BLE001
         return raw                                               # fail-closed
     return raw
+
+
+def _unparse(tree) -> str:
+    """`ast.unparse` as Python 3.11 and later write it, on every supported version."""
+    import ast
+    if sys.version_info >= (3, 11):
+        return ast.unparse(tree)
+    from ._unparse310 import unparse
+    return unparse(tree)
 
 
 def _semantic_source(src: str) -> bytes:
