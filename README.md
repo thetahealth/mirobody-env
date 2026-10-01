@@ -347,8 +347,10 @@ uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
   --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
 ```
 
-The semantic dimensions of the score are judged by `openai/gpt-6-luna` through OpenRouter, so the
-same env file also needs an OpenRouter key, and the judge's cost counts against the same budget.
+With `--limit` the run checks the endpoint on a sample: the semantic dimensions are not judged, no
+OpenRouter key is needed, and the run exits 6 to say the scores are incomplete. Without it, the
+semantic dimensions are judged by `openai/gpt-6-luna` through OpenRouter, so the same env file
+also needs an OpenRouter key, and the judge's cost counts against the same budget.
 
 | To change | Where | Code |
 |---|---|---|

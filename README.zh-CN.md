@@ -271,7 +271,7 @@ uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
   --judge-budget-usd 5 --judge-budget-ledger ~/.haenv/budget.json
 ```
 
-得分中的语义维度由 `openai/gpt-6-luna` 经 OpenRouter 判定，所以同一个密钥文件里还要有 OpenRouter 的密钥，裁判费用计入同一个预算。
+带 `--limit` 时是对接口的抽样检查：语义维度不判，不需要 OpenRouter 密钥，运行以退出码 6 结束，表示得分不完整。不带 `--limit` 时，得分中的语义维度由 `openai/gpt-6-luna` 经 OpenRouter 判定，所以同一个密钥文件里还要有 OpenRouter 的密钥，裁判费用计入同一个预算。
 
 | 要改的 | 位置 | 是否写代码 |
 |---|---|---|
