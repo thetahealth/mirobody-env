@@ -28,6 +28,9 @@ sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
 from haenv import evaluate as EV                    # noqa: E402
 import recompute_judges as RJ                       # noqa: E402
+from _patch_bound import patch_bound  # noqa: E402
+from haenv.run_state import RunContext as _RunContext  # noqa: E402
+_CTX = _RunContext()   # the run these tests drive; monkeypatch restores its fields
 
 FP_NOW = "fp-now-0000000000"
 BUDGET_ROW = {"case": "C1", "solver": "m1", "T": 84, "overall": "ABORT(no_answer:budget)",
@@ -99,19 +102,19 @@ def test_live_gated_path_uses_the_same_predicate(monkeypatch):
     class _VP:
         adjudication = {"ddx": {"diagnosis": "X"}}
 
-    monkeypatch.setattr(EV, "build_instance", lambda raw, T: (types.SimpleNamespace(), _VP()))
+    patch_bound(monkeypatch, "build_instance", lambda raw, T: (types.SimpleNamespace(), _VP()))
     monkeypatch.setattr(_g, "run_gated", lambda raw, T, solver, trace=None: (_Out(), _Tr()))
-    monkeypatch.setattr(EV.RUN, "resp_path", None)
-    monkeypatch.setattr(EV, "iron_law_precheck", lambda raw, sp, vp, solver: (lambda: (None, [])))
-    row = EV._row_gated("C1", "m1", object(), 84, _Solver())
+    monkeypatch.setattr(_CTX, "resp_path", None)
+    patch_bound(monkeypatch, "iron_law_precheck", lambda raw, sp, vp, solver: (lambda: (None, [])))
+    row = EV._row_gated("C1", "m1", object(), 84, _Solver(), ctx=_CTX)
     assert row["overall"] == "ABORT(no_answer:budget)"
     rederived = {k: row[k] for k in ("tool_spent", "tool_budget", "no_response_reason")}
     assert RJ.rederive_abort(dict(row, **rederived))[1] is None
     # the live verdict comes from that predicate: forcing it on a committed, in-budget cell
     # turns the cell into the budget ABORT
     _Tr.committed, _Tr.spent = True, 1.0
-    monkeypatch.setattr(EV, "budget_abort", lambda committed, spent, budget: True)
-    assert EV._row_gated("C1", "m1", object(), 84, _Solver())["overall"] == "ABORT(no_answer:budget)"
+    patch_bound(monkeypatch, "budget_abort", lambda committed, spent, budget: True)
+    assert EV._row_gated("C1", "m1", object(), 84, _Solver(), ctx=_CTX)["overall"] == "ABORT(no_answer:budget)"
 
 
 def _rerun(d, *flags):

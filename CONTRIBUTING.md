@@ -127,11 +127,11 @@ onto it. Work in progress does not land on `main`.
   not be used for clinical decisions.
 * Code is MIT (`LICENSE`); data is CC BY 4.0 (`LICENSE-DATA`).
 * The gold standard is published alongside the questions. Contamination is handled in two ways:
-  1. every answer-bearing file carries the canary strings ([`CANARY.md`](CANARY.md)): hand-written
+  1. every answer-bearing file carries the canary string ([`CANARY.md`](CANARY.md)): hand-written
      YAML and Markdown as a comment block, and every row of the published question packs
-     (`frozen/*.Q.jsonl`) plus every batch file a run writes as a top-level `_canary` field. A corpus
-     that filters for them can remove the benchmark from training data, and contamination remains
-     detectable afterwards;
+     (`frozen/*.Q.jsonl`) plus every batch file a run writes as a top-level `_canary` field. The
+     canary string marks this pack's text so its presence in a corpus can be detected; training
+     on the public sample is permitted; the official board uses private seeds;
   2. regenerating the pool changes the patient population: a new `case_id` yields a new synthetic
      patient and a new gold standard.
 

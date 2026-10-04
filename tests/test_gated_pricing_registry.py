@@ -41,7 +41,7 @@ _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
 import haenv.gated as G  # noqa: E402
-from gatekeeper import COST  # noqa: E402
+from haenv_kernel.gatekeeper import COST  # noqa: E402
 
 
 def _cost(target: str) -> float:
@@ -202,7 +202,7 @@ def test_charging_uses_the_menu_kind_not_the_self_reported_one():
     different amounts -- that difference is the entire content of the
     bypass.
     """
-    from gatekeeper import Gatekeeper
+    from haenv_kernel.gatekeeper import Gatekeeper
     menu_kind = G.kind_of("垂体MRI")
     assert menu_kind == "imaging", menu_kind
     assert COST[menu_kind] == 80.0

@@ -18,9 +18,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal
-
-#: Field class; see the table in the module docstring.
-FieldClass = Literal["patient_fact", "gold", "knob"]
+from .external_gold import (  # noqa: F401
+    FieldClass,
+)
 
 #: Field provenance.
 Provenance = Literal["source_text", "clinician", "derived", "llm", "sampled", "absent"]
@@ -95,6 +95,7 @@ FIELD_SPECS: tuple[tuple[str, FieldClass, str], ...] = (
     ("long_horizon_tier", "knob",
      "长视野档的逐例标记(≈1 年视野)。不能靠 `index_time_T == 336` 反推 —— "
      "自然抽到 336 的那批资格不受限,混进来对照就不匹配了"),
+    ("composition_v2", "knob", "组成 v2 标记:症状外显率与同义措辞已在 job 生成期落到 raw.symptoms;文本里没有,是我们拧的"),
     ("missingness", "knob", "缺失机制 MCAR/MAR/MNAR"),
     ("adherence_low", "knob", "依从性低谷"),
     ("drug_response", "knob", "个体药效响应系数"),
@@ -270,7 +271,7 @@ def _selfcheck_on_import() -> None:
     if _dup:
         raise ProvenanceError(f"FIELD_SPECS has keys classified more than once: {_dup} -- the boundary would stop holding")
     try:
-        from .job import LATENT_REGISTRY
+        from .job_schema import LATENT_REGISTRY
     except Exception:                                          # noqa: BLE001
         return                                     # job not importable yet
     _miss = check_covers_registry(LATENT_REGISTRY)

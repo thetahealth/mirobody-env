@@ -85,11 +85,14 @@ def fingerprint_dir(kp: Path) -> str:
 
 
 def kernel_fingerprint() -> tuple[str, str]:
-    """Returns (kernel absolute path, fingerprint) of the kernel copy actually
-    imported (`config.kernel_path` or `HAENV_KERNEL_PATH`).
+    """Returns (kernel absolute path, fingerprint) of the kernel package actually imported.
+
+    Read from the loaded `haenv_kernel` module rather than from `kernel_path()`: since the
+    kernel became a package, the executed copy is the one on the import path, and a
+    `HAENV_KERNEL_PATH` checkout is only a comparison source (see `haenv.kernel_path`).
     """
-    import schema                                  # kernel: already mounted onto sys.path by cli._bootstrap
-    kp = Path(schema.__file__).resolve().parent
+    import haenv_kernel.schema
+    kp = Path(haenv_kernel.schema.__file__).resolve().parent
     return str(kp), fingerprint_dir(kp)
 
 
@@ -120,7 +123,7 @@ def provenance_fields(cfg: dict, job_path: str | None = None,
     # Runtime knobs such as `--no-physio` change the world without changing any file,
     # so they are recorded as `world_knobs` next to `world_sha`.
     try:
-        from . import events as _ev_knob
+        from . import world_knobs as _ev_knob
         out["world_knobs"] = f"physio={int(bool(_ev_knob.PHYSIO_ENABLED[0]))}"
     except Exception:                                    # noqa: BLE001
         out["world_knobs"] = "unknown"
@@ -148,7 +151,8 @@ def usage_fields(job, rows: list[dict] | None = None) -> dict:
     `evaluate.usage_coverage`, plus generation-side usage. Missing rows are
     recorded as `absent:no_eval_rows`, never as 0.
     """
-    from .evaluate import load_rows, usage_coverage
+    from .row_store import load_rows
+    from .run_ledger import usage_coverage
     out: dict = {}
     if rows is None:
         p = getattr(job, "results_file", None)
@@ -242,7 +246,7 @@ def solver_fields(job, declared, rows: list[dict] | None = None) -> dict:
     if rows is None:
         p = getattr(job, "results_file", None)
         try:
-            from .evaluate import load_rows
+            from .row_store import load_rows
             rows = load_rows(Path(p)) if p and Path(p).is_file() else None
         except (OSError, json.JSONDecodeError):
             rows = None
@@ -257,6 +261,13 @@ SAMPLING_UNSPECIFIED_NOTE = (
     "unpinned is deliberate (temperature 0 degenerates into loops on long generations, "
     "reasoning models often ignore temperature, and no real deployment runs temperature 0), "
     "so this column records a condition, not a constraint.")
+
+SAMPLING_DECLARED_NOTE = (
+    "`params` is what each model is sent, from `config.models.<m>.sampling` and "
+    "`reasoning_effort`: a numeric temperature is in the request body; `unsupported:<why>` "
+    "means the provider takes no temperature and none is sent (checked against the route's "
+    "`supported_parameters` before any request). A model absent from `params` runs at the "
+    "provider default.")
 
 #: Explanation written into `batch.json` next to `solving_sha16`.
 SOLVING_FINGERPRINT_NOTE = (
@@ -278,7 +289,8 @@ def solving_fingerprint(per_model: dict) -> str | None:
         return None
     canon = {str(n): {k: v for k, v in sorted((m or {}).items())
                       if k in ("backend", "model", "max_tokens", "stream",
-                               "sampling_in_config", "status", "argv", "provider")}
+                               "sampling_in_config", "status", "argv", "provider",
+                               "sampling", "reasoning_effort", "upstream")}
              for n, m in sorted(per_model.items())}
     blob = json.dumps(canon, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
@@ -291,7 +303,7 @@ def sampling_fields(cfg: dict, models=None) -> dict:
     (what providers echo back). A backend with no request in this process is
     `absent:not_observed`, not "does not echo".
     """
-    from .evaluate import BACKENDS
+    from .solvers import BACKENDS
     from .llm import (SAMPLING_PARAM_NAMES, budget_audit_snapshot as _budget_audit_snapshot,
                       effective_transport as _effective_transport, sampling_snapshot)
 
@@ -327,7 +339,13 @@ def sampling_fields(cfg: dict, models=None) -> dict:
                         "stream": bool(_eff["stream"]),
                         "stream_from": _eff["stream_from"],
                         "sampling_in_config": d,
-                        **({"provider": spec["provider"]} if spec.get("provider") else {})}
+                        **({"provider": spec["provider"]} if spec.get("provider") else {}),
+                        # Declared sampling block and effort (`config.models.<m>.sampling`),
+                        # only when set, so undeclared models keep their fingerprint.
+                        **({"sampling": spec["sampling"]} if spec.get("sampling") else {}),
+                        **({"reasoning_effort": spec["reasoning_effort"]}
+                           if spec.get("reasoning_effort") else {}),
+                        **({"upstream": spec["upstream"]} if spec.get("upstream") else {})}
     obs = sampling_snapshot()
     by_model = obs.get("by_model") or {}
     backends = {}
@@ -341,10 +359,16 @@ def sampling_fields(cfg: dict, models=None) -> dict:
                         "n_calls": sum(int(v.get("n_calls") or 0) for v in seen),
                         "echo_distinct": [e for v in seen
                                           for e in (v.get("echo_distinct") or [])]})
+    _real = {n: m for n, m in per_model.items() if "backend" in m}
+    _pinned = {n: {"sampling": m.get("sampling"), "reasoning_effort": m.get("reasoning_effort")}
+               for n, m in _real.items() if m.get("sampling")}
+    status = ("unspecified:provider_default" if not _pinned
+              else "declared:config.models.sampling" if len(_pinned) == len(_real)
+              else f"partial:{len(_pinned)}/{len(_real)}_models_declared")
     return {
-        "status": "unspecified:provider_default",
-        "params": {},
-        "note": SAMPLING_UNSPECIFIED_NOTE,
+        "status": status,
+        "params": _pinned,
+        "note": SAMPLING_UNSPECIFIED_NOTE if not _pinned else SAMPLING_DECLARED_NOTE,
         "solving_sha16": solving_fingerprint(per_model),
         "solving_status": ("absent:no_models_declared_in_batch" if not per_model
                            else f"{len(per_model)} model(s) in the fingerprint"),
@@ -505,6 +529,10 @@ def register(job, cfg: dict, n_cases: int, n_emitted: int, cmd: str,
     _prov = dict(getattr(job, "provenance", None) or {})
     meta["gold_provenance"] = _prov
     meta["gold_provenance_recorded"] = bool(_prov)
+    from .pack_size import batch_fields
+    _pack = batch_fields(getattr(job, "path", None), job.job_id)
+    if _pack:
+        meta["pack"] = _pack
     # Per-part judging fingerprint as of this run (see `anchor.parts_compatible`).
     try:
         from .anchor import judge_parts

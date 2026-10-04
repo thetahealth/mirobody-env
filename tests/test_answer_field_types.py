@@ -6,7 +6,7 @@ from haenv.tracks import _answer_text
 
 
 def _payload():
-    from schema import SolverPayload
+    from haenv_kernel.schema import SolverPayload
     return SolverPayload(case_id="X-01", user_profile={}, prediction_context={
         "target_event_type": "weight_regain"}, longitudinal_data={}, evidence_ledger=[])
 

@@ -19,10 +19,10 @@ from pathlib import Path
 
 import yaml
 
-from build import build_instance, leakage_probe
-from schema import RawCase, SolverOutput, SolverPayload
-from solver import Solver
-import verifier as verifier_mod
+from .build import build_instance, leakage_probe
+from .schema import RawCase, SolverOutput, SolverPayload
+from .solver import Solver
+from . import verifier as verifier_mod
 
 log = logging.getLogger("harness.runner")
 HERE = Path(__file__).parent
@@ -72,7 +72,7 @@ def run_multiround(raw: RawCase, solver: Solver, cadence: int | None = None):
     rounds are diffed into a repair state (confirmed/revised). Returns
     (trajectory, final_grade); ground truth is used only in the final scoring.
     """
-    import verifier as verifier_mod
+    from . import verifier as verifier_mod
     T = int(raw.prediction_context["prediction_time_T"])
     cadence = cadence or int(load_config().get("prediction_cadence_days", 7))
     _, verifier_payload = build_instance(raw, T)
@@ -127,13 +127,17 @@ def run_multiround(raw: RawCase, solver: Solver, cadence: int | None = None):
 
 
 def _verify_subprocess(output: SolverOutput, verifier_payload, ledger_ids) -> dict:
-    """Scores in a separate `verifier.py` subprocess; no solver state reaches it."""
+    """Scores in a separate `verifier.py` subprocess; no solver state reaches it.
+
+    Launched as `-m haenv_kernel.verifier` rather than by file path: since the kernel
+    became a package, running the file directly would execute it as `__main__` with no
+    package context and its relative imports would fail.
+    """
     blob = json.dumps({"solver_output": asdict(output),
                        "verifier_payload": asdict(verifier_payload),
                        "ledger_ids": ledger_ids}, ensure_ascii=False)
-    proc = subprocess.run([sys.executable, str(HERE / "verifier.py")],
-                          input=blob, capture_output=True, text=True,
-                          env={**os.environ, "PYTHONPATH": str(HERE)})
+    proc = subprocess.run([sys.executable, "-m", "haenv_kernel.verifier"],
+                          input=blob, capture_output=True, text=True, cwd=str(HERE.parent))
     if proc.returncode != 0:
         raise RuntimeError(f"verifier subprocess failed: {proc.stderr}")
     return json.loads(proc.stdout)

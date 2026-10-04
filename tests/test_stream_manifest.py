@@ -23,8 +23,8 @@ import haenv                                                        # noqa: E402
 
 sys.path.insert(0, str(haenv.kernel_path()))
 
-import synth                                                        # noqa: E402
-from latent import DISEASE_SIGNAL_DOMAIN, KNOWN_DEVICES             # noqa: E402
+import haenv_kernel.synth as synth                                       # noqa: E402
+from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN, KNOWN_DEVICES    # noqa: E402
 
 from haenv import events, gated, gates, indicators, streams, wearable   # noqa: E402
 from haenv.physio import apply as physio_apply                      # noqa: E402

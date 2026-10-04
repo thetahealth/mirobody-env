@@ -174,8 +174,20 @@ def apply_post_injection(raw, *, case_id: str, clean_weight=None) -> list[str]:
 
     # Readings that carry a trap's evidence (the kernel's artifacts target `weight`, its
     # PRIMARY signal).
-    from noise import trap_evidence_days            # kernel; on the path wherever build runs
+    from haenv_kernel.noise import trap_evidence_days            # kernel; on the path wherever build runs
     _trap_days = trap_evidence_days(raw) | window_evidence_days(raw)
+
+    # The home scale shows 0.1 kg: the observed weight goes on that grid before any reading is
+    # copied forward, so a copied reading repeats a grid value. `weight_ref` (clinic scale) and
+    # the truth snapshot above keep their own precision.
+    if isinstance(ld.get("weight"), list):
+        from .physio.noise import WEIGHT_SCALE_RESOLUTION_KG, weight_on_scale_grid
+        ld["weight"] = [
+            {**q, "value": weight_on_scale_grid(q["value"])}
+            if isinstance(q, dict) and isinstance(q.get("value"), (int, float))
+            and not isinstance(q.get("value"), bool) else q
+            for q in ld["weight"]]
+        applied.append(f"scale_resolution:weight@{WEIGHT_SCALE_RESOLUTION_KG}kg")
 
     for name, (fn, key) in BUILTIN.items():
         spec = cfg.get(key) or {}

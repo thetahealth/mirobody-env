@@ -40,6 +40,7 @@ sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
 from haenv import judges as J                        # noqa: E402
 from haenv import mount_table as MT                  # noqa: E402
+from haenv import mount_coverage as MC                  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -285,19 +286,19 @@ def test_premounted_cells_are_reported_not_hidden():
     #   artifact, to "everything is registered" -- but the former is broken
     #   => an assertion of "empty" must be immediately followed by a control
     #   that **can produce non-empty**.
-    assert MT.unregistered_mounts() == [], \
-        f"还有预挂载没注册:{MT.unregistered_mounts()}"
-    assert MT.coverage()["unregistered"] == MT.unregistered_mounts(), \
+    assert MC.unregistered_mounts() == [], \
+        f"还有预挂载没注册:{MC.unregistered_mounts()}"
+    assert MC.coverage()["unregistered"] == MC.unregistered_mounts(), \
         "覆盖读数与取值入口必须是同一条路径"
     # Positive control: remove a registered entry, it must be recounted as premounted
     _saved = list(J.JUDGES)
     J.JUDGES[:] = [j for j in J.JUDGES if j.name != "premise_repair"]
     try:
-        assert "premise_repair" in MT.unregistered_mounts(), \
+        assert "premise_repair" in MC.unregistered_mounts(), \
             "摘掉注册项后没被数成预挂载 ⇒ 这个读数恒空,上面那个 `[]` 证明不了任何事"
     finally:
         J.JUDGES[:] = _saved
-    assert MT.unregistered_mounts() == [], "复位失败,后面的用例会读到脏状态"
+    assert MC.unregistered_mounts() == [], "复位失败,后面的用例会读到脏状态"
 
 
 def test_multi_column_coverage_is_reported_honestly():
@@ -319,7 +320,7 @@ def test_multi_column_coverage_is_reported_honestly():
     (`evaluate._row_multi` calls `run_judges`). The check watches "is it
     filled in AND does it actually run".
     """
-    cbg = MT.coverage_by_geometry()
+    cbg = MC.coverage_by_geometry()
     assert set(cbg) == set(MT.GEOMETRIES)
     assert cbg["multi"]["mounted"] > 0, (
         "multi 列又回到 0 —— 17 格单拍族挂载被撤了?"
@@ -338,9 +339,9 @@ def test_multi_column_coverage_is_reported_honestly():
     # counter-metric: mounted != run. `_row_multi` is wired in and
     #    `mounting.MOUNTS['multi'].profile` is set, so multi must not be
     #    counted as unwired.
-    assert "multi" not in MT.coverage()["unwired"], (
+    assert "multi" not in MC.coverage()["unwired"], (
         "multi 已接线(profile=MULTI + `_row_multi` 走 `run_judges`),"
-        f"却还被数进 unwired:{MT.coverage()['unwired']}")
+        f"却还被数进 unwired:{MC.coverage()['unwired']}")
     # Positive control: other geometries are **not** 0, proving this reading
     # isn't always zero
     assert cbg["single"]["mounted"] > 0 and cbg["slices"]["mounted"] > 0, \
@@ -355,11 +356,11 @@ def test_multi_column_coverage_is_reported_honestly():
     _before = _MG.BY_GEOMETRY["slices"]
     _MG.BY_GEOMETRY["slices"] = dataclasses.replace(_before, profile="")
     try:
-        assert "slices" in MT.coverage()["unwired"], \
+        assert "slices" in MC.coverage()["unwired"], \
             "profile 清空后没被数回来 ⇒ `unwired` 恒空,上面那条断言没有信息量"
     finally:
         _MG.BY_GEOMETRY["slices"] = _before
-    assert MT.coverage()["unwired"] == [], "复位失败,后面的用例会读到脏状态"
+    assert MC.coverage()["unwired"] == [], "复位失败,后面的用例会读到脏状态"
 
 
 def test_every_core_judge_has_a_reason_on_multi():
@@ -412,4 +413,4 @@ def test_every_core_judge_has_a_reason_on_multi():
 def test_holes_stay_empty_after_the_change():
     """The cross product of judges and geometries has no reasonless holes --
     counter-metric to the coverage reading."""
-    assert MT.holes() == []
+    assert MC.holes() == []

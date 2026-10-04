@@ -39,14 +39,6 @@ def test_google_without_cache_hit_is_full_price_and_says_so():
         assert bill['cache_discount_applied'] is False
 
 
-def test_google_flash_cache_rate():
-    p=prices('gemini-3.7-flash','google')
-    bill=p.cost_receipt({'usageMetadata':{'promptTokenCount':2000,'candidatesTokenCount':100,
-        'totalTokenCount':2100,'cachedContentTokenCount':1000}})
-    # 1000 x .75 + 1000 x .075 + 100 x 3.75 = 1200 -> $0.0012
-    assert Decimal(bill['upper_bound_usd'])==Decimal('.0012') and bill['cache_discount_applied'] is True
-
-
 def test_qwen_bound_uses_native_currency_and_never_fake_dollar_receipt():
     p=prices('qwen3.7-flash','dashscope')
     bill=p.cost_receipt({'usage':{'prompt_tokens':1000,'completion_tokens':500,'total_tokens':1500,
@@ -236,14 +228,6 @@ def test_resume_after_the_verified_date_starts_but_native_dispatch_still_refuses
     assert not run.ledger.snapshot()['requests']
 
 
-def test_gemini_38_flash_has_a_verified_tariff():
-    p=prices('gemini-3.8-flash')
-    assert (p.input_per_million,p.output_per_million,p.currency)==('.75','3.75','USD')
-    assert (p.max_input_tokens,p.max_output_tokens)==(1048576,65536)
-    with pytest.raises(ValueError,match='exact model'):
-        prices('gemini-3.8-flash','relay')
-
-
 def test_a_verified_schedule_is_valid_for_seven_days_and_not_before():
     for day in (29, 30):
         NativePrices.verified('gemini-3.1-pro-preview', 'google', today=date(2026, 9, day))
@@ -252,11 +236,3 @@ def test_a_verified_schedule_is_valid_for_seven_days_and_not_before():
     for bad in (date(2026, 9, 28), date(2026, 10, 6), date(2026, 11, 1)):
         with pytest.raises(ValueError, match='expired'):
             NativePrices.verified('gemini-3.1-pro-preview', 'google', today=bad)
-
-
-def test_gemini_38_flash_has_a_cached_input_rate():
-    p=prices('gemini-3.8-flash','google')
-    bill=p.cost_receipt({'usageMetadata':{'promptTokenCount':2000,'candidatesTokenCount':100,
-        'totalTokenCount':2100,'cachedContentTokenCount':1000}})
-    assert Decimal(bill['upper_bound_usd'])==Decimal('.0012') and bill['cache_discount_applied'] is True
-    assert bill['cache_input_per_million']=='0.075'

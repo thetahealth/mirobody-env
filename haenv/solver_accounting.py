@@ -20,6 +20,9 @@ import urllib.request
 from .paid_completion import AccountedCompletion
 from .semantic_budget import BudgetExceeded, BudgetLedger
 from .semantic_transport import PriceSchedule
+from .paid_completion import (  # noqa: F401
+    NoGenerationRecord,
+)
 
 
 def _hash(value) -> str:
@@ -37,6 +40,8 @@ def wire_settings(solver) -> dict:
         out["provider"] = solver.provider
     if getattr(solver, "upstream", None):          # declared upstream (config `upstream`), only when set
         out["upstream"] = solver.upstream
+    if getattr(solver, "sampling", None):          # declared sampling, only when set (answer view)
+        out["sampling"] = dict(solver.sampling)
     return out
 
 
@@ -293,7 +298,8 @@ class SolverRequestAccountant:
     def __init__(self, paid: AccountedCompletion, cell_id: str, stop: threading.Event,
                  backoff: dict | None = None, *, sleep=None, rng=None, cell_v2: str | None = None,
                  index: RequestIndex | None = None, routes: list | None = None,
-                 model: str | None = None, keys: KeyRotation | None = None):
+                 model: str | None = None, keys: KeyRotation | None = None,
+                 case_id: str | None = None):
         import random
         import time
         self.paid, self.cell_id, self.stop = paid, cell_id, stop
@@ -306,6 +312,22 @@ class SolverRequestAccountant:
         self._counts: dict[str, int] = {}
         self.routes, self.model, self.keys = routes, model, keys
         self.last_request_id = None
+        #: The grid cell this cursor serves; written into every receipt it makes.
+        self.cell = ({"case_id": case_id, "solver": model} if case_id is not None else None)
+        self._requests: list[dict] = []
+
+    def drain_requests(self) -> list[dict]:
+        """One record per request since the last drain (goes onto the cell's row)."""
+        out, self._requests = self._requests, []
+        return out
+
+    def _note(self, request_id: str, prompt: str, route, outcome: str, response=None) -> None:
+        from .transport import served_of
+        self._requests.append({
+            "request_id": request_id,
+            "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+            "route": None if route is None else route.name, "outcome": outcome,
+            **({"served": served_of(response)} if response is not None else {})})
 
     def drain_backoff(self) -> list[dict]:
         events, self._events = self._events, []
@@ -389,7 +411,8 @@ class SolverRequestAccountant:
             relay_accounting.ATTEMPT.key = attempt.get("api_key")
             try:
                 result = paid.request(request_id, prompt, wire_settings(target), send,
-                                      attempt=attempt or None)
+                                      attempt=attempt or None, cell=self.cell)
+                self._note(request_id, prompt, route, "answered", result)
                 if route is not None:
                     with _CHAINS_LOCK:
                         _chain_locked(self.model)["streak"][route.name] = 0
@@ -403,6 +426,7 @@ class SolverRequestAccountant:
                 self.stop.set()
                 raise
             except Exception as error:  # noqa: BLE001 -- annotate for key/route decisions
+                self._note(request_id, prompt, route, f"failed:{type(error).__name__}")
                 error.haenv_attempt = {**{k: v for k, v in attempt.items() if k != "api_key"},
                                        "request_id": request_id, "_route": route, "_keys": keys}
                 raise
@@ -505,7 +529,8 @@ def generation_cost_lookup(cfg: dict, *, attempts: int = 6, delay_s: float = 5.0
     """
     import time
     import urllib.error
-    from .evaluate import BACKENDS, _ensure_backends_registered, load_env_file
+    from .solvers import BACKENDS, _ensure_backends_registered
+    from .solvers import load_env_file
     _ensure_backends_registered(cfg)
     backend = BACKENDS["openrouter"]
     key = load_env_file(cfg.get("env_file")).get(backend["key_env"])
@@ -541,17 +566,10 @@ def generation_cost_lookup(cfg: dict, *, attempts: int = 6, delay_s: float = 5.0
     return lookup
 
 
-class NoGenerationRecord(ValueError):
-    """Every lookup answered 404: OpenRouter holds no billed generation under this id."""
-
-    def __init__(self, generation_id: str, lookups: int, waited_s: float):
-        super().__init__("No generation record")
-        self.generation_id, self.lookups, self.waited_s = generation_id, lookups, waited_s
-
-
 def fetch_endpoints(cfg: dict, model: str) -> list[dict]:
     """Free per-endpoint price list for one exact OpenRouter model id."""
-    from .evaluate import BACKENDS, _ensure_backends_registered, load_env_file
+    from .solvers import BACKENDS, _ensure_backends_registered
+    from .solvers import load_env_file
     _ensure_backends_registered(cfg)
     backend = BACKENDS["openrouter"]
     key = load_env_file(cfg.get("env_file")).get(backend["key_env"])
@@ -565,12 +583,26 @@ def fetch_endpoints(cfg: dict, model: str) -> list[dict]:
     endpoints = data.get("endpoints") if isinstance(data, dict) else None
     if not isinstance(endpoints, list) or not endpoints:
         raise ValueError(f"No endpoint price list for {model}")
-    return [{"provider_name": e.get("provider_name"), "pricing": e.get("pricing") or {}} for e in endpoints]
+    return [{"provider_name": e.get("provider_name"), "pricing": e.get("pricing") or {},
+             "supported_parameters": e.get("supported_parameters")} for e in endpoints]
+
+
+def route_supported_parameters(meta: dict, pin: str | None) -> list | None:
+    """The parameters a route accepts: with a pin, those every endpoint of the pinned provider
+    lists (`/models/<id>/endpoints`); with no pin, or an endpoint record that does not carry the
+    list, the model-level union."""
+    if pin is not None:
+        lists = [e.get("supported_parameters") for e in meta.get("endpoints") or []
+                 if e.get("provider_name") == pin]
+        if lists and all(isinstance(x, list) for x in lists):
+            return sorted(set.intersection(*(set(x) for x in lists)))
+    return meta.get("supported_parameters")
 
 
 def fetch_catalog(cfg: dict) -> list[dict]:
     """Free exact-model price lookup; credentials and failure URLs are not logged."""
-    from .evaluate import BACKENDS, _ensure_backends_registered, load_env_file
+    from .solvers import BACKENDS, _ensure_backends_registered
+    from .solvers import load_env_file
     _ensure_backends_registered(cfg)
     backend = BACKENDS["openrouter"]
     key = load_env_file(cfg.get("env_file")).get(backend["key_env"])
@@ -642,7 +674,7 @@ class BatchAccounting:
         reader, probe = None, None
         if solver.backend == "relay":
             from .relay_accounting import RelayBilling, usage_probe
-            from .evaluate import BACKENDS, _ensure_backends_registered
+            from .solvers import BACKENDS, _ensure_backends_registered
             reader = RelayBilling.for_solver(prices, solver, self.cfg)
             _ensure_backends_registered(self.cfg)
             base = BACKENDS["relay"].get("quota_url")
@@ -685,7 +717,7 @@ class BatchAccounting:
         solver._accounting = SolverRequestAccountant(
             paid, cell, self.stop, self.cfg.get("rate_limit_backoff"),
             cell_v2=None if self.batch_uid is None else cell_v2(self.batch_uid, case_id, solver_name),
-            index=self.index, routes=routes, model=solver_name, keys=keys)
+            index=self.index, routes=routes, model=solver_name, keys=keys, case_id=case_id)
 
 
 def answer_settings_of(settings: dict) -> dict:
@@ -962,7 +994,7 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
     silently reissues a request with a changed payload.
     """
     from .baselines import BASELINE_NAMES
-    from .evaluate import OpenAICompatSolver, GoogleSolver
+    from .solvers import OpenAICompatSolver, GoogleSolver
     live = {name: make() for name, make in solvers if name not in BASELINE_NAMES}
     declared_prices = {name: declared_price(cfg, name, s) for name, s in live.items()}
     misplaced = [name for name, s in live.items()
@@ -1090,6 +1122,7 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
         else:
             catalog = fetch_catalog(cfg) if any(s.backend == "openrouter" for s in live.values()) else []
             metadata = {name: _route_metadata(cfg, s, name, catalog) for name, s in live.items()}
+        check_route_conditions(live, metadata, cfg)
         resumed = manifest.exists()
         prices = {}
         for name, s in live.items():
@@ -1145,6 +1178,48 @@ def _route_prices(s, name: str, meta: dict):
     return prices
 
 
+def check_route_conditions(live: dict, metadata: dict, cfg: dict) -> None:
+    """Before any request: every OpenRouter solver's pin and declared sampling hold on the
+    route's own metadata (free GETs already in the manifest).
+
+    - `paid.require_upstream_pin`: an OpenRouter solver with no pin is refused;
+    - a pin names an upstream the model's endpoint list holds (`verify_upstream`);
+    - a sent temperature needs `temperature` in the route's `supported_parameters`
+      (`route_supported_parameters`: the pinned endpoint's list), and a temperature recorded as
+      unsupported must really be missing there (neither is guessed);
+    - a reasoning effort needs `reasoning` (or `reasoning_effort`) there.
+    """
+    from .transport import UNSUPPORTED, pinned_upstream
+    require_pin = bool(((cfg or {}).get("paid") or {}).get("require_upstream_pin", False))
+    for name, s in live.items():
+        if s.backend != "openrouter":
+            continue
+        meta = metadata.get(name) or {}
+        pin = pinned_upstream(getattr(s, "provider", None))
+        if pin is None and require_pin:
+            raise ValueError(f"{name}: paid.require_upstream_pin is on and this OpenRouter route "
+                             "has no provider pin (provider: {only: [<upstream>], allow_fallbacks: false})")
+        if pin is not None:
+            if getattr(s, "upstream", None) not in (None, pin):
+                raise ValueError(f"{name}: declared upstream {s.upstream!r} differs from the pin {pin!r}")
+            names = {e.get("provider_name") for e in meta.get("endpoints") or []}
+            if pin not in names:
+                raise ValueError(f"{name}: OpenRouter lists no {pin!r} endpoint for {s.model}")
+        supported = route_supported_parameters(meta, pin)
+        if supported is None:
+            continue
+        t = (getattr(s, "sampling", None) or {}).get("temperature")
+        if isinstance(t, str) and t.startswith(UNSUPPORTED) and "temperature" in supported:
+            raise ValueError(f"{name}: temperature recorded as unsupported, but OpenRouter lists "
+                             "`temperature` for this route; set a value")
+        if t is not None and not isinstance(t, str) and "temperature" not in supported:
+            raise ValueError(f"{name}: OpenRouter lists no `temperature` for this route; record "
+                             f"'{UNSUPPORTED}<why>' instead of a value")
+        if getattr(s, "reasoning_effort", None) is not None and not (
+                {"reasoning", "reasoning_effort"} & set(supported)):
+            raise ValueError(f"{name}: OpenRouter lists no reasoning parameter for this route")
+
+
 def verify_upstream(s, meta: dict) -> bool:
     """Is the declared upstream the one this route is served by? True only with evidence.
 
@@ -1172,7 +1247,7 @@ def _prepare_fallbacks(accounting, live: dict, cfg: dict, root: Path, ledger_pat
     """Fallback routes (config `fallback_routes` / runtime.yaml `routes`): each is built,
     held to the primary's answer view, price-verified by a free preflight and written to
     the manifest (`route_price_metadata`, `fallback_routes`) before any request."""
-    from .evaluate import fallback_solver_factories
+    from .solvers import fallback_solver_factories
     manifest = root / "manifest.json"
     plans = {}
     for name, primary in live.items():

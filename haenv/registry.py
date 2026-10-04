@@ -20,7 +20,7 @@ ROOT = _data_root()
 
 # Registry paths resolve only through the cache helper, where tests redirect them.
 
-PAIR_FIELDS = frozenset({"pair", "take", "threads"})
+PAIR_FIELDS = frozenset({"pair", "take", "threads", "composition_v2"})
 
 # The independent table is a seed table; the overlay expands it into the kernel's shape.
 SEED_FIELDS = frozenset({"weight", "symptoms", "outcome_label"})
@@ -115,12 +115,144 @@ def load_causal_clusters() -> tuple[tuple[str, ...], ...]:
     return tuple(tuple(c) for c in raw)
 
 
+# ---- composition v2: prevalence, association clusters, symptom penetrance + variants -------------
+STATUSES = frozenset({"verified", "abstract", "expert_estimate", "design"})
+RARE_PREVALENCE = 1 / 2000          # M2 spec C1: prevalence below this counts as a rare disease
+
+
+def composition_v2_pair_ids() -> frozenset:
+    """Pairs added for composition-v2 jobs (`composition_v2: true` in `composition_comorbid.yaml`). Global pools that
+    average over the spec catalogue (`findings_render._disease_abnormality_pool`) skip them, so adding a v2 pair never
+    shifts a legacy job's draws."""
+    raw = _load_yaml("composition_comorbid.yaml").get("pairs") or {}
+    return frozenset(str(k) for k, v in raw.items() if isinstance(v, dict) and v.get("composition_v2"))
+
+
+def load_disease_prevalence() -> dict[str, dict]:
+    """`{spec_id: {value, population, source, source_status, ...}}`. Consumed at job-generation time only
+    (allocation weights); judging never reads it."""
+    raw = _load_yaml("disease_prevalence.yaml").get("prevalence") or {}
+    allowed = {"value", "population", "general_value", "source", "source_status", "note"}
+    out: dict[str, dict] = {}
+    for sid, it in raw.items():
+        bad = set(it) - allowed
+        if bad:
+            raise RegistryError(f"prevalence {sid}: unregistered fields {sorted(bad)}")
+        for f in ("value", "population", "source", "source_status"):
+            if it.get(f) in (None, ""):
+                raise RegistryError(f"prevalence {sid}: missing {f}")
+        if not (0.0 < float(it["value"]) < 1.0):
+            raise RegistryError(f"prevalence {sid}: value must be in (0, 1)")
+        if it["source_status"] not in STATUSES:
+            raise RegistryError(f"prevalence {sid}: source_status={it['source_status']!r} not in {sorted(STATUSES)}")
+        out[str(sid)] = dict(it)
+    return out
+
+
+def is_rare(prev: dict) -> bool:
+    """Rare when either the matched-population value or the general-population value is below 1/2000."""
+    vals = [float(prev["value"])] + ([float(prev["general_value"])] if prev.get("general_value") else [])
+    return min(vals) < RARE_PREVALENCE
+
+
+def load_association_pairs() -> dict[frozenset, dict]:
+    """Association (shared-susceptibility) pairs, kept apart from the causal clusters: a pair here keeps
+    `join_gold: comorbidity` with two separate work-ups. Keyed by `frozenset(pair)`."""
+    raw = _load_yaml("association_clusters.yaml")
+    allowed = {"pair", "cluster", "or", "measure", "source", "source_status", "note",
+               "overrides_causal_cluster", "status"}
+    out: dict[frozenset, dict] = {}
+    for it in raw.get("pairs") or []:
+        bad = set(it) - allowed
+        if bad:
+            raise RegistryError(f"association pair {it.get('pair')}: unregistered fields {sorted(bad)}")
+        pr = tuple(it.get("pair") or ())
+        if len(pr) != 2 or pr[0] == pr[1]:
+            raise RegistryError(f"association pair {pr}: must name two different specs")
+        if it.get("source_status") not in STATUSES:
+            raise RegistryError(f"association pair {pr}: source_status={it.get('source_status')!r} not in {sorted(STATUSES)}")
+        if it.get("or") is not None and float(it["or"]) <= 0:
+            raise RegistryError(f"association pair {pr}: or must be positive")
+        if frozenset(pr) in out:
+            raise RegistryError(f"association pair {pr}: declared twice")
+        out[frozenset(pr)] = dict(it)
+    return out
+
+
+def association_admissible(a: str, b: str, prevalence: dict, assoc: dict) -> tuple[bool, float, str]:
+    """M2 spec C2 admission: (1) registered association pair with OR >= 1.5, or (2) both prevalences >= 1%
+    and the independent product >= 1e-4. Returns `(ok, or_used, why)`; on path (2) `or_used` is the registered OR if any, else 1.0."""
+    e = assoc.get(frozenset((a, b)))
+    if e and e.get("or") is not None and float(e["or"]) >= 1.5:
+        return True, float(e["or"]), f"association cluster {e.get('cluster')} OR={e['or']}"
+    pa, pb = (prevalence.get(a) or {}).get("value"), (prevalence.get(b) or {}).get("value")
+    if pa and pb and pa >= 0.01 and pb >= 0.01 and pa * pb >= 1e-4:
+        _o = float(e["or"]) if e and e.get("or") else 1.0      # a known OR below 1.5 still weights the draw
+        return True, _o, f"both prevalences >= 1% (independent product {pa * pb:.2g})"
+    return False, 0.0, "not in an association cluster with OR>=1.5 and not both >=1% prevalence"
+
+
+def load_symptom_penetrance() -> dict[str, list[dict]]:
+    """Per-spec symptom table `{spec_id: [{idx, text, penetrance, source, source_status, variants}]}`.
+    `text` must equal the spec's canonical symptom text (checked by `check_symptom_penetrance`)."""
+    raw = _load_yaml("symptom_penetrance.yaml").get("symptoms") or {}
+    allowed = {"idx", "text", "penetrance", "source", "source_status", "variants"}
+    out: dict[str, list[dict]] = {}
+    for sid, rows in raw.items():
+        seen = set()
+        for it in rows:
+            bad = set(it) - allowed
+            if bad:
+                raise RegistryError(f"symptom_penetrance {sid}: unregistered fields {sorted(bad)}")
+            if int(it["idx"]) in seen:
+                raise RegistryError(f"symptom_penetrance {sid}: idx {it['idx']} declared twice")
+            seen.add(int(it["idx"]))
+            if not (0.0 < float(it["penetrance"]) <= 1.0):
+                raise RegistryError(f"symptom_penetrance {sid}[{it['idx']}]: penetrance must be in (0, 1]")
+            if it.get("source_status") not in STATUSES:
+                raise RegistryError(f"symptom_penetrance {sid}[{it['idx']}]: source_status={it.get('source_status')!r}")
+            v = it.get("variants") or {}
+            if set(v) - {"colloquial", "atypical"}:
+                raise RegistryError(f"symptom_penetrance {sid}[{it['idx']}]: variant levels must be colloquial/atypical")
+            if len(v.get("colloquial") or []) + len(v.get("atypical") or []) < 2:
+                raise RegistryError(f"symptom_penetrance {sid}[{it['idx']}]: needs >= 2 variants besides the canonical text")
+        out[str(sid)] = [dict(it) for it in rows]
+    return out
+
+
+def check_symptom_penetrance(specs: dict) -> list[str]:
+    """Drift gate: each entry's canonical text equals the spec's symptom text at `idx`, and no variant text is
+    shared between two symptoms or equal to any canonical text."""
+    bad: list[str] = []
+    table = load_symptom_penetrance()
+    owner: dict[str, str] = {}
+    canon = {str(s[1]) for sp in specs.values() for s in sp["symptoms"]}
+    for sid, rows in table.items():
+        sp = specs.get(sid)
+        if sp is None:
+            bad.append(f"{sid}: not in the condition registry")
+            continue
+        for it in rows:
+            i = int(it["idx"])
+            if i >= len(sp["symptoms"]) or str(sp["symptoms"][i][1]) != str(it["text"]):
+                bad.append(f"{sid}[{i}]: canonical text drifted from the spec")
+            for lvl, txts in (it.get("variants") or {}).items():
+                for t in txts:
+                    key = "".join(str(t).split())
+                    if key in owner and owner[key] != f"{sid}[{i}]":
+                        bad.append(f"{sid}[{i}]: variant {t!r} also used by {owner[key]}")
+                    if str(t) in canon:
+                        bad.append(f"{sid}[{i}]: variant {t!r} equals a canonical symptom text")
+                    owner[key] = f"{sid}[{i}]"
+    return sorted(bad)
+
+
 def load_negated_findings() -> dict[str, tuple[dict, ...]]:
     """Findings the question asserts as normal or absent, mapped to the specs that would make them
     abnormal.
     """
     raw = _load_yaml("negated_findings.yaml") or {}
-    allowed = {"finding", "where", "contradicted_by", "item", "direction", "why_not_derived"}
+    allowed = {"finding", "where", "contradicted_by", "item", "direction", "why_not_derived", "idx"}
     out: dict[str, tuple[dict, ...]] = {}
     for sid, items in raw.items():
         if not isinstance(items, list) or not items:
@@ -145,8 +277,11 @@ def load_negated_findings() -> dict[str, tuple[dict, ...]]:
                         f"{sid}/{it['finding']}: without `item`/`direction`, "
                         f"`why_not_derived` is required, so 'not derivable yet' is distinguishable from 'forgotten'")
                 merged = hand
+            if it.get("idx") is not None and (not isinstance(it["idx"], int) or isinstance(it["idx"], bool) or it["idx"] < 0):
+                raise RegistryError(f"{sid}/{it['finding']}: idx must be a non-negative symptom index")
             rows.append({"finding": str(it["finding"]), "where": str(it.get("where", "")),
-                         "contradicted_by": merged, "hand_listed": hand})
+                         "contradicted_by": merged, "hand_listed": hand,
+                         "idx": (int(it["idx"]) if it.get("idx") is not None else None)})
         out[str(sid)] = tuple(rows)
     return out
 
@@ -177,9 +312,13 @@ def load_antagonist_axes() -> tuple[dict, ...]:
     return tuple(out)
 
 
-def pair_conflict(pair, clusters, negated: dict, axes) -> str | None:
+def pair_conflict(pair, clusters, negated: dict, axes, take=None) -> str | None:
     """Whether this pair may be combined: `None`, or the reason it may not. Shared by the pair
     generator and load-time validation.
+
+    `take` (optional, two index tuples aligned with `pair`): the symptoms of each member that the composed case
+    shows. A negated finding registered with `idx` (the position of the symptom that asserts it) only conflicts
+    when that symptom is in the member's take; without `take`, or without `idx`, every negated finding applies.
     """
     if any(pair[0] in cl and pair[1] in cl for cl in clusters):   # ③ same_causal_cluster
         cl = next(cl for cl in clusters if pair[0] in cl and pair[1] in cl)
@@ -189,6 +328,8 @@ def pair_conflict(pair, clusters, negated: dict, axes) -> str | None:
     for x, y in (tuple(pair), tuple(pair)[::-1]):                 # ⑦ negated_finding_conflict
         for f in negated.get(x, ()):
             if y in f["contradicted_by"]:
+                if take is not None and f.get("idx") is not None and int(f["idx"]) not in tuple(take[tuple(pair).index(x)]):
+                    continue
                 return (f"{x} asserts {f['finding']!r} ({f['where']}) in the case, "
                         f"but a {y} diagnosis makes it abnormal; the record would contradict itself"
                         f" (see registry/negated_findings.yaml)")
@@ -209,6 +350,7 @@ def load_comorbid_pairs(kernel_spec_ids: frozenset | set | None = None,
     clusters = load_causal_clusters() if clusters is None else clusters
     _NEGATED = load_negated_findings()
     _AXES = load_antagonist_axes()
+    _OVERRIDES = frozenset(k for k, v in load_association_pairs().items() if v.get("overrides_causal_cluster"))
     out: dict[str, dict] = {}
     for pid, spec in raw.items():
         if not isinstance(spec, dict):
@@ -232,9 +374,12 @@ def load_comorbid_pairs(kernel_spec_ids: frozenset | set | None = None,
             miss = [x for x in pair if x not in kernel_spec_ids]
             if miss:
                 raise RegistryError(f"{pid}: references unknown specs {miss}")
-        if (_why := pair_conflict(pair, clusters, _NEGATED, _AXES)):
-            raise RegistryError(f"{pid}: {_why}")
+        # A pair registered in `association_clusters.yaml` with `overrides_causal_cluster` is exempt from
+        # check (3) only (same causal cluster); checks (7) and (8) still apply.
+        _cl = () if frozenset(pair) in _OVERRIDES else clusters
         take = tuple(tuple(t) for t in spec["take"])
+        if (_why := pair_conflict(pair, _cl, _NEGATED, _AXES, take=take)):
+            raise RegistryError(f"{pid}: {_why}")
         if len(take) != 2 or any(len(t) != 2 for t in take):
             raise RegistryError(f"{pid}: take must be two (start, end) pairs, got {take}")
         for t in take:                                      # ⑤ take_out_of_range
@@ -411,7 +556,13 @@ def check_case_ids_cover(spec_ids) -> list[str]:
             f"add them to registry/case_ids.yaml in order from JD-{nxt:02d} (do not insert between existing ids)"]
 
 
-TEST_VOCAB_SECTIONS = frozenset({"stopwords", "prefixes", "synonyms"})
+#: `recall` is read only by `load_test_recall_vocab()` (the three-valued matcher in
+#: `haenv/judges/recall_match.py`); `load_test_vocab()` does not return it.
+TEST_VOCAB_SECTIONS = frozenset({"stopwords", "prefixes", "synonyms", "recall"})
+TEST_RECALL_SECTIONS = frozenset({"atomic_terms", "prefixes", "qualifiers", "negation", "conditional", "past_result",
+                                  "imaging_modalities", "imaging_generic",
+                                  "hint_stop_zh", "hint_stop_en", "generic_segments", "weak_forms",
+                                  "synonyms", "distinct_from", "panels", "member_panels"})
 
 
 def load_test_vocab() -> dict:
@@ -443,6 +594,88 @@ def load_test_vocab() -> dict:
     return {"stopwords": tuple(stop), "prefixes": tuple(pref), "synonyms": syn}
 
 
+
+def _lower_ok(where: str, forms) -> tuple[str, ...]:
+    out = []
+    for a in forms or ():
+        a = str(a)
+        if not a.strip():
+            raise RegistryError(f"{where}: empty form")
+        if a.isascii() and a != a.lower():
+            raise RegistryError(f"{where}: English forms must be lowercase (matching is case-folded), got {a!r}")
+        out.append(a)
+    if len(set(out)) != len(out):
+        raise RegistryError(f"{where}: duplicate forms {sorted({x for x in out if out.count(x) > 1})}")
+    return tuple(out)
+
+
+def _sourced(where: str, v) -> str:
+    src = str((v or {}).get("source") or "").strip() if isinstance(v, dict) else ""
+    if not src:
+        raise RegistryError(f"{where}: every entry must carry a non-empty `source` "
+                            "(standard name / abbreviation / alias / panel composition)")
+    return src
+
+
+def load_test_recall_vocab() -> dict:
+    """The `recall` section of `vocab_tests.yaml`, validated default-deny.
+
+    Every synonym, weak form, distinct-from term and panel carries a `source`; a missing source
+    is a load error, so an entry cannot be added without saying what kind of equivalence it is.
+    """
+    raw = _load_yaml("vocab_tests.yaml").get("recall")
+    if not isinstance(raw, dict) or not raw:
+        raise RegistryError("vocab_tests.yaml: section `recall` missing or empty")
+    bad = set(raw) - TEST_RECALL_SECTIONS
+    missing = TEST_RECALL_SECTIONS - set(raw)
+    if bad or missing:
+        raise RegistryError(f"vocab_tests.yaml recall: unregistered {sorted(bad)} / missing {sorted(missing)}")
+    out: dict = {}
+    for k in ("atomic_terms", "prefixes", "negation", "conditional", "past_result", "imaging_modalities",
+              "imaging_generic", "hint_stop_zh", "hint_stop_en"):
+        v = raw[k]
+        if not isinstance(v, list) or not v:
+            raise RegistryError(f"vocab_tests.yaml recall.{k}: must be a non-empty list")
+        out[k] = _lower_ok(f"recall.{k}", v) if k not in ("atomic_terms", "prefixes") else tuple(str(x) for x in v)
+    for k in ("qualifiers", "generic_segments"):
+        v = raw[k]
+        if not isinstance(v, dict) or not v or not all(str(x).strip() for x in v.values()):
+            raise RegistryError(f"vocab_tests.yaml recall.{k}: mapping fragment -> reason (non-empty)")
+        out[k] = {str(a): str(b) for a, b in v.items()}
+    for k, field in (("synonyms", "forms"), ("weak_forms", "forms"), ("distinct_from", "terms")):
+        v = raw[k]
+        if not isinstance(v, dict) or not v:
+            raise RegistryError(f"vocab_tests.yaml recall.{k}: must be a non-empty mapping")
+        out[k] = {}
+        for key, ent in v.items():
+            where = f"recall.{k}.{key}"
+            src = _sourced(where, ent)
+            forms = _lower_ok(where, ent.get(field))
+            if not forms:
+                raise RegistryError(f"{where}: `{field}` must be non-empty")
+            out[k][str(key)] = {field: forms, "source": src}
+    out["panels"] = {}
+    for key, ent in (raw["panels"] or {}).items():
+        where = f"recall.panels.{key}"
+        src = _sourced(where, ent)
+        if not isinstance(ent.get("definitive"), bool):
+            raise RegistryError(f"{where}: `definitive` must be true/false")
+        al = _lower_ok(where, ent.get("aliases"))
+        mem = tuple(str(x) for x in ent.get("members") or ())
+        if not al or not mem:
+            raise RegistryError(f"{where}: aliases and members must be non-empty")
+        out["panels"][str(key)] = {"aliases": al, "members": mem, "definitive": ent["definitive"], "source": src}
+    out["member_panels"] = {}
+    for key, ent in (raw["member_panels"] or {}).items():
+        where = f"recall.member_panels.{key}"
+        src = _sourced(where, ent)
+        mins = ent.get("min")
+        mem = {str(m): _lower_ok(f"{where}.{m}", f) for m, f in (ent.get("members") or {}).items()}
+        if not isinstance(mins, int) or mins < 2 or len(mem) < mins:
+            raise RegistryError(f"{where}: `min` must be an int >= 2 and <= number of members")
+        out["member_panels"][str(key)] = {"min": mins, "members": mem, "source": src}
+    return out
+
 # ---------------------------------------------------------------- findings layer
 
 #: The action threshold is the level that clinically triggers work-up, recorded only where an
@@ -456,7 +689,7 @@ DIRECTIONS = {"high", "low", "normal", "positive", "negative"}
 MAGNITUDES = {"mild", "moderate", "marked"}
 ROLES = {"screening", "supportive", "confirmatory"}
 TRAJECTORIES = {"stable", "progressive", "episodic", "fluctuating", "treatment_responsive"}
-PROFILE_FIELDS = {"id", "direction", "magnitude", "role", "trajectory", "n"}
+PROFILE_FIELDS = {"id", "direction", "magnitude", "role", "trajectory", "n", "penetrance", "penetrance_source"}
 
 # Findings that are only interpretable together.
 PAIRED_FINDINGS: tuple[tuple[str, str, str], ...] = (
@@ -587,6 +820,12 @@ def load_condition_findings(findings: dict | None = None) -> dict[str, dict]:
                 raise RegistryError(f"{sid}.{fid}: direction={it['direction']} must not have a magnitude")
             if int(it.get("n", 1)) < 1:
                 raise RegistryError(f"{sid}.{fid}: n must be >= 1 (labs are sparse, but measured at least once)")
+            if it.get("penetrance") is not None:
+                _pn = float(it["penetrance"])
+                if not (0.0 < _pn <= 1.0):
+                    raise RegistryError(f"{sid}.{fid}: penetrance={_pn} must be in (0, 1]")
+                if not str(it.get("penetrance_source") or "").strip():
+                    raise RegistryError(f"{sid}.{fid}: penetrance needs a penetrance_source (literature or an explicit estimate note)")
             prof.append({**{k: it.get(k) for k in PROFILE_FIELDS}, "id": fid})
         if not any(p["role"] == "confirmatory" for p in prof):
             raise RegistryError(f"{sid}: at least one confirmatory finding is required; "

@@ -27,7 +27,7 @@ CANARY = "adjudication"          # use a real forbidden token as the probe, don'
 
 def expect_leak(label: str, kind: str, sp, T: int, want: str) -> None:
     """Negative control: must fire red with `want` in the reason (not just any violation)."""
-    from build import leakage_probe                                   # kernel
+    from haenv_kernel.build import leakage_probe                                   # kernel
     ok, viol = leakage_probe(sp, T)
     hit = (not ok) and any(want in v for v in viol)
     RESULTS.append((label, kind, hit, f"ok={ok} viol={viol[:3]}"))
@@ -36,7 +36,7 @@ def expect_leak(label: str, kind: str, sp, T: int, want: str) -> None:
 def expect_clean(label: str, kind: str, sp, T: int) -> None:
     """Positive control: a normal input must not fire red (guards against
     false positives / a gate that's always red). `kind` is marked with a `!` prefix."""
-    from build import leakage_probe                                   # kernel
+    from haenv_kernel.build import leakage_probe                                   # kernel
     ok, viol = leakage_probe(sp, T)
     RESULTS.append((label, f"!{kind}", ok, "clean" if ok else f"false positive {viol[:3]}"))
 
@@ -46,7 +46,7 @@ def _real_payload():
     from haenv import job as J
     from haenv.build import build_case
     from haenv.ddx import ddx_case_specs
-    from build import build_instance                                  # kernel
+    from haenv_kernel.build import build_instance                                  # kernel
 
     for s in ddx_case_specs(only=["JD-PCOS"]):
         cs = J.CaseSpec(case_id=s["case_id"], raw=s["raw"], latent=s["latent"])
@@ -60,7 +60,7 @@ def _real_payload():
 
 
 def main() -> int:
-    from build import FORBIDDEN_TOKENS, leakage_probe                 # kernel
+    from haenv_kernel.build import FORBIDDEN_TOKENS, leakage_probe                 # kernel
 
     sp0, T = _real_payload()
 

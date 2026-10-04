@@ -13,7 +13,7 @@ A cell holds a subject, not a boolean:
 
 Cell values are default-deny (anything outside ``SUBJECTS`` raises, at import and on
 lookup); geometry names are validated at write time only, because rows may carry
-``geometry = "<unrecorded>"``. A blank cell without a reason is a hole (:func:`holes`).
+``geometry = "<unrecorded>"``. A blank cell without a reason is a hole (`mount_coverage.holes`).
 
 SYNTHETIC data, evaluation only; not medical advice.
 """
@@ -327,79 +327,14 @@ def reason_for(judge_name: str, geometry: str) -> str | None:
     return WHY_NOT.get(f"*@{geometry}")
 
 
-def holes() -> list[tuple[str, str]]:
-    """Blank cells with no reason: the real holes. The maintainers' tests keep this
-    empty."""
-    from .judges import JUDGES
-    out = []
-    for j in JUDGES:
-        for g in GEOMETRIES:
-            if subject_of(j.name, g) == NONE and reason_for(j.name, g) is None:
-                out.append((j.name, g))
-    return out
-
-
 def known_gaps() -> list[str]:
     """`WHY_NOT` entries whose reason starts with the known-gap marker (red circle, U+1F534)."""
     return sorted(k for k, v in WHY_NOT.items() if v.lstrip().startswith("🔴"))
 
 
-def unregistered_mounts() -> list[str]:
-    """Judges mounted in the table but not registered in `JUDGES`."""
-    from .judges import JUDGES
-    known = {j.name for j in JUDGES}
-    return sorted(n for n in MOUNT if n not in known)
-
-
-def unwired_geometries() -> list[str]:
-    """Geometries with mounted judges whose row builder declares no dispatcher profile
-    (`mounting.BY_GEOMETRY`), i.e. mounted but never run."""
-    from .mounting import BY_GEOMETRY
-    out = []
-    for g in GEOMETRIES:
-        if not any(subject_of(n, g) != NONE for n in MOUNT):
-            continue                      # not a single cell mounted on this geometry -> no "mounted but never runs" to speak of
-        m = BY_GEOMETRY.get(g)
-        if m is None or not str(getattr(m, "profile", "") or ""):
-            out.append(g)
-    return out
-
-
-def coverage_by_geometry() -> dict:
-    """Coverage per geometry, so an empty column is not hidden in the total."""
-    from .judges import JUDGES
-    known = {j.name for j in JUDGES}
-    out = {}
-    for g in GEOMETRIES:
-        mounted = [j.name for j in JUDGES if subject_of(j.name, g) != NONE]
-        pre = [n for n in sorted(MOUNT)
-               if n not in known and subject_of(n, g) != NONE]
-        out[g] = {"n_judges": len(JUDGES), "mounted": len(mounted),
-                  "mounted_names": mounted,
-                  "premounted_unregistered": pre}
-    return out
-
-
-def coverage() -> dict:
-    """Cross-product coverage, for reports."""
-    from .judges import JUDGES
-    tot = len(JUDGES) * len(GEOMETRIES)
-    mounted = sum(1 for j in JUDGES for g in GEOMETRIES
-                  if subject_of(j.name, g) != NONE)
-    gaps = len(known_gaps())
-    return {"n_judges": len(JUDGES), "n_geometries": len(GEOMETRIES), "n_cells": tot,
-            "mounted": mounted, "declared_absent": tot - mounted,
-            "known_gaps": gaps, "holes": len(holes()),
-            "mounted_frac": round(mounted / tot, 3),
-            # Pre-mounted: a cell exists but the judge is not registered.
-            "unregistered": unregistered_mounts(),
-            "unwired": unwired_geometries(),
-            "by_geometry": coverage_by_geometry()}
-
-
 def _lint_table() -> list[str]:
     """Default-deny check of the whole table at import: cell values and geometry names.
-    Registry membership is checked at runtime by :func:`unregistered_mounts`."""
+    Registry membership is checked at runtime by `mount_coverage.unregistered_mounts`."""
     bad: list[str] = []
     for name, cells in MOUNT.items():
         if not isinstance(cells, dict):

@@ -178,6 +178,14 @@ def moments_of(name: str, cohort: str) -> tuple[float, float]:
             raise DistributionUnderdetermined(f"{name}/{cohort}: mean/sd must be positive")
         sig2 = math.log(1.0 + (s_ / m_) ** 2)
         out = (m_ / math.exp(sig2 / 2.0), math.sqrt(sig2))
+    elif c.get("sigma_ln") is not None and c.get("median") is not None:
+        # (median, sigma_ln): the between-person log-spread is registered directly. The per-draw
+        # measurement CV is added on top at emission, so `p_abnormal` (the over-line rate of one
+        # reading in the source population) is a documented target here, not an input.
+        s_ = float(c["sigma_ln"])
+        if s_ <= 0:
+            raise DistributionUnderdetermined(f"{name}/{cohort}: sigma_ln must be positive")
+        out = (float(c["median"]), s_)
     else:
         out = (float(c["median"]), sigma_of(name, cohort))
     _assert_fits_payload(name, cohort, *out)
@@ -336,19 +344,29 @@ def sample_baseline(name: str, disease: str, comorbidities=(), case_id: str = ""
         if _m is None:
             raise
         return float(_m)
-    z = _gauss(str(case_id), "indicator", name, coh)
-
-    # One-factor shared severity: ln(b_i) = ln(median_i) + sigma_i * [lambda*z_case +
-    # sqrt(1-lambda^2)*z_i], so marginals (and `p_abnormal`) are unchanged.
-    # sigma is sigma_total, not `sigma_between`: clinical streams are not in
-    # `registry/physio_streams.yaml:streams` (no observation noise), so all
-    # observed spread is between-patient.
-    lam = _loading_of(coh)
-    if lam is None:
-        return med * math.exp(sd * z)  # loading not registered => independent draw
-    z_case = _gauss(str(case_id), "severity", coh)
-    z_mix = lam * z_case + math.sqrt(max(0.0, 1.0 - lam * lam)) * z
-    return med * math.exp(sd * z_mix)
+    cap = (of(name)["cohorts"][coh]).get("cap")
+    sev = severity().get(str(coh))
+    # The shared severity factor is the registered correlation of its `pair` only; applying it to
+    # every stream of the cohort would make unrelated streams (LDL, ALT, blood pressure ...) move
+    # with the diabetes severity.
+    lam = _loading_of(coh) if (sev is not None and name in [str(x) for x in sev["pair"]]) else None
+    z_case = _gauss(str(case_id), "severity", coh) if lam is not None else 0.0
+    val = med
+    for k in range(32):
+        z = (_gauss(str(case_id), "indicator", name, coh) if k == 0
+             else _gauss(str(case_id), "indicator", name, coh, f"redraw{k}"))
+        # One-factor shared severity: ln(b_i) = ln(median_i) + sigma_i * [lambda*z_case +
+        # sqrt(1-lambda^2)*z_i], so marginals (and `p_abnormal`) are unchanged.
+        # sigma is the between-person spread (`sigma_ln`, or solved from `p_abnormal` for
+        # cohorts registered that way); the per-draw measurement CV (`physio_streams.yaml:clinical_measurement.cv`)
+        # is applied at emission, on top of it. The EMR spread column is informational only.
+        z_mix = z if lam is None else lam * z_case + math.sqrt(max(0.0, 1.0 - lam * lam)) * z
+        val = med * math.exp(sd * z_mix)
+        # `cap`: the referral line of a cohort without the indicator's disease; baselines at or above it
+        # are redrawn (a benign cohort does not start at a referral-level reading).
+        if cap is None or val < float(cap):
+            return val
+    return med
 
 
 def _gauss(*path: str) -> float:
@@ -489,3 +507,14 @@ def sample_case(disease: str, signals, comorbidities=(), case_id: str = "",
         f"{disease}: no draw in {max_draws} rounds satisfied both "
         f"'at least one of {need or '(none)'} abnormal' and the pairwise constraints. "
         "Adjust those indicators' distribution parameters in the registry")
+
+
+def _declared_ndigits(name: str) -> int | None:
+    """A stream's declared decimal precision from the indicator registry, or
+    `None` (unregistered, or `ndigits: null` for panel items) to leave it as is."""
+    from . import indicators as _ind
+    try:
+        nd = _ind.of(name)["ndigits"]
+    except _ind.IndicatorUnregistered:
+        return None
+    return None if nd is None else int(nd)

@@ -12,11 +12,11 @@
   "verify": "Strip the field from every row, re-serialise with ensure_ascii=False and separators=(',', ':'), one newline per row: the sha256 must equal `sha256_without_canary`. The file as shipped must equal `sha256_with_canary`. `split_wq.py --check` does both.",
   "packs": {
    "ddx-timeline.Q.jsonl": {
-    "sha256_with_canary": "27a228c639ee294fb25ed76298bcc0069dacc07daa003ff696f6b40d7c0b5edc",
+    "sha256_with_canary": "bf599888293c1f84bbf0c759235b299baec18b54328b45684e550ccb6dad93ec",
     "sha256_without_canary": "81c55b40610712c4a3e0affd831e47c912fbadda99789c4f96b57c1877c33f14"
    },
    "ddx-workup.Q.jsonl": {
-    "sha256_with_canary": "e299f7c83d44f9f493bc082243f65589bd4bc702df8138810cf721ca1ab7de60",
+    "sha256_with_canary": "efcb20ff2af871620d2f403da7667e312c50b99aefc00b4ea5ef45d4df8c2686",
     "sha256_without_canary": "28948f1069991b9d94abeb47d7cb687fdb4292c86d0c08c1cc3d672c6afa3055"
    }
   }
@@ -29,7 +29,7 @@
   "file": "ddx-timeline.cases.jsonl",
   "file_sha256": "5586476a1e7c4d59b481261a85fc6e826369c08e31b675aa7b6427c133cc2d56",
   "stamped_sha256": "54da5c56ba878d37a734d123f6720b98a42ab5b79186fa763c5a36397f356d36",
-  "job_yaml_sha256": "4e97a6649c12c925376616b79f8793910e79280223686b7497845dc9f04ea553",
+  "job_yaml_sha256": "c6fc6360bed7ac960c0444bdbb7ea4e32981d9a06546fb9ba7e9999481566e99",
   "per_case_sha256": {
    "JD-17v2": "3c788538973099aa",
    "JD-17v3": "f8b9c89dc7590ffb",
@@ -186,7 +186,7 @@
   "file": "ddx-workup.cases.jsonl",
   "file_sha256": "2c70bba2c2968534158b7da3c751c5f06b6e3801a5b18726c462ceb8d201c2e8",
   "stamped_sha256": "90520e821c5bff26e0d8a12f3b7f6c8951319c863104f1b334583cd97aefd825",
-  "job_yaml_sha256": "ecdb92512d36ea0075fa2d97f9db0ad4b0c2f92217e920d3bfe16493c30713ed",
+  "job_yaml_sha256": "24f88e69e76214d9d1f637c4e65c5b185bfb757280b683b7b23fefbf493b8f88",
   "per_case_sha256": {
    "JD-01": "c7cde36165c3b1ad",
    "JD-02": "f8fd7c61a72c257f",

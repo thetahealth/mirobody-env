@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from build import build_instance, leakage_probe    # kernel
+from haenv_kernel.build import build_instance, leakage_probe    # kernel
 
 log = logging.getLogger("haenv.report")
 
@@ -151,7 +151,7 @@ def _case_gate_surface(rows: list[dict], built: dict | None = None) -> list[str]
         if (_adj or {}).get("red_flag_present"):
             _rf_cases.add(str(_cid))
     _n_solvers = len({str(r.get("solver")) for r in graded}) or 1
-    # Kernel preconditions (`core/verifier.py`): `red_flag_present`, its complement,
+    # Kernel preconditions (`haenv_kernel/verifier.py`): `red_flag_present`, its complement,
     # `clinician_action_warranted`, `artifact_flags.is_artifact_window`.
     _warr_cases: set[str] = set()
     _artifact_cases: set[str] = set()
@@ -317,8 +317,8 @@ def reliability_by_model(rows: list[dict], job=None) -> dict:
     mismatch between the two is reported. Returns `{"source", "models", "mismatch",
     "ceiling"}`; `source == "unavailable"` must be printed as not measured.
     """
-    from .evaluate import attribute_attempts as _attr
-    from .evaluate import retry_classes as _classes
+    from .run_ledger import attribute_attempts as _attr
+    from .run_ledger import retry_classes as _classes
 
     def _graded(o) -> bool:
         o = str(o or "")
@@ -422,7 +422,7 @@ def render_reliability_table(rel: dict, ranking: list[dict]) -> list[str]:
     """The §1r reliability table: printed next to the board, not part of the
     composite score (reasons are printed below the table).
     """
-    from .evaluate import retry_classes as _classes
+    from .run_ledger import retry_classes as _classes
     L = ["### 1r. Reliability -- **how this cell got its answer** (not counted toward the composite score, printed next to the board)\n"]
     if rel["source"] == "unavailable":
         L.append("> **Not measured**: this batch has neither `responses.jsonl` nor any `retry_*` fields in `eval.jsonl`. "
@@ -621,7 +621,7 @@ def render(job, rows: list[dict], built: dict, audits: list[dict], cfg: dict) ->
     if _pm:
         L.append("### 1b. Q-side false-premise probe -- **both rates must be read side by side**\n")
         # Polarity counts come from this batch; `PREMISE_RATIO` is only the declared ratio.
-        from .evaluate import PREMISE_RATIO as _PR
+        from .qside import PREMISE_RATIO as _PR
         _n_pf = sum(1 for r in _pm if r.get("prem_polarity") == "false")
         _n_pt = sum(1 for r in _pm if r.get("prem_polarity") != "false")
         L.append(f"> The user asks with a premise that is wrong (the world is unchanged, only the framing changes). "
@@ -782,7 +782,7 @@ def render(job, rows: list[dict], built: dict, audits: list[dict], cfg: dict) ->
     if _np:
         L.append("### 1f. noop probe -- asked about a signal that doesn't exist in the environment, does it make one up\n")
         # Polarity counts come from this batch; `evaluate.NOOP_RATIO` is only the declared ratio.
-        from .evaluate import NOOP_RATIO as _NR
+        from .qside import NOOP_RATIO as _NR
         _GAP_P = ("gap", "absent")
         _COV_P = ("covered", "present")
         _n_gap = sum(1 for r in _np if r.get("noop_polarity") in _GAP_P)
@@ -1686,7 +1686,7 @@ def render(job, rows: list[dict], built: dict, audits: list[dict], cfg: dict) ->
     L.append("---\n")
     # Per-slice gates and case-level gates are separate sections; cross-product
     # coverage is printed as well.
-    from .mount_table import coverage as _mt_cov
+    from .mount_coverage import coverage as _mt_cov
     from .mount_table import known_gaps as _mt_gaps
     _cov = _mt_cov()
     L.append("### 1x. Cross-product coverage of judge \u00d7 geometry\n")

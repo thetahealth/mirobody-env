@@ -67,26 +67,30 @@ def _force_include() -> dict[str, str]:
     return out
 
 
-def _kernel_force_include() -> tuple[pathlib.Path, pathlib.PurePosixPath]:
-    """The one `force-include` entry that carries the L0 kernel, as (source dir in the repo, destination in the wheel).
+def _kernel_package_dir() -> pathlib.Path:
+    """Where `haenv` expects the kernel package to live, relative to the repo root.
 
-    Found by asking `haenv` where it looks -- the destination is whatever
-    `_WHEEL_KERNEL`'s first path component under the package is -- rather
-    than by matching the literal string `core`. Naming the source here
-    would make this helper agree with the constant by construction, which
-    is the one thing it must not do.
+    Derived from `haenv._INSTALLED_KERNEL` -- the constant the code actually reads --
+    rather than from a literal, so the constant and the packaging cannot drift apart.
     """
     import haenv
 
     pkg = pathlib.Path(haenv.__file__).resolve().parent
-    top = haenv._WHEEL_KERNEL.relative_to(pkg).parts[0]      # e.g. "_kernel"
-    want = f"{pkg.name}/{top}"
-    hits = {s: d for s, d in _force_include().items() if d.rstrip("/") == want}
-    assert len(hits) == 1, (
-        f"`force-include` 里应当恰有一条把内核装到 {want!r},实际 {sorted(hits)} —— "
-        f"要么内核没打进轮子,要么 `_WHEEL_KERNEL` 指的根本不是打包落点")
-    src, dst = next(iter(hits.items()))
-    return (ROOT / src).resolve(), pathlib.PurePosixPath(dst.rstrip("/"))
+    kp = haenv._INSTALLED_KERNEL
+    assert kp.parent == pkg.parent, (
+        f"`haenv._INSTALLED_KERNEL` = {kp} 不在 `haenv/` 的同级 —— "
+        f"打包时它就不是一个顶层包了")
+    return kp
+
+
+def _declared_packages() -> set[str]:
+    """The `packages` list of the wheel target in `pyproject.toml`."""
+    txt = PYPROJECT.read_text(encoding="utf-8")
+    body = txt.split("[tool.hatch.build.targets.wheel]", 1)
+    assert len(body) == 2, "pyproject 里没有 wheel 节"
+    m = re.search(r'^packages\s*=\s*\[([^\]]*)\]', body[1], re.M)
+    assert m, "wheel 节里没有 `packages = [...]`"
+    return {x.strip().strip('"\'') for x in m.group(1).split(",") if x.strip()}
 
 
 def _kernel_modules_haenv_imports() -> dict[str, pathlib.Path]:
@@ -95,90 +99,84 @@ def _kernel_modules_haenv_imports() -> dict[str, pathlib.Path]:
     Read with the AST, not by text: the kernel imports are flagged in
     `haenv/` with a trailing `# kernel` comment, and scanning for that
     comment would let a comment impersonate an import (and would miss any
-    import whose author forgot the marker). Only absolute, single-segment
-    imports count -- `from .build import ...` is haenv's own module, and
-    the two are spelled almost identically.
+    import whose author forgot the marker). Imports are read as AST nodes
+    for that reason; `haenv_kernel/__init__.py` re-exports the same modules
+    under dotted names, and both spellings are collected here.
     """
-    src, _ = _kernel_force_include()
+    src = _kernel_package_dir()
     by_name = {p.stem: p for p in src.rglob("*.py")}
     found: dict[str, pathlib.Path] = {}
     for p in sorted((ROOT / "haenv").rglob("*.py")):
         for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
             if isinstance(n, ast.ImportFrom):
-                if n.level == 0 and n.module in by_name:
-                    found[n.module] = by_name[n.module]
+                mod = n.module or ""
+                if n.level:
+                    continue
+                head, _, tail = mod.partition(".")
+                if head == "haenv_kernel" and tail in by_name:
+                    found[tail] = by_name[tail]
+                elif not tail and mod in by_name:      # legacy bare name, if any survives
+                    found[mod] = by_name[mod]
             elif isinstance(n, ast.Import):
                 for a in n.names:
-                    if a.name in by_name:
+                    head, _, tail = a.name.partition(".")
+                    if head == "haenv_kernel" and tail in by_name:
+                        found[tail] = by_name[tail]
+                    elif not tail and a.name in by_name:
                         found[a.name] = by_name[a.name]
     return found
 
 
-def test_wheel_kernel_constant_matches_the_packaging_destination():
-    """`haenv._WHEEL_KERNEL` must be the directory the kernel modules actually land in, derived from `force-include`.
+def test_kernel_package_is_declared_and_sits_beside_haenv():
+    """`haenv_kernel` must be a declared top-level package, and `_INSTALLED_KERNEL` must name it.
 
     ## What this catches
 
-    A constant reading `haenv/_kernel/metabolic_harness` while
-    `force-include` mapped `core` -> `haenv/_kernel`, whose modules are
-    already top level: the wheel contains `haenv/_kernel/build.py` and
-    the extra level never exists. On a clean venv install of such a wheel:
+    The kernel used to be a bare directory force-included into `haenv/_kernel/` and put
+    on `sys.path` at import time. It is now an ordinary top-level package. The failure
+    this guards is the half-migrated state: the source tree moved but `pyproject.toml`
+    still ships the old layout (or vice versa), so the installed wheel has the code but
+    not where the import path looks for it:
 
-        haenv build | verify | run | report   -> exit 1,
-            "[haenv] 内核路径不存在: None"
-        python -c "import haenv.report"       -> ModuleNotFoundError: No module named 'build'
+        pip install <wheel> && python -c "import haenv"   -> ModuleNotFoundError: haenv_kernel
 
-    The whole defect class is "every file is packaged, and the path that
-    finds them is wrong," which every other test in this file is blind to
-    by construction: they compare `force-include` against the code that
-    *reads* resources, never against the constant that *locates* them.
+    ## Why both sides are read rather than written down
 
-    ## Why the destination is derived, not written down
-
-    Restating `"_kernel"` here would turn this into a copy of the value it
-    is judging, and the copy would have been updated in the same commit
-    that broke the constant -- or not at all. The expected path is instead
-    computed from two independent facts: where `force-include` puts the
-    source directory, and where inside that directory each module `haenv`
-    imports actually sits.
+    The constant is taken from `haenv._INSTALLED_KERNEL` and the declaration from
+    `pyproject.toml`, so the two cannot drift apart by a shared literal going stale in
+    one place.
     """
     import haenv
 
-    src, dst = _kernel_force_include()
+    kp = _kernel_package_dir()
+    assert kp.name == "haenv_kernel", (
+        f"🔴 `haenv._INSTALLED_KERNEL` = {kp},不叫 `haenv_kernel`")
+    assert (kp / "__init__.py").is_file(), (
+        f"🔴 {kp} 里没有 `__init__.py` —— 它不是包,装到 site-packages 后 import 不到")
+    declared = _declared_packages()
+    assert "haenv_kernel" in declared, (
+        f"🔴 `pyproject.toml` 的 wheel `packages` 里没有 `haenv_kernel`(实为 {sorted(declared)})—— "
+        f"源码树跑得动,轮子装完 import 不到")
     mods = _kernel_modules_haenv_imports()
     assert mods, "`haenv/` 里一个内核模块 import 都没扫到 —— 扫描面塌了,不是通过"
-
-    # `force-include` maps the *contents* of `src` onto `dst`, so a module at
-    # `src/<rel>/<name>.py` lands at `dst/<rel>/<name>.py`.
-    dirs = {p.parent.relative_to(src).as_posix() for p in mods.values()}
-    assert len(dirs) == 1, (
-        f"内核模块散在多层目录里 {sorted(dirs)},`sys.path` 上挂一个目录挂不全它们:"
-        f"{sorted(mods)}")
-    rel = dirs.pop()
-
-    pkg = pathlib.Path(haenv.__file__).resolve().parent
-    parts = dst.parts + ((rel,) if rel != "." else ())
-    expect = pkg.parent.joinpath(*parts)
-    assert haenv._WHEEL_KERNEL == expect, (
-        f"🔴 `_WHEEL_KERNEL` = {haenv._WHEEL_KERNEL}\n"
-        f"   而 force-include 把内核装到 {expect}\n"
-        f"⇒ 轮子装完 `haenv build/verify/run/report` 全部 exit 1(内核路径不存在),"
-        f"`import haenv.report` 报 No module named '{sorted(mods)[0]}'。"
-        f"别改这条测试来让红变绿 —— 改 `haenv/__init__.py` 的常量。")
+    missing = sorted(m for m in mods if not (kp / f"{m}.py").is_file())
+    assert not missing, (
+        f"🔴 `haenv/` import 的内核模块 {missing} 不在 {kp} 里 —— 路径常量指错了")
 
 
 @pytest.mark.slow
 def test_wheel_kernel_is_importable_where_the_constant_points():
-    """The end-to-end half: in a real wheel, the directory `_WHEEL_KERNEL` names must exist and its modules must import.
+    """The end-to-end half: in a real wheel, `haenv_kernel` must be a top-level package whose modules import.
 
-    The test above is a derivation; this one is the artefact. It builds
-    the wheel, unpacks it, and imports the kernel modules from exactly the
-    path `_WHEEL_KERNEL` would resolve to for that layout -- the step that
-    turns red on a wrong constant with no reasoning required.
+    The test above is a derivation; this one is the artefact. It builds the wheel,
+    unpacks it, and imports the kernel modules from exactly the location the package
+    declares -- the step that turns red on a half-migrated layout with no reasoning
+    required.
 
-    The import runs in a subprocess: the kernel's top-level names include
-    `build`, which is also a PyPI package CI installs, so importing it
-    into this session would shadow it for every test that follows.
+    The import runs in a subprocess: the kernel's top-level names include `build`, which
+    is also a PyPI package CI installs, so importing it into this session would shadow it
+    for every test that follows. (Under the package layout `haenv_kernel.build` no longer
+    shadows anything, but the probe still runs isolated as a matter of habit.)
     """
     import shutil
     import subprocess
@@ -186,12 +184,9 @@ def test_wheel_kernel_is_importable_where_the_constant_points():
     import tempfile
     import zipfile
 
-    import haenv
-
     if not shutil.which("uv"):
         pytest.skip("uv 不在 PATH 上,建不了轮子")
-    pkg = pathlib.Path(haenv.__file__).resolve().parent
-    rel = haenv._WHEEL_KERNEL.relative_to(pkg.parent)        # e.g. "haenv/_kernel"
+    pkg = _kernel_package_dir().name                            # "haenv_kernel"
     mods = sorted(_kernel_modules_haenv_imports())
     assert mods, "`haenv/` 里一个内核模块 import 都没扫到 —— 扫描面塌了,不是通过"
 
@@ -203,19 +198,20 @@ def test_wheel_kernel_is_importable_where_the_constant_points():
         out = pathlib.Path(td) / "unpacked"
         with zipfile.ZipFile(whl) as z:
             names = set(z.namelist())
-            missing = [m for m in mods if f"{rel.as_posix()}/{m}.py" not in names]
+            missing = [m for m in mods if f"{pkg}/{m}.py" not in names]
             assert not missing, (
-                f"🔴 轮子里 {rel.as_posix()}/ 下没有 {missing} —— "
-                f"`_WHEEL_KERNEL` 指的位置装完不存在")
+                f"🔴 轮子里 {pkg}/ 下没有 {missing} —— 内核没打进轮子")
+            assert f"{pkg}/__init__.py" in names, (
+                f"🔴 轮子里 {pkg}/ 不是包(缺 `__init__.py`)")
             z.extractall(out)
-        kdir = out / rel
+        kdir = out / pkg
         assert kdir.is_dir(), f"🔴 解包后 {kdir} 不是目录"
-        probe = ("import sys; sys.path.insert(0, %r); " % str(kdir)
-                 + "; ".join(f"import {m}" for m in mods))
+        probe = ("import sys; sys.path.insert(0, %r); " % str(out)
+                 + "; ".join(f"import {pkg}.{m}" for m in mods))
         p = subprocess.run([sys.executable, "-c", probe],
                            capture_output=True, text=True)
         assert p.returncode == 0, (
-            f"🔴 从 `_WHEEL_KERNEL` 的落点 import 内核失败:\n{p.stdout}{p.stderr}")
+            f"🔴 从轮子里 import `{pkg}` 失败:\n{p.stdout}{p.stderr}")
 
 
 def test_data_root_is_the_single_entry():

@@ -324,7 +324,7 @@ def test_every_registered_thread_keeps_a_diagnosis_alias():
 def test_scoring_profile_scores_dx_listed_not_dx_hit():
     p = load_profile()
     assert "dx_listed" in p.scored_dims and "dx_hit" not in p.scored_dims
-    assert p.metrics["dx_hit"]["role"] == "diagnostic"
+    assert p.metrics["dx_hit"]["role"] == "retired"   # M1 2026-10-01: dead dimension retired
     assert p.metrics["dx_listed"]["metric_type"] == "score01"
 
 

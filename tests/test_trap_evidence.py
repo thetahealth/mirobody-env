@@ -31,9 +31,9 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-import noise as N                                            # noqa: E402
-import verifier as V                                         # noqa: E402
-from haenv import gates as G                                 # noqa: E402
+import haenv_kernel.noise as N                                           # noqa: E402
+import haenv_kernel.verifier as V                                        # noqa: E402
+from haenv import gates as G                                             # noqa: E402
 from haenv import post_inject as PI                          # noqa: E402
 
 

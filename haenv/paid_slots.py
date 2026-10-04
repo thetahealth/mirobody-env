@@ -10,16 +10,22 @@ from __future__ import annotations
 from contextlib import contextmanager
 import fcntl
 import json
+import os
 from pathlib import Path
+import tempfile
 import time
 
-from .run_scheduler import paid_limits as _paid_limits
+from .run_scheduler import GLOBAL_REQUEST_LIMIT, JUDGE_RESERVED_LANES, SOLVER_LANES  # noqa: F401
 from .semantic_budget import BudgetExceeded
 
-#: Configured defaults (`config.paid.global_request_limit` / `judge_reserved_lanes`), used
-#: while neither the runtime file nor `capacity.json` sets a ceiling.
-GLOBAL_REQUEST_LIMIT, JUDGE_RESERVED_LANES = _paid_limits()
 
+def persist_json(path: Path, value: dict) -> None:
+    """Write `value` to `path` atomically: a temp file in the same directory, fsync, rename."""
+    with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, delete=False) as file:
+        json.dump(value, file, ensure_ascii=False)
+        file.flush()
+        os.fsync(file.fileno())
+    os.replace(file.name, path)
 
 class CapacityMismatch(BudgetExceeded, ValueError):
     """Kept for importers; a differing configured ceiling is no longer refused."""
@@ -51,8 +57,7 @@ def set_capacity(ledger_path: Path, limit: int, *, reason: str = "set_capacity")
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         capacity = root / "capacity.json"
         old = json.loads(capacity.read_text()) if capacity.exists() else None
-        from .paid_completion import AccountedCompletion
-        AccountedCompletion._persist(capacity, {"limit": limit})
+        persist_json(capacity, {"limit": limit})
     from .ops.runtime import ops_log
     ops_log(ledger_path, "capacity_set", old=old, new={"limit": limit}, reason=reason)
     return {"old": old, "new": {"limit": limit}}
@@ -74,11 +79,6 @@ def current_limits(ledger_path: Path) -> tuple[int, int]:
         except (OSError, ValueError):
             pass
     return limit, min(JUDGE_RESERVED_LANES, limit - 1)
-
-
-#: Solver requests may hold at most `global - judge_reserved` lanes (the rest stay reachable
-#: by judges). Static value at import, for importers; `request_slot` uses the live value.
-SOLVER_LANES = GLOBAL_REQUEST_LIMIT - JUDGE_RESERVED_LANES
 
 
 @contextmanager

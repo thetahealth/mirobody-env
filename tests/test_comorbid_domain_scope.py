@@ -21,7 +21,7 @@ import haenv                                                        # noqa: E402
 
 sys.path.insert(0, str(haenv.kernel_path()))
 
-from latent import DISEASE_SIGNAL_DOMAIN                            # noqa: E402
+from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN                            # noqa: E402
 
 from haenv.build import _register_comorbid_domain                   # noqa: E402
 

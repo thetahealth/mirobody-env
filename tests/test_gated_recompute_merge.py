@@ -34,6 +34,9 @@ sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
 from haenv import evaluate as EV                    # noqa: E402
 import recompute_judges as RJ                       # noqa: E402
+from _patch_bound import patch_bound  # noqa: E402
+from haenv.run_state import RunContext as _RunContext  # noqa: E402
+_CTX = _RunContext()   # the run these tests drive; monkeypatch restores its fields
 
 MENU = [{"target": "TSH", "is_test": True},
         {"target": "ACTH", "is_test": True},
@@ -83,29 +86,29 @@ def _live_row(monkeypatch):
     from haenv import gated as _g, judges as _j, tracks as _tk
     seen: list = []
 
-    def _grade(out, vp, ev):
+    def _grade(out, vp, ev, **kw):
         seen.append(copy.deepcopy(out._raw))
         return types.SimpleNamespace(tracks={"A": 1.0}, hard_gate_failures=[], overall="SCORED")
 
-    monkeypatch.setattr(EV, "build_instance", lambda raw, T: (_SP(), _VP()))
+    patch_bound(monkeypatch, "build_instance", lambda raw, T: (_SP(), _VP()))
     monkeypatch.setattr(_g, "run_gated", lambda raw, T, solver, trace=None: (_Out(), _Trace()))
     monkeypatch.setattr(EV.verifier_mod, "grade", _grade)
     monkeypatch.setattr(_tk, "tool_track", lambda tr, vp, key_signals=None: {})
     monkeypatch.setattr(_tk, "key_signals_for", lambda vp: [])
     monkeypatch.setattr(_j, "run_judges", lambda shape, out, vp: {})
-    monkeypatch.setattr(_j, "judge_noop_probe", lambda out, spec: {})
+    monkeypatch.setattr(_j, "judge_noop_probe", lambda out, spec, **kw: {})
     monkeypatch.setattr(_j, "judge_quant_probe", lambda out, spec, t_max=None: {})
     monkeypatch.setattr(_j, "judge_abstention_calibration", lambda out, vp: {})
-    monkeypatch.setattr(EV.RUN, "resp_path", None)
-    monkeypatch.setattr(EV, "iron_law_precheck", lambda raw, sp, vp, solver: (lambda: (None, [])))
+    monkeypatch.setattr(_CTX, "resp_path", None)
+    patch_bound(monkeypatch, "iron_law_precheck", lambda raw, sp, vp, solver: (lambda: (None, [])))
     monkeypatch.setattr(EV.process, "run_process_judges", lambda raw, ev: {})
-    row = EV._row_gated("JD-01", "stub", object(), 84, _Solver())
+    row = EV._row_gated("JD-01", "stub", object(), 84, _Solver(), ctx=_CTX)
     assert len(seen) == 1, "live path did not grade exactly once"
     return row, seen[0]
 
 
 def _recompute(monkeypatch, row, menu=MENU, trace_p=pathlib.Path("/nonexistent/trace.jsonl")):
-    monkeypatch.setattr(EV, "gated_menu", lambda raw, T: list(menu))
+    patch_bound(monkeypatch, "gated_menu", lambda raw, T: list(menu))
     RJ._MENUS.clear()
     RJ._TRACE_TARGETS.clear()
     return RJ.merge_gated_purchases(row, copy.deepcopy(ANSWER), object(), trace_p)
@@ -152,7 +155,7 @@ def test_unrecorded_purchases_are_skipped_not_guessed(monkeypatch, tmp_path):
 
 def test_source_answer_is_not_mutated(monkeypatch):
     row, _ = _live_row(monkeypatch)
-    monkeypatch.setattr(EV, "gated_menu", lambda raw, T: list(MENU))
+    patch_bound(monkeypatch, "gated_menu", lambda raw, T: list(MENU))
     RJ._MENUS.clear()
     src = copy.deepcopy(ANSWER)
     RJ.merge_gated_purchases(row, src, object(), pathlib.Path("/nonexistent"))

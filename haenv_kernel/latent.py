@@ -58,6 +58,24 @@ _DISEASE_SIGNAL_DOMAIN_BASE: dict[str, dict[str, dict]] = {
         "weight": _WEIGHT,
     },
 }
+# M2 explainer base conditions (spec 3.3): comorbidity-only signal domains, attached only by the M2
+# job generator (`registry/background_comorbidity.yaml:explainer_bases`). Kept out of
+# `DISEASE_SIGNAL_DOMAIN`, whose keys are the primary-disease pool (job sampling, the extractor's
+# vocabulary, the A5 disease bits). Their lab readings that are not streams (TSH, creatinine, UACR,
+# Hb, PTH) come from `registry/base_condition_findings.yaml` on purchase.
+COMORBIDITY_SIGNAL_DOMAIN: dict[str, dict[str, dict]] = {
+    "hypothyroidism": {   # treated, on levothyroxine
+        "LDL": {"unit": "mmol/L", "range": [1.0, 8.0], "max_weekly_delta": 0.3},
+        "weight": _WEIGHT,
+    },
+    "CAD": {              # stable coronary disease, on a statin
+        "LDL": {"unit": "mmol/L", "range": [1.0, 8.0], "max_weekly_delta": 0.3},
+        "weight": _WEIGHT,
+    },
+    "CKD": {              # stage 3, on an ACE inhibitor
+        "weight": _WEIGHT,
+    },
+}
 
 
 class _ScopedDomain(dict):

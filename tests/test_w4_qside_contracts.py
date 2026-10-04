@@ -20,6 +20,8 @@ from haenv import evaluate as E
 from haenv import wq
 from haenv.judges import _quant_truth, judge_noop_probe, judge_quant_probe
 from haenv.quantities import resolve as _q
+from haenv.run_state import RunContext as _RunContext  # noqa: E402
+_CTX = _RunContext()   # the run these tests drive; monkeypatch restores its fields
 
 ROOT = pathlib.Path(haenv.__file__).resolve().parent.parent
 
@@ -79,12 +81,12 @@ def test_trend_is_built_on_the_answer_window_so_the_oracle_is_always_right():
          (60, 80.0), (70, 70.0)]
     raw = _Raw({"s": s}, T=70, cid="W4-AW")
     built = {"W4-AW": raw}
-    import haenv.evaluate as _ev
+    import haenv.qside as _ev                       # `assign_quant_probes` reads `_QUANT_KINDS` there
     # pin the rotation to trend for this id
     orig = _ev._QUANT_KINDS
     try:
         _ev._QUANT_KINDS = ("trend",)
-        qp = E.assign_quant_probes(built, answer_t={"W4-AW": 30})
+        qp = E.assign_quant_probes(built, answer_t={"W4-AW": 30}, ctx=_CTX)
     finally:
         _ev._QUANT_KINDS = orig
     pr = qp["W4-AW"]
@@ -96,12 +98,12 @@ def test_trend_is_built_on_the_answer_window_so_the_oracle_is_always_right():
 def test_answer_window_does_not_touch_other_quant_kinds():
     s = [(0, 1.0), (1, 5.0), (2, 2.0), (3, 3.0), (4, 2.5), (5, 1.0)]
     raw = _Raw({"s": s}, T=5, cid="W4-PK")
-    import haenv.evaluate as _ev
+    import haenv.qside as _ev                       # `assign_quant_probes` reads `_QUANT_KINDS` there
     orig = _ev._QUANT_KINDS
     try:
         _ev._QUANT_KINDS = ("peak_day",)
-        a = json.dumps(E.assign_quant_probes({"W4-PK": raw}), sort_keys=True)
-        b = json.dumps(E.assign_quant_probes({"W4-PK": raw}, answer_t={"W4-PK": 3}), sort_keys=True)
+        a = json.dumps(E.assign_quant_probes({"W4-PK": raw}, ctx=_CTX), sort_keys=True)
+        b = json.dumps(E.assign_quant_probes({"W4-PK": raw}, answer_t={"W4-PK": 3}, ctx=_CTX), sort_keys=True)
     finally:
         _ev._QUANT_KINDS = orig
     assert a == b
@@ -111,7 +113,7 @@ def test_run_and_recompute_share_one_assignment_that_avoids_the_noop_stream():
     """`recompute_judges` assigns probes with `avoid`, exactly as the run does; without it,
     rows are marked stale for a question that has not changed."""
     npr, qpr = E.assign_qside_probes({"W4-AV": _Raw({"x": _rising(30), "y": _rising(8)},
-                                                     T=29, cid="W4-AV")})
+                                                     T=29, cid="W4-AV")}, ctx=_CTX)
     tgt = (npr.get("W4-AV") or {}).get("target")
     if tgt and qpr.get("W4-AV"):
         assert qpr["W4-AV"]["signal"] != tgt
@@ -169,25 +171,25 @@ def test_noop_probe_carries_the_contract_and_the_question_lists_the_enum():
     raw = _Raw({"s": [(0, 1.0), (40, 2.0), (41, 2.0), (42, 2.1), (43, 2.0), (44, 2.0)]}, T=60)
     pr = E.build_noop_probe(raw, "absent", 60)
     assert pr["contract"] == "enum-v1"
-    E.NOOP_FOR.clear()
-    E.NOOP_FOR["W4-Q"] = pr
+    _CTX.noop_for.clear()
+    _CTX.noop_for["W4-Q"] = pr
 
     class _P:
         case_id = "W4-Q"
         prediction_context = {}
-    txt = E._noop_suffix(_P())
-    E.NOOP_FOR.clear()
+    txt = E._noop_suffix(_P(), _CTX)
+    _CTX.noop_for.clear()
     for v in ("present", "no_data_in_window", "unreliable"):
         assert f"`{v}`" in txt
 
 
 def test_noop_oracle_stub_answers_the_enum_on_both_sides():
     from haenv.baselines import OracleProbeSolver
-    E.NOOP_FOR.clear()
-    E.QUANT_FOR.clear()
+    _CTX.noop_for.clear()
+    _CTX.quant_for.clear()
     try:
         for probe in (_GAP, _COV):
-            E.NOOP_FOR["W4-OR"] = probe
+            _CTX.noop_for["W4-OR"] = probe
 
             class _P:
                 case_id = "W4-OR"
@@ -196,12 +198,13 @@ def test_noop_oracle_stub_answers_the_enum_on_both_sides():
                 user_profile = {}
                 longitudinal_data = {}
                 evidence_ledger = []
-            right = OracleProbeSolver("right").solve(_P())
-            wrong = OracleProbeSolver("wrong").solve(_P())
+            right, wrong = OracleProbeSolver("right"), OracleProbeSolver("wrong")
+            right.run_ctx = wrong.run_ctx = _CTX           # the stubs read the run they are bound to
+            right, wrong = right.solve(_P()), wrong.solve(_P())
             assert judge_noop_probe(right, probe)["noop_ok"] == 1.0
             assert judge_noop_probe(wrong, probe)["noop_ok"] == 0.0
     finally:
-        E.NOOP_FOR.clear()
+        _CTX.noop_for.clear()
 
 
 # ---------------------------------------------------------------- join_evidence
@@ -338,7 +341,7 @@ def test_ddx_framings_ask_for_certainty_and_join_evidence():
 def test_an_answer_with_certainty_survives_parsing():
     """Positive control for `dx_affirmed`: kernel `solver._extract_json` ->
     `evaluate._to_output` -> `tracks._differential` keep `certainty` on each candidate."""
-    from solver import _extract_json
+    from haenv_kernel.solver import _extract_json
     from haenv.tracks import _differential
     txt = ('```json\n{"differential":[{"rank":1,"diagnosis":"甲减","certainty":"probable",'
            '"supporting_evidence":["EV-1"],"ruled_out_by":null},{"rank":2,"diagnosis":"亚临床甲减",'

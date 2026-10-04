@@ -139,7 +139,7 @@ def check_feasible(cs: ConstraintSpec, *, T: int = 84,
     # 3. drug and dosing frequency
     drug = cs.of("drug")
     if isinstance(drug, Fix):
-        from .gates import DRUG_DOSES_PER_WEEK
+        from .gate_tables import DRUG_DOSES_PER_WEEK
         if str(drug.value) not in DRUG_DOSES_PER_WEEK:
             bad.append(f"drug={drug.value!r} is not in the dosing-frequency registry — "
                        f"frequency is derived from the drug, and an unregistered drug can't "
@@ -149,7 +149,7 @@ def check_feasible(cs: ConstraintSpec, *, T: int = 84,
     dev = cs.of("devices")
     if isinstance(dev, (Fix, OneOf)):
         vals = dev.value if isinstance(dev, Fix) else [x for o in dev.options for x in o]
-        from .events import METRICS
+        from .events_streams import METRICS
         servable = {d for m in METRICS for d in (m.devices or ())}
         idle = sorted({str(d) for d in (vals or [])} - servable - {"smart_scale"})
         if idle:
@@ -162,8 +162,8 @@ def check_feasible(cs: ConstraintSpec, *, T: int = 84,
     # which is only a necessary condition.
     ed = event_density or {}
     if ed:
-        from .events import (effective_pool_size, event_pools, event_weeks,
-                             expected_event_counts)
+        from .events import effective_pool_size, event_pools
+        from .events_pools import event_weeks, expected_event_counts
         BENIGN_EVENTS, LIFE_EVENTS = event_pools()
         weeks = event_weeks(T)
         # shares its default rates with the injector

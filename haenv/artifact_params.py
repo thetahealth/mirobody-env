@@ -2,7 +2,7 @@
 the artifact-injection magnitudes consumed by `haenv/build.py`.
 
 Each entry records its value, the kernel's signature default (`kernel_default`)
-and its evidence. `assert_matches_kernel` raises when a default in `core/noise.py`
+and its evidence. `assert_matches_kernel` raises when a default in `haenv_kernel/noise.py`
 and the registered `kernel_default` disagree, since which value applies would
 otherwise depend on whether `**kw` is passed.
 """
@@ -117,7 +117,7 @@ def assert_matches_kernel(noise_classes: dict[str, Any]) -> None:
                        f"{spec['kernel_default']}; one side changed without the other")
     if bad:
         raise ArtifactParamsError(
-            "artifact magnitude registry does not match the core/ kernel defaults:\n  " + "\n  ".join(bad)
+            "artifact magnitude registry does not match the haenv_kernel/ kernel defaults:\n  " + "\n  ".join(bad)
             + "\nUpdate `kernel_default:`; decide separately whether `value:` follows (changing it changes the cases).")
 
 

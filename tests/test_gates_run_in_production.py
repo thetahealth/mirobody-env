@@ -25,6 +25,9 @@ import haenv                                                        # noqa: E402
 from haenv import cli                                              # noqa: E402
 from haenv import gates                                             # noqa: E402
 from haenv import job as J                                          # noqa: E402
+sys.path.insert(0, str(ROOT / "tests"))
+from _module_family import family_source                           # noqa: E402
+from _patch_bound import patch_bound                               # noqa: E402
 
 JOB = ROOT / "inputs" / "ddx-timeline.job.yaml"
 N_CASES = 8
@@ -40,7 +43,7 @@ EMPTY_BY_DESIGN: dict[tuple[str, str], str] = {
 
 
 def _defined_gates() -> list[str]:
-    src = (ROOT / "haenv" / "gates.py").read_text(encoding="utf-8")
+    src = family_source("haenv/gates.py")
     return sorted(set(re.findall(r"^def (check_\w+)\(", src, flags=re.M)))
 
 
@@ -71,10 +74,13 @@ def _run(monkeypatch, tmp_path) -> dict[str, list[dict]]:
             calls.setdefault(__name, []).append(dict(bound.arguments))
             return __orig(*args, **kw)
 
-        monkeypatch.setattr(gates, name, spy)
+        patch_bound(monkeypatch, name, spy, source="haenv.gates")
     monkeypatch.setenv("HAENV_OUTPUT_ROOT", str(tmp_path))
     ids = ",".join(cs.case_id for cs in J.load_job(JOB).cases[:N_CASES])
-    rc = cli.main(["build", str(JOB), "--gen", "deterministic", "--fresh", "--cases", ids])
+    # Serial: the spies record in this process. A process pool runs the same `build_case`,
+    # and its output equals the serial run byte for byte.
+    rc = cli.main(["build", str(JOB), "--gen", "deterministic", "--fresh", "--cases", ids,
+                   "--gen-workers", "1"])
     assert rc in (0, 4), f"haenv build exited {rc}"
     return calls
 

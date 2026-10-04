@@ -6,49 +6,89 @@
 # appends the resolved configuration and its layers to <batch>/config_runs.jsonl.
 
 # L0 kernel directory, relative to the repo root. Override with HAENV_KERNEL_PATH.
-kernel_path: core
+kernel_path: haenv_kernel
 
 # Models under test. `vendor` is explicit because one vendor can route through several backends.
 # max_tokens follows the budget rule in haenv/llm.py (budget_for / recommended_budgets) and is
 # not silently lowered. Explicit provider-cap corrections define new run conditions;
 # historical responses retain their original declared budgets.
+#
+# Upstream pin and sampling of the default models. Both are
+# answer view: changing either makes a new batch.
+# - `provider` pins every OpenRouter model to one upstream with fallbacks off; an upstream that
+#   is unavailable fails the request (recorded), it is never replaced. Default = the upstream
+#   that served the most v1.0.1 receipts on ddx-timeline and ddx-workup. glm-5.3-flash streams,
+#   and the v1.0.1 stream reader dropped the provider field, so v1.0.1 has no record for it: it
+#   is pinned to the vendor's own endpoint.
+# - Models without a direct backend route through OpenRouter. An account that enforces zero data
+#   retention cannot reach the vendors' own OpenAI, Anthropic and Minimax endpoints, so the OpenAI
+#   models pin to Azure and Claude Opus pins to Google Vertex (same weights).
+# - `sampling.temperature`: 0 where the provider takes a temperature, the one accepted value
+#   where it takes only one, `unsupported:<why>` where it takes none. `reasoning_effort:
+#   medium` everywhere an effort exists; Gemini takes a thinking budget of 8192 tokens instead.
 models:
   # max_tokens is the provider's published outputTokenLimit (65536).
-  gemini-3.1-pro:     {backend: google, vendor: google, model: gemini-3.1-pro-preview, max_tokens: 65536}
-  deepseek-v4-pro:    {backend: openrouter, vendor: deepseek, model: deepseek/deepseek-v4-pro, max_tokens: 72000}
-  terra:              {backend: openrouter, vendor: openai, model: openai/gpt-5.6-terra, max_tokens: 72000}
-  luna:               {backend: openai, vendor: openai, model: gpt-5.6-luna, max_tokens: 72000}
-  sol:                {backend: openai, vendor: openai, model: gpt-5.6-sol, max_tokens: 72000}
+  gemini-3.1-pro:     {backend: google, vendor: google, model: gemini-3.1-pro-preview, max_tokens: 65536,
+                       sampling: {temperature: 0, thinking_budget: 8192}}
+  # v1.0.1: DigitalOcean 157, Novita 78, Relace 5, NextBit 1, unrecorded 4 receipts.
+  deepseek-v4-pro:    {backend: openrouter, vendor: deepseek, model: deepseek/deepseek-v4-pro, max_tokens: 72000,
+                       provider: {only: [DigitalOcean], allow_fallbacks: false},
+                       reasoning_effort: medium, sampling: {temperature: 0}}
+  terra:              {backend: openrouter, vendor: openai, model: openai/gpt-5.6-terra, max_tokens: 72000,
+                       provider: {only: [Azure], allow_fallbacks: false}}
+  luna:               {backend: openrouter, vendor: openai, model: openai/gpt-5.6-luna, max_tokens: 72000,
+                       provider: {only: [Azure], allow_fallbacks: false}}
+  sol:                {backend: openrouter, vendor: openai, model: openai/gpt-5.6-sol, max_tokens: 72000,
+                       provider: {only: [Azure], allow_fallbacks: false}}
   # Upstream rate limits on these arrive as HTTP 200 error bodies; extra retries absorb them.
+  # v1.0.1: Azure served every receipt of both (sol 405, luna 328). OpenRouter lists no
+  # `temperature` in their supported_parameters.
   gpt-6-sol:          {backend: openrouter, vendor: openai, model: openai/gpt-6-sol, max_tokens: 72000,
-                       retries: 5}
+                       retries: 5, provider: {only: [Azure], allow_fallbacks: false},
+                       reasoning_effort: medium,
+                       sampling: {temperature: "unsupported:provider (OpenRouter supported_parameters has no temperature)"}}
   gpt-6-luna:         {backend: openrouter, vendor: openai, model: openai/gpt-6-luna, max_tokens: 72000,
-                       retries: 5}
-  deepseek-v4-flash:  {backend: openrouter, vendor: deepseek, model: deepseek/deepseek-v4-flash, max_tokens: 72000}
+                       retries: 5, provider: {only: [Azure], allow_fallbacks: false},
+                       reasoning_effort: medium,
+                       sampling: {temperature: "unsupported:provider (OpenRouter supported_parameters has no temperature)"}}
+  # v1.0.1: DigitalOcean 150, OpenInference 7, Azure/Novita/Relace 1 each.
+  deepseek-v4-flash:  {backend: openrouter, vendor: deepseek, model: deepseek/deepseek-v4-flash, max_tokens: 72000,
+                       provider: {only: [DigitalOcean], allow_fallbacks: false},
+                       reasoning_effort: medium, sampling: {temperature: 0}}
   # Not in default_models (cost); run with --models claude-opus-4-8.
-  claude-opus-4-8:    {backend: relay,  vendor: anthropic, model: claude-opus-4-8, max_tokens: 72000}
+  claude-opus-4-8:    {backend: openrouter, vendor: anthropic, model: anthropic/claude-opus-4.8, max_tokens: 72000,
+                       provider: {only: [Google], allow_fallbacks: false}}
   # Also the default case-generation model (synth.gen_model).
   gemini-3.8-flash:   {backend: google, vendor: google, model: gemini-3.8-flash, max_tokens: 65536}
-  qwen3.8-max:        {backend: relay,  vendor: alibaba, model: qwen3.8-max, max_tokens: 72000}
-  gemini-3.7-flash:   {backend: google, vendor: google, model: gemini-3.7-flash, max_tokens: 65536}
-  qwen3.7-flash:      {backend: dashscope, vendor: alibaba, model: qwen3.7-flash, max_tokens: 72000}
+  # Alibaba's own endpoint (dashscope); OpenRouter lists no plain qwen3.8-max.
+  qwen3.8-max:        {backend: dashscope, vendor: alibaba, model: qwen3.8-max, max_tokens: 72000}
+  gemini-3.7-flash:   {backend: google, vendor: google, model: gemini-3.7-flash, max_tokens: 65536,
+                       sampling: {temperature: 0, thinking_budget: 8192}}
+  # No effort: dashscope takes a thinking budget, not an effort level (conversion open).
+  qwen3.7-flash:      {backend: dashscope, vendor: alibaba, model: qwen3.7-flash, max_tokens: 72000,
+                       sampling: {temperature: 0}}
   # Always reasons; stream so the gateway does not time out a long request.
-  glm-5.3:            {backend: relay,  vendor: zhipu, model: glm-5.3, max_tokens: 72000,
-                       stream: true, retries: 5}
+  glm-5.3:            {backend: openrouter, vendor: zhipu, model: z-ai/glm-5.3, max_tokens: 72000,
+                       stream: true, retries: 5, provider: {only: [Z.AI], allow_fallbacks: false}}
+  # v1.0.1: no upstream recorded (stream); pinned to the vendor's endpoint.
   glm-5.3-flash:      {backend: openrouter, vendor: zhipu, model: z-ai/glm-5.3-flash, max_tokens: 72000,
-                       stream: true, retries: 5}
+                       stream: true, retries: 5, provider: {only: [Z.AI], allow_fallbacks: false},
+                       reasoning_effort: medium, sampling: {temperature: 0}}
   # Reasoning arrives in <think> blocks in the body; reasoning_tokens reads 0.
+  # Served by a third-party host (Novita, fp8): of the zero-data-retention endpoints, the
+  # highest listed precision, then the lowest price among hosts that answer a probe.
   minimax-m3:         {backend: openrouter, vendor: minimax, model: minimax/minimax-m3, max_tokens: 72000,
-                       stream: true}
+                       stream: true, provider: {only: [Novita], allow_fallbacks: false},
+                       reasoning_effort: medium, sampling: {temperature: 0}}
   # Streams can be truncated without finish_reason; retries recover most of them.
-  # The relay and OpenRouter-pinned-to-Moonshot serve the same weights from the same
-  # upstream (declared `upstream`, identical on both), so they answer as one solver; the
-  # OpenRouter route is the fallback when relay keys run out (runtime.yaml `routes` overrides).
-  kimi-k3:            {backend: relay,  vendor: moonshot, model: kimi-k3, max_tokens: 72000,
+  # Pinned to Moonshot's own endpoint on OpenRouter. Kimi K3 accepts temperature 1 only (Kimi API
+  # model parameter reference); that endpoint lists no `temperature` in supported_parameters, so
+  # none is sent and the model runs at its fixed value.
+  kimi-k3:            {backend: openrouter, vendor: moonshot, model: moonshotai/kimi-k3, max_tokens: 72000,
                        stream: true, retries: 5, upstream: "Moonshot AI",
-                       fallback_routes: [{backend: openrouter, model: moonshotai/kimi-k3,
-                                          upstream: "Moonshot AI",
-                                          provider: {only: ["Moonshot AI"], allow_fallbacks: false}}]}
+                       provider: {only: ["Moonshot AI"], allow_fallbacks: false},
+                       reasoning_effort: medium,
+                       sampling: {temperature: "unsupported:provider (accepts 1 only; OpenRouter supported_parameters has no temperature)"}}
 default_models: ['gemini-3.1-pro', 'deepseek-v4-pro', 'gpt-6-sol', 'gpt-6-luna', 'kimi-k3',
                  'gemini-3.7-flash', 'qwen3.7-flash', 'glm-5.3-flash', 'minimax-m3',
                  'deepseek-v4-flash']
@@ -80,7 +120,12 @@ backend_limits:
 #            its cell count) threads. --workers N overrides it; 1 runs serially.
 #   model_workers: per-model pool sizes that replace `workers` for the named models.
 #   pooling: model = one pool per model, longest expected cell first (from a timing table
-#            when one is present); backend = one pool per backend in task order.
+#            when one is present); elastic = model pools sized to min(elastic_max, backend cap)
+#            with the backend slot going to the model with the most expected work left (the
+#            pools no longer starve the shared paid lanes once the fast models finish);
+#            backend = one pool per backend in task order.
+#   elastic_max: pool size of a model under `elastic` (a model named in model_workers keeps its
+#            own size). 16 = the largest single-model concurrency the backend probe exercised.
 #   model_wall_budget_s: seconds per model ("*" = every model not named), counted from the
 #            model's first cell; past it the model starts no further cell and the board
 #            reads its unstarted cells as timed out. Empty = no budget.
@@ -89,12 +134,14 @@ eval:
   model_workers: {}
   model_wall_budget_s: {}
   pooling: model
+  elastic_max: 16
 
 # Paid requests in flight across every process that shares one budget ledger, and the part
 # of that ceiling solver requests may not take (kept for judge requests). A ledger records
 # the ceiling it runs under; change it explicitly with `paid_slots.set_capacity` while no
 # paid request is in flight.
 paid:
+  require_upstream_pin: true   # refuse a billed run with an unpinned OpenRouter solver
   global_request_limit: 48
   judge_reserved_lanes: 3
 

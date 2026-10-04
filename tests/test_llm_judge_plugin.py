@@ -43,6 +43,7 @@ sys.path.insert(0, str(EXAMPLE_DIR))
 import haenv_llm_judge_demo as P                    # noqa: E402
 from haenv import judges as J                       # noqa: E402
 from haenv import mount_table as MT                 # noqa: E402
+from haenv import mount_coverage as MC                 # noqa: E402
 
 #: A spec_id with near-miss rivals registered in this repo's `registry/rivals.yaml` (JD-PCOS has 2).
 SPEC_WITH_RIVALS = "JD-PCOS"
@@ -151,7 +152,7 @@ def test_factory_mounts_and_is_selected():
     assert MT.subject_of(P.NAME, "slices") == MT.NONE
     assert MT.reason_for(P.NAME, "slices"), "不挂的格必须有理由,否则它是叉乘里的一个洞"
     assert MT.reason_for(P.NAME, "multi"), "multi 由表里既有的 `*@multi` 通配理由兜底"
-    assert (P.NAME, "slices") not in MT.holes() and (P.NAME, "multi") not in MT.holes()
+    assert (P.NAME, "slices") not in MC.holes() and (P.NAME, "multi") not in MC.holes()
     vp = _VP()
     assert P.NAME in [j.name for j in J.applicable("single", "ddx:unified", vp)]
     assert P.NAME in [j.name for j in J.applicable("gated", "ddx:unified", vp)]

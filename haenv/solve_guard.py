@@ -13,7 +13,8 @@ import logging
 from dataclasses import dataclass
 from typing import Callable
 
-from build import leakage_probe                      # kernel
+from haenv_kernel.build import leakage_probe                      # kernel
+from haenv_kernel.solver import _extract_json
 
 log = logging.getLogger("haenv")
 
@@ -37,7 +38,7 @@ SOLVE_EXEMPT: dict[str, str] = {
                        "`runner.run_multiround`); the recorder never touches the payload, never "
                        "issues a request, and never changes the wrapped object's behavior "
                        "(`__getattr__` forwards everything). Wiring status of the multi "
-                       "geometry is tracked by `mount_table.unwired_geometries()`, not here.",
+                       "geometry is tracked by `mount_coverage.unwired_geometries()`, not here.",
 }
 
 
@@ -134,5 +135,23 @@ def facts_of_output(out) -> SolveFacts:
 
 def _unextractable(txt) -> bool:
     """Delegate to `evaluate.json_unextractable`, which uses the kernel's own `_extract_json`."""
-    from .evaluate import json_unextractable
     return json_unextractable(txt)
+
+
+def json_unextractable(raw_text) -> bool:
+    """True if the raw text is non-empty but no JSON object can be extracted from it.
+
+    The kernel's `solver._extract_json` falls back to `{}` in that case, and `_to_output({})`
+    would turn it into a canned abstention scored as the model's answer. This calls the same
+    extractor (which strips `<think>` blocks) so it agrees with the scoring path.
+    """
+    if raw_text is None:
+        return False                       # attribute absent = offline stub, not applicable (same convention as `raw_empty`)
+    t = str(raw_text)
+    if not t.strip():
+        return False                       # genuinely empty -- goes through the existing `raw_empty` path, not judged here
+    try:
+        data = _extract_json(t)
+    except Exception:                      # noqa: BLE001 -- parse error = same as `{}` once retries are exhausted
+        return True
+    return not (isinstance(data, dict) and data)

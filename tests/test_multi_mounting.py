@@ -51,6 +51,7 @@ sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
 from haenv import judges as J                        # noqa: E402
 from haenv import mount_table as MT                  # noqa: E402
+from haenv import mount_coverage as MC                  # noqa: E402
 from haenv import mounting as MG                     # noqa: E402
 
 #: The slice-only judge list is hard-coded here, not derived from `MOUNT`.
@@ -189,7 +190,7 @@ def test_every_unmounted_cell_on_multi_has_a_reason():
         if MT.subject_of(name, "multi") != MT.NONE:
             continue
         assert MT.reason_for(name, "multi"), f"{name}@multi 是个没理由的空格"
-    assert MT.holes() == [], f"叉乘里出现了没理由的洞:{MT.holes()}"
+    assert MC.holes() == [], f"叉乘里出现了没理由的洞:{MC.holes()}"
 
 
 def test_slices_family_reasons_are_per_judge_not_one_wildcard():
@@ -245,13 +246,13 @@ def test_negative_control_blank_reason_is_detected():
     try:
         assert MT.reason_for("slices_workup", "multi") is None, \
             "三条理由都抽掉了还查得到 —— 说明 `reason_for` 从别处兜了底,断言恒绿"
-        assert ("slices_workup", "multi") in MT.holes(), \
+        assert ("slices_workup", "multi") in MC.holes(), \
             "没理由的空格没有进 `holes()` —— 那条棘轮盯的东西是空的"
     finally:
         MT.WHY_NOT[key] = saved
         MT.WHY_NOT["slices*@multi"] = saved_family
         MT.WHY_NOT["*@multi"] = saved_star
-    assert MT.holes() == [], "复位之后洞必须消失(证明上面那次判负是抽理由造成的)"
+    assert MC.holes() == [], "复位之后洞必须消失(证明上面那次判负是抽理由造成的)"
 
 
 # ---------------------------------------------------------------- 3. actually runs
@@ -359,19 +360,19 @@ def test_unwired_geometry_reading_still_bites():
     immediately counted back in.
     """
     import dataclasses
-    assert MT.unwired_geometries() == [], \
-        f"还有几何挂了判据却不调 run_judges:{MT.unwired_geometries()}"
-    assert MT.coverage()["unwired"] == MT.unwired_geometries(), \
+    assert MC.unwired_geometries() == [], \
+        f"还有几何挂了判据却不调 run_judges:{MC.unwired_geometries()}"
+    assert MC.coverage()["unwired"] == MC.unwired_geometries(), \
         "覆盖读数与取值入口必须是同一条路径"
     # negative control: strip single's profile, it must be counted back in => proves the `[]` above isn't vacuous
     before = MG.BY_GEOMETRY["single"]
     MG.BY_GEOMETRY["single"] = dataclasses.replace(before, profile="")
     try:
-        assert "single" in MT.unwired_geometries(), \
+        assert "single" in MC.unwired_geometries(), \
             "profile 清空后没被数回来 ⇒ 这个读数恒空,`[]` 证明不了任何事"
     finally:
         MG.BY_GEOMETRY["single"] = before
-    assert MT.unwired_geometries() == [], "复位失败,后面的用例会读到脏状态"
+    assert MC.unwired_geometries() == [], "复位失败,后面的用例会读到脏状态"
 
 
 def test_negative_control_unwiring_the_profile_restores_the_flag():
@@ -385,15 +386,15 @@ def test_negative_control_unwiring_the_profile_restores_the_flag():
     """
     import dataclasses
     before = MG.BY_GEOMETRY["multi"]
-    assert "multi" not in MT.unwired_geometries(), \
+    assert "multi" not in MC.unwired_geometries(), \
         "multi 已接线(profile=MULTI + _row_multi 走 run_judges),不该还被报成未接线"
     MG.BY_GEOMETRY["multi"] = dataclasses.replace(before, profile="")
     try:
-        assert "multi" in MT.unwired_geometries(), \
+        assert "multi" in MC.unwired_geometries(), \
             "profile 清空后标记没回来 ⇒ 这个读数根本没读 profile,恒假"
     finally:
         MG.BY_GEOMETRY["multi"] = before
-    assert "multi" not in MT.unwired_geometries(), "复位失败,后面的用例会读到脏状态"
+    assert "multi" not in MC.unwired_geometries(), "复位失败,后面的用例会读到脏状态"
 
 
 def test_premounted_pair_is_now_registered():
@@ -406,8 +407,8 @@ def test_premounted_pair_is_now_registered():
     count is zero" could just mean that reading itself is broken, not that
     the count is genuinely zero.
     """
-    assert MT.unregistered_mounts() == [], \
-        f"还有预挂载没注册:{MT.unregistered_mounts()}"
+    assert MC.unregistered_mounts() == [], \
+        f"还有预挂载没注册:{MC.unregistered_mounts()}"
     for name in ("multiround_revision", "premise_repair"):
         assert MT.subject_of(name, "multi") == MT.TRAJ
         assert any(j.name == name for j in J.JUDGES), f"{name} 不在活注册表里"
@@ -415,8 +416,8 @@ def test_premounted_pair_is_now_registered():
     _saved = list(J.JUDGES)
     J.JUDGES[:] = [j for j in J.JUDGES if j.name != "premise_repair"]
     try:
-        assert "premise_repair" in MT.unregistered_mounts(), \
+        assert "premise_repair" in MC.unregistered_mounts(), \
             "摘掉注册项后没被报成预挂载 ⇒ 这个读数恒空"
     finally:
         J.JUDGES[:] = _saved
-    assert MT.unregistered_mounts() == [], "复位失败,后面的用例会读到脏状态"
+    assert MC.unregistered_mounts() == [], "复位失败,后面的用例会读到脏状态"

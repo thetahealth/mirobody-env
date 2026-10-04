@@ -21,7 +21,7 @@ import haenv                                                        # noqa: E402
 
 sys.path.insert(0, str(haenv.kernel_path()))
 
-from latent import LatentPremise                                    # noqa: E402
+from haenv_kernel.latent import LatentPremise                                    # noqa: E402
 
 from haenv import job as J                                          # noqa: E402
 from haenv.build import (OBSERVATION_ONLY_META, WORLD_PROMPT_META,  # noqa: E402
@@ -76,3 +76,22 @@ def test_unlisted_key_is_withheld():
     meta = _world_prompt_premise(p)["meta"]
     assert "probe_unlisted_key" not in meta and "rhythm_gap" not in meta
     assert "case_id" in meta
+
+
+def test_external_gold_and_knob_keys_never_reach_the_prompt(monkeypatch):
+    """The external slot carries a plugin's latent keys into the premise; the world prompt shows
+    only those classed `patient_fact`. An empty slot is dropped, so a case with no plugin latent keeps
+    its prompt (and its cache key) byte for byte."""
+    from haenv import external_gold as EG
+    _, cs = next(_cases())
+    p = _premise(cs)
+    monkeypatch.setitem(EG.LATENT_CLASSES, "x_gold", "gold")
+    monkeypatch.setitem(EG.LATENT_CLASSES, "x_knob", "knob")
+    monkeypatch.setitem(EG.LATENT_CLASSES, "x_fact", "patient_fact")
+    p.meta[EG.SLOT] = {"x_gold": {"dx": "SECRET"}, "x_knob": {"tier": "SECRET"}, "x_fact": {"age": 61}}
+    meta = _world_prompt_premise(p)["meta"]
+    assert meta[EG.SLOT] == {"x_fact": {"age": 61}} and "SECRET" not in json.dumps(meta)
+    p.meta[EG.SLOT] = {"x_gold": {"dx": "SECRET"}}
+    assert EG.SLOT not in _world_prompt_premise(p)["meta"]
+    p.meta[EG.SLOT] = {}
+    assert EG.SLOT not in _world_prompt_premise(p)["meta"]

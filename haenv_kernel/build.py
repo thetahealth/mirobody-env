@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import logging
 
-from schema import RawCase, SolverPayload, VerifierPayload
+from .schema import RawCase, SolverPayload, VerifierPayload
 
 log = logging.getLogger("harness.build")
 

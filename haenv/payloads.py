@@ -26,7 +26,7 @@ def canonical_T(raw) -> int:
 
 
 def build_pairs(built: dict) -> dict[str, tuple]:
-    from build import build_instance                      # kernel
+    from haenv_kernel.build import build_instance                      # kernel
     out: dict[str, tuple] = {}
     for cid, raw in built.items():
         out[cid] = build_instance(raw, canonical_T(raw))
@@ -62,7 +62,7 @@ def load_payloads(path: Path) -> dict[str, tuple]:
     A missing field raises; no default is substituted, since an empty ledger would read as
     "the model cited nothing".
     """
-    from schema import SolverPayload, VerifierPayload      # kernel
+    from haenv_kernel.schema import SolverPayload, VerifierPayload      # kernel
     out: dict[str, tuple] = {}
     for line in path.read_text(encoding="utf-8").split("\n"):
         if not line.strip():

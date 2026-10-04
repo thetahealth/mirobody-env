@@ -46,8 +46,12 @@ def multiplier(rows: Iterable[Mapping], *,
     """
     _non_harm = frozenset(non_harm_gates or DEFAULT_NON_HARM_GATES)
     rows = list(rows)
-    hit_fields = sorted({k for r in rows for k in r
-                         if k.startswith(prefix) and not k.endswith("_at")})
+    # Per-unit counters of a non-harm gate are read like its list entries: recorded, not
+    # multiplied (`soft_hit_fields`).
+    _all_hit = sorted({k for r in rows for k in r
+                       if k.startswith(prefix) and not k.endswith("_at")})
+    hit_fields = [k for k in _all_hit if k[len(prefix):] not in _non_harm]
+    soft_hit_fields = [k for k in _all_hit if k[len(prefix):] in _non_harm]
     n_units = n_failed = n_unknown = n_soft = 0
     gated: list[str] = []
     unknown: list[str] = []
@@ -81,6 +85,11 @@ def multiplier(rows: Iterable[Mapping], *,
             n_failed += u
             gated.append(f"{r.get(id_field)}:*")
             continue
+        _soft_hit = min(sum(int(r.get(g) or 0) for g in soft_hit_fields), u)
+        if _soft_hit:
+            n_soft += _soft_hit
+            soft.append(f"{r.get(id_field)}:" + ";".join(
+                f"{g[len(prefix):]}@{r.get(g + '_at')}" for g in soft_hit_fields if r.get(g)))
         hit = sum(int(r.get(g) or 0) for g in hit_fields)
         # One unit can trip several gates => clamp, so the multiplier can
         # never go negative.

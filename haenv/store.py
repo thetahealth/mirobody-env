@@ -15,7 +15,7 @@ import logging
 from dataclasses import asdict
 from pathlib import Path
 
-from schema import RawCase          # kernel
+from haenv_kernel.schema import RawCase          # kernel
 
 log = logging.getLogger("haenv.store")
 
@@ -160,7 +160,7 @@ def drift_scope(built: dict, prev_cases_file) -> dict:
     p = _P(prev_cases_file)
     if not p.is_file():
         return {"scope": "undecidable", "why": f"the previous batch's cases.jsonl is not available ({p.name})"}
-    from build import build_instance                    # kernel
+    from haenv_kernel.build import build_instance                    # kernel
     prev = load_cases(p)
     q_changed, t_changed, common = [], [], []
     for cid, raw in built.items():

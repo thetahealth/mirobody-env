@@ -8,6 +8,20 @@ from __future__ import annotations
 
 import re
 
+from .alias_match import (  # noqa: F401
+    _CLAUSE_END,
+    _NEG_CUES,
+    _NEG_EXEMPT,
+    _PENDING_EXCLUSION,
+    _PENDING_NEGATORS,
+    _alias_spans,
+    _clause_tail,
+    _mask_pending,
+    _negated,
+    alias_hit_asserted,
+    alias_mentioned,
+)
+
 
 def visible_observations(case: dict, day: int) -> tuple:
     """Fingerprint of what the solver can see on `day`: visible evidence ids plus
@@ -70,7 +84,7 @@ def slice_convergence(slice_rows: list[dict], gold_driver: str | None,
     def _hit(r: dict, top1_only: bool = True) -> bool:
         """Convergence = the top pick hits gold; a hedge naming it lower down
         counts only toward `mentioned_at`."""
-        from .events import alias_hit
+        from .events_text import alias_hit
         if names:
             cand = r.get("differential") or []
             if cand:
@@ -125,62 +139,39 @@ def rank_key(x: dict) -> int:
         return RANK_ABSENT
 
 
-# ---------------------------------------------------------------- hit judging
-# hit (asserted), mentioned (entertained) and negated are separate quantities:
-# a ruled-out or negated mention is not a hit.
-_NEG_EXEMPT = ("不排除", "未排除", "不能排除", "无法排除", "不除外", "cannot rule out",
-               "can't rule out", "not excluded")
-_NEG_CUES = ("不像", "不支持", "不考虑", "暂不", "不要", "不宜", "不太可能", "可能性低",
-             "否认", "排除", "已排除", "无证据", "不成立", "非典型",
-             "unlikely", "ruled out", "rule out", "ruling out", "excluded", "exclude",
-             "no evidence", "doubt")
+#: 暂定，待临床复核 (docs/spec, design §5.0 D9). Read live by the judges, so a test can flip a flag.
+#:   executed_counts_as_covered: a test already bought through the tool (`executed_investigations`)
+#:     counts toward `tests_recall` like an item of `tests_to_order` (precision is unchanged).
+#:   possible_counts_as_listed: "possible"/"probable"/"suspected" entries count as listed, and a
+#:     comorbidity diagnosis needs per-thread coverage only (never both components asserted together).
+#:   rule_out_counts_as_listed: `certainty: "rule_out"` (待排, still to be ruled out) is a live
+#:     candidate even when `ruled_out_by` is filled in.
+D9_PROVISIONAL = {"executed_counts_as_covered": True,
+                  "possible_counts_as_listed": True,
+                  "rule_out_counts_as_listed": True}
 
 
-#: Pending-exclusion phrasing: "X 待排除", "需排除 X", "需进一步分型并排除 X",
-#: "X needs to be ruled out". The candidate is still on the differential, so the
-#: "排除"/"rule out" inside these phrases does not negate it.
-_PENDING_EXCLUSION = re.compile(
-    r"(?:有待|尚需|仍需|需要|建议|进一步|待|需)[^,，。；;.!?！？、\n]{0,6}?排除"
-    r"|\bneeds? to (?:be ruled out|rule out)\b"
-    r"|\b(?:must|should) (?:be ruled out|rule out)\b"
-    r"|\bto be ruled out\b|\bpending exclusion\b",
-    re.I)
-#: A negator just before the phrase keeps it a negation ("无需排除 X", "已进一步排除 X",
-#: "does not need to be ruled out").
-_PENDING_NEGATORS = ("无", "不", "毋", "未", "已", "勿", "no ", "not ")
-#: A negator's reach ends at a clause boundary: in "不，需排除 X" or "功能不全；需排除 X" the
-#: "不" belongs to the previous clause. "、" is not a boundary (it separates list items).
-_CLAUSE_END = re.compile(r"[，,；;。！？!?\n]")
+_RULE_OUT_CERTAINTY = ("rule_out", "ruleout", "to_rule_out", "待排", "待排除")
 
 
-def _clause_tail(s: str) -> str:
-    """The part of `s` after its last clause boundary."""
-    return _CLAUSE_END.split(s)[-1]
+def _certainty(x: dict) -> str:
+    return re.sub(r"[\s\-]+", "_", str(x.get("certainty") or "").strip().lower())
 
 
-def _mask_pending(text: str) -> str:
-    """`text` with pending-exclusion phrases blanked out (same length, so offsets hold)."""
-    def _sub(m):
-        before = _clause_tail(text[max(0, m.start() - 4):m.start()]).lower()
-        if any(k in before for k in _PENDING_NEGATORS):
-            return m.group(0)
-        return " " * len(m.group(0))
-    return _PENDING_EXCLUSION.sub(_sub, text)
+def is_rule_out_pending(x: dict) -> bool:
+    """`certainty` says "to be ruled out" (待排), as opposed to "ruled_out" (已排除)."""
+    return _certainty(x) in _RULE_OUT_CERTAINTY
 
 
-def _negated(text: str, at: int, span: int) -> bool:
-    """Whether the alias at `text[at:at+span]` is negated, from a narrow window
-    (10 chars before, 12 after). Exemptions such as "cannot rule out" are checked
-    first; only multi-character cues count. Pending-exclusion phrases are blanked
-    out of the text before the cues are read, so another cue in the same window
-    still negates.
+def entry_excluded(x: dict) -> bool:
+    """Whether a differential entry is excluded (not live). `certainty: "ruled_out"` excludes;
+    otherwise a non-empty `ruled_out_by` excludes, except on a `rule_out` (待排) entry (D9.3).
     """
-    win = (text[max(0, at - 10):at] + " " + text[at + span:at + span + 12]).lower()
-    if any(k in win for k in _NEG_EXEMPT):
+    if _certainty(x) == "ruled_out":
+        return True
+    if not str(x.get("ruled_out_by") or "").strip():
         return False
-    m = _mask_pending(text)
-    win = (m[max(0, at - 10):at] + " " + m[at + span:at + span + 12]).lower()
-    return any(k in win for k in _NEG_CUES)
+    return not (D9_PROVISIONAL["rule_out_counts_as_listed"] and is_rule_out_pending(x))
 
 
 def _finding_aliases() -> dict[str, tuple[str, ...]]:
@@ -269,47 +260,6 @@ def judging_names(aliases) -> list[str]:
     return out
 
 
-def _alias_spans(text: str, names):
-    """Occurrences `(alias, start, length)` of gold aliases, minus exclusion
-    words (`overlay.alias_excluded_at`, e.g. polycystic kidney disease for
-    PCOS). Negated occurrences are kept.
-    """
-    from .events import alias_hit
-    from .overlay import alias_excluded_at
-    t = str(text or "")
-    low = t.lower()
-    # Scoring accepts a full word for a stem alias (`hypothyroid` ->
-    # `Hypothyroidism`); leak scanning does not.
-    for a in alias_hit(t, names, allow_suffix=True):
-        al = str(a).lower()
-        i, n = 0, len(al)
-        while True:
-            j = low.find(al, i)
-            if j < 0:
-                break
-            if not alias_excluded_at(t, a, j):
-                yield a, j, n
-            i = j + 1
-
-
-def alias_mentioned(text: str, names) -> bool:
-    """True if the text mentions the gold diagnosis (asserted or negated),
-    ignoring exclusion words."""
-    for _ in _alias_spans(text, names):
-        return True
-    return False
-
-
-def alias_hit_asserted(text: str, names) -> bool:
-    """True if at least one valid occurrence is not negated. Judging side only;
-    leak scanning does not use this filter."""
-    t = str(text or "")
-    for _a, j, n in _alias_spans(t, names):
-        if not _negated(t, j, n):
-            return True
-    return False
-
-
 def dx_rank_of(out, names) -> dict:
     """Hit judging for the gold diagnosis, shared by `judges` and this module.
 
@@ -331,7 +281,7 @@ def dx_rank_of(out, names) -> dict:
                 continue
             if ment is None:
                 ment = i
-            if str(x.get("ruled_out_by") or "").strip():
+            if entry_excluded(x):
                 ruled = True
                 continue
             hit = i
@@ -349,7 +299,7 @@ def dx_rank_of(out, names) -> dict:
 def asserted_diagnoses(out) -> list[str]:
     """Candidate diagnoses that are not ruled out."""
     return [str(x.get("diagnosis") or "") for x in _differential(out)
-            if not str(x.get("ruled_out_by") or "").strip()]
+            if not entry_excluded(x)]
 
 
 def ddx_hit(out, ddx: dict | None) -> dict:
@@ -361,7 +311,7 @@ def ddx_hit(out, ddx: dict | None) -> dict:
     """
     if not ddx:
         return {}
-    from .events import alias_hit
+    from .events_text import alias_hit
     # `independent` items have no single diagnosis, and the insufficient tier
     # carries no signal; both are N/A for dx (scored by join_hit / abst_*).
     if ddx.get("join_gold") == "independent":
@@ -581,30 +531,45 @@ def tool_track(trace, vp=None, key_signals=None) -> dict:
         # Self-reported `kind` disagreeing with the menu (billing uses the menu).
         "tool_kind_misreports": getattr(trace, "kind_misreports", 0),
     }
-    # T4. Typed targets are mapped to finding ids through the production
-    # resolver `gated._resolve_target`.
-    ks = set(key_signals or ())
-    if ks:
-        asked = set(uniq)
-        try:
-            from .gated import _resolve_target as _rt
-            from .registry import load_findings as _lf
-            _fdg = _lf()
-            for _t in uniq:
-                _fid = _rt(str(_t), _fdg)
-                if _fid:
-                    asked.add(_fid)
-        except Exception:      # resolver unavailable: compare raw strings
-            pass
-        missed = sorted(ks - asked)
-        out["tool_key_signals"] = sorted(ks)
-        out["tool_key_missed"] = missed or None
-        out["tool_key_covered"] = round(len(ks & asked) / len(ks), 3)
-        out["tool_concluded_blind"] = bool(missed) and bool(getattr(trace, "committed", False))
-    else:
-        out["tool_key_covered"] = None          # not applicable
-        out["tool_concluded_blind"] = None
+    out.update(key_coverage(targets, key_signals, menu=getattr(trace, "menu", None),
+                            committed=bool(getattr(trace, "committed", False))))
     return out
+
+
+def decoy_targets(menu) -> set[str]:
+    """Menu items flagged `real: False` (signals this patient does not have, mixed into the menu)."""
+    return {str(i.get("target")) for i in (menu or []) if isinstance(i, dict) and i.get("real") is False}
+
+
+def key_coverage(targets, key_signals, menu=None, committed: bool = False) -> dict:
+    """T4: key signals queried before committing.
+
+    Typed targets are mapped to finding ids through the production resolver
+    `gated.menu_findings` (a composite item credits every component). Only non-decoy menu
+    items count (`real is not False`): a decoy
+    such as `cortisol_am` resolves to a real finding id, and counting it would credit a key
+    signal the same call is scored ungrounded for by T1 (B11, 2026-10-01).
+    """
+    ks = set(key_signals or ())
+    if not ks:
+        return {"tool_key_covered": None, "tool_concluded_blind": None}      # not applicable
+    decoys = decoy_targets(menu)
+    uniq = [t for t in dict.fromkeys(str(t) for t in (targets or []) if t)]
+    real = [t for t in uniq if t not in decoys]
+    asked = set(real)
+    try:
+        from .gated import menu_findings as _mf
+        from .registry import load_findings as _lf
+        _fdg = _lf()
+        for _t in real:
+            asked.update(_mf(_t, _fdg))
+    except Exception:      # resolver unavailable: compare raw strings
+        pass
+    missed = sorted(ks - asked)
+    return {"tool_key_signals": sorted(ks), "tool_key_missed": missed or None,
+            "tool_key_covered": round(len(ks & asked) / len(ks), 3),
+            "tool_concluded_blind": bool(missed) and bool(committed),
+            "tool_key_decoys_skipped": sorted(t for t in uniq if t in decoys) or None}
 
 
 def key_signals_for(vp) -> tuple[str, ...]:
@@ -619,7 +584,7 @@ def key_signals_for(vp) -> tuple[str, ...]:
     spec = GOLD_EVIDENCE.get(str(drv or ""))
     if spec:
         return (spec["signal"],)
-    from .judges import _ddx as _ddx_of
+    from .wq import _ddx as _ddx_of
     from .overlay import rivals_for
     ddx = _ddx_of(vp) or {}
     if not ddx.get("spec_id"):

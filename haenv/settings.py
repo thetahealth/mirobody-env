@@ -73,6 +73,9 @@ class ModelSpec(_Section):
     reasoning_effort: str | None = _f("answer")
     upstream: str | None = _f("answer")
     provider: dict | None = _f("answer")
+    #: temperature (number or "unsupported:<why>") and Google thinking_budget
+    #: (`transport.check_sampling`).
+    sampling: dict | None = _f("answer")
     stream: bool = _f("route", False)
     retries: int | None = _f("route")
     fallback_routes: list[RouteSpec] = _f("route", [])
@@ -96,13 +99,17 @@ class EvalSection(_Section):
     workers: int = _f("execution", 8)
     model_workers: dict[str, int] = _f("execution", {})
     model_wall_budget_s: dict[str, float] = _f("execution", {})
-    pooling: Literal["model", "backend"] = _f("execution", "model")
+    pooling: Literal["model", "backend", "elastic"] = _f("execution", "model")
+    elastic_max: int = _f("execution", 16)
 
 
 class PaidSection(_Section):
     global_request_limit: int = _f("execution", 48)
     judge_reserved_lanes: int = _f("execution", 3)
     max_capacity: int | None = _f("execution")
+    #: Refuse a billed run whose OpenRouter solver has no provider pin (checked before any
+    #: request; the pin itself is part of the answer view through `upstream`).
+    require_upstream_pin: bool = _f("execution", False)
 
 
 class TransportSection(_Section):
@@ -129,7 +136,7 @@ class Config(BaseModel):
     """The whole of `config.yaml` after `config.local.yaml`, the overlay and `--set`."""
     model_config = ConfigDict(extra="allow")
 
-    kernel_path: str = _f("location", "core")
+    kernel_path: str = _f("location", "haenv_kernel")
     models: dict[str, ModelSpec] | list[str] = _f("selection", {})
     default_models: list[str] = _f("selection", [])
     backends: dict[str, BackendSpec] = _f("route", {})

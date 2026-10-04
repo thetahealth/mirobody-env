@@ -107,20 +107,43 @@ def test_onelong_stub_is_registered():
     assert OneLongTestSolver.name == "onelong"
 
 
-def test_oracle_disc_names_is_not_in_the_prompt_path():
-    """`ORACLE_DISC_NAMES` holds gold-standard values => it must never enter the prompt-rendering path.
-
-    Same discipline as `ORACLE_GOLD_TESTS`: it is reachable in-process, and
-    only one line of code away from being rendered into the prompt.
-    """
+def oracle_table_uses(root) -> list[str]:
+    """`file:function` for every read or write of a `RunContext.oracle_*` gold table outside
+    the two places allowed: `qside.assign_oracle_*` (fills them) and `baselines.py` (the
+    oracle stubs)."""
     import ast
-    src = (ROOT / "haenv").glob("*.py")
     bad = []
-    for f in src:
-        if f.name in ("evaluate.py", "baselines.py"):
-            continue                                   # the registry and the oracle stub itself -- legitimate
+    for f in sorted(pathlib.Path(root).glob("*.py")):
         t = ast.parse(f.read_text(encoding="utf-8"))
+        owner: dict[int, str] = {}                 # node -> innermost enclosing function
+
+        def mark(node, name):
+            for ch in ast.iter_child_nodes(node):
+                inner = ch.name if isinstance(ch, (ast.FunctionDef, ast.AsyncFunctionDef)) else name
+                owner[id(ch)] = inner
+                mark(ch, inner)
+        mark(t, "<module>")
         for n in ast.walk(t):
-            if isinstance(n, ast.Name) and n.id == "ORACLE_DISC_NAMES":
-                bad.append(f.name)
-    assert not bad, f"金标判别项名被这些模块引用了:{sorted(set(bad))}"
+            if isinstance(n, ast.Attribute) and n.attr.startswith("oracle_"):
+                name = owner.get(id(n), "<module>")
+                if f.name == "baselines.py" or (f.name == "qside.py" and name.startswith("assign_oracle_")):
+                    continue
+                bad.append(f"{f.name}:{name}")
+    return sorted(set(bad))
+
+
+def test_oracle_disc_names_is_not_in_the_prompt_path():
+    """The gold tables (`RunContext.oracle_disc_names`, `oracle_gold_tests`, ...) must never
+    enter the prompt-rendering path: they are written by `qside.assign_oracle_*`, read by the
+    oracle stubs in `baselines.py`, and touched nowhere else. A field that is one attribute
+    access away from a prompt is only one line of code away from being rendered.
+    """
+    assert oracle_table_uses(ROOT / "haenv") == []
+
+
+def test_a_gold_table_read_in_the_render_path_is_reported(tmp_path):
+    (tmp_path / "qside.py").write_text(
+        "def assign_oracle_gold(built, *, ctx):\n    ctx.oracle_disc_names.clear()\n"
+        "def render_for(solver, payload):\n    return str(solver.run_ctx.oracle_disc_names)\n",
+        encoding="utf-8")
+    assert oracle_table_uses(tmp_path) == ["qside.py:render_for"]

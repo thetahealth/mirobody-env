@@ -238,7 +238,14 @@ def test_ndigits_has_exactly_one_declaration_site():
             assert d.get("kind") == "panel", (
                 f"{name}:ndigits 为 null 却不是 panel —— 只有文本通道的项可以不声明位数")
         assert E._declared_ndigits(name) == (None if nd is None else int(nd)), name
-    assert n_null >= 5, f"ndigits=null 的只有 {n_null} 条 —— 这一支的扫描面塌了"
+    # Since 2026-09-30 (realism P1-4) every panel item declares its printed precision,
+    # read by `findings_render._round`; `null` stays legal (magnitude rounding) but unused.
+    n_panel = sum(1 for d in D.values() if d.get("kind") == "panel")
+    assert n_panel >= 5, f"kind: panel 的只有 {n_panel} 条 —— 这一支的扫描面塌了"
+    from haenv import findings_render as _FR
+    for name, d in D.items():
+        if d.get("kind") == "panel" and d["ndigits"] is not None:
+            assert _FR._ndigits(name) == int(d["ndigits"]), name
     assert E._declared_ndigits("从来没建过档的流") is None
 
 
@@ -259,7 +266,9 @@ def test_metrics_ndigits_agrees_with_the_dossier():
 def test_dossier_is_the_only_source_of_the_baseline():
     """The code does not read a baseline from `CLINICAL_SPEC`; the dossier is the source."""
     import ast
-    src = (ROOT / "haenv" / "build.py").read_text(encoding="utf-8")
+    sys.path.insert(0, str(ROOT / "tests"))
+    from _module_family import family_source
+    src = family_source("haenv/build.py")
     tree = ast.parse(src)
     for node in ast.walk(tree):
         if (isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name)
@@ -435,7 +444,8 @@ def test_panel_items_are_registered_with_empty_cohorts():
     for p, k in kinds.items():
         if k == "panel":
             assert D[p]["cohorts"] == {}, f"{p} 是 panel 却有队列 —— 时序通道不产它"
-            assert D[p]["ndigits"] is None, f"{p} 是 panel 却声明了 ndigits(文本通道按值定位数)"
+            # 2026-09-30 (realism P1-4): panel items declare the printed precision.
+            assert isinstance(D[p]["ndigits"], int), f"{p} 是 panel 却没声明 ndigits"
 
 
 def test_panel_reference_ranges_are_not_self_authored():

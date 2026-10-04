@@ -10,8 +10,9 @@ SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
-from schema import SolverOutput, SolverPayload          # kernel
-from solver import Solver                                # kernel
+from haenv_kernel.schema import SolverOutput, SolverPayload          # kernel
+from haenv_kernel.solver import Solver                                # kernel
+from .run_state import run_ctx_of
 
 #: Names of all offline stubs; other modules read the roster from here.
 BASELINE_NAMES: tuple[str, ...] = (
@@ -254,10 +255,10 @@ class OracleTestsSolver(Solver):
         # The gold label comes from the verifier-side ledger, not the payload.
         tests: list[str] = []
         try:
-            from .evaluate import ORACLE_GOLD_TESTS
             cid = str(getattr(payload, "case_id", "")
                       or (getattr(payload, "prediction_context", {}) or {}).get("case_id", ""))
-            tests = [str(t) for t in (ORACLE_GOLD_TESTS.get(cid) or []) if str(t).strip()]
+            tests = [str(t) for t in (run_ctx_of(self).oracle_gold_tests.get(cid) or [])
+                     if str(t).strip()]
         except Exception:                                # noqa: BLE001
             tests = []
         raw["tests_to_order"] = tests
@@ -280,10 +281,10 @@ class OneLongTestSolver(Solver):
         raw = dict(getattr(out, "_raw", {}) or {})
         names: list[str] = []
         try:
-            from .evaluate import ORACLE_DISC_NAMES
             cid = str(getattr(payload, "case_id", "")
                       or (getattr(payload, "prediction_context", {}) or {}).get("case_id", ""))
-            names = [str(x) for x in (ORACLE_DISC_NAMES.get(cid) or []) if str(x).strip()]
+            names = [str(x) for x in (run_ctx_of(self).oracle_disc_names.get(cid) or [])
+                     if str(x).strip()]
         except Exception:                                # noqa: BLE001
             names = []
         raw["tests_to_order"] = ["、".join(names)] if names else []
@@ -310,14 +311,11 @@ class OracleProbeSolver(Solver):
         cid = str(getattr(payload, "case_id", "")
                   or (getattr(payload, "prediction_context", {}) or {}).get("case_id", ""))
         _right = self.mode == "right"
-        try:
-            from .evaluate import NOOP_FOR, QUANT_FOR
-        except Exception:                                 # noqa: BLE001
-            NOOP_FOR, QUANT_FOR = {}, {}                  # noqa: N806
+        ctx = run_ctx_of(self)
 
         # ---- noop: answer the enum on that key (`present` / `no_data_in_window`);
         # the `wrong` side answers both sides backwards ----
-        npr = NOOP_FOR.get(cid) or {}
+        npr = ctx.noop_for.get(cid) or {}
         sq: dict = {}
         if npr:
             _absent = not bool(npr.get("truth_present"))
@@ -325,7 +323,7 @@ class OracleProbeSolver(Solver):
                                           else "present")
         # ---- quant: answer the ground truth (`wrong` side answers a value
         # that is guaranteed wrong) ----
-        qpr = QUANT_FOR.get(cid) or {}
+        qpr = ctx.quant_for.get(cid) or {}
         if qpr:
             t = qpr.get("truth")
             if _right:
@@ -358,11 +356,7 @@ class OracleReviewSolver(Solver):
         out = ConstantDdxSolver().solve(payload)
         cid = str(getattr(payload, "case_id", "")
                   or (getattr(payload, "prediction_context", {}) or {}).get("case_id", ""))
-        try:
-            from .evaluate import ORACLE_WARRANTED
-        except Exception:                                 # noqa: BLE001
-            ORACLE_WARRANTED = {}                         # noqa: N806
-        _w = ORACLE_WARRANTED.get(cid)
+        _w = run_ctx_of(self).oracle_warranted.get(cid)
         if _w is None:
             return out                                    # the gold label has no such field -> stay silent
         _declare = bool(_w) if self.mode == "right" else (not bool(_w))
@@ -447,11 +441,7 @@ class LateConvergeSolver(Solver):
         self._seen[cid] = k
         raw = dict(getattr(out, "_raw", {}) or {})
         if k >= self.switch_at:
-            try:
-                from .evaluate import ORACLE_DIAGNOSIS
-                gold = ORACLE_DIAGNOSIS.get(cid)
-            except Exception:                            # noqa: BLE001
-                gold = None
+            gold = run_ctx_of(self).oracle_diagnosis.get(cid)
             if not gold:
                 raw["late_converge_gold_unavailable"] = True
                 out._raw = raw                           # noqa: SLF001

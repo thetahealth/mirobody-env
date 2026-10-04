@@ -16,14 +16,15 @@ import logging
 
 from . import wearable as _wear
 
-from latent import DISEASE_SIGNAL_DOMAIN                  # kernel
-from build import build_instance, leakage_probe
-from solver import BaselineSolver, RobustSolver, ALLOWED_DRIVERS
+from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN                  # kernel
+from haenv_kernel.build import build_instance, leakage_probe
+from haenv_kernel.solver import BaselineSolver, RobustSolver, ALLOWED_DRIVERS
 
 from .events import event_pools as _event_pools
-from .events import (ATTRIBUTIVE_MARKERS, AUX_WHITELIST,
-                     METRIC_BY_NAME, _adj, _event_ok, attributive_hits, effective_tags,
-                     facts_of, event_proxy_tags, inherited_profile, proxy_tags)
+from .events import ATTRIBUTIVE_MARKERS, AUX_WHITELIST, attributive_hits
+from .events_streams import METRIC_BY_NAME, _adj, _adj_full
+from .events_pools import _event_ok, effective_tags, facts_of, event_proxy_tags, proxy_tags
+from .events import inherited_profile
 
 log = logging.getLogger("haenv.verify")
 
@@ -97,7 +98,7 @@ def check_stream(row: dict, pts: list[dict], f, driver: str, T: int,
 
     exp = (float(f.baseline_vitals[m.vital_key])
            if (m.vital_key and f.baseline_vitals.get(m.vital_key) is not None)
-           else _adj(name, m.base, f))
+           else _adj_full(name, m.base, f))
     # Baseline judged on the injector's own render when available: the observed
     # series also carries event footprints.
     mu = _mean([q["value"] for q in neutral_pts]) if neutral_pts else _mean(vals)
@@ -264,7 +265,7 @@ def check_event(row: dict, f, driver: str, T: int, real_days: set[int],
     if kind == "real_symptom":
         # Real symptom: it must actually appear in raw_case, at a matching day (fabricating
         # legitimate evidence out of nothing is not allowed)
-        from .events import scrub_annotation
+        from .events_text import scrub_annotation
         hit = [s for s in f.symptoms
                if s["day"] == day and text in (s["text"],
                                                scrub_annotation(s["text"], ddx_aliases)[0])]
@@ -301,7 +302,7 @@ def check_event(row: dict, f, driver: str, T: int, real_days: set[int],
         checks["plausible_for_profile"] = _ck(ok, why or f"profile: heavy={f.heavy} elderly={f.elderly}")
         # Answer relevance is judged on role tags (`events.role_tags`), not on the
         # model's self-report.
-        from .events import role_tags as _rt
+        from .events_pools import role_tags as _rt
         eff = _rt(it) if it else set()
         _banned = event_proxy_tags(f, driver)
         checks["not_driver_or_comorbid_proxy"] = _ck(
@@ -440,7 +441,7 @@ def scan_solver_text(raw, T: int, prompt_frame: str | None = None,
     findings += [f"truth_word_zh:{w}" for w in TRUTH_WORDS_ZH if w in blob]
     findings += [f"driver_word_zh:{w}" for w in DRIVER_WORDS_ZH if w in blob]
     findings += [f"driver_name:{d}" for d in ALLOWED_DRIVERS if d in low]
-    from .events import alias_hit
+    from .events_text import alias_hit
     # EV ids are masked before alias scanning: slot names such as `B12` can collide
     # with clinical aliases. Known gap: the scan runs before id anonymization.
     _blob_no_ids = _EV_ID_RE.sub("<EVID>", blob)

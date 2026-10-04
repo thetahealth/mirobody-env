@@ -10,6 +10,11 @@ import time
 import urllib.request
 
 from .semantic_budget import _amount
+from haenv import data_root as _dr   # resource root: source tree = repo root, wheel = haenv/_data
+from .run_state import log
+from .call_log import (  # noqa: F401
+    billed_tokens,
+)
 
 #: The key the current thread's attempt was sent with (set by the request accountant around
 #: one attempt). The bill of that attempt must be read with that same key.
@@ -81,7 +86,7 @@ class RelayPrices:
 
 
 def fetch_metadata(cfg: dict, solver) -> dict:
-    from .evaluate import BACKENDS, _ensure_backends_registered
+    from .solvers import BACKENDS, _ensure_backends_registered
     _ensure_backends_registered(cfg)
     base = BACKENDS["relay"].get("quota_url")
     if not base:
@@ -111,7 +116,7 @@ class RelayBilling:
 
     @classmethod
     def for_solver(cls, prices, solver, cfg):
-        from .evaluate import BACKENDS, _ensure_backends_registered
+        from .solvers import BACKENDS, _ensure_backends_registered
         _ensure_backends_registered(cfg)
         base = BACKENDS["relay"].get("quota_url")
         if not base:
@@ -153,16 +158,18 @@ class RelayBilling:
 # The relay balance gate. It lives here (INFRA) so that changing how much money a resumed run
 # asks for never moves the solving-code or judging fingerprints; `evaluate._preflight_quota`
 # only delegates.
-def preflight_quota(job, cfg, solvers, n_cases: int, n_done: int) -> None:
+def preflight_quota(job, cfg, solvers, n_cases: int, n_done: int, *, resp_path=None) -> None:
     """Check the relay balance before a batch starts and refuse to start if it is short.
 
     Covers only `relay` models, and only when `config.backends.relay.quota_url` is set
     (OneAPI-style billing endpoints); other backends are listed in a warning. If the balance
-    cannot be read, it warns and continues.
+    cannot be read, it warns and continues. `resp_path` is the run's `responses.jsonl`; the
+    cells already done are read next to it.
     """
-    from .evaluate import (BACKENDS, RUN, RELAY_COST_PER_GRID, RELAY_COST_DEFAULT,
-                           RELAY_COST_HEADROOM, RELAY_USD_PER_MTOK, _done_keys, _dr,
-                           _measured_tokens_per_grid, log)
+    from .solvers import BACKENDS
+    from .run_state import log
+    from .resume import _done_keys
+    from . import data_root as _dr
     _nb = [n for n, _ in solvers
            if (cfg.get("models", {}).get(n) or {}).get("backend") == "relay"]
     _uncov: dict[str, list[str]] = {}
@@ -184,7 +191,7 @@ def preflight_quota(job, cfg, solvers, n_cases: int, n_done: int) -> None:
         return
     _est, _basis = 0.0, "per-cell constant table (rough)"
     # a resumed batch only needs money for the relay cells it has not answered yet
-    done = _done_keys(RUN.resp_path.with_name("eval.jsonl")) if RUN.resp_path else set()
+    done = _done_keys(resp_path.with_name("eval.jsonl")) if resp_path else set()
     _todo = {n: max(0, n_cases - sum(1 for k in done if str(k).rsplit("|", 1)[-1] == n)) for n in _nb}
     n_cases = max(_todo.values())
     _tok = _measured_tokens_per_grid(job, _nb)
@@ -247,3 +254,68 @@ def _bypass_proxy(host: str) -> None:
     if host not in items:
         items.append(host)
     os.environ["no_proxy"] = os.environ["NO_PROXY"] = ",".join(items)
+
+
+#: Per-cell unit cost in USD (~20k-token prompts) for relay-billed models; a rough
+#: affordability check, not billing.
+RELAY_COST_PER_GRID = {"kimi-k3": 0.2374, "terra": 0.0592}
+
+
+#: Unit cost for unlisted relay-billed models (errs high).
+RELAY_COST_DEFAULT = 0.15
+
+
+RELAY_COST_HEADROOM = 2.0
+
+
+#: Normalized rate (USD per million tokens) for the affordability check; errs high, since a
+#: run that breaks midway leaves a partial reading.
+RELAY_USD_PER_MTOK = 4.0
+
+
+def _measured_tokens_per_grid(job, models: list[str]) -> dict[str, float]:
+    """Each model's measured tokens per cell from this job's earlier batches (from `billed`,
+    else `usage`); empty if there are none.
+    """
+    try:
+        import json as _j
+        _root =_dr()
+        base = _root / "results" / getattr(job, "task_type", "") / getattr(job, "job_id", "")
+        if not base.is_dir():
+            return {}
+        # The four most recent batches that contain the estimated models (offline smoke batches
+        # would otherwise crowd them out).
+        cands = [d for d in base.iterdir()
+                 if d.is_dir() and (d / "responses.jsonl").is_file()]
+        agg: dict[str, dict] = {}
+        _want = {str(m) for m in (models or [])}
+        _with_usage = []
+        for _d in sorted(cands, key=lambda x: x.name, reverse=True):
+            try:
+                with (_d / "responses.jsonl").open(encoding="utf-8", errors="ignore") as _fh:
+                    if any(_l.strip() and any(f'"{m}"' in _l for m in _want) for _l in _fh):
+                        _with_usage.append(_d)
+            except Exception:                          # noqa: BLE001
+                continue
+            if len(_with_usage) >= 4:
+                break
+        for d in _with_usage:
+            rp = d / "responses.jsonl"
+            for line in rp.read_text(encoding="utf-8", errors="ignore").split("\n"):
+                if not line.strip():
+                    continue
+                try:
+                    r = _j.loads(line)
+                except Exception:                               # noqa: BLE001
+                    continue
+                if r.get("solver") not in models:
+                    continue
+                b = r.get("billed") or billed_tokens(r.get("usage"))
+                e = agg.setdefault(r["solver"], {"tok": 0, "grids": set()})
+                e["tok"] += int(b.get("in_total", 0)) + int(b.get("out", 0))
+                e["grids"].add((r.get("case"), d.name))
+        return {m: e["tok"] / max(1, len(e["grids"])) for m, e in agg.items() if e["tok"]}
+    except Exception as e:                                      # noqa: BLE001
+        log.warning("[quota] failed to compute tokens live from historical batches (%s) —— "
+                    "falling back to the unit-price table", e)
+        return {}

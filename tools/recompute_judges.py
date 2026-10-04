@@ -296,7 +296,7 @@ def enrich_slice_rows(row: dict, by_slices: dict) -> int:
 
 
 def rejudge_qside(row: dict, out, case, noop_probe: dict | None, quant_probe: dict | None,
-                  t_max: int | None) -> dict:
+                  t_max: int | None, delivered=None) -> dict:
     """Judge one row's noop and quant answers on the questions that row was asked.
 
     noop: the probe is rebuilt from the row's recorded fields (target, window, truth) under
@@ -324,7 +324,7 @@ def rejudge_qside(row: dict, out, case, noop_probe: dict | None, quant_probe: di
             stale.append(f"noop:落盘 target={_t} vs 现在 {noop_probe.get('target')},"
                          f"且行上缺窗口/真值 —— 题面变过,只能重跑")
     if _np:
-        add.update(judge_noop_probe(out, _np) or {})
+        add.update(judge_noop_probe(out, _np, delivered=delivered) or {})
     _k, _s = row.get("quant_kind"), row.get("quant_signal")
     if _k is None:
         _qp = quant_probe
@@ -383,6 +383,8 @@ def main(argv: list[str]) -> int:
         return 2
 
     full = "--full" in argv
+    from haenv.run_state import RunContext
+    qctx = RunContext()                      # the Q-side probes rebuilt below, if any
     from haenv.judges import join_self_contradiction
 
     # Without `--full`, only judges that don't need vp (gold) are recomputed;
@@ -392,7 +394,7 @@ def main(argv: list[str]) -> int:
     sps: dict = {}
     if full:
         from haenv.store import load_cases
-        from build import build_instance                      # kernel
+        from haenv_kernel.build import build_instance                      # kernel
         cases_p = d / "cases.jsonl"
         if not cases_p.is_file():
             print(f"[recompute] --full needs {cases_p}"); return 2
@@ -427,7 +429,7 @@ def main(argv: list[str]) -> int:
         # answer window each row records); assignment is deterministic by case_id ----
         try:
             from haenv.evaluate import assign_qside_probes
-            _npr, _qpr = assign_qside_probes(_built, answer_t=_answer_t_from_rows(eval_p))
+            _npr, _qpr = assign_qside_probes(_built, answer_t=_answer_t_from_rows(eval_p), ctx=qctx)
             print(f"[recompute] Q-side probes rebuilt: noop {len(_npr)} cases · quant {len(_qpr)} cases")
         except Exception as e:                            # noqa: BLE001
             print(f"[recompute] rebuilding the Q-side probes failed ({type(e).__name__}); "
@@ -449,7 +451,7 @@ def main(argv: list[str]) -> int:
                 str(r.get("slice_t"))] = slice_raw_facts(r.get("raw"))
         if isinstance(raw, str):
             # Same parser as the pipeline (handles ```json fences).
-            from solver import _extract_json          # kernel
+            from haenv_kernel.solver import _extract_json          # kernel
             try:
                 raw = _extract_json(raw)
             except Exception as e:
@@ -490,6 +492,7 @@ def main(argv: list[str]) -> int:
     #: Exercise counts for the per-slice raw-text facts, printed at the end.
     _srf_stats: dict[str, int] = {}
     _abort_rederived = [0]
+    _menu_cache: dict = {}
     _abort_errors: list[str] = []
 
     def _jfp_rc() -> str:
@@ -571,6 +574,20 @@ def main(argv: list[str]) -> int:
                 # ---- Kernel tracks (`--tracks`) ----
                 # `verifier.grade(out, vp, ev)` can be rebuilt from disk. Off by default: it
                 # overwrites `tracks` and goes through the same changed-field trail.
+                # T4 (key-signal coverage) is rebuilt from the row's purchases and the case's menu
+                # (`tracks.key_coverage`, decoys skipped), with the same changed-field trail.
+                if "--tracks" in argv and _gated_row and row.get("tool_targets") is not None and vp is not None:
+                    try:
+                        from haenv import tracks as _tk4
+                        _cid4 = row.get("case")
+                        if _cid4 not in _menu_cache and _built.get(_cid4) is not None:
+                            from haenv.evaluate import gated_menu as _gm
+                            _menu_cache[_cid4] = _gm(_built[_cid4], int(row.get("T")))
+                        add.update(_tk4.key_coverage(row.get("tool_targets"), _tk4.key_signals_for(vp),
+                                                     menu=_menu_cache.get(_cid4),
+                                                     committed=bool(row.get("tool_committed"))))
+                    except Exception as e:                    # noqa: BLE001
+                        add["tool_key_recompute_error"] = f"{type(e).__name__}: {str(e)[:120]}"
                 if "--tracks" in argv:
                     # Gated rows are graded on the merged answer; a row whose purchases cannot
                     # be recovered keeps its live gates (`gates_recompute_skipped` says why).
@@ -578,8 +595,7 @@ def main(argv: list[str]) -> int:
                         pass
                     else:
                         try:
-                            import verifier as _V                       # kernel
-                            _sp = sps.get(row.get("case"))
+                            import haenv_kernel.verifier as _V    # kernel                            _sp = sps.get(row.get("case"))
                             _ev = [e["evidence_id"] for e in (_sp.evidence_ledger or [])] if _sp else []
                             # A row carrying `slice_rows` is graded as live (`_row_slices`): on its
                             # last slice's own response, with the review gates left to the slice
@@ -606,7 +622,9 @@ def main(argv: list[str]) -> int:
                                 add["gates_recompute_note"] = (
                                     "slices:末片原文不在盘上 ⇒ 整例门沿用 live 读数,未重算")
                             else:
-                                _rep = _V.grade(_subject, vp, _ev, unit_gates_per_slice=_per_slice)
+                                from haenv.judges.safety import evidence_names_for as _ev_names
+                                _rep = _V.grade(_subject, vp, _ev, unit_gates_per_slice=_per_slice,
+                                                evidence_names=_ev_names(_sp, row.get("tool_targets")))
                                 add["tracks"] = _rep.tracks
                                 add["gates"] = _rep.hard_gate_failures
                                 # `overall`, `tracks` and `gates` are written back together from the
@@ -623,7 +641,6 @@ def main(argv: list[str]) -> int:
             # is backfilled into `slice_rows` from `responses.jsonl`.
             if vp is not None:
                 try:
-                    from haenv.evaluate import NOOP_FOR, QUANT_FOR
                     _cid = str(row.get("case"))
                     _slices = row.get("slices") or []
                     # Single-shot takes `T` from the row: `quant_t_max` records how far the model
@@ -636,8 +653,23 @@ def main(argv: list[str]) -> int:
                     _q_last_bad = (isinstance(_srs_q, list) and bool(_srs_q)
                                    and bool(_srs_q[-1].get("leak") or _srs_q[-1].get("slice_unparseable")
                                             or _srs_q[-1].get("raw_empty")))
+                    # Delivered window = the saved solver payload (`payloads.jsonl`), the same
+                    # series the semantic judge reads; a slice row whose last slice ends before
+                    # the saved payload's T is rebuilt at that slice.
+                    _sp_q = sps.get(row.get("case"))
+                    if (_sp_q is not None and _tmax is not None and _built.get(_cid) is not None
+                            and int((getattr(_sp_q, "prediction_context", None) or {})
+                                    .get("prediction_time_T", _tmax)) != int(_tmax)):
+                        try:
+                            from haenv_kernel.build import build_instance as _bi_q
+                            _sp_q = _bi_q(_built.get(_cid), int(_tmax))[0]
+                        except Exception:              # noqa: BLE001
+                            _sp_q = None
+                    from haenv.judges.trajectory import delivered_series as _dlv_series
                     add.update(rejudge_qside(row, _Out({} if _q_last_bad else raw), _built.get(_cid),
-                                             NOOP_FOR.get(_cid), QUANT_FOR.get(_cid), _tmax))
+                                             qctx.noop_for.get(_cid), qctx.quant_for.get(_cid), _tmax,
+                                             delivered=_dlv_series(_sp_q, row.get("tool_targets"),
+                                                                   gated=_gated_row)))
                 except Exception as e:                    # noqa: BLE001
                     add["qside_probe_error"] = f"{type(e).__name__}: {str(e)[:120]}"
                 # Slice rows go through `run_judges(SLICES, ...)`, dispatched by `mount_table`.

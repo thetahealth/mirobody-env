@@ -17,7 +17,7 @@ import os
 import re
 import subprocess
 
-from schema import SolverPayload, SolverOutput
+from .schema import SolverPayload, SolverOutput
 
 log = logging.getLogger("harness.solver")
 

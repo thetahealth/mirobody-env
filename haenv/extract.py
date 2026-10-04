@@ -24,6 +24,10 @@ from .provenance import (GOLD_FIELDS, PATIENT_FACTS, RARELY_IN_TEXT,
 
 # Resources are read through the single `data_root()` entry point (repo root, or `haenv/_data` in a wheel).
 from haenv import data_root as _data_root
+from .job import (  # noqa: F401
+    KNOB_DOMAIN,
+    _outcome_domain,
+)
 ROOT = _data_root()
 
 
@@ -194,7 +198,7 @@ def extract_patient_facts(text: str, case_id: str, model: str = "gemini-3.1-pro"
 
     cfg = cfg or _cached_yaml(ROOT / "config.yaml")
 
-    from latent import (DISEASE_SIGNAL_DOMAIN, DRUG_PKPD, KNOWN_DEVICES,   # kernel
+    from haenv_kernel.latent import (DISEASE_SIGNAL_DOMAIN, DRUG_PKPD, KNOWN_DEVICES,   # kernel
                         drug_pkpd)
     _dis = "|".join(sorted(DISEASE_SIGNAL_DOMAIN))
     _dev = "|".join(sorted(KNOWN_DEVICES))
@@ -262,22 +266,6 @@ def extract_patient_facts(text: str, case_id: str, model: str = "gemini-3.1-pro"
 #: source are read from it, never copied.
 
 
-def _outcome_domain() -> tuple:
-    """The domain of `outcome` = `job.OUTCOMES`."""
-    from .job import OUTCOMES
-    return tuple(OUTCOMES)
-
-
-KNOB_DOMAIN: dict[str, tuple] = {
-    # Long tiers let the follow-up interval (median ≈ T/13) approach a real ~28-day outpatient rhythm.
-    "index_time_T": (56, 70, 84, 98, 112, 168, 336),
-    # Must satisfy `>= T + 112` (see `ddx._course_end_for`), or large-T cases fail
-    # `L5-outcome-sustainable`.
-    "course_end_day": (224, 280, 365, 448, 504, 560),
-    # Exposes the domain for validation; the value itself is drawn by `job.outcome_of`.
-    "outcome": _outcome_domain(),
-}
-
 #: `distractor_level` is not sampled: high-intensity distraction injects events the density
 #: declaration does not account for (`event_density_mismatch`). Cases take the pipeline default.
 DISTRACTOR_NOT_SAMPLED_WHY = (
@@ -295,7 +283,7 @@ def sample_knobs(case_id: str, n_symptoms: int, course_end_day: int | None = Non
     unknown). `symptom_rate` is computed over the observation window `T`, the window the
     emission gate judges (see `latent_rules`' L2), and is at least 1 / weeks of T.
     """
-    from .gates import DRUG_DOSES_PER_WEEK
+    from .gate_tables import DRUG_DOSES_PER_WEEK
 
     led = ledger or ProvenanceLedger(case_id)
     T = int(rng.pick(list(KNOB_DOMAIN["index_time_T"]), case_id, "T"))
@@ -591,7 +579,7 @@ def validate_extracted(ec: ExtractedCase, cfg: dict | None = None
     """Run the extraction result through the kernel's own premise validation
     (`build.premise_spec` -> `latent.LatentPremise` -> `latent.validate_premise`).
     """
-    from latent import LatentPremise, validate_premise            # kernel
+    from haenv_kernel.latent import LatentPremise, validate_premise            # kernel
 
     from .build import premise_spec
     from .job import CaseSpec

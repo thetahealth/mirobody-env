@@ -48,7 +48,7 @@ def _rule_not_ddx(vp) -> str | None:
 
 
 def _rule_insufficient(vp) -> str | None:
-    from .judges import _ddx
+    from .wq import _ddx
     return "ddx:insufficient" if bool((_ddx(vp) or {}).get("insufficient")) else None
 
 

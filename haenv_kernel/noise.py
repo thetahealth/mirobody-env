@@ -5,7 +5,7 @@ produces a dirty observation that the solver sees before T; whether it is an art
 recorded only on the verifier side (`reversal_points[type=trap]`,
 `adjudication.artifact_flags`). Injection never changes `outcome_label`.
 
-    from noise import inject, NOISE_CLASSES
+    from haenv_kernel.noise import inject, NOISE_CLASSES
     noisy = inject(clean_raw, "device_switch", d0=63, d1=84)
 
 SYNTHETIC, evaluation use only, not medical advice.
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import copy
 
-from schema import RawCase
+from .schema import RawCase
 
 PRIMARY = "weight"          # the primary signal for this batch of base cases
 _WORSEN_UP = True           # weight rising = worsening

@@ -47,6 +47,9 @@ from haenv import judges as _j                      # noqa: E402
 from haenv import solve_guard as _sg                # noqa: E402
 from haenv import tracks as _tk                     # noqa: E402
 from haenv import wq as _wq                         # noqa: E402
+from _patch_bound import patch_bound  # noqa: E402
+from haenv.run_state import RunContext as _RunContext  # noqa: E402
+_CTX = _RunContext()   # the run these tests drive; monkeypatch restores its fields
 
 
 class _VP:
@@ -92,19 +95,19 @@ def _facts():
 def _install(monkeypatch, calls: list):
     """Replace the iron law with a **counter**; stub everything else. The counter
     records "who called it"."""
-    monkeypatch.setattr(EV, "build_instance", lambda raw, T: (_SP(), _VP()))
-    monkeypatch.setattr(EV.RUN, "resp_path", None)
+    patch_bound(monkeypatch, "build_instance", lambda raw, T: (_SP(), _VP()))
+    monkeypatch.setattr(_CTX, "resp_path", None)
     monkeypatch.setattr(_wq, "injected_manifest", lambda cid: {})
     monkeypatch.setattr(_sg, "guarded_solve",
                         lambda solver, sp, t, precheck=None, **kw: (
                             (precheck() if precheck else None), _facts())[1])
     monkeypatch.setattr(EV.verifier_mod, "grade",
-                        lambda out, vp, vis: types.SimpleNamespace(
+                        lambda out, vp, vis, **kw: types.SimpleNamespace(
                             hard_gate_failures=[], tracks={}, overall="SCORED"))
     monkeypatch.setattr(_j, "run_judges", lambda geom, subjects, vp, ctx=None: {})
-    monkeypatch.setattr(_j, "judge_noop_probe", lambda out, spec: {})
+    monkeypatch.setattr(_j, "judge_noop_probe", lambda out, spec, **kw: {})
     monkeypatch.setattr(_j, "judge_quant_probe", lambda out, spec, t_max=None: {})
-    monkeypatch.setattr(EV, "_premise_row", lambda cid, out: {})
+    patch_bound(monkeypatch, "_premise_row", lambda cid, out, **kw: {})
     monkeypatch.setattr(_tk, "alternative_a1", lambda out: {"a1": None})
     monkeypatch.setattr(_tk, "_answer_text", lambda out: "")
     monkeypatch.setattr(_tk, "_differential", lambda out: [])
@@ -112,13 +115,13 @@ def _install(monkeypatch, calls: list):
     def _counting(raw, sp, vp, solver):
         calls.append(id(sp))
         return lambda: (_Q, [])
-    monkeypatch.setattr(EV, "iron_law_precheck", _counting)
+    patch_bound(monkeypatch, "iron_law_precheck", _counting)
 
 
 def test_single_runs_the_iron_law(monkeypatch):
     calls: list = []
     _install(monkeypatch, calls)
-    EV._row_single("C1", "m1", _Raw(), 10, _Solver())
+    EV._row_single("C1", "m1", _Raw(), 10, _Solver(), ctx=_CTX)
     assert len(calls) == 1, f"单拍上铁律被调 {len(calls)} 次"
 
 
@@ -127,7 +130,7 @@ def test_slices_runs_the_iron_law_per_slice(monkeypatch):
     earlier slices against the Q taken at T."""
     calls: list = []
     _install(monkeypatch, calls)
-    EV._row_slices("C1", "m1", _Raw(), [10, 20, 30], _Solver())
+    EV._row_slices("C1", "m1", _Raw(), [10, 20, 30], _Solver(), ctx=_CTX)
     assert len(calls) == 3, f"3 片上铁律被调 {len(calls)} 次(应逐片各一次)"
 
 
@@ -135,14 +138,14 @@ def test_gated_runs_the_iron_law(monkeypatch):
     """Gated: no precheck hook, so run it explicitly once before solving."""
     calls: list = []
     _install(monkeypatch, calls)
-    monkeypatch.setattr(EV, "verifier_mod", EV.verifier_mod)
+    patch_bound(monkeypatch, "verifier_mod", EV.verifier_mod)
     import haenv.gated as _g
     monkeypatch.setattr(_g, "run_gated",
                         lambda raw, T, solver: (_Out(), types.SimpleNamespace(
                             leak=None, raw_empty=False, raw_unparseable=False,
                             calls=[], budget=0, spent=0, rounds=0)))
     try:
-        EV._row_gated("C1", "m1", _Raw(), 10, _Solver())
+        EV._row_gated("C1", "m1", _Raw(), 10, _Solver(), ctx=_CTX)
     except Exception:                                # noqa: BLE001
         pass                                         # the downstream pipeline is not this file's concern
     assert calls, "门控上铁律**一次都没被调**"

@@ -3,7 +3,7 @@
 A job file supplies a raw case and its latent control variables; the pipeline
 builds the world, runs the models, scores them and writes a report.
 
-The L0 kernel lives in ``core/`` inside this repository.
+The L0 kernel lives in ``haenv_kernel/`` inside this repository.
 """
 import os as _os
 import sys as _sys
@@ -24,12 +24,13 @@ if _SCRATCH_TMP and not _os.environ.get("TMPDIR"):
         pass
 
 
-#: Kernel location in a wheel: `force-include` copies `core/` (with its LICENSE) to
-#: `haenv/_kernel/`, modules directly under it. Absent in a source tree.
-_WHEEL_KERNEL = _Path(__file__).resolve().parent / "_kernel"
+#: The kernel package directory. A source tree and a wheel resolve the same way: `haenv/`
+#: and `haenv_kernel/` are siblings at the repository root and in `site-packages`.
+_INSTALLED_KERNEL = _Path(__file__).resolve().parent.parent / "haenv_kernel"
 
-#: Kernel location in a source tree; fallback when `config.yaml:kernel_path` cannot be read.
-_DEFAULT_KERNEL_REL = "core"
+#: Kernel location relative to the repository root; fallback when `config.yaml:kernel_path`
+#: cannot be read.
+_DEFAULT_KERNEL_REL = "haenv_kernel"
 
 #: Data resources in a wheel (`config.yaml`, `registry/`, `inputs/`, `docs/anchor/`,
 #: `tools/make_freeze.py`, via `force-include`). Absent in a source tree.
@@ -73,11 +74,17 @@ ROOT = data_root()
 
 
 def kernel_path(cfg: dict | None = None) -> _Path | None:
-    """Resolve the L0 kernel directory.
+    """Resolve the directory a tool reads kernel *source* from.
 
-    Order: ``HAENV_KERNEL_PATH`` (used even if it does not exist), then
-    ``config.yaml:kernel_path``, then ``haenv/_kernel`` for a wheel. Returns ``None``
-    rather than raising.
+    This does not decide which kernel executes: that is always the `haenv_kernel`
+    package on the import path (see `batch.kernel_fingerprint`, which reads the loaded
+    module rather than this directory). What this answers is "where is the kernel source
+    a read-only tool should parse" -- `analytics` reads `verifier.py` by AST, and the
+    maintainers' document-number tooling takes its kernel root from here.
+
+    Order: ``HAENV_KERNEL_PATH`` (a comparison checkout; used even if it does not exist),
+    then ``config.yaml:kernel_path``, then the installed package directory for a wheel.
+    Returns ``None`` rather than raising.
     """
     env = _os.environ.get("HAENV_KERNEL_PATH")
     if env:
@@ -91,21 +98,23 @@ def kernel_path(cfg: dict | None = None) -> _Path | None:
     p = (ROOT / str(cfg.get("kernel_path") or _DEFAULT_KERNEL_REL)).resolve()
     if p.is_dir():
         return p
-    if _WHEEL_KERNEL.is_dir():
-        return _WHEEL_KERNEL
+    # Installed wheel only: ROOT is the packaged `_data` directory and the kernel is a
+    # sibling package next to `haenv/`. An explicitly overridden ROOT must never fall
+    # back to the installed kernel -- that would silently read the wrong tree, the same
+    # rule `anchor._fingerprint_path` states for the fingerprint inputs.
+    if ROOT == _WHEEL_DATA and _INSTALLED_KERNEL.is_dir():
+        return _INSTALLED_KERNEL
     return None
 
 
-# Mount the kernel before any submodule is imported (some import kernel names at module
-# level). insert(0) so kernel top-level names such as "build" are not shadowed by PyPI packages.
-def _mount_kernel() -> None:
+# Hand the kernel the auxiliary stream manifest. The kernel itself is an ordinary package
+# (`haenv_kernel`), imported like any other; nothing here puts a directory on `sys.path`.
+def _register_kernel_streams() -> None:
     kp = kernel_path()
-    if kp is not None and str(kp) not in _sys.path:
-        _sys.path.insert(0, str(kp))
-    if kp is not None:
-        # The kernel learns haenv's auxiliary streams from the stream manifest.
-        from .streams import register_with_kernel
-        register_with_kernel()
+    if kp is None:
+        return
+    from .streams import register_with_kernel
+    register_with_kernel()
 
 
-_mount_kernel()
+_register_kernel_streams()

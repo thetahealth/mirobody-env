@@ -13,10 +13,17 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
-import sys
 import threading
 
 from haenv import data_root as _data_root
+from .semantic_source import (  # noqa: F401
+    _SEM_CACHE,
+    _semantic_cached,
+    _semantic_of,
+    _semantic_source,
+    _unparse,
+    semantic_bytes,
+)
 ROOT = _data_root()
 _PACKAGE_ROOT = pathlib.Path(__file__).resolve().parent
 ANCHOR_DIR = ROOT / "docs" / "anchor"
@@ -82,13 +89,6 @@ def frozen_packs() -> dict[str, str]:
 # Judging-fingerprint — a board is only allowed one judging version
 # ==========================================================================
 
-#: Cache parsing by actual content: edits can preserve size and mtime, and even
-#: ctime has limited resolution on some filesystems. File reads stay live.
-#:
-#: Semantic content: `.py` via AST with docstrings stripped, `.yaml` via
-#: `safe_load` to JSON with key order preserved; a parse failure falls back to
-#: raw bytes. Pack fingerprints (`cases.jsonl`, job files) stay byte-exact.
-_SEM_CACHE: dict[tuple, bytes] = {}
 _SOURCE_CACHE: dict[tuple, bytes] = {}
 _SOURCE_FILE_STATES: dict[str, str] = {}
 
@@ -103,81 +103,11 @@ def _fingerprint_path(rel: str) -> pathlib.Path:
     """
     if ROOT == _PACKAGE_ROOT / "_data":
         head, _, tail = rel.partition("/")
-        bases = {"haenv": _PACKAGE_ROOT, "core": _PACKAGE_ROOT / "_kernel",
+        bases = {"haenv": _PACKAGE_ROOT, "haenv_kernel": _PACKAGE_ROOT.parent / "haenv_kernel",
                  "verifier_core": _PACKAGE_ROOT.parent / "verifier_core"}
         if head in bases:
             return bases[head] / tail
     return ROOT / rel
-
-
-def semantic_bytes(path: pathlib.Path) -> bytes:
-    """A file's semantic content (comments/docstrings/formatting excluded).
-    Falls back to the raw bytes if parsing fails."""
-    raw = path.read_bytes()
-    suf = path.suffix.lower()
-    key = (suf, hashlib.sha256(raw).digest())
-    hit = _SEM_CACHE.get(key)
-    if hit is not None:
-        return hit
-    out = _semantic_of(raw, suf)
-    if len(_SEM_CACHE) > 4096:                                   # simple cap, avoid unbounded growth
-        _SEM_CACHE.clear()
-    _SEM_CACHE[key] = out
-    return out
-
-
-def _semantic_cached(raw: bytes, suf: str) -> bytes:
-    """`_semantic_of`, memoised on content like `semantic_bytes`."""
-    key = (suf, hashlib.sha256(raw).digest())
-    hit = _SEM_CACHE.get(key)
-    if hit is None:
-        hit = _semantic_of(raw, suf)
-        if len(_SEM_CACHE) > 4096:
-            _SEM_CACHE.clear()
-        _SEM_CACHE[key] = hit
-    return hit
-
-
-def _semantic_of(raw: bytes, suf: str) -> bytes:
-    try:
-        if suf == ".py":
-            import ast
-            tree = ast.parse(raw.decode("utf-8"))
-            for node in ast.walk(tree):
-                if not isinstance(node, (ast.Module, ast.ClassDef,
-                                         ast.FunctionDef, ast.AsyncFunctionDef)):
-                    continue
-                body = getattr(node, "body", None)
-                if (body and isinstance(body[0], ast.Expr)
-                        and isinstance(body[0].value, ast.Constant)
-                        and isinstance(body[0].value.value, str)):
-                    node.body = body[1:] or [ast.Pass()]
-            return _unparse(ast.fix_missing_locations(tree)).encode("utf-8")
-        if suf in (".yaml", ".yml"):
-            import json
-
-            import yaml
-            # Key order is preserved: some registry tables are first-match-wins.
-            return json.dumps(yaml.safe_load(raw.decode("utf-8")),
-                              ensure_ascii=False, sort_keys=False,
-                              default=str).encode("utf-8")
-    except Exception:                                            # noqa: BLE001
-        return raw                                               # fail-closed
-    return raw
-
-
-def _unparse(tree) -> str:
-    """`ast.unparse` as Python 3.11 and later write it, on every supported version."""
-    import ast
-    if sys.version_info >= (3, 11):
-        return ast.unparse(tree)
-    from ._unparse310 import unparse
-    return unparse(tree)
-
-
-def _semantic_source(src: str) -> bytes:
-    import textwrap
-    return _semantic_of(textwrap.dedent(src).encode("utf-8"), ".py")
 
 
 def _fingerprint_of(rels) -> str:
@@ -273,6 +203,57 @@ def verify_judging_equivalence(row: dict, *, infra=None) -> dict:
     if got != row["new"]:
         raise EquivalenceError(f"{row['old']}@{rev} maps to {got}, not {row['new']}")
     return {**row, "dropped_to_infra": dropped, "kept_n": len(kept)}
+
+
+def _reader(rev: str | None):
+    """Source access at a revision (git objects), or the working tree for `None`."""
+    if rev is None:
+        return lambda rel: (ROOT / rel).read_bytes() if (ROOT / rel).is_file() else None
+    return lambda rel: _git_blob(rev, rel)
+
+
+def _segments(rev: str | None) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    if rev is None:
+        return judging_files(), infra_files()
+    return _segment_at(rev, "JUDGING"), _segment_at(rev, "INFRA")
+
+
+def _commit_of(rev: str | None) -> str | None:
+    """Full commit id of `rev`, so a moving ref such as HEAD is never a cache key."""
+    if rev is None:
+        return None
+    import subprocess
+    r = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", f"{rev}^{{commit}}"],
+                       capture_output=True, text=True, timeout=60)
+    return r.stdout.strip() or None
+
+
+def verify_judging_move(row: dict, *, infra=None) -> dict:
+    """Recompute one `old judging_sha16 -> new` row that records moved code.
+
+    `old` must reproduce at `rev` and `new` at `new_rev` (`None` = the working tree, for a
+    check before committing); between the two the judging segment may only move code
+    (`anchor_moves.certify`), apart from the definitions `changed` names with a reason.
+    `infra`, when given, limits the `INFRA` files code may leave the segment for (an anchor
+    passes the ones a previous anchor already recorded). Raises `EquivalenceError`.
+    """
+    from .anchor_moves import MoveError, certify
+    rev, new_rev = row["rev"], row.get("new_rev")
+    j_old, i_old = _segments(rev)
+    j_new, i_new = _segments(new_rev)
+    if infra is not None:
+        i_new = tuple(f for f in i_new if f in set(infra))
+    if fingerprint_at(rev, j_old) != row["old"]:
+        raise EquivalenceError(f"{row['old']} does not reproduce at {rev}")
+    got = _fingerprint_of(j_new) if new_rev is None else fingerprint_at(new_rev, j_new)
+    if got != row["new"]:
+        raise EquivalenceError(f"judging at {new_rev or 'the working tree'} is {got}, not {row['new']}")
+    try:
+        cert = certify((_reader(rev), j_old, i_old), (_reader(new_rev), j_new, i_new),
+                       row.get("changed"), keys=(_commit_of(rev), _commit_of(new_rev)))
+    except MoveError as e:
+        raise EquivalenceError(f"{row['old']}@{rev} -> {row['new']}: {e}") from e
+    return {**row, **cert}
 
 
 def judging_fingerprint() -> str:

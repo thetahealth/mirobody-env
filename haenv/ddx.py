@@ -180,7 +180,7 @@ def gap_tier_for(case_id: str, spec: dict, T: int,
     (`evaluate.rhythm_gap_feasible`) are drawn, at `gap_frac`, salt `|gap`."""
     import hashlib as _h
 
-    from .evaluate import rhythm_gap_feasible
+    from .rhythm import rhythm_gap_feasible
     if bool(spec.get("red_flag", False)):
         return False
     if str(spec.get("urgency") or "").strip() not in ("🟡", "🟢"):
@@ -234,7 +234,7 @@ def _sex_of(spec: dict, default: str = "F", case_id: str | None = None,
     both sexes keep the default and leave the contradiction to GEN19. No `case_id`, no sampling."""
     # Negated or excluded mentions still count ("prostate" in an excluded item presupposes a
     # male patient); the emission gate uses the same `SEX_EXCLUSIVE` table.
-    from .gates import SEX_EXCLUSIVE
+    from .gate_tables import SEX_EXCLUSIVE
     blob = " ".join(f"{t} {c}" for _, t, c in spec.get("symptoms") or ())
     male = any(w in blob for w in SEX_EXCLUSIVE["F"])      # words only a male would have
     female = any(w in blob for w in SEX_EXCLUSIVE["M"])    # words only a female would have
@@ -268,7 +268,7 @@ def _t_index_for(anon: str) -> int:
     """This case's index time, from `case_id` only (window length must not depend on the
     disease). The domain is `extract.KNOB_DOMAIN`."""
     from . import rng
-    from .extract import KNOB_DOMAIN
+    from .job_schema import KNOB_DOMAIN
     return int(rng.pick(list(KNOB_DOMAIN["index_time_T"]), anon, "T"))
 
 
@@ -363,6 +363,76 @@ def _density_knobs(anon: str, tier: str | None, T: int) -> tuple[float, float, f
     return mpw, round(n_sym / weeks, 4), round(n_life / weeks, 4)
 
 
+# ---- composition v2: symptom penetrance + synonym variants ---------------------------------------
+#: Variant-text cycle: canonical text first, then colloquial, then atypical. Case `v` of a spec takes the
+#: `(offset + v)`-th text of a per-slot cycle, so up to `len(cycle)` variants of one spec never repeat a text.
+def _symptom_sources(cid: str, spec: dict) -> list[tuple[str, int]]:
+    """`[(source_spec_id, symptom_idx)]` for each symptom of `spec`. A comorbid composition takes its
+    four symptoms from its two kernel specs (overlay `haenv_comorbid_specs`: a0, b0, a1, b1)."""
+    from .overlay import HAENV_COMORBID_PAIRS
+    cfg = HAENV_COMORBID_PAIRS.get(cid)
+    if cfg:
+        a, b = cfg["pair"]
+        ta, tb = cfg["take"]
+        return [(a, int(ta[0])), (b, int(tb[0])), (a, int(ta[1])), (b, int(tb[1]))]
+    return [(cid, i) for i in range(len(spec["symptoms"]))]
+
+
+def _penetrance_index() -> dict[tuple[str, int], dict]:
+    from .registry import load_symptom_penetrance
+    return {(sid, int(r["idx"])): r for sid, rows in load_symptom_penetrance().items() for r in rows}
+
+
+def v2_symptom_draw(anon: str, v: int, cid: str, spec: dict, sym_days: list[int], T: int,
+                    insufficient: bool) -> tuple[list[int], list[str]]:
+    """Composition-v2 draw for one case: which of the spec's symptoms are expressed (independent
+    Bernoulli(penetrance), a floor keeping the emission gates satisfiable) and which wording each
+    expressed symptom uses. Returns `(kept_indices, texts_by_spec_position)`.
+
+    Floors (only off the insufficient tier): at least 2 symptoms on or before T (GEN14 requires 2
+    visible true symptoms), and at least one per thread for a comorbid composition (two threads
+    interleaved a0, b0, a1, b1). The insufficient tier has every symptom after T, so the draw only thins it."""
+    from . import rng
+    idx = _penetrance_index()
+    src = _symptom_sources(cid, spec)
+    pens, texts = [], []
+    for k, (sid, i) in enumerate(src):
+        row = idx.get((sid, i))
+        canon = str(spec["symptoms"][k][1])
+        pens.append(float(row["penetrance"]) if row else 1.0)
+        if row is None:
+            texts.append(canon)
+            continue
+        cyc = [str(row["text"])] + [str(t) for t in (row.get("variants") or {}).get("colloquial", [])] \
+            + [str(t) for t in (row.get("variants") or {}).get("atypical", [])]
+        off = rng.below(len(cyc), cid, "sym_variant_offset", k)
+        texts.append(cyc[(off + int(v) - 1) % len(cyc)])
+    keep = [k for k in range(len(src)) if rng.unit(anon, "sym_penetrance", k) < pens[k]]
+    if not insufficient:
+        def vis(ks):
+            return [k for k in ks if int(sym_days[k]) <= int(T)]
+        threads = [(0, 2), (1, 3)] if src and src[0][0] != src[1][0] and cid in _pair_ids() else []
+        def add_back(pool_pred, need_fn):
+            nonlocal keep
+            while need_fn(keep):
+                cand = [k for k in range(len(src)) if k not in keep and int(sym_days[k]) <= int(T) and pool_pred(k)]
+                if not cand:
+                    break
+                cand.sort(key=lambda k: (-pens[k], k))
+                keep = sorted(keep + [cand[0]])
+        for th in threads:
+            add_back(lambda k, th=th: k in th, lambda ks, th=th: not any(k in th for k in vis(ks)))
+        add_back(lambda k: True, lambda ks: len(vis(ks)) < 2)
+    if not keep:                                   # at least one symptom is always expressed
+        keep = [max(range(len(src)), key=lambda k: (pens[k], -k))]
+    return sorted(keep), texts
+
+
+def _pair_ids() -> set:
+    from .overlay import HAENV_COMORBID_PAIRS
+    return set(HAENV_COMORBID_PAIRS)
+
+
 def variant_id(anon: str, v: int) -> str:
     """Case id of the v-th variant; `v=1` is the frozen id. `JD-01v2`, not `JD-01-v2`: EV ids
     are split on `-` downstream."""
@@ -373,7 +443,7 @@ def declare_high_distractor_density(latent: dict) -> dict:
     """Make a `distractor_level: high` case's declared benign-symptom count equal what the
     injector puts in the ledger. Mutates and returns `latent`.
 
-    `core/noise.inject_distractors` writes `min(pool, max(6, round(rate x (T + window) / 7)))`
+    `haenv_kernel/noise.inject_distractors` writes `min(pool, max(6, round(rate x (T + window) / 7)))`
     benign symptoms upstream, and the density pass counts every one of them toward the quota
     `round(rate x T / 7)` (`events.expected_event_counts`). When the declared quota is below
     the upstream count, all upstream items are kept and no planned item tops the ledger
@@ -382,7 +452,7 @@ def declare_high_distractor_density(latent: dict) -> dict:
     pool size (the count is capped at the pool size for any window), so declaring at least
     the pool size makes declared and injected agree for every window length.
     """
-    from noise import _DISTRACTOR_SYMPTOMS
+    from haenv_kernel.noise import _DISTRACTOR_SYMPTOMS
     ed = latent["event_density"]
     weeks = max(1.0, float(latent["index_time_T"]) / 7.0)
     pool = len(_DISTRACTOR_SYMPTOMS)
@@ -397,7 +467,8 @@ def declare_high_distractor_density(latent: dict) -> dict:
 
 def ddx_case_specs(only: list[str] | None = None, variants: int = 1,
                    include_draft: bool = False, density: str | None = None,
-                   insufficient_frac: float | None = None) -> list[dict]:
+                   insufficient_frac: float | None = None, composition_v2: bool = False,
+                   variant_start: int = 1) -> list[dict]:
     """The job.yaml case list (`{case_id, raw, latent}`).
 
     `density` selects a density tier (`None` = frozen defaults). `insufficient_frac` overrides
@@ -405,6 +476,10 @@ def ddx_case_specs(only: list[str] | None = None, variants: int = 1,
     condition that differ only in `case_id`-derived draws (demographics, weight scale 0.80-1.20,
     timing); `v=1` keeps the frozen id. Variants share the narrative and gold, so they are not
     independent samples.
+
+    `composition_v2` turns on symptom penetrance and synonym wording (`registry/symptom_penetrance.yaml`)
+    and marks each case `latent.composition_v2`; off, the output is byte-identical to before. `variant_start`
+    numbers the first variant of each spec (the allocator may emit variants `k..k+n-1`).
     """
     from .demographics import doses_per_week as _doses_per_week, sample_profile as _sample_profile
     from .overlay import check_threads, check_vocab, condition_registry, threads_for
@@ -426,7 +501,7 @@ def ddx_case_specs(only: list[str] | None = None, variants: int = 1,
         kind, start, end = spec["weight"]
         # The spec key names the answer, so an opaque case id is used on the solver side.
         _used_disease: list[str] = []
-        for _v in range(1, max(1, int(variants)) + 1):
+        for _v in range(int(variant_start), int(variant_start) + max(1, int(variants))):
             anon = variant_id(_CASE_IDS[cid], _v)
             # Multiplicative scaling keeps every relative quantity, and so the gold label, unchanged.
             _sc = 1.0
@@ -452,6 +527,9 @@ def ddx_case_specs(only: list[str] | None = None, variants: int = 1,
                 if density is not None:
                     _sym_rate = round(_sym_rate + len(_sym_days) / max(1.0, float(_T) / 7.0), 4)
             _rf, _urg = insufficient_triage(spec, _sym_days, int(_T), _ins)
+            _keep, _texts = (list(range(len(spec["symptoms"]))), [str(s[1]) for s in spec["symptoms"]])
+            if composition_v2:
+                _keep, _texts = v2_symptom_draw(anon, _v, cid, spec, _sym_days, int(_T), bool(_ins))
             # Sampled once: a second draw with `avoid` populated could pick a different disease.
             _prof = _sample_profile(anon, _sex_of(spec, case_id=anon, spec_id=cid),
                                     avoid=tuple(_used_disease))
@@ -463,8 +541,8 @@ def ddx_case_specs(only: list[str] | None = None, variants: int = 1,
                     "sex": _sex_of(spec, case_id=anon, spec_id=cid),
                     "start_weight": round(_start, 1),
                     "nadir_weight": round(min(_start, _end), 1),
-                    "symptoms": [{"day": d, "text": t, "context": c}
-                                 for d, (_d0, t, c) in zip(_sym_days, spec["symptoms"])],
+                    "symptoms": [{"day": _sym_days[k], "text": _texts[k], "context": spec["symptoms"][k][2]}
+                                 for k in _keep],
                 },
                 "latent": {
                     "index_time_T": int(_T),
@@ -495,10 +573,11 @@ def ddx_case_specs(only: list[str] | None = None, variants: int = 1,
                     "event_density": {"measure_per_week": _mpw,
                                       "dosing_per_week": _doses_per_week(_prof["drug"]),
                                       "symptom_rate": _sym_rate, "life_event_rate": _life_rate,
-                                      "clinical_symptoms_recorded": len(spec["symptoms"]),
+                                      "clinical_symptoms_recorded": len(_keep),
                                       "course_weeks": round(_course_end_for(anon, int(_T)) / 7.0, 1)},
                     **({"rhythm_gap": True}
                        if gap_tier_for(anon, spec, int(_T)) else {}),
+                    **({"composition_v2": True} if composition_v2 else {}),
                     # Recorded explicitly: cases can also land on T=336 naturally, outside the eligibility
                     # filter, so `T` alone cannot identify the tier's control arm.
                     **({"long_horizon_tier": True} if _long else {}),

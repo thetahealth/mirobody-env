@@ -289,30 +289,6 @@ def check_threads(specs: dict) -> list[str]:
     return problems
 
 
-# ============================================================ (4b) alias exclusion set
-# A short alias can be a substring of a different disease's name ("polycystic" in
-# "polycystic kidney disease"). Scoring side only: the leak scan keeps the raw vocabulary.
-from .registry import load_alias_excludes as _load_alias_excludes      # noqa: E402
-ALIAS_EXCLUDES = _load_alias_excludes()
-
-
-
-def alias_excluded_at(text: str, alias: str, pos: int) -> bool:
-    """Whether this occurrence of `alias` at `pos` lies inside an exclusion phrase
-    (positional containment, not "the phrase appears somewhere in the text")."""
-    low, a = str(text or "").lower(), str(alias or "").lower()
-    for bad in ALIAS_EXCLUDES.get(a, ()) :
-        b, i = bad.lower(), 0
-        while True:
-            j = low.find(b, i)
-            if j < 0:
-                break
-            if j <= pos and pos + len(a) <= j + len(b):    # this hit is fully contained within `bad`
-                return True
-            i = j + 1
-    return False
-
-
 # Cross-example overlaps that share a genuine disease axis; these examples are scored by
 # thread coverage, not by dx alias.
 from .registry import load_alias_overlap_ok as _load_alias_overlap_ok      # noqa: E402
@@ -563,7 +539,7 @@ def apply_alias_supplements(specs: dict, supplements: dict | None = None) -> dic
     """Copy of `specs` with supplements applied: `aliases` gains `synonyms`, and each
     supplemented spec gains `leak_aliases` (= aliases + `leak_only`). Raises on an unknown
     spec id, or a synonym that also names one of the spec's rivals."""
-    from .events import alias_hit
+    from .events_text import alias_hit
     sup = load_alias_supplements() if supplements is None else supplements
     missing = sorted(set(sup) - set(specs))
     if missing:
@@ -590,7 +566,7 @@ def apply_alias_supplements(specs: dict, supplements: dict | None = None) -> dic
 def _kernel_specs() -> dict:
     """Kernel `DDX_SPECS` with alias supplements: the one starting point for
     `condition_registry` and `validate_registry`."""
-    import joint_scenarios as JS                     # kernel (`core/`); read here, not edited
+    import haenv_kernel.joint_scenarios as JS    # kernel (haenv_kernel/); read here, not edited
     return apply_alias_supplements(JS.DDX_SPECS)
 
 
@@ -610,7 +586,7 @@ def condition_registry(*, fresh: bool = False, include_draft: bool = False) -> d
     """The synthesized condition registry `{spec_id: spec}`, shared by item generation and
     scoring."""
     global _REGISTRY_CACHE
-    import joint_scenarios as JS                     # kernel (core/; changing it moves world_sha)
+    import haenv_kernel.joint_scenarios as JS    # kernel (haenv_kernel/; changing it moves world_sha)
     # Draft branch before the cache, so `include_draft=True` never returns the cached set.
     if include_draft:                                # draft conditions never enter the cache, to avoid contaminating later calls
         _k = _kernel_specs()
@@ -657,6 +633,10 @@ def check_red_flag_urgency(specs: dict) -> list[str]:
 # Rivals raise the bar from naming the disease to ruling out a comparable near-miss.
 # Declarations live in `registry/rivals.yaml`.
 from .registry import load_rivals as _load_rivals                # noqa: E402
+from .alias_excludes import (  # noqa: F401
+    ALIAS_EXCLUDES,
+    alias_excluded_at,
+)
 
 RIVALS: dict[str, tuple[dict, ...]] = _load_rivals()
 
@@ -715,7 +695,7 @@ def rivals_for(spec_id: str | None, spec: dict | None = None) -> tuple[dict, ...
 def check_rival_alias_disjoint(specs: dict) -> list[str]:
     """Gate: a rival must not match its own spec's gold aliases under the scoring matcher
     (`tracks.alias_hit_asserted`), or "name gold and rule out the rival" is a tautology."""
-    from .tracks import alias_hit_asserted
+    from .alias_match import alias_hit_asserted
     bad: list[str] = []
     for sid, spec in (specs or {}).items():
         gold = list(spec.get("aliases") or [])
@@ -732,7 +712,7 @@ def check_rival_not_other_gold(specs: dict) -> list[str]:
     """Warning-only: rivals that are another example's gold. Mutual rivals are legitimate,
     but reported numbers should account for them."""
     gold_alias = {sid: list(s.get("aliases") or []) for sid, s in (specs or {}).items()}
-    from .events import alias_hit
+    from .events_text import alias_hit
     out: list[str] = []
     for sid, spec in (specs or {}).items():
         for r in rivals_for(sid, spec):

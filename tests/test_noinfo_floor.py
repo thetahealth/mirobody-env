@@ -28,8 +28,8 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-import verifier as K                                          # noqa: E402  kernel
-from haenv import analytics as A                              # noqa: E402
+import haenv_kernel.verifier as K                                        # noqa: E402
+from haenv import analytics as A                                             # noqa: E402
 
 
 # ------------------------------------------------------------ helpers
@@ -206,7 +206,7 @@ AUDIT_12 = {
 
 
 def test_alias_supplements_cover_the_audited_twelve():
-    import joint_scenarios as JS
+    import haenv_kernel.joint_scenarios as JS
     from haenv.events import alias_hit
     from haenv.overlay import apply_alias_supplements
     sup = apply_alias_supplements(JS.DDX_SPECS)
@@ -220,7 +220,7 @@ def test_alias_supplements_cover_the_audited_twelve():
 
 
 def test_alias_supplements_do_not_hit_unrelated_words():
-    import joint_scenarios as JS
+    import haenv_kernel.joint_scenarios as JS
     from haenv.events import alias_hit
     from haenv.overlay import apply_alias_supplements
     from haenv.overlay import rivals_for

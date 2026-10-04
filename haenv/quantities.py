@@ -38,6 +38,31 @@ def _thrift(r: Mapping):
     return min(1.0, max(0.0, round(1.0 - float(u), 3)))
 
 
+def tool_grounded_joint_of(r: Mapping):
+    """`tool_grounded_joint`: grounding rate joined with "was a necessary tool called".
+
+    Not a gated row (no `tool_budget`) => None. The item declares key signals
+    (`tool_key_covered` not None): no signal query => 0.0; otherwise grounding rate x
+    1[key coverage > 0]. No key signals declared: grounding rate when there was a query,
+    else None (nothing was necessary). Design 2026-09-30 §2.1: a model that never queries
+    no longer averages 1.000 over the few cells where it did.
+    """
+    if r.get("tool_budget") is None and r.get("tool_n_calls") is None:
+        return None
+    n = r.get("tool_n_signal_calls")
+    if not isinstance(n, (int, float)) or isinstance(n, bool):
+        n = r.get("tool_n_calls") or 0
+    g = r.get("tool_target_grounded_rate")
+    if g is None:
+        g = r.get("tool_grounded_rate")
+    kc = r.get("tool_key_covered")
+    if kc is None:
+        return (round(float(g), 3) if (n and isinstance(g, (int, float))) else None)
+    if not n:
+        return 0.0
+    return round(float(g or 0.0) * (1.0 if float(kc) > 0 else 0.0), 3)
+
+
 def dx_listed_of(r: Mapping):
     """`dx_listed`: the share of gold lines on the differential and not ruled out, within the
     candidate cap. The one definition, used by the dx judges on their own output and here on
@@ -57,6 +82,17 @@ def dx_listed_of(r: Mapping):
         return float(c) if isinstance(c, (int, float)) and not isinstance(c, bool) else None
     h = resolve(r, "dx_hit")
     return (1.0 if h else 0.0) if isinstance(h, bool) else None
+
+
+def dx_listed_n0_of(r: Mapping):
+    """A6 profile atom: `dx_listed` under the strict cap n + 0 (a line counts only within the first
+    `n` live candidates, `n` = number of gold lines). Read from `dx_listed_positions`; `None` when
+    the row has no live positions."""
+    pos = r.get("dx_listed_positions")
+    if not (isinstance(pos, list) and pos):
+        return None
+    n = sum(1 for p in pos if isinstance(p, int) and not isinstance(p, bool) and p <= len(pos))
+    return round(n / len(pos), 3)
 
 
 #: The only place that defines what a quantity is called; direct reads outside `resolve()` are
@@ -96,10 +132,18 @@ QUANTITIES: tuple[Quantity, ...] = (
     # ---- Remaining scored dimensions (no aliases) ----
     Quantity("noop_ok", why="No-op probe: declaration matches ground truth"),
     Quantity("review_macro", why="Specificity of review declarations (not-warranted class)"),
+    Quantity("review_utility", why="Balanced accuracy of review declarations: (sensitivity + specificity) / 2"),
+    Quantity("abst_utility", why="Balanced accuracy of abstention: insufficient-tier cells abstained, other cells did not"),
+    Quantity("action_consistency", why="Semantic auxiliary atom: the action fits the model's own differential; profile reading"),
+    Quantity("abst_utility_cc", why="Chance-corrected abstention utility, max(0, 2 x abst_utility - 1) (A3); profile reading, not scored (A-block 2)"),
+    Quantity("tool_grounded_joint", derived=tool_grounded_joint_of, applies_to=("gated",),
+             why="Grounding rate joined with whether a necessary tool was called; no query = 0"),
     Quantity("quant_ok", why="Data-check item (triple identity, anchor-exempt)"),
     Quantity("excl_grounded_rate", why="Citation authenticity (continuous version); scored as diagnostic, not as a scored dimension"),
     Quantity("dx_hit", why="Whether the gold diagnosis appears in the model's differential list (matched via the kernel DDX_SPECS aliases); "
                            "on a comorbidity case, whether at least one thread does. Reported, not scored"),
+    Quantity("dx_listed_n0", derived=dx_listed_n0_of,
+             why="dx_listed under the strict cap n + 0 (A6 profile reading, not scored)"),
     Quantity("dx_listed", derived=dx_listed_of,
              why="Share of gold lines (the diagnosis, or each comorbidity thread) on the differential and not ruled out, "
                  "within the candidate cap. Derived on the read side for rows written before the field existed"),

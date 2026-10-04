@@ -15,6 +15,7 @@ import pathlib
 import sys
 import typing
 from typing import Callable
+from typing import Literal
 
 #: Built-in `adjudication` keys; an external block may not reuse them.
 _RESERVED = frozenset({
@@ -43,7 +44,6 @@ def register_framing(name: str, template: str, *, source: str, why: str) -> None
     """Register an external question template. Duplicate or built-in names are rejected; the
     probe yaml must carry its `framing_sha256` like a built-in template.
     """
-    from .evaluate import _BUILTIN_FRAMING_NAMES
     if name in _BUILTIN_FRAMING_NAMES:
         raise ValueError(f"{name!r} is a built-in question-framing template -- may not be replaced at runtime.")
     if name in FRAMINGS:
@@ -113,7 +113,6 @@ def register_gold_block(name: str, fn: Callable, *, latent_keys: tuple[str, ...]
                          "gold with no traceable origin can't have its score audited")
     keys = tuple(latent_keys or ())
     classes = dict(latent_classes or {})
-    from .provenance import FieldClass
     valid = set(typing.get_args(FieldClass))
     missing = [k for k in keys if k not in classes]
     extra = sorted(set(classes) - set(keys))
@@ -125,7 +124,7 @@ def register_gold_block(name: str, fn: Callable, *, latent_keys: tuple[str, ...]
             f"not a latent key {extra}, invalid {bad}")
 
     # Registering the latent keys here keeps block and keys from being half-registered.
-    from .job import LATENT_REGISTRY
+    from .job_schema import LATENT_REGISTRY
     taken = [k for k in keys if k in LATENT_REGISTRY]
     if taken:
         raise ValueError(f"latent keys {taken} are already in LATENT_REGISTRY; "
@@ -282,7 +281,7 @@ def _code_fingerprint(fn: Callable) -> str:
         and not any(part.startswith(".") for part in p.relative_to(root).parts))
     key = (str(root), tuple((str(p), p.stat().st_mtime_ns, p.stat().st_size) for p in files))
     if key not in _FP_CACHE:
-        from .anchor import semantic_bytes
+        from .semantic_source import semantic_bytes
         h = hashlib.sha256()
         for p in files:
             rel = p.name if root.is_file() else str(p.relative_to(root))
@@ -332,3 +331,11 @@ def manifest_sha() -> str:
     }
     blob = json.dumps(shaping, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+
+
+#: Field class; see the table in the module docstring.
+FieldClass = Literal["patient_fact", "gold", "knob"]
+
+
+_BUILTIN_FRAMING_NAMES = frozenset({
+    "PROMPT", "DDX_PROMPT", "DDX_SCOPE_PROMPT", "DDX_SCOPE2_PROMPT", "DDX_TRACE_PROMPT"})

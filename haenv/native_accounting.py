@@ -42,6 +42,8 @@ CACHE_TARIFFS = {
     ('google', 'gemini-3.7-flash'): ('0.075', 'https://ai.google.dev/gemini-api/docs/pricing'),
     ('google', 'gemini-3.8-flash'): ('0.075', 'https://ai.google.dev/gemini-api/docs/pricing'),
     ('dashscope', 'qwen3.7-flash'): ('0.24', 'https://help.aliyun.com/zh/model-studio/qwen3-7-flash'),
+    # help.aliyun.com/zh/model-studio/qwen3-8-max (Beijing, read 2026-10-03): single tier, cached input 1.5.
+    ('dashscope', 'qwen3.8-max'): ('1.5', 'https://help.aliyun.com/zh/model-studio/qwen3-8-max'),
 }
 CACHE_VERIFIED_ON = '2026-09-29'
 DASHSCOPE_CACHE_CREATION_FACTOR = Decimal('1.25')
@@ -111,6 +113,10 @@ class NativePrices:
                 'https://ai.google.dev/gemini-api/docs/pricing'),
             ('dashscope','qwen3.7-flash'): ('1.2','4.8','CNY','.20',983616,131072,
                 'https://help.aliyun.com/zh/model-studio/qwen3-7-flash'),
+            # Beijing: input 12 / output 36 CNY per million tokens, one tier; context 1M, max input
+            # 983616 in thinking mode, max output 131072 (read 2026-10-03).
+            ('dashscope','qwen3.8-max'): ('12','36','CNY','.20',983616,131072,
+                'https://help.aliyun.com/zh/model-studio/qwen3-8-max'),
         }
         if (backend,model) not in schedules:
             raise ValueError('No verified native tariff for the exact model and route')

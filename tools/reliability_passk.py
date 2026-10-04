@@ -84,6 +84,32 @@ def _cache_by_sample(sample_dirs, models) -> list[dict]:
     return out
 
 
+#: Files a sample directory takes from the prompt source: the case bodies and batch record, the
+#: solver payloads (semantic preparation reads them), and every pack audit marker
+#: (`shared_audit.marker_name`; without it each cell of a pack case is `ABORT(<pack>_unaudited)`).
+SAMPLE_FILES = ("cases.jsonl", "batch.json", "payloads.jsonl")
+#: The one sample file a resumed sample keeps with its own bytes: it records the sample's batch.
+OWN_RECORD = SAMPLE_FILES[1]
+
+
+def prepare_sample_dir(src, d) -> list[str]:
+    """Copy the source's sample files into `d`; a file already in `d` must be byte-identical to the
+    source's (a resumed sample keeps its own files only when they are the same bytes). Returns the
+    names copied or confirmed."""
+    from pathlib import Path as _P
+    from haenv.shared_audit import marker_name
+    src, d = _P(src), _P(d)
+    d.mkdir(parents=True, exist_ok=True)
+    names = [f for f in SAMPLE_FILES if (src / f).is_file()]
+    names += sorted(m.name for m in src.glob("*" + marker_name("")) if m.is_file())
+    for f in names:
+        if not (d / f).is_file():
+            shutil.copy(src / f, d / f)
+        if f != OWN_RECORD and (d / f).read_bytes() != (src / f).read_bytes():
+            raise ValueError(f"sample {d.name}: {f} differs from the prompt source {src.name}")
+    return names
+
+
 def pick_source_batch(base, from_batch: str | None):
     """The source batch for the case set: `from_batch` if given (None if it does not exist),
     else the latest complete batch from `tools/packread.batches`, which excludes this
@@ -413,10 +439,7 @@ def main(argv: list[str]) -> int:
     for i in range(1, k + 1):
         d = base / (SAMPLE_FMT % (stamp, i))
         if not report_only:
-            d.mkdir(parents=True, exist_ok=True)
-            for f in ("cases.jsonl", "batch.json"):
-                if (src / f).is_file() and not (d / f).is_file():
-                    shutil.copy(src / f, d / f)
+            prepare_sample_dir(src, d)
         sample_dirs.append(d)
     print(f"[passk] prompt source {src.name} (reused byte for byte) · k={k} · "
           f"sample directories {[d.name for d in sample_dirs]}")

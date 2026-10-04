@@ -759,3 +759,8 @@ def manifest_of_row(row: dict) -> dict:
     return ((row.get("case") or {}).get("adjudication") or {}).get("injected_event_manifest") or {}
 
 
+def _ddx(vp) -> dict:
+    """Only for data not in the `wq` gold table (e.g. the ddx context `rivals_for` needs); single
+    gold fields go through `_gold`.
+    """
+    return (getattr(vp, "adjudication", None) or {}).get("ddx") or {}

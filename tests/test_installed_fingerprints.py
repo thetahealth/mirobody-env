@@ -22,7 +22,7 @@ def installed_tree(tmp_path_factory):
     site = tmp_path_factory.mktemp("installed-fingerprints")
     package = site / "haenv"
     shutil.copytree(ROOT / "haenv", package, ignore=shutil.ignore_patterns("__pycache__"))
-    shutil.copytree(ROOT / "core", package / "_kernel",
+    shutil.copytree(ROOT / "haenv_kernel", site / "haenv_kernel",
                     ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(ROOT / "verifier_core", site / "verifier_core",
                     ignore=shutil.ignore_patterns("__pycache__"))
@@ -75,7 +75,7 @@ def test_semantic_cache_detects_same_size_edit_with_restored_mtime(tmp_path):
 
 @pytest.mark.parametrize("rel,installed_rel", [
     ("haenv/scoring.py", "haenv/scoring.py"),
-    ("core/verifier.py", "haenv/_kernel/verifier.py"),
+    ("haenv_kernel/verifier.py", "haenv_kernel/verifier.py"),
     ("verifier_core/gate.py", "verifier_core/gate.py"),
     ("registry/scoring.yaml", "haenv/_data/registry/scoring.yaml"),
 ])

@@ -279,7 +279,7 @@ def separation(rows: Sequence[Mapping], dim: str, *,
 
     geo = geometry
     if geo is None:
-        from .absence import geometry_of          # reuse the single implementation, don't write a second
+        from .row_store import geometry_of  # reuse the single implementation, don't write a second
         geo = geometry_of(list(rows))
 
     per = _per_solver(rows, dim, spec, unpaired=allow_unpaired)

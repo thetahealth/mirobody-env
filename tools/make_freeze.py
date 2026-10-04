@@ -52,12 +52,14 @@ def _generation_source(batch_dir: Path, _seen: set | None = None) -> dict:
 #: pack must be regenerated. A registry yaml belongs here when its strings reach the
 #: prompt without passing through `inputs/*.job.yaml`, which `job_yaml_sha256` covers.
 GENERATION = (
-    "core/build.py", "core/latent.py", "core/synth.py", "core/noise.py",
-    "core/joint_scenarios.py",
-    "haenv/build.py", "haenv/events.py", "haenv/findings_render.py",
+    "haenv_kernel/build.py", "haenv_kernel/latent.py", "haenv_kernel/synth.py", "haenv_kernel/noise.py",
+    "haenv_kernel/joint_scenarios.py",
+    "haenv/build.py", "haenv/build_weight.py", "haenv/build_clinical.py",
+    "haenv/events.py", "haenv/events_text.py", "haenv/events_pools.py",
+    "haenv/events_streams.py", "haenv/findings_render.py",
     "haenv/relations.py", "haenv/verify.py", "haenv/overlay.py",
     "haenv/registry.py", "haenv/rng.py",
-    "haenv/wearable.py",
+    "haenv/wearable.py", "haenv/med_course.py",
     "haenv/framings.py",
     "haenv/yamlcache.py",
     "haenv/regpath.py",
@@ -67,13 +69,16 @@ GENERATION = (
     "haenv/job.py",
     "haenv/gated.py",
     "registry/findings.yaml", "registry/condition_findings.yaml",
+    "registry/panel_background.yaml",
+    "registry/panel_copula.yaml",
     "registry/findings_upstream.yaml",
     "registry/lookalikes.yaml", "registry/vocab_context.yaml",
     "registry/condition_aliases.yaml",
     "registry/symptom_annotations.yaml",
-    "registry/symptom_topics.yaml", "registry/physio_kernels.yaml",
+    "registry/symptom_topics.yaml", "registry/symptom_penetrance.yaml", "registry/association_clusters.yaml",
+    "registry/physio_kernels.yaml",
     "registry/physio_streams.yaml", "registry/comorbid_coupling.yaml",
-    "registry/benign_events.yaml",
+    "registry/benign_events.yaml", "registry/symptom_lay.yaml", "registry/drug_side_effects.yaml",
     "registry/condition_age_limits.yaml",
     "registry/clinical_baselines.yaml",
     "registry/indicators.yaml",
@@ -84,6 +89,10 @@ GENERATION = (
     "haenv/indicators.py",
     "registry/artifact_rates.yaml", "haenv/artifact_params.py",
     "registry/drug_effects.yaml", "haenv/drug_effects.py",
+    # split out of `overlay.py` / `job.py` / `drug_effects.py` / `events.py` (2026-10-03),
+    # moved verbatim
+    "haenv/alias_excludes.py", "haenv/job_schema.py", "haenv/drug_schema.py",
+    "haenv/world_knobs.py",
     # Gold qualifiers (core + qualifier split, derivability on the visible instance).
     "registry/gold_qualifiers.yaml", "haenv/qualifiers.py",
 )
@@ -92,8 +101,8 @@ GENERATION = (
 #: registry data) must be in the segment or in `JUDGING_IMPORT_ALLOW` /
 #: `REGISTRY_YAML_OUT_OF_SCOPE` with a reason.
 JUDGING = (
-    "core/verifier.py", "core/gatekeeper.py", "core/schema.py",
-    "core/runner.py", "core/solver.py",
+    "haenv_kernel/verifier.py", "haenv_kernel/gatekeeper.py", "haenv_kernel/schema.py",
+    "haenv_kernel/runner.py", "haenv_kernel/solver.py",
     "haenv/llm_rubric.py", "registry/rubric_points.yaml",
     "haenv/semantic_judge.py", "haenv/semantic_inputs.py", "haenv/semantic_rubric.py",
     "haenv/semantic_pipeline.py",
@@ -112,14 +121,24 @@ JUDGING = (
     "haenv/judges/__init__.py", "haenv/judges/_helpers.py",
     "haenv/judges/differential.py", "haenv/judges/outcome.py",
     "haenv/judges/trajectory.py", "haenv/judges/safety.py",
-    "haenv/judges/llm.py",
-    "haenv/gates.py", "haenv/scoring.py",
+    "haenv/judges/llm.py", "haenv/judges/recall_match.py",
+    "haenv/gates.py", "haenv/gates_case.py", "haenv/gates_outcome.py", "haenv/gates_shortcut.py", "haenv/scoring.py",
     "haenv/process.py", "haenv/wq.py", "haenv/report.py",
     "haenv/analytics.py",
     "haenv/evaluate.py",
+    # split out of `evaluate.py` (2026-10-03); same judging code, moved verbatim
+    "haenv/run_state.py", "haenv/qside.py", "haenv/run_ledger.py", "haenv/solvers.py",
+    "haenv/rows.py",
+    # definitions moved down so the import graph has no cycle through the judging core
+    # (2026-10-03), moved verbatim
+    "haenv/alias_match.py", "haenv/mount_coverage.py", "haenv/row_store.py",
+    "haenv/semantic_seal.py", "haenv/semantic_coverage.py", "haenv/rhythm.py",
+    "haenv/resume.py", "haenv/gate_tables.py",
     "haenv/gold_kinds.py",
     "haenv/separation.py", "haenv/mount_table.py", "haenv/tracks.py",
     "haenv/baselines.py", "haenv/quantities.py", "haenv/absence.py",
+    # M1 2026-10-01: question-blind ceilings for every core dimension (imported by analytics)
+    "haenv/blind_ceilings.py",
     "haenv/ranking.py", "haenv/gated.py",
     "haenv/solve_guard.py",
     "verifier_core/gate.py", "verifier_core/ceilings.py",
@@ -139,6 +158,76 @@ JUDGING = (
     "registry/drug_indications.yaml", "registry/comorbidity_vocab.yaml",
 )
 
+#: M2 judging segment (feat/m2-impl): the round-2 hook, the M2 atoms and composite, the frame judge.
+#: It is stamped on M2 rows as `m2_judging_sha16` (`haenv/m2/hooks.py`) and never enters
+#: `judging_sha16`, so v1.0.1 and F0 bridge cells keep the integration judging fingerprint.
+#: `haenv/m2/core.py` is also the M2 world's stamp (external-gold manifest); the M2 emission gate is
+#: fingerprinted there by its declaration, `haenv/m2/audit.py`. `haenv/pack_skeleton.py` (judge
+#: mounting and the publish gate, shared by every pack) is in each pack's judging segment and
+#: `haenv/shared_audit.py` (the shared emission gate) in each pack world segment.
+M2_JUDGING = (
+    "haenv/pack_skeleton.py",
+    "haenv/m2/hooks.py", "haenv/m2/round2.py", "haenv/m2/score.py", "haenv/m2/plugin.py",
+    "haenv/m2/core.py", "registry/explain_away.yaml", "registry/base_condition_findings.yaml",
+)
+
+#: Pack 2 (acute triage) segments (feat/pack2-triage). Neither enters `GENERATION` or
+#: `JUDGING`, so jobs that do not declare the `haenv.pack2` plugin keep their `world_sha` and
+#: `judging_sha16`. `PACK2_WORLD` is the pack-2 world (snapshot, event pool, G2 table, gate,
+#: question template): its fingerprint is written into every pack-2 gold
+#: (`adjudication.triage.world_sha16`) and into the registered `pack2.triage` probe, whose hash
+#: enters the external-gold manifest, so a pack-2 world change moves the pack-2 `world_sha`.
+#: `PACK2_JUDGING` (judge, hooks, composite) is stamped on pack-2 rows as `pack2_judging_sha16`.
+PACK2_WORLD = (
+    "haenv/shared_audit.py",
+    "haenv/pack2/world.py", "haenv/pack2/vitals.py", "haenv/pack2/events.py", "haenv/pack2/grading.py",
+    "haenv/pack2/_util.py", "haenv/pack2/framing.py",
+    "registry/pack2_triage_thresholds.yaml", "registry/pack2_acute_events.yaml",
+    # the build hook that calls `world.finalize_adjudication` (it decides the re-armed gold
+    # fields), so it is in both pack-2 segments
+    "haenv/pack2/hooks.py",
+)
+PACK2_JUDGING = (
+    "haenv/pack_skeleton.py",
+    "haenv/pack2/hooks.py", "haenv/pack2/plugin.py", "haenv/pack2/score.py",
+)
+
+#: Pack 4 (follow-up interpretation, feat/pack4-followup). Two segments of their own, neither in
+#: `JUDGING` nor in `GENERATION`, so every existing job keeps `judging_sha16` and `world_sha`:
+#: `P4_JUDGING` is stamped on pack-4 rows as `p4_judging_sha16` (`haenv/p4/hooks.py`); `P4_WORLD`
+#: is stamped on the pack-4 gold block as `p4_world_sha16` and enters `world_sha` of a pack-4
+#: batch through the registered probe (`haenv/p4/plugin.py:probe_dict`). `haenv/p4/gold.py` is in
+#: both: the generator accepts an item by it and the judge reads its output.
+P4_JUDGING = (
+    "haenv/pack_skeleton.py",
+    "haenv/p4/score.py", "haenv/p4/plugin.py", "haenv/p4/hooks.py", "haenv/p4/gold.py",
+)
+P4_WORLD = (
+    "haenv/shared_audit.py",
+    "haenv/labworld/__init__.py", "haenv/labworld/truth.py", "haenv/labworld/observe.py",
+    "haenv/labworld/perturb.py", "registry/labworld.yaml",
+    "haenv/p4/plan.py", "haenv/p4/realize.py", "haenv/p4/render.py", "haenv/p4/gold.py",
+    "haenv/p4/gate.py", "haenv/p4/features.py",
+)
+
+#: Pack 3 (chronic medication adjustment, feat/pack3-meds). Same arrangement as pack 4: neither
+#: segment is in `JUDGING` or `GENERATION`; `P3_JUDGING` is stamped on pack-3 rows as
+#: `p3_judging_sha16`, `P3_WORLD` on the pack-3 gold block as `p3_world_sha16` and enters `world_sha`
+#: of a pack-3 batch through the registered probe. It shares three lab-world modules with
+#: `P4_WORLD` (read, not changed, by pack 3).
+P3_JUDGING = (
+    "haenv/pack_skeleton.py",
+    "haenv/p3/score.py", "haenv/p3/plugin.py", "haenv/p3/hooks.py", "haenv/p3/gold.py",
+    "haenv/labworld/meds.py", "registry/p3_meds.yaml", "registry/control_targets.yaml",
+)
+P3_WORLD = (
+    "haenv/shared_audit.py",
+    "haenv/labworld/__init__.py", "haenv/labworld/truth.py", "haenv/labworld/observe.py",
+    "haenv/labworld/meds.py", "registry/p3_meds.yaml", "registry/control_targets.yaml",
+    "haenv/p3/plan.py", "haenv/p3/realize.py", "haenv/p3/render.py", "haenv/p3/gold.py",
+    "haenv/p3/gate.py",
+)
+
 #: Infrastructure segment: request accounting, cost receipts, the shared cap, paid slots,
 #: scheduling and the pre-send wire check. A change here cannot alter what a solver is
 #: shown, how it is asked or how a cell is scored, so it is recorded (`code_upgrades`)
@@ -156,6 +245,9 @@ INFRA = (
     # what a vote or a score is (consensus and rubric summaries stay in `semantic_judge` /
     # `semantic_rubric`)
     "haenv/judge_scheduler.py", "haenv/semantic_parallel.py",
+    # per-call bookkeeping shared by solvers and the generation dispatcher: usage and
+    # sampling echo, the token-budget policy (`needs_stream` picks the transport), billing
+    "haenv/call_log.py",
 )
 
 #: INFRA modules must not import these (AST-checked): scoring, gates, judges and the
@@ -173,8 +265,390 @@ JUDGING_SHA_EQUIVALENCE = (
     {"old": "6aa282bab6e2afcf", "rev": "a26d32ad", "new": "2f560f1c346ba93d"},
 )
 
+#: Old judging fingerprints and the value after a refactor that only moved code: files
+#: renamed or split, imports moved, definitions moved into `INFRA`. Each row is recomputed
+#: by `haenv.anchor.verify_judging_move`: `old` must reproduce at `rev`, `new` at `new_rev`,
+#: and `haenv.anchor_moves.certify` must find every judging definition of `rev` at `new_rev`
+#: with the same source, bound to the same definitions -- apart from the names in `changed`,
+#: each with its reason, every one of which must really have changed.
+JUDGING_SHA_MOVES: tuple[dict, ...] = (
+    # One row from the previous anchor to the 1.2.0 tree: the kernel package and acyclic imports,
+    # judging v2, world v2, the four task packs and the release changes. Moves and content changes
+    # are grouped; every content change is declared, so the judging stamp history stays continuous.
+    {"old": "67dd5866790e9cb9", "rev": "b55d2e85", "new": "a5f058bdd9de77b9", "new_rev": "c499aab1",
+     "changed": {
+         # moves: the kernel package, the evaluate.py split, the run context and the acyclic
+         # import graph -- definitions whose source text changed with the move (60)
+         "_verify_subprocess": "kernel package: the isolated verifier runs as `-m"
+                               " haenv_kernel.verifier`, not by file path",
+         "kernel_fingerprint": "kernel package: fingerprints the loaded `haenv_kernel` module",
+         "kernel_path": "kernel package: locates kernel source for read-only tools only",
+         "registry/condition_aliases.yaml": "kernel package: two `why` texts name"
+                                            " `haenv_kernel/`",
+         "RunContext": "run context: the object that replaces the module-level run state",
+         "run_ctx_of": "run context: the run a solver is bound to, or an empty one",
+         "RUN": "run context: removed as a module global; now a field of the "
+                "explicit RunContext",
+         "RunState": "run context: removed as a module global; now a field of the"
+                     " explicit RunContext",
+         "NOOP_FOR": "run context: removed as a module global; now a field of the"
+                     " explicit RunContext",
+         "QUANT_FOR": "run context: removed as a module global; now a field of "
+                      "the explicit RunContext",
+         "PREMISE_FOR": "run context: removed as a module global; now a field of "
+                        "the explicit RunContext",
+         "QUANT_TRUTH_DIST": "run context: removed as a module global; now a "
+                             "field of the explicit RunContext",
+         "ORACLE_GOLD_TESTS": "run context: removed as a module global; now a "
+                              "field of the explicit RunContext",
+         "ORACLE_DISC_NAMES": "run context: removed as a module global; now a "
+                              "field of the explicit RunContext",
+         "ORACLE_WARRANTED": "run context: removed as a module global; now a "
+                             "field of the explicit RunContext",
+         "ORACLE_DIAGNOSIS": "run context: removed as a module global; now a "
+                             "field of the explicit RunContext",
+         "_USAGE_ACC": "run context: removed as a module global; now a field of "
+                       "the explicit RunContext",
+         "_RETRY_ACC": "run context: removed as a module global; now a field of "
+                       "the explicit RunContext",
+         "_REPLAY_N": "run context: removed as a module global; now a field of "
+                      "the explicit RunContext",
+         "_REPLAY_FRESH": "run context: removed as a module global; now a field "
+                          "of the explicit RunContext",
+         "PER_BATCH_DICTS": "run context: removed as a module global; now a field"
+                            " of the explicit RunContext",
+         "enter_batch": "run context: removed as a module global; now a field of "
+                        "the explicit RunContext",
+         "_BATCH_SCOPE": "run context: removed as a module global; now a field of"
+                         " the explicit RunContext",
+         "assign_premises": "run context: takes `ctx` and uses its fields instead"
+                            " of module globals",
+         "assign_noop_probes": "run context: takes `ctx` and uses its fields "
+                               "instead of module globals",
+         "assign_quant_probes": "run context: takes `ctx` and uses its fields "
+                                "instead of module globals",
+         "assign_qside_probes": "run context: takes `ctx` and uses its fields "
+                                "instead of module globals",
+         "assign_oracle_gold": "run context: takes `ctx` and uses its fields "
+                               "instead of module globals",
+         "assign_oracle_warranted": "run context: takes `ctx` and uses its fields"
+                                    " instead of module globals",
+         "_resync_trend_windows": "run context: takes `ctx` and uses its fields "
+                                  "instead of module globals",
+         "_premise_suffix": "run context: takes `ctx` and uses its fields instead"
+                            " of module globals",
+         "_noop_suffix": "run context: takes `ctx` and uses its fields instead of"
+                         " module globals",
+         "_quant_suffix": "run context: takes `ctx` and uses its fields instead "
+                          "of module globals",
+         "render_for": "run context: takes `ctx` and uses its fields instead of module globals",
+         "_row_single": "run context: takes `ctx` and uses its fields instead of module globals",
+         "_row_gated": "run context: takes `ctx` and uses its fields instead of module globals",
+         "_row_slices": "run context: takes `ctx` and uses its fields instead of module globals",
+         "_row_multi": "run context: takes `ctx` and uses its fields instead of module globals",
+         "_premise_row": "run context: takes `ctx` and uses its fields instead of"
+                         " module globals",
+         "_replay_solver_for": "run context: takes `ctx` and uses its fields "
+                               "instead of module globals",
+         "_ReplaySolver": "run context: takes `ctx` and uses its fields instead "
+                          "of module globals",
+         "_persist_gated_round": "run context: takes `ctx` and uses its fields "
+                                 "instead of module globals",
+         "gated_rounds_path": "run context: takes `ctx` and uses its fields "
+                              "instead of module globals",
+         "take_replay_count": "run context: takes `ctx` and uses its fields "
+                              "instead of module globals",
+         "_note_grid_usage": "run context: takes `ctx` and uses its fields "
+                             "instead of module globals",
+         "_note_grid_retry": "run context: takes `ctx` and uses its fields "
+                             "instead of module globals",
+         "take_grid_usage": "run context: takes `ctx` and uses its fields instead"
+                            " of module globals",
+         "take_grid_retry": "run context: takes `ctx` and uses its fields instead"
+                            " of module globals",
+         "save_response": "run context: takes `ctx` and uses its fields instead "
+                          "of module globals",
+         "_preflight_quota": "run context: takes `ctx` and uses its fields "
+                             "instead of module globals",
+         "_run_tasks": "run context: takes `ctx` and uses its fields instead of module globals",
+         "run_eval": "run context: takes `ctx` and uses its fields instead of module globals",
+         "OracleTestsSolver": "run context: the oracle stub reads its gold from "
+                              "the run it is bound to",
+         "OneLongTestSolver": "run context: the oracle stub reads its gold from "
+                              "the run it is bound to",
+         "OracleProbeSolver": "run context: the oracle stub reads its gold from "
+                              "the run it is bound to",
+         "OracleReviewSolver": "run context: the oracle stub reads its gold from "
+                               "the run it is bound to",
+         "LateConvergeSolver": "run context: the oracle stub reads its gold from "
+                               "the run it is bound to",
+         "SOLVE_EXEMPT": "acyclic imports: a reason text names "
+                         "`mount_coverage.unwired_geometries`, where that check "
+                         "now lives",
+         "haenv/semantic_pipeline.py:ROOT": "acyclic imports: moved with "
+                                            "`code_state` to `semantic_seal.py`",
+         "haenv/semantic_seal.py:ROOT": "acyclic imports: "
+                                        "`Path(__file__).resolve().parents[1]` "
+                                        "from the same `haenv/` directory, so the"
+                                        " same root",
+         # moves: the pack hook points read `qside.render_for` live after the evaluate split (4)
+         "OpenAICompatSolver": "merge glue: `render_for` is a pack hook point; "
+                               "the call reads `qside.render_for` live so a "
+                               "pack's wrapper takes effect after the evaluate "
+                               "split",
+         "GoogleSolver": "merge glue: same live read of the `render_for` hook point",
+         "CLISolver": "merge glue: same live read of the `render_for` hook point",
+         "_prompt_sha_for": "merge glue: same live read of the `render_for` hook point",
+         # content: judging v2, world v2 and the four task packs (113)
+         "tool_grounded_joint_of": "content: judging v2, world v2 or the task packs",
+         "_tests_sets": "content: judging v2, world v2 or the task packs",
+         "_u": "content: judging v2, world v2 or the task packs",
+         "gold_from_cases_jsonl": "content: judging v2, world v2 or the task packs",
+         "_stub_trace": "content: judging v2, world v2 or the task packs",
+         "_f1": "content: judging v2, world v2 or the task packs",
+         "D9_PROVISIONAL": "content: judging v2, world v2 or the task packs",
+         "report_section": "content: judging v2, world v2 or the task packs",
+         "_lab_calendar_signals": "content: judging v2, world v2 or the task packs",
+         "decoy_targets": "content: judging v2, world v2 or the task packs",
+         "normalize_action_class": "content: judging v2, world v2 or the task packs",
+         "registry/gated_pricing.yaml": "content: judging v2, world v2 or the task packs",
+         "evidence_names_for": "content: judging v2, world v2 or the task packs",
+         "_NAME_SPLIT_RE": "content: judging v2, world v2 or the task packs",
+         "registry/composition_comorbid.yaml": "content: judging v2, world v2 or the task packs",
+         "_dx_score": "content: judging v2, world v2 or the task packs",
+         "_hard_gates": "content: judging v2, world v2 or the task packs",
+         "_resolves_to": "content: judging v2, world v2 or the task packs",
+         "_rd": "content: judging v2, world v2 or the task packs",
+         "core_constant_ceilings": "content: judging v2, world v2 or the task packs",
+         "run_gated": "content: judging v2, world v2 or the task packs",
+         "read_run": "content: judging v2, world v2 or the task packs",
+         "tests_f1_ceiling": "content: judging v2, world v2 or the task packs",
+         "tests_f1_matcher_ceiling": "content: judging v2, world v2 or the task packs",
+         "_fsum_mean": "content: judging v2, world v2 or the task packs",
+         "multiplier": "content: judging v2, world v2 or the task packs",
+         "_f1_of": "content: judging v2, world v2 or the task packs",
+         "dx_listed_ceiling": "content: judging v2, world v2 or the task packs",
+         "flag_side": "content: judging v2, world v2 or the task packs",
+         "normalize_evidence_name": "content: judging v2, world v2 or the task packs",
+         "review_macro_of": "content: judging v2, world v2 or the task packs",
+         "INSUFFICIENT_KIND": "content: judging v2, world v2 or the task packs",
+         "_executed_tests": "content: judging v2, world v2 or the task packs",
+         "_pricing": "content: judging v2, world v2 or the task packs",
+         "asserted_diagnoses": "content: judging v2, world v2 or the task packs",
+         "key_coverage": "content: judging v2, world v2 or the task packs",
+         "_certainty": "content: judging v2, world v2 or the task packs",
+         "_quant": "content: judging v2, world v2 or the task packs",
+         "tool_blind_stubs": "content: judging v2, world v2 or the task packs",
+         "abstention_utility_of": "content: judging v2, world v2 or the task packs",
+         "grade": "content: judging v2, world v2 or the task packs",
+         "chance_corrected": "content: judging v2, world v2 or the task packs",
+         "_report_face": "content: judging v2, world v2 or the task packs",
+         "_dx_hits": "content: judging v2, world v2 or the task packs",
+         "apply_recall_code_first": "content: judging v2, world v2 or the task packs",
+         "dx_listed_top_k_freq": "content: judging v2, world v2 or the task packs",
+         "_pick_w": "content: judging v2, world v2 or the task packs",
+         "discriminator_tests": "content: judging v2, world v2 or the task packs",
+         "gated_menus_from_cases": "content: judging v2, world v2 or the task packs",
+         "RECALL_CODE_FIRST": "content: judging v2, world v2 or the task packs",
+         "_stub_joint": "content: judging v2, world v2 or the task packs",
+         "constant_ceilings": "content: judging v2, world v2 or the task packs",
+         "_execute_run": "content: judging v2, world v2 or the task packs",
+         "ROW_AUXILIARY": "content: judging v2, world v2 or the task packs",
+         "rank_ddx": "content: judging v2, world v2 or the task packs",
+         "check_caps": "content: judging v2, world v2 or the task packs",
+         "_drain_requests": "content: judging v2, world v2 or the task packs",
+         "_ACTION_CLASS_RE": "content: judging v2, world v2 or the task packs",
+         "_fill_to_budget": "content: judging v2, world v2 or the task packs",
+         "registry/negated_findings.yaml": "content: judging v2, world v2 or the task packs",
+         "QUANTITIES": "content: judging v2, world v2 or the task packs",
+         "_RULE_OUT_CERTAINTY": "content: judging v2, world v2 or the task packs",
+         "delivered_truth_present": "content: judging v2, world v2 or the task packs",
+         "_named_on_stream": "content: judging v2, world v2 or the task packs",
+         "NON_HARM_GATES": "content: judging v2, world v2 or the task packs",
+         "CORE_DIMS": "content: judging v2, world v2 or the task packs",
+         "REPORT_ONLY_DIMS": "content: judging v2, world v2 or the task packs",
+         "_by_case": "content: judging v2, world v2 or the task packs",
+         "TOOL_STUB_DRAWS": "content: judging v2, world v2 or the task packs",
+         "menu_for": "content: judging v2, world v2 or the task packs",
+         "_EPS": "content: judging v2, world v2 or the task packs",
+         "delivered_series": "content: judging v2, world v2 or the task packs",
+         "load_rows": "content: judging v2, world v2 or the task packs",
+         "REPORTED_DIAGNOSTICS": "content: judging v2, world v2 or the task packs",
+         "_HEDGED_CERTAINTY": "content: judging v2, world v2 or the task packs",
+         "_norm_ans": "content: judging v2, world v2 or the task packs",
+         "registry/case_ids.yaml": "content: judging v2, world v2 or the task packs",
+         "has_reading_model": "content: judging v2, world v2 or the task packs",
+         "_track_D": "content: judging v2, world v2 or the task packs",
+         "DX_LIST_CAP_MARGIN": "content: judging v2, world v2 or the task packs",
+         "_cites_evidence_name": "content: judging v2, world v2 or the task packs",
+         "ROLES": "content: judging v2, world v2 or the task packs",
+         "judge_workup": "content: judging v2, world v2 or the task packs",
+         "synth_on_demand": "content: judging v2, world v2 or the task packs",
+         "dx_listed_n0_of": "content: judging v2, world v2 or the task packs",
+         "Profile": "content: judging v2, world v2 or the task packs",
+         "registry/vocab_tests.yaml": "content: judging v2, world v2 or the task packs",
+         "METRIC_FIELDS": "content: judging v2, world v2 or the task packs",
+         "_tests_f1_matcher_search": "content: judging v2, world v2 or the task packs",
+         "_EXACT": "content: judging v2, world v2 or the task packs",
+         "composite_scores": "content: judging v2, world v2 or the task packs",
+         "_abst": "content: judging v2, world v2 or the task packs",
+         "batch_discrimination_gate": "content: judging v2, world v2 or the task packs",
+         "TOOL_STUB_SEED": "content: judging v2, world v2 or the task packs",
+         "menu_findings": "content: judging v2, world v2 or the task packs",
+         "_obs_cfg": "content: judging v2, world v2 or the task packs",
+         "dx_rank_of": "content: judging v2, world v2 or the task packs",
+         "entry_excluded": "content: judging v2, world v2 or the task packs",
+         "is_rule_out_pending": "content: judging v2, world v2 or the task packs",
+         "_review": "content: judging v2, world v2 or the task packs",
+         "solver_for_spec": "content: judging v2, world v2 or the task packs",
+         "tool_track": "content: judging v2, world v2 or the task packs",
+         "_noop": "content: judging v2, world v2 or the task packs",
+         "overlay_rows": "content: judging v2, world v2 or the task packs",
+         "abst_stub_rows": "content: judging v2, world v2 or the task packs",
+         "exact_precision": "content: judging v2, world v2 or the task packs",
+         "judge_noop_probe": "content: judging v2, world v2 or the task packs",
+         "_norm_item": "content: judging v2, world v2 or the task packs",
+         "check_cadence": "content: judging v2, world v2 or the task packs",
+         "PROPENSITY_GATES": "content: judging v2, world v2 or the task packs",
+         "rank_ddx_exact": "content: judging v2, world v2 or the task packs",
+         "_listed": "content: judging v2, world v2 or the task packs",
+         "synth_menu_target": "content: judging v2, world v2 or the task packs",
+         # content: release changes (22)
+         "haenv/judges/recall_match.py:YES": "recall matching of ordered tests "
+                                             "enters the judging segment: "
+                                             "semantic_report imports it and it "
+                                             "decides scores",
+         "haenv/judges/recall_match.py:NO": "recall matching of ordered tests "
+                                            "enters the judging segment: "
+                                            "semantic_report imports it and it "
+                                            "decides scores",
+         "haenv/judges/recall_match.py:UNDECIDED": "recall matching of ordered "
+                                                   "tests enters the judging "
+                                                   "segment: semantic_report "
+                                                   "imports it and it decides "
+                                                   "scores",
+         "haenv/judges/recall_match.py:_SEP": "recall matching of ordered tests "
+                                              "enters the judging segment: "
+                                              "semantic_report imports it and it "
+                                              "decides scores",
+         "haenv/judges/recall_match.py:_ASCII_ALNUM": "recall matching of ordered"
+                                                      " tests enters the judging "
+                                                      "segment: semantic_report "
+                                                      "imports it and it decides "
+                                                      "scores",
+         "haenv/judges/recall_match.py:_CJK_SPACE": "recall matching of ordered "
+                                                    "tests enters the judging "
+                                                    "segment: semantic_report "
+                                                    "imports it and it decides "
+                                                    "scores",
+         "haenv/judges/recall_match.py:_norm": "recall matching of ordered tests "
+                                               "enters the judging segment: "
+                                               "semantic_report imports it and it"
+                                               " decides scores",
+         "haenv/judges/recall_match.py:_variants": "recall matching of ordered "
+                                                   "tests enters the judging "
+                                                   "segment: semantic_report "
+                                                   "imports it and it decides "
+                                                   "scores",
+         "haenv/judges/recall_match.py:_is_ascii_alnum": "recall matching of "
+                                                         "ordered tests enters "
+                                                         "the judging segment: "
+                                                         "semantic_report imports"
+                                                         " it and it decides "
+                                                         "scores",
+         "haenv/judges/recall_match.py:_spans": "recall matching of ordered tests"
+                                                " enters the judging segment: "
+                                                "semantic_report imports it and "
+                                                "it decides scores",
+         "haenv/judges/recall_match.py:_Text": "recall matching of ordered tests "
+                                               "enters the judging segment: "
+                                               "semantic_report imports it and it"
+                                               " decides scores",
+         "haenv/judges/recall_match.py:_vocab": "recall matching of ordered tests"
+                                                " enters the judging segment: "
+                                                "semantic_report imports it and "
+                                                "it decides scores",
+         "haenv/judges/recall_match.py:gold_segments": "recall matching of "
+                                                       "ordered tests enters the "
+                                                       "judging segment: "
+                                                       "semantic_report imports "
+                                                       "it and it decides scores",
+         "haenv/judges/recall_match.py:_forms": "recall matching of ordered tests"
+                                                " enters the judging segment: "
+                                                "semantic_report imports it and "
+                                                "it decides scores",
+         "haenv/judges/recall_match.py:_shadows_of": "recall matching of ordered "
+                                                     "tests enters the judging "
+                                                     "segment: semantic_report "
+                                                     "imports it and it decides "
+                                                     "scores",
+         "haenv/judges/recall_match.py:_flag": "recall matching of ordered tests "
+                                               "enters the judging segment: "
+                                               "semantic_report imports it and it"
+                                               " decides scores",
+         "haenv/judges/recall_match.py:_hint_tokens": "recall matching of ordered"
+                                                      " tests enters the judging "
+                                                      "segment: semantic_report "
+                                                      "imports it and it decides "
+                                                      "scores",
+         "haenv/judges/recall_match.py:match_item": "recall matching of ordered "
+                                                    "tests enters the judging "
+                                                    "segment: semantic_report "
+                                                    "imports it and it decides "
+                                                    "scores",
+         "haenv/judges/recall_match.py:match_required_tests": "recall matching of"
+                                                              " ordered tests "
+                                                              "enters the judging"
+                                                              " segment: "
+                                                              "semantic_report "
+                                                              "imports it and it "
+                                                              "decides scores",
+         "load_judge_plugins": "an entry-point target registered under several "
+                               "groups attaches once, so an installed wheel loads"
+                               " each pack once",
+         "check_batch": "GEN8d breaks a most-common-text tie on the text, so the "
+                        "batch record does not depend on PYTHONHASHSEED; a gate "
+                        "message names `haenv_kernel/noise.py`",
+         "registry/scoring.yaml": "content: judging v2 scoring roles; three "
+                                  "`decided` values carry no document references",
+     }},
+)
+
 #: Registry yaml in neither segment, with the reason the judging segment cannot reach it.
 REGISTRY_YAML_OUT_OF_SCOPE: dict[str, str] = {
+    "registry/p3_meds.yaml":
+        "Pack-3 managed-drug table (ladders, effects, time constants, adverse effects, rule "
+        "constants). Read only by `haenv/labworld/meds.py` and `haenv/p3/` (segments `P3_WORLD` / "
+        "`P3_JUDGING`); a job that does not load `haenv.p3` never opens it; it enters a pack-3 "
+        "batch's `world_sha` through the registered probe.",
+    "registry/control_targets.yaml":
+        "Pack-3 control targets (axis, CV, target). Same scope and stamp as `registry/p3_meds.yaml`.",
+    "registry/pack2_triage_thresholds.yaml":
+        "Pack-2 grading table G2 (provisional). Read only by `haenv/pack2/world.py`, which no "
+        "`JUDGING` module imports; it is anchored by `PACK2_WORLD` instead, and its content is "
+        "hashed into every pack-2 gold (`tables_sha16`, `world_sha16`). If a `JUDGING` module "
+        "ever reads it, this exemption has to come off first.",
+    "registry/pack2_acute_events.yaml":
+        "Pack-2 acute-event pool and wording. Same boundary as `pack2_triage_thresholds.yaml`: "
+        "read only by `haenv/pack2/world.py` and the job composer `tools/pack2_gen_job.py`, "
+        "anchored by `PACK2_WORLD`.",
+    "registry/labworld.yaml":
+        "Pack-4 lab-world table (follow-up analytes, perturbations, visible-cause effects). Read "
+        "only by `haenv/labworld/` and `haenv/p4/` (segments `P4_WORLD` / `P4_JUDGING`); no file "
+        "of the judging segment reads it, and a job that does not load `haenv.p4` never opens it. "
+        "Its fingerprint is stamped on pack-4 gold (`labworld_tables_sha16`) and enters a pack-4 "
+        "batch's `world_sha` through the registered probe.",
+    "registry/explain_away.yaml":
+        "Pack-1 (M2) explained-away symptom table. Read only by `haenv/m2/`, which no `JUDGING` "
+        "module imports; anchored by `M2_JUDGING` (stamped on M2 rows as `m2_judging_sha16`).",
+    "registry/base_condition_findings.yaml":
+        "Pack-1 (M2) base condition -> declared findings. Read only by `haenv/m2/core.py`; same "
+        "boundary and anchor (`M2_JUDGING`) as `registry/explain_away.yaml`.",
+    "registry/acute_events.yaml":
+        "Pack-1 (M2) F1 day-T acute-event pool. Read only by `haenv/m2/core.py`, which no "
+        "`JUDGING` module imports. Not yet in `M2_JUDGING`: the segment assignment of `haenv/m2/` "
+        "is left to the next re-anchor (module docstring of `haenv/m2/core.py`); until then an "
+        "edit to this table moves no stamp.",
     "registry/knobs.yaml":
         "Input-surface registry: why each module-level constant lives in "
         "code rather than config. Its only production consumer is "
@@ -186,6 +660,12 @@ REGISTRY_YAML_OUT_OF_SCOPE: dict[str, str] = {
         "leaderboard (editing a comment must not invalidate the anchor). If "
         "judging code ever reads it (say, deciding whether to score a "
         "dimension based on `class`), this exemption has to come off first.",
+    "registry/disease_prevalence.yaml":
+        "Prevalence table for the composition-v2 allocator. Its only production consumer is "
+        "`tools/gen_composition_v2.py` (and `registry.association_admissible`, called by that tool), "
+        "which runs at job-generation time -- its output is written into `inputs/*.job.yaml`, out of the "
+        "judging segment's reach; the judging segment makes zero calls into it. Same boundary as "
+        "`tiers.yaml`. If judging code ever reads a prevalence, this exemption has to come off first.",
     "registry/tiers.yaml":
         "Tier ratios / slicing geometry / gated budgets. The `authoritative:` "
         "section's only consumer is `haenv/ddx.py:_tier`, which runs at "
@@ -292,6 +772,16 @@ REGISTRY_YAML_OUT_OF_SCOPE: dict[str, str] = {
 #: reason. An entry must not decide `overall` or any `absence.DENOM_FIELD` denominator;
 #: its crossing symbols are pinned in `ALLOW_SYMBOL_PIN`.
 JUDGING_IMPORT_ALLOW: dict[str, str] = {
+    "haenv_kernel/build.py":
+        "`GENERATION` segment, reached from `haenv_kernel/runner.py` by "
+        "`build_instance` / `leakage_probe`. Always so: `runner` has imported the "
+        "kernel's `build` since the fork, and the dependency is unremarkable -- what "
+        "made it visible is that the kernel became a package, so the import is now "
+        "`from .build import ...` and the judging-segment guard can resolve it. It "
+        "stays out of `JUDGING` because changing it changes what the solver is shown, "
+        "which is a question change (`world_sha`), not a score change; that "
+        "classification predates this entry (see `haenv_kernel/FORKED_FROM.md`). The leak "
+        "probe's own behaviour is pinned separately by `tools/leak_probe_selftest.py`.",
     "haenv/semantic_parallel.py":
         "`INFRA` segment (see `INFRA`): the lane scheduler and the per-cell result files of a "
         "semantic run. The pipeline imports the lane cap and the cell runner; votes come from "
@@ -316,9 +806,10 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
         "`ALLOW_SYMBOL_PIN`.",
     "haenv/relay_accounting.py":
         "`INFRA` segment (see `INFRA`): relay tariff and billing-log reads. Judging code "
-        "imports only the balance gate (`preflight_quota`), which decides whether a run may "
-        "start spending; it returns nothing, and changes no byte of a response, a vote or a "
-        "score. The crossing symbol is pinned in `ALLOW_SYMBOL_PIN`.",
+        "imports the balance gate (`preflight_quota`), which decides whether a run may "
+        "start spending, and re-exports the tariff it prices with (`RELAY_COST_*`, "
+        "`RELAY_USD_PER_MTOK`, `_measured_tokens_per_grid`); none of them changes a byte of a "
+        "response, a vote or a score. The crossing symbols are pinned in `ALLOW_SYMBOL_PIN`.",
     "haenv/solver_accounting.py":
         "`INFRA` segment (see `INFRA`): request accounting, the shared cap and the pre-send "
         "wire check. Judging code imports only the named symbols (a budget stop, the cap "
@@ -327,10 +818,14 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
         "`ALLOW_SYMBOL_PIN`.",
     "haenv/transport.py":
         "`INFRA` segment (see `INFRA`): request accounting, the shared cap and the pre-send "
-        "wire check. Judging code imports only the named symbols (a budget stop, the cap "
-        "ledger, price bounds, the paid entry point); none of them produces, filters or "
-        "alters a response, a vote or a score. The crossing symbols are pinned in "
-        "`ALLOW_SYMBOL_PIN`.",
+        "wire check. Judging code imports only the named symbols: the pre-send wire check; "
+        "the validators of a model's upstream pin and sampling block, which refuse a "
+        "configuration before any request; the temperature a request carries, read from that "
+        "block; the served-upstream check, which fails an attempt a pinned route says another "
+        "upstream served (the attempt is retried or the cell has no answer, as for any failed "
+        "attempt); and `judge_spec`, which drops the solver-only keys so a judge's request is "
+        "what it was before they existed. None of them produces or alters a response, a vote "
+        "or a score. The crossing symbols are pinned in `ALLOW_SYMBOL_PIN`.",
     "haenv/semantic_runref.py":
         "Only locates the sealed semantic run a manifest or view names -- by path, else by "
         "run_id / tasks digest / manifest digest -- and refuses a run whose bytes or identity "
@@ -378,13 +873,31 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
         "`evaluate.py`'s re-export layer; the symbols that cross are pinned "
         "in `ALLOW_SYMBOL_PIN`.",
     "haenv/events.py":
+        "Already in GENERATION: changing it regenerates the packs. The judging segment takes "
+        "`inherited_profile` (as `_inh`) from it, the kernel's inherited event profile read "
+        "where the plugin pools are rebound.",
+    "haenv/events_pools.py":
         "Already in GENERATION: changing it invalidates the whole freeze (the "
         "pack must be regenerated), which already implies invalidating "
         "readings. The judging segment imports `expected_event_counts` / "
-        "`event_weeks` / `EVENT_RATE_DEFAULTS` / `_inh` from it, which are "
+        "`event_weeks` / `EVENT_RATE_DEFAULTS` from it, which are "
         "formulas, not lookup tables; regenerating the item is a stricter "
         "consequence than recomputing, so the exemption holds regardless of "
         "which symbols cross.",
+    "haenv/events_streams.py":
+        "Already in GENERATION, split out of `events.py` with the same standing: the judging "
+        "segment reads the metric catalog `METRIC_BY_NAME`, and changing it regenerates the packs.",
+    "haenv/events_text.py":
+        "Already in GENERATION, split out of `events.py` with the same standing: the judges "
+        "match condition names with `alias_hit`, and changing it regenerates the packs.",
+    "haenv/alias_excludes.py":
+        "Already in GENERATION, split out of `overlay.py` with the same standing: the judges' "
+        "alias matcher (`alias_match`) reads the exclusion table through `alias_excluded_at`; "
+        "the table it loads, `registry/vocab_alias_excludes.yaml`, is in JUDGING on its own.",
+    "haenv/semantic_source.py":
+        "In neither segment, split out of `anchor.py` with the same standing: it normalizes "
+        "a file to the bytes the fingerprints hash. `semantic_seal.code_state` takes "
+        "`semantic_bytes` from it to seal a pilot's code state, a provenance field.",
     "haenv/overlay.py":
         "Already in GENERATION. This entry only exempts the `.py` file "
         "itself, not the data it loads: the twelve registry yaml files "
@@ -392,12 +905,21 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
         "check covers them independently of this entry.",
     "haenv/registry.py":
         "Already in GENERATION. Judges only use `load_test_vocab` / "
-        "`load_findings` to load yaml, and those yaml files are each already "
-        "registered in one of the two tables on their own.",
+        "`load_test_recall_vocab` / `load_findings` to load yaml, and those yaml files are "
+        "each already registered in one of the two tables on their own.",
     "haenv/findings_render.py":
         "Already in GENERATION. `gated.py` takes the rendering of the gate's "
         "disclosure surface from it; changing it regenerates the pack, and "
         "readings are invalidated along with it.",
+    "haenv/indicators.py":
+        "Already in GENERATION. `gated._named_on_stream` reads an indicator's printed precision "
+        "(`of(...)['ndigits']`) to format a named test drawn from a live lab stream; changing it "
+        "changes the tool result shown to the solver (question surface), no judging field.",
+    "haenv/regpath.py":
+        "Already in GENERATION. `gates.check_cadence` (GEN6, generation time only) and "
+        "`gated._obs_cfg` read `registry/physio_streams.yaml:clinical_observation` / "
+        "`clinical_measurement.cv` through `load_registry`: the lab calendar signals, and the "
+        "named-test measurement variation, flag symbols and printed names (question surface).",
     "haenv/rng.py":
         "Already in GENERATION. The deterministic-sampling implementation; "
         "`evaluate` uses it for sampling, and changing it changes the item, "
@@ -432,6 +954,20 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
         "the LLM judge enters `_CORE` or is turned on by default, this entry "
         "no longer holds, and `llm.py` must move into `JUDGING` (or the "
         "judging-side dispatcher must be split from the solver-side one).",
+    "haenv/call_log.py":
+        "`INFRA`: per-call usage and sampling echo, the token-budget policy and billing, "
+        "split out of `llm.py` so the solver layer no longer imports the generation "
+        "dispatcher. `needs_stream` decides the transport method, and `_is_exhausted` decides "
+        "when a key leaves the pool, both measurement conditions pinned by "
+        "`batch.solving_fingerprint` like `timeout` and the key pool; nothing here sets "
+        "`overall` or a per-dimension denominator field.",
+    "haenv/ops/runtime.py":
+        "In neither segment. `solvers.py` reads the operator's route chain from the "
+        "hot-reloadable runtime file next to the shared ledger (`for_ledger(...).current()`). "
+        "It decides which backend a request is routed to and whether new paid requests may "
+        "start, never what is asked or how an answer is scored; the route actually used is "
+        "recorded on the row. Until 2026-10-03 the guard resolved `.ops.runtime` against the top-level "
+        "package, where no `ops` module exists, so this edge went unlisted.",
     "haenv/anchor.py":
         "It computes the judging fingerprint itself, and produces only "
         "provenance fields (`judging_sha16` / `judge_parts` / "
@@ -465,15 +1001,15 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
         "doesn't change any reading. Semantic preparation also reads kernel_fingerprint "
         "to require byte-identical payload-building code before projecting an old saved slice; "
         "it is a provenance admission check, not an imputed score.",
-    "haenv/build.py":
+    "haenv/build_clinical.py":
         "Already in GENERATION; changing it regenerates the packs rather than recomputing readings. "
         "The exemption covers this `.py` file only, not the data it loads. The judging side takes "
-        "`_clinical_baselines`, `_clinical_cv` and `_cached_yaml` from it; the registry data behind "
+        "`_clinical_baselines`, `_clinical_cv` and `CLINICAL_ATTEN` from it; the registry data behind "
         "them (`registry/clinical_baselines.yaml`) is itself in GENERATION, and the gate that uses it, "
         "`gates.check_clinical_baseline_cohort`, runs only at generation time from `build.build_case`. "
         "`ALLOW_SYMBOL_PIN` pins the crossing symbol set, so a "
-        "new symbol taken from `build.py` fails at once instead of being covered by this entry.",
-    "haenv/cli.py":
+        "new symbol taken from `build_clinical.py` fails at once instead of being covered by this entry.",
+    "haenv/config.py":
         "The judging side takes `load_cfg` (reads config.yaml), its alias "
         "`_lc_p`, and the repo-root constant `ROOT`. What it feeds into "
         "`real_solver_pool` is the unregistered-name warning branch; pool "
@@ -481,7 +1017,8 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
         "so changing config doesn't change any cell's score; `ROOT` is a path "
         "constant that `haenv/judges/llm.py` uses to set the dispatcher's "
         "cache location, and enters no judging field. The crossing symbol "
-        "set is pinned in `ALLOW_SYMBOL_PIN`.",
+        "set is pinned in `ALLOW_SYMBOL_PIN`. Split out of `cli.py` so the judges and the "
+        "solver layer read configuration without importing the command line.",
     "haenv/prompts.py":
         "The solver-visible surface (item prompt templates). Changing it "
         "requires rerunning (which costs money), not recomputing -- it "
@@ -509,7 +1046,7 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
 
 #: Anchor version. Entries in `PENDING_ANCHOR` are only valid for this version;
 #: as soon as the anchor advances, this table must be emptied.
-PENDING_ANCHOR_REVISION = 87
+PENDING_ANCHOR_REVISION = 91
 
 #: Files added to `JUDGING` before the anchor was updated (allowed while re-anchoring
 #: is not); emptied once the anchor moves past `PENDING_ANCHOR_REVISION`.
@@ -518,37 +1055,48 @@ PENDING_ANCHOR: dict[str, str] = {}
 #: Names each `JUDGING_IMPORT_ALLOW` module lets cross into the judging segment
 #: (`from .M import ...` binding names); must match exactly.
 ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
+    "haenv_kernel/build.py": frozenset({"build_instance", "leakage_probe"}),
     "haenv/semantic_parallel.py": frozenset({"MAX_JUDGE_LANES", "run_cells"}),
     "haenv/run_scheduler.py": frozenset({"_schedule", "_stall_guard", "stall_report_lines"}),
     "haenv/semantic_budget.py": frozenset({"BudgetExceeded", "BudgetLedger", "cost_summary"}),
     "haenv/semantic_transport.py": frozenset({"PriceSchedule", "PricedJudge"}),
     "haenv/paid_completion.py": frozenset({"note_generation"}),
     "haenv/solver_accounting.py": frozenset({"prepare_accounting", "fetch_endpoints"}),
-    "haenv/relay_accounting.py": frozenset({"preflight_quota"}),
-    "haenv/transport.py": frozenset({"verify_wire"}),
+    "haenv/relay_accounting.py": frozenset({
+        "RELAY_COST_DEFAULT", "RELAY_COST_HEADROOM", "RELAY_COST_PER_GRID", "RELAY_USD_PER_MTOK",
+        "_measured_tokens_per_grid", "preflight_quota"}),
+    "haenv/transport.py": frozenset({"verify_wire", "check_pin", "check_sampling", "check_served",
+                                     "judge_spec", "sent_temperature"}),
     "haenv/payloads.py": frozenset({"load_payloads"}),
     "haenv/store.py": frozenset({"load_cases"}),
     "haenv/semantic_runref.py": frozenset({"correction_base", "subset_base", "view_run"}),
     "haenv/streams.py": frozenset({"device_signals"}),
     "haenv/anchor.py": frozenset({
         "_jvint", "_wvint", "infra_files", "judging_fingerprint", "judging_fp_cached",
-        "judging_vintages", "semantic_bytes", "world_fingerprint"}),
+        "judging_vintages", "world_fingerprint"}),
+    "haenv/semantic_source.py": frozenset({"semantic_bytes"}),
     "haenv/batch.py": frozenset({"provenance_fields", "record_usage", "kernel_fingerprint"}),
-    "haenv/build.py": frozenset({
-        "CLINICAL_ATTEN", "_cached_yaml", "_clinical_baselines", "_clinical_cv"}),
-    "haenv/cli.py": frozenset({"ROOT", "_lc_p", "load_cfg"}),
+    "haenv/build_clinical.py": frozenset({"CLINICAL_ATTEN", "_clinical_baselines", "_clinical_cv"}),
+    "haenv/config.py": frozenset({"ROOT", "_lc_p", "load_cfg"}),
     "haenv/external_gold.py": frozenset({"_ext_probes"}),
     "haenv/framings.py": frozenset({
         "DDX_PROMPT", "DDX_SCOPE2_PROMPT", "DDX_SCOPE_PROMPT", "DDX_TRACE_PROMPT",
         "_BUILTIN_FRAMING_NAMES", "_SCOPE2_EDITS", "_SCOPE_EDITS", "_framings",
         "derive_scope2_prompt", "derive_scope_prompt", "framing_sha256"}),
-    "haenv/events.py": frozenset({
-        "EVENT_RATE_DEFAULTS", "METRIC_BY_NAME", "_inh", "alias_hit",
-        "event_weeks", "expected_event_counts"}),
-    "haenv/findings_render.py": frozenset({"_band", "_value"}),
-    "haenv/llm.py": frozenset({"_llm", "make_dispatcher"}),
+    "haenv/events.py": frozenset({"_inh"}),
+    "haenv/events_pools.py": frozenset({
+        "EVENT_RATE_DEFAULTS", "event_weeks", "expected_event_counts"}),
+    "haenv/events_streams.py": frozenset({"METRIC_BY_NAME"}),
+    "haenv/events_text.py": frozenset({"alias_hit"}),
+    "haenv/findings_render.py": frozenset({"_TS_TO_PANEL", "_band", "_value"}),
+    "haenv/indicators.py": frozenset({"of"}),
+    "haenv/regpath.py": frozenset({"load_registry"}),
+    "haenv/llm.py": frozenset({"make_dispatcher"}),
+    "haenv/call_log.py": frozenset({"_EXHAUSTED_MARKERS", "_is_exhausted", "_llm", "billed_tokens"}),
+    "haenv/ops/runtime.py": frozenset({"for_ledger"}),
+    "haenv/alias_excludes.py": frozenset({"alias_excluded_at"}),
     "haenv/overlay.py": frozenset({
-        "RIVALS", "_cr_pub", "_fac", "_kernel_specs", "alias_excluded_at", "condition_registry",
+        "RIVALS", "_cr_pub", "_fac", "_kernel_specs", "condition_registry",
         "haenv_comorbid_specs", "haenv_independent_specs", "rivals_for",
         "spec_id_of", "specialty_hit", "threads_for"}),
     "haenv/prompts.py": frozenset({"PROMPT"}),
@@ -558,7 +1106,7 @@ ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
     "haenv/registry.py": frozenset({
         "GOLD_EVIDENCE", "_cff", "_lf", "_load_test_vocab",
         "condition_findings_for_case", "load_findings",
-        "_load_yaml", "load_disputed_gold"}),
+        "_load_yaml", "load_disputed_gold", "load_test_recall_vocab"}),
     "haenv/rng.py": frozenset({"rng"}),
     "haenv/slicing.py": frozenset({"_slicing"}),
 }
@@ -603,7 +1151,7 @@ def _equivalence_rows(prev: dict | None = None) -> dict:
     """
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
-    from haenv.anchor import verify_judging_equivalence
+    from haenv.anchor import verify_judging_equivalence, verify_judging_move
     prev = prev or {}
     known = {(r["old"], r["rev"], r["new"])
              for key in ("judging_sha_equivalence", "judging_sha_equivalence_pending")
@@ -615,6 +1163,11 @@ def _equivalence_rows(prev: dict | None = None) -> dict:
             out["effective"].append(verify_judging_equivalence(row, infra=trusted_infra))
         else:
             out["pending"].append(verify_judging_equivalence(row))
+    for row in JUDGING_SHA_MOVES:
+        if (row["old"], row["rev"], row["new"]) in known:
+            out["effective"].append({**verify_judging_move(row, infra=trusted_infra), "kind": "move"})
+        else:
+            out["pending"].append({**verify_judging_move(row), "kind": "move"})
     return out
 
 

@@ -58,33 +58,67 @@ def data(real):
     return _current(real)
 
 
-def test_exact_public_values_and_alphabetical_models(data):
+@pytest.fixture
+def public():
+    """A snapshot whose public diagnosis board has a column (`quant_ok`): the column logic is
+    tested here, since the shipped snapshot's diagnosis board may have none."""
+    return _synthetic()
+
+
+def test_empty_public_board_is_accepted_when_its_dimensions_are_withheld(data):
+    data["board"]["dims"] = []
+    for row in data["board"]["models"]:
+        row["dims"] = {}
+    assert data["board"]["withheld"], "the shipped snapshot discloses its withheld dimensions"
     result = FIGURE.prepare(data)
-    models = sorted(data["board"]["models"], key=lambda row: row["solver"])
+    assert result["dims"] == [] and result["validity_pending"] is True
+    assert all(line == [] for line in result["values"])
+    assert FIGURE.prepare_preliminary(data)["diagnosis_validity_pending"] is True
+    with pytest.raises(ValueError, match="public dimension"):
+        FIGURE.ranked_items(result, "dx_listed")
+
+
+def test_empty_public_board_without_a_withheld_disclosure_is_rejected(data):
+    data["board"]["dims"] = []
+    for row in data["board"]["models"]:
+        row["dims"] = {}
+    data["board"]["withheld"] = []
+    with pytest.raises(ValueError, match="withheld"):
+        FIGURE.prepare(data)
+
+
+def test_public_board_with_a_column_is_not_marked_pending(public):
+    assert FIGURE.prepare(public)["validity_pending"] is False
+    assert FIGURE.prepare_preliminary(public)["diagnosis_validity_pending"] is False
+
+
+def test_exact_public_values_and_alphabetical_models(public):
+    result = FIGURE.prepare(public)
+    models = sorted(public["board"]["models"], key=lambda row: row["solver"])
     assert result["solvers"] == [row["solver"] for row in models]
     assert result["values"] == [[row["dims"][dim] for dim in result["dims"]] for row in models]
-    data["board"]["models"].reverse()
-    assert FIGURE.prepare(data) == result
+    public["board"]["models"].reverse()
+    assert FIGURE.prepare(public) == result
 
 
 @pytest.mark.parametrize("value", [None, float("nan"), float("inf"), -0.01, 1.01, True])
-def test_invalid_readings_raise_instead_of_becoming_zero(data, value):
-    data["board"]["models"][0]["dims"]["quant_ok"] = value
+def test_invalid_readings_raise_instead_of_becoming_zero(public, value):
+    public["board"]["models"][0]["dims"]["quant_ok"] = value
     with pytest.raises(ValueError, match="invalid reading"):
-        FIGURE.prepare(data)
+        FIGURE.prepare(public)
 
 
-def test_missing_reading_is_rejected(data):
-    del data["board"]["models"][0]["dims"]["quant_ok"]
+def test_missing_reading_is_rejected(public):
+    del public["board"]["models"][0]["dims"]["quant_ok"]
     with pytest.raises(ValueError, match="per-dimension"):
-        FIGURE.prepare(data)
+        FIGURE.prepare(public)
 
 
-def test_withheld_half_of_paired_dimension_is_rejected(data):
+def test_withheld_half_of_paired_dimension_is_rejected(public):
     # withhold one production metric of a plotted dimension (the second half when paired)
-    data["board"]["withheld"].append({"metric": data["board"]["dims"][0].split("+")[-1]})
+    public["board"]["withheld"].append({"metric": public["board"]["dims"][0].split("+")[-1]})
     with pytest.raises(ValueError, match="Withheld"):
-        FIGURE.prepare(data)
+        FIGURE.prepare(public)
 
 
 @pytest.mark.parametrize("mutate", [
@@ -94,24 +128,24 @@ def test_withheld_half_of_paired_dimension_is_rejected(data):
     lambda d: d["provenance"].update(is_snapshot=True),
     lambda d: d["board"].update(judging="stale"),
 ])
-def test_composite_duplicate_incomplete_or_stale_snapshot_rejected(data, mutate):
-    mutate(data)
+def test_composite_duplicate_incomplete_or_stale_snapshot_rejected(public, mutate):
+    mutate(public)
     with pytest.raises(ValueError):
-        FIGURE.prepare(data)
+        FIGURE.prepare(public)
 
 
-def test_changed_public_reading_changes_export(data):
-    before = FIGURE.prepare(data)
-    data["board"]["models"][0]["dims"]["quant_ok"] = .1234
-    assert FIGURE.prepare(data) != before
+def test_changed_public_reading_changes_export(public):
+    before = FIGURE.prepare(public)
+    public["board"]["models"][0]["dims"]["quant_ok"] = .1234
+    assert FIGURE.prepare(public) != before
 
 
-def test_dimension_order_preserves_values_and_source_order(data):
-    result = FIGURE.prepare(data)
+def test_dimension_order_preserves_values_and_source_order(public):
+    result = FIGURE.prepare(public)
     before = copy.deepcopy(result)
     for dim in result["dims"]:
         rows = FIGURE.ranked_items(result, dim)
-        expected = sorted(data["board"]["models"],
+        expected = sorted(public["board"]["models"],
                           key=lambda row: (-row["dims"][dim], row["solver"]))
         assert [row["solver"] for row in rows] == [row["solver"] for row in expected]
         assert [row["value"] for row in rows] == [row["dims"][dim] for row in expected]
@@ -119,28 +153,28 @@ def test_dimension_order_preserves_values_and_source_order(data):
     assert result == before
 
 
-def test_exact_ties_share_competition_rank(data):
+def test_exact_ties_share_competition_rank(public):
     dim = "quant_ok"
-    for index, row in enumerate(data["board"]["models"]):
+    for index, row in enumerate(public["board"]["models"]):
         row["dims"][dim] = .9 if index < 2 else .8 - index * .01
-    rows = FIGURE.ranked_items(FIGURE.prepare(data), dim)
+    rows = FIGURE.ranked_items(FIGURE.prepare(public), dim)
     assert [row["rank"] for row in rows[:3]] == [1, 1, 3]
     assert [row["tied"] for row in rows[:3]] == [True, True, False]
     assert rows[0]["solver"] < rows[1]["solver"]
 
 
-def test_ties_use_exported_values_not_rounded_display(data):
+def test_ties_use_exported_values_not_rounded_display(public):
     dim = "quant_ok"
-    data["board"]["models"][0]["dims"][dim] = .99004
-    data["board"]["models"][1]["dims"][dim] = .99003
-    rows = FIGURE.ranked_items(FIGURE.prepare(data), dim)
+    public["board"]["models"][0]["dims"][dim] = .99004
+    public["board"]["models"][1]["dims"][dim] = .99003
+    rows = FIGURE.ranked_items(FIGURE.prepare(public), dim)
     assert [row["rank"] for row in rows[:2]] == [1, 2]
     assert not any(row["tied"] for row in rows[:2])
 
 
-def test_unpublished_dimension_cannot_be_sorted(data):
+def test_unpublished_dimension_cannot_be_sorted(public):
     with pytest.raises(ValueError, match="public dimension"):
-        FIGURE.ranked_items(FIGURE.prepare(data), "dx_hit")
+        FIGURE.ranked_items(FIGURE.prepare(public), "dx_hit")
 
 
 def test_preliminary_preserves_production_scores_and_dimensions(data):
@@ -348,3 +382,17 @@ def test_figure_footer_reads_counts_and_unanswered_cells_from_data(tmp_path):
     assert "a3 (diagnosis 5/145)" in svg and "a4 (budgeted tools 12/145)" in svg
     assert "a2 (budgeted tools 1/145)" in svg
     assert "Not ranked" not in svg
+
+
+def test_figure_marks_the_diagnosis_track_when_its_public_board_is_empty(tmp_path):
+    pytest.importorskip("matplotlib")
+    data = _synthetic()
+    data["board"]["dims"] = []
+    for row in data["board"]["models"]:
+        row["dims"] = {}
+    FIGURE.draw(FIGURE.prepare_preliminary(data), tmp_path / "empty")
+    svg = (tmp_path / "empty" / "readme_results.svg").read_text()
+    assert all(line in svg for line in FIGURE.DIAGNOSIS_VALIDITY_PENDING)
+    FIGURE.draw(FIGURE.prepare_preliminary(_synthetic()), tmp_path / "column")
+    svg = (tmp_path / "column" / "readme_results.svg").read_text()
+    assert not any(line in svg for line in FIGURE.DIAGNOSIS_VALIDITY_PENDING)

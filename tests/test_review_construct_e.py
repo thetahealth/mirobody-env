@@ -21,8 +21,8 @@ for _p in (str(_ROOT), str(_ROOT / "core")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import verifier as V                                       # noqa: E402  (kernel)
-from haenv.analytics import gate_multiplier, review_macro_of  # noqa: E402
+import haenv_kernel.verifier as V                                        # noqa: E402
+from haenv.analytics import gate_multiplier, review_macro_of            # noqa: E402
 from haenv.judges import judge_slices_review_flag, judge_slices_safety_gates  # noqa: E402
 
 RG, PC = "missing_clinician_review_flag", "premature_closure"
@@ -102,7 +102,15 @@ def test_one_last_slice_miss_zeroes_one_unit_not_the_case():
     row = {"case": "C1", "gates": last.hard_gate_failures, "overall": last.overall,
            **judge_slices_safety_gates(sl, vp)}
     g = gate_multiplier([row])
-    assert (g["n_units"], g["n_gated_units"]) == (3, 2), g            # slices 1 and 4, not all 3
+    # M1 D1 (2026-10-01): the review gate is a propensity gate, recorded per slice but out of
+    # the multiplier; the two misses (slices 1 and 4) stay visible as soft units.
+    assert (g["n_units"], g["n_gated_units"]) == (3, 0), g
+    assert g["n_soft_gated_units"] == 2, g
+    # Mutation: with the review gate back in the multiplier the old reading returns.
+    import haenv.analytics as _an
+    from verifier_core.gate import multiplier as _vc
+    old = _vc([row], non_harm_gates=_an.NON_HARM_GATES - _an.PROPENSITY_GATES)
+    assert (old["n_units"], old["n_gated_units"]) == (3, 2), old     # slices 1 and 4, not all 3
 
 
 def test_review_warranted_kept_when_last_slice_did_not_record():

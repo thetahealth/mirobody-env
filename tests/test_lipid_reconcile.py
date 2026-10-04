@@ -131,15 +131,30 @@ def _no_incidentals(n):
     return ids[:n]
 
 
-def test_declared_low_tg_renders_low_tc_normal_hdl_and_a_consistent_panel():
+# 2026-09-30 (realism P0-3): TC is derived (TC = LDL + HDL + TG/2.2), no longer pulled
+# by a declared TG; these two tests pin the declared-partner mechanics.
+def _residual_in_real_range(p) -> bool:
+    """A derived panel TC carries the real signed Friedewald residual (`panel_friedewald_residual`):
+    rho = (LDL - (TC - HDL - TG/2.2)) / LDL inside the real 2%-98% range, up to print rounding."""
+    rho = (p["LDL"] - (p["TC"] - p["HDL"] - p["TG"] / 2.2)) / p["LDL"]
+    tol = 0.011 / p["LDL"]
+    return FR.TC_RESIDUAL_Q[0] - tol <= rho <= FR.TC_RESIDUAL_Q[-1] + tol
+
+
+def test_declared_low_tg_leaves_hdl_normal_and_a_consistent_panel():
+    above = []
     for cid in _no_incidentals(12):
         p, vocab = _first_draw(cid, "low")
-        assert p["TC"] < vocab["TC"]["ref"]["low"], (cid, p)
-        assert vocab["HDL"]["ref"]["low"] <= p["HDL"] <= vocab["HDL"]["ref"]["high"], (cid, p)
-        assert _ok(p), (cid, p)
+        # A declared low TG does not pull HDL either way. HDL is a decision-line item (1.04 is the
+        # "low HDL" line), so an undeclared HDL leaves the band at the population's rate (6-9%
+        # above it); what a declared low TG must not do is push it above the band more often.
+        above.append(p["HDL"] > vocab["HDL"]["ref"]["high"])
+        assert _residual_in_real_range(p), (cid, p)
+    assert sum(above) <= 3, above            # binomial(12, 0.09): P(>= 4) ~ 2%
 
 
 def test_declared_high_tg_still_pulls_hdl_low():
     for cid in _no_incidentals(12):
         p, vocab = _first_draw(cid, "high")
-        assert p["TC"] > vocab["TC"]["ref"]["high"] and p["HDL"] < vocab["HDL"]["ref"]["low"], (cid, p)
+        assert p["HDL"] < vocab["HDL"]["ref"]["low"], (cid, p)
+        assert _residual_in_real_range(p), (cid, p)

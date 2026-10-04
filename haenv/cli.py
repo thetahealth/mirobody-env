@@ -26,6 +26,13 @@ from . import kernel_path as _kernel_path
 # Resources (config, registries) are read from the data root.
 from haenv import data_root as _data_root
 from haenv import output_root as _output_root
+from .config import (  # noqa: F401
+    CONFIG_OVERLAY_ENV,
+    _deep_merge,
+    apply_config_overlay,
+    config_layers,
+    load_cfg,
+)
 ROOT = _data_root()
 
 # Artefacts go to the output root. The two roots coincide in a source tree; after a
@@ -35,72 +42,23 @@ OUT = _output_root()
 
 
 def _bootstrap(cfg: dict) -> None:
-    """Check that the L0 kernel is on the import path (`haenv.__init__` mounts it) and exit
-    with a readable message if it is missing.
+    """Check that the L0 kernel package is importable, and exit with a readable message
+    if it is not.
+
+    The kernel is imported as `haenv_kernel`, not by putting a directory on `sys.path`,
+    so there is nothing to mount here. `kernel_path()` is still consulted for the
+    comparison directory tools read kernel source from; it does not decide which kernel
+    runs.
     """
+    try:
+        import haenv_kernel  # noqa: F401
+    except ImportError as e:
+        sys.exit(f"[haenv] the L0 kernel package `haenv_kernel` is not importable: {e}"
+                 f" (it ships with this repository; a wheel installs it inside the package)")
     kp = _kernel_path(cfg)
-    if kp is None or not kp.exists():
-        sys.exit(f"[haenv] kernel path does not exist: {kp}"
+    if kp is not None and not kp.exists():
+        sys.exit(f"[haenv] kernel source directory for tooling does not exist: {kp}"
                  f" (check config.yaml:kernel_path, or the HAENV_KERNEL_PATH env var)")
-    if str(kp) not in sys.path:
-        sys.path.insert(0, str(kp))
-
-
-def _deep_merge(base: dict, over: dict) -> dict:
-    """Merge `over` into `base` in place: mappings recurse, everything else replaces."""
-    for k, v in (over or {}).items():
-        if isinstance(v, dict) and isinstance(base.get(k), dict):
-            _deep_merge(base[k], v)
-        else:
-            base[k] = v
-    return base
-
-
-def load_cfg() -> dict:
-    """`config.yaml`, with the untracked `config.local.yaml` (deployment settings) merged over it."""
-    # Parsed once per process and returned as deep copies (callers mutate them).
-    from .yamlcache import load_yaml as _cached
-    cfg = _cached(ROOT / "config.yaml")
-    local = ROOT / "config.local.yaml"
-    if local.is_file():
-        _deep_merge(cfg, _cached(local) or {})
-    from . import settings
-    return settings.validate(settings.apply_set(apply_config_overlay(cfg)))
-
-
-def config_layers() -> list[dict]:
-    """Every file merged into `load_cfg`, in order, with its SHA-256 (`--set` is recorded
-    separately, see `settings.record`)."""
-    import hashlib
-    paths = [ROOT / "config.yaml", ROOT / "config.local.yaml"]
-    named = os.environ.get(CONFIG_OVERLAY_ENV, "").strip()
-    if named:
-        paths.append(Path(named))
-    return [{"file": str(p), "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
-            for p in paths if p.is_file()]
-
-
-CONFIG_OVERLAY_ENV = "HAENV_CONFIG_OVERLAY"
-
-
-def apply_config_overlay(cfg: dict) -> dict:
-    """Merge the per-run overlay named by `$HAENV_CONFIG_OVERLAY` over `cfg`, in place.
-
-    The overlay is a YAML file in the shape of `config.yaml`; it is applied after
-    `config.local.yaml`, so one process (one `haenv run`) can route a model to a different
-    backend without touching either file. What was routed is recorded in `batch.json`
-    (`sampling.per_model.<model>.backend` and `solving_sha16`). A named overlay that does not
-    exist is an error: a silent fallback would run the cells on the wrong provider.
-    """
-    named = os.environ.get(CONFIG_OVERLAY_ENV, "").strip()
-    if not named:
-        return cfg
-    from .yamlcache import load_yaml as _cached
-    path = Path(named)
-    if not path.is_file():
-        raise FileNotFoundError(f"{CONFIG_OVERLAY_ENV} names a file that does not exist: {path}")
-    return _deep_merge(cfg, _cached(path) or {})
-
 
 
 #: Extensions treated as case text. Anything that is not a job file is text.
@@ -364,17 +322,20 @@ def _main(argv=None) -> int:
                     help="model key used for question generation (config.synth.gen_model is the only default source; there is no fallback in the code)")
     ap.add_argument("--gen-workers", type=int, metavar="N", default=0,
                     help="number of concurrent question-generation workers (0 = use `config.synth.gen_workers`). "
-                         "Deterministic generation sends no requests and automatically falls back to serial")
+                         "Deterministic generation runs on processes: 0 = job `gen_workers`, else min(16, cores); 1 = serial")
     ap.add_argument("--regen", action="store_true",
                     help="ignore the question-generation LLM cache and force fresh model calls (default: hits cases/_llm_cache/)")
     ap.add_argument("--workers", type=int, default=0,
                     help="cells in flight per model (0 = use `config.eval.workers`; 1 = serial). Each model's "
                          "pool is min(this value, `backend_limits[backend]`, its cell count), and the models "
                          "on one backend share that backend's cap; rows are identical to a serial run apart "
-                         "from timing fields")
-    ap.add_argument("--pooling", choices=["model", "backend"], default=None,
+                         "from timing fields. Under `--pooling elastic` only 1 (serial) matters: pools are "
+                         "sized by `config.eval.elastic_max`")
+    ap.add_argument("--pooling", choices=["model", "backend", "elastic"], default=None,
                     help="scheduling: one pool per model, longest expected cell first (default, "
-                         "`config.eval.pooling`), or one pool per backend in task order")
+                         "`config.eval.pooling`); `elastic` = per-model pools sized to the backend "
+                         "cap (at most `config.eval.elastic_max`) with the backend slot going to the "
+                         "model with the most work left; `backend` = one pool per backend in task order")
     ap.add_argument("--allow-retired", action="store_true",
                     help="allow probes marked retired-defective. For reproducing historical batches only -- "
                          "those probes were retired because their questions had confounds, and running new data "
@@ -410,12 +371,11 @@ def _main(argv=None) -> int:
     from .evaluate import run_eval
     from .report import write_report
 
-    from .evaluate import RUN
     # Worker count comes from the config when the flag is unset; there is no default in code.
     _w = int(getattr(a, "workers", 0) or 0)
     if _w <= 0:
         _w = int((cfg.get("eval") or {}).get("workers") or 1)
-    RUN.workers = max(1, _w)
+    _workers = max(1, _w)
 
     # `inputs` is read-only: it lists every input the framework reads (config, job file,
     # registries, code constants) and where each comes from.
@@ -450,7 +410,7 @@ def _main(argv=None) -> int:
     job.allow_retired = bool(a.allow_retired)
     # Applied after loading, so the flag overrides the job file.
     if a.physio is not None:
-        from . import events as _ev_sw
+        from . import world_knobs as _ev_sw
         _ev_sw.PHYSIO_ENABLED[0] = bool(a.physio)
         print(f"[haenv] physiology layer {'enabled' if a.physio else 'disabled'} from the command line (overrides job.yaml)")
     if a.models:
@@ -612,7 +572,8 @@ def _main(argv=None) -> int:
             print(f"[haenv] kernel fingerprint matches ✓ {k_got}")
         batch_mod.register(job, cfg, len(job.cases), len(built), a.cmd,
                            gate_report=_override_trace)
-        return _eval_and_report(a, job, cfg, built, audits, run_eval, write_report)
+        return _eval_and_report(a, job, cfg, built, audits, run_eval, write_report,
+                            workers=_workers)
 
     # ---- generator: a model for the course and daily events, or deterministic ----
     syn = cfg.get("synth", {}) or {}
@@ -636,9 +597,14 @@ def _main(argv=None) -> int:
     # Parallel by default; parallel and serial runs produce byte-identical cases. ----
     built, audits = {}, []
     _n_workers = max(1, int(getattr(a, "gen_workers", 0) or syn.get("gen_workers", 1) or 1))
-    # Deterministic generation sends no requests, so it runs serially.
+    # Deterministic generation is CPU-bound: it runs on forked processes, not threads
+    # (`--gen-workers` > job `gen_workers` > min(16, cores); 1 = serial).
     if dispatch is None:
-        _n_workers = 1
+        from . import build_pool as _bp
+        from .yamlcache import load_yaml as _load_job_yaml
+        # Read from the job file here: `job.py` is on the generation fingerprint.
+        _job_gw = (_load_job_yaml(Path(job.path)) or {}).get("gen_workers") if job.path else 0
+        _n_workers = max(1, int(getattr(a, "gen_workers", 0) or _job_gw or _bp.default_workers()))
 
     def _one_case(cs):
         try:
@@ -647,7 +613,11 @@ def _main(argv=None) -> int:
         except Exception as e:  # one failed case must not sink the batch
             return cs, None, e
 
-    if _n_workers > 1:
+    if dispatch is None and _n_workers > 1:
+        print(f"[haenv] generating on {_n_workers} processes (results collected in input order, byte-identical to serial)")
+        _results = _bp.build_all(job.cases, lambda cs: build_case(
+            cs, max_rounds=int(syn.get("max_rounds", 6))), _n_workers)
+    elif _n_workers > 1:
         from concurrent.futures import ThreadPoolExecutor
         from . import events as _ev_warm
         # Warm lazily loaded registries before threading; failure is harmless.
@@ -710,14 +680,16 @@ def _main(argv=None) -> int:
                   f"({AUDIT_FILENAME})")
         except Exception as _e:                              # noqa: BLE001
             print(f"[haenv] build audit not written ({type(_e).__name__}: {_e})")
-        from build import build_instance                     # kernel
-        from .gates import check_batch, check_shortcut, case_features
-        from .gates import check_hardwired_horizons, check_tier_surface
-        from .gates import check_footprint_not_discriminative
+        from haenv_kernel.build import build_instance                     # kernel
+        from .gates import check_batch
+        from .gates_shortcut import check_shortcut, case_features
+        from .gates_case import check_hardwired_horizons
+        from .gates_shortcut import check_tier_surface
+        from .gates_shortcut import check_footprint_not_discriminative
         # Physiological footprints must not identify real symptoms.
         _fp_hits = check_footprint_not_discriminative(built)
         # Coupling-layer observability; only "this layer did not run" fails.
-        from .gates import check_coupling_observable
+        from .gates_case import check_coupling_observable
         _fp_hits += check_coupling_observable(built)
         _batch_hits = (check_batch(built) + check_tier_surface(built)
                        + check_hardwired_horizons(built) + _fp_hits)
@@ -786,7 +758,7 @@ def _main(argv=None) -> int:
             rows.append((cid, case_features(spx), (r.gold_drivers or [None])[0],
                          r.outcome_label, jg))  # the join gold is scanned too
         # ---- labels this task type scores; unscored labels are exempt from the shortcut gate ----
-        from .gates import check_outcome_derivable
+        from .gates_outcome import check_outcome_derivable
         _specs = {c.case_id: c for c in job.cases}
         _oc_na = [any(w["kind"] == "outcome_rule_not_applicable"
                       for w in check_outcome_derivable(r, _specs.get(cid)))
@@ -1026,7 +998,8 @@ def _main(argv=None) -> int:
         print(f"[haenv] per-item ledger -> {jsonl}")
         return 0 if (n_bad == 0 and n_leak == 0) else 3
 
-    return _eval_and_report(a, job, cfg, built, audits, run_eval, write_report)
+    return _eval_and_report(a, job, cfg, built, audits, run_eval, write_report,
+                            workers=_workers)
 
 
 def _fine_vintage_gate(job, rows, *, refuse: bool) -> bool:
@@ -1085,19 +1058,23 @@ def _fine_vintage_gate(job, rows, *, refuse: bool) -> bool:
     return False
 
 
-def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report) -> int:
+def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report, *,
+                     workers: int = 1) -> int:
     """Evaluate (incremental JSONL, resumable), then report. ``built`` is freshly generated
-    or read back from the batch.
+    or read back from the batch. The Q-side probes are assigned into this run's context,
+    which `run_eval` then carries to every cell.
     """
     if a.cmd == "run":
+        from .run_state import RunContext
+        ctx = RunContext(workers=workers)
         # ---- fine-fingerprint gate before resuming ----
         if not a.fresh and job.results_file.exists():
-            from .evaluate import load_rows as _load_rows_pre
+            from .row_store import load_rows as _load_rows_pre
             if not _fine_vintage_gate(job, _load_rows_pre(job.results_file), refuse=True):
                 return 5
         # ---- false-premise probes: polarity assigned deterministically per case ----
         from . import evaluate as _ev_mod
-        _pm = _ev_mod.assign_premises(built)
+        _pm = _ev_mod.assign_premises(built, ctx=ctx)
         if _pm:
             _nf = sum(1 for v in _pm.values() if v.get("polarity") == "false")
             print(f"[haenv] Q-side false-premise probes: {len(_pm)}/{len(built)} case(s) carry "
@@ -1107,7 +1084,7 @@ def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report) -> int:
         # call, shared with `tools/recompute_judges.py` (the quant probe avoids the noop
         # stream, and `trend` is built on the window each case is answered on) ----
         _nm, _qm = _ev_mod.assign_qside_probes(
-            built, answer_t=_ev_mod.answer_windows(job, built, job.results_file.parent))
+            built, answer_t=_ev_mod.answer_windows(job, built, job.results_file.parent), ctx=ctx)
         if _nm:
             _na = sum(1 for v in _nm.values() if not v.get("truth_present"))
             print(f"[haenv] Q-side no-op probes: {len(_nm)}/{len(built)} case(s) "
@@ -1115,8 +1092,8 @@ def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report) -> int:
                   f"{len(_nm) - _na}) -- claiming insufficient data on a signal that is "
                   f"present is a false positive")
         # Gold list for the oracle stub only; never rendered.
-        _om = _ev_mod.assign_oracle_gold(built)
-        _ow = _ev_mod.assign_oracle_warranted(built)
+        _om = _ev_mod.assign_oracle_gold(built, ctx=ctx)
+        _ow = _ev_mod.assign_oracle_warranted(built, ctx=ctx)
         print(f"[haenv] oracle gold list: {len(_om)}/{len(built)} case(s) · "
               f"oracle-reviewed gold {len(_ow)}/{len(built)} case(s) -- read only by the "
               f"oracle stub, never enters any question (an upper/lower bound row, not a "
@@ -1131,17 +1108,17 @@ def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report) -> int:
         Path(job.results_dir).mkdir(parents=True, exist_ok=True)
         append_record(job.results_dir, cfg, config_layers())
         if a.offline:
-            rows = run_eval(job, cfg, built, resume=not a.fresh)
+            rows = run_eval(job, cfg, built, resume=not a.fresh, ctx=ctx)
         else:
             from .solver_accounting import AccountingRefused
             try:
-                rows = run_eval(job, cfg, built, resume=not a.fresh,
+                rows = run_eval(job, cfg, built, resume=not a.fresh, ctx=ctx,
                                 budget_ledger=a.judge_budget_ledger, budget_usd=a.judge_budget_usd)
             except AccountingRefused as e:
                 print(f"[haenv] cannot start a billed run: {e}; no billed request was sent")
                 return 2
     else:  # report: read the existing JSONL
-        from .evaluate import load_rows
+        from .row_store import load_rows
         p = job.results_file
         if not p.exists():
             print(f"[haenv] no results file {p}; run `run` first."); return 2
@@ -1219,7 +1196,8 @@ def _missing_credentials(job, cfg: dict, *, judged: bool) -> str | None:
     `semantic_pipeline.fetch_prices` reads; a `--limit` run is not judged.
     """
     from .baselines import BASELINE_NAMES
-    from .evaluate import BACKENDS, _ensure_backends_registered, build_solvers, load_env_file
+    from .solvers import BACKENDS, _ensure_backends_registered, build_solvers
+    from .solvers import load_env_file
     try:
         live = [(n, make()) for n, make in build_solvers(job, cfg) if n not in BASELINE_NAMES]
     except ValueError as e:

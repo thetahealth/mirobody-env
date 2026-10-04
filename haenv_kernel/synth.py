@@ -15,10 +15,10 @@ import re
 from dataclasses import asdict
 from pathlib import Path
 
-from schema import RawCase
-from latent import (LatentPremise, DISEASE_SIGNAL_DOMAIN, allowed_noise_classes, derive_noise_plan,
-                    drug_pkpd)
-from noise import inject as inject_noise
+from .schema import RawCase
+from .latent import (LatentPremise, DISEASE_SIGNAL_DOMAIN, allowed_noise_classes,
+                     derive_noise_plan, drug_pkpd)
+from .noise import inject as inject_noise
 
 log = logging.getLogger("harness.synth")
 HERE = Path(__file__).parent
@@ -65,7 +65,7 @@ def _pkpd_conflicts(raw: RawCase, p: LatentPremise) -> list[dict]:
         return out
     dose = sorted(raw.longitudinal_data.get("dose_timeline", []), key=lambda x: x["ts"])
     for pt in dose:
-        if pt["value"] not in pk["ladder"]:
+        if pt["value"] not in pk["ladder"] and pt["value"] != 0:     # 0 = a hold (dose paused)
             out.append({"kind": "dose_off_ladder", "detail": f"{pt['value']}@{pt['ts']} ∉ {pk['ladder']}"})
     for a, b in zip(dose, dose[1:]):
         if b["value"] != a["value"] and (b["ts"] - a["ts"]) < pk["min_titration_days"]:
@@ -269,11 +269,11 @@ class LLMGenerator:
     def _call(self, prompt: str) -> str:
         if self.dispatch is not None:
             return self.dispatch(prompt)
-        from latent import _ai_dispatch
+        from .latent import _ai_dispatch
         return _ai_dispatch(prompt, self.family, self.tier)
 
     def generate(self, p: LatentPremise, original_case: dict | None, feedback: list[dict]) -> RawCase:
-        from latent import _extract_json
+        from .latent import _extract_json
         prompt = _CASE_PROMPT.format(
             premise=json.dumps(p.dumps(), ensure_ascii=False),
             original=json.dumps(original_case or {}, ensure_ascii=False),
@@ -356,7 +356,7 @@ def persist_case(raw: RawCase, task_type: str = "hardprob", cases_dir: str | Non
     blob = json.dumps(asdict(raw), ensure_ascii=False)
     module = ('"""AUTO-GENERATED synthesized case (%s) — SYNTHETIC, eval only.\n'
               '由 synth.persist_case 写入;含 latent_premise(verifier-only)。"""\n'
-              'from schema import RawCase\n'
+              'from .schema import RawCase\n'
               'import json\n\n'
               '_JSON = %r\n\n\n'
               'def raw() -> RawCase:\n'

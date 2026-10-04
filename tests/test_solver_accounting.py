@@ -11,6 +11,7 @@ from haenv.semantic_budget import BudgetExceeded, BudgetLedger
 from haenv.semantic_transport import PriceSchedule
 from haenv.solver_accounting import SolverRequestAccountant, prepare_accounting
 from haenv.paid_completion import AccountedCompletion
+from _patch_bound import patch_bound  # noqa: E402
 
 
 def bound(tmp_path, *, limit="1", cell="a"):
@@ -58,7 +59,7 @@ def test_solve_does_not_swallow_budget_stop(tmp_path, monkeypatch, kind):
         calls.append(prompt)
         raise BudgetExceeded("stop")
     monkeypatch.setattr(s, "_post", stop)
-    monkeypatch.setattr(ev, "render_for", lambda *a: ("question", "probe"))
+    patch_bound(monkeypatch, "render_for", lambda *a: ("question", "probe"), source="haenv.qside")
     monkeypatch.setattr(ev.time, "sleep", lambda *a: pytest.fail("retry after budget stop"))
     with pytest.raises(BudgetExceeded):
         s.solve(object())
@@ -122,8 +123,7 @@ def test_solver_prices_do_not_require_judge_reasoning_capability():
 
 
 def test_parallel_budget_stop_persists_inflight_success(tmp_path, monkeypatch):
-    monkeypatch.setattr(ev.RUN, "workers", 2)
-    monkeypatch.setattr(ev, "_backend_of", lambda n: "openrouter")
+    patch_bound(monkeypatch, "_backend_of", lambda n: "openrouter")
     started = threading.Barrier(2)
     def work(i):
         started.wait(timeout=2)
@@ -134,7 +134,7 @@ def test_parallel_budget_stop_persists_inflight_success(tmp_path, monkeypatch):
         return {"case": "survived", "solver": "s"}
     out = tmp_path / "eval.jsonl"
     with pytest.raises(BudgetExceeded):
-        ev._run_tasks(work, [0, 1], out, key_of=lambda t: "s")
+        ev._run_tasks(work, [0, 1], out, key_of=lambda t: "s", workers=2)
     assert json.loads(out.read_text())["case"] == "survived"
 
 
@@ -149,16 +149,14 @@ def test_run_eval_binds_real_solver_to_shared_ledger(tmp_path, monkeypatch):
                         lambda cfg, model: [{"provider_name": "only", "pricing": metadata["pricing"]}])
     monkeypatch.setattr(batch, "provenance_fields", lambda *a, **k: {"world_sha": "w"})
     monkeypatch.setattr(batch, "record_usage", lambda *a: None)
-    monkeypatch.setattr(ev, "build_solvers", lambda *a: [("s", ev._const(s))])
-    monkeypatch.setattr(ev, "_preflight_quota", lambda *a, **k: None)
-    monkeypatch.setattr(ev, "load_probes", lambda *a: {})
-    monkeypatch.setattr(ev.RUN, "resp_path", None)
-    monkeypatch.setattr(ev.RUN, "workers", 1)
-    def single(cid, name, raw, t, solver):
+    patch_bound(monkeypatch, "build_solvers", lambda *a: [("s", ev._const(s))])
+    patch_bound(monkeypatch, "_preflight_quota", lambda *a, **k: None)
+    patch_bound(monkeypatch, "load_probes", lambda *a: {})
+    def single(cid, name, raw, t, solver, *, ctx):
         assert solver._accounting.paid.ledger.path == (tmp_path / "shared.json").resolve()
         solver._post("question")
         return {"case": cid, "solver": name, "overall": "SCORED"}
-    monkeypatch.setattr(ev, "_row_single", single)
+    patch_bound(monkeypatch, "_row_single", single)
     monkeypatch.setattr(ev.OpenAICompatSolver, "_post_wire", lambda *a:
                         {"usage": {"cost": .001}, "choices": []})
     job = SimpleNamespace(job_id="account-test", results_file=tmp_path / "eval.jsonl",

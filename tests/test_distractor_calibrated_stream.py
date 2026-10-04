@@ -1,6 +1,6 @@
 """A kernel distractor on a calibrated stream must not delete that stream.
 
-`core/noise.inject_distractors` writes unrelated metric streams into
+`haenv_kernel/noise.inject_distractors` writes unrelated metric streams into
 `raw.longitudinal_data` before `events.inject` runs, and `distractor_level: low`
 always names `steps`. If `plan_streams` skips every name already present as
 "provided by the world layer", the inherited-stream pass removes the unplanned

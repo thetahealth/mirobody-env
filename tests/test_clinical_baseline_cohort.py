@@ -68,7 +68,7 @@ def test_only_hba1c_is_cross_cohort():
       - a signal becomes cross-domain and nobody adds its cohorts;
       - a single-domain signal gets cohorts for symmetry, which no case would exercise.
     """
-    from latent import DISEASE_SIGNAL_DOMAIN
+    from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN
 
     seen: dict[str, set[str]] = {}
     for dz, dom in DISEASE_SIGNAL_DOMAIN.items():

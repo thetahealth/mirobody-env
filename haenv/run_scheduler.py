@@ -5,12 +5,19 @@ cell is scored: every cell runs the same `fn(task)` exactly once, rows are persi
 they complete, and the returned list is in task order. Serial (`workers <= 1`), the old
 per-backend pools and the per-model pools produce the same rows apart from timing fields.
 
-Five mechanisms:
+Six mechanisms:
 
 * **One pool per model.** A model gets `min(workers, backend cap, its cell count)`
   threads (`config.eval.model_workers` replaces `workers` for a named model). The models
   on one backend share a backend-level slot, so the sum of their cells in flight never
   exceeds `backend_limits[backend]`.
+* **Elastic pools** (`eval.pooling: elastic`, opt-in). A model's pool is
+  `min(config.eval.elastic_max, backend cap, its cell count)` (or its `model_workers`
+  entry), so a model that outlives the others is not held to a fixed pool size while the
+  shared paid lanes sit idle, and the backend slot goes to the waiting cell of the model
+  with the most expected work left (queued plus running, from the same timing table; one
+  unit per cell without one). The ceiling is the same backend cap and the same global
+  lanes as under `model`; only the split between models changes.
 * **Longest expected cell first.** Each cell's expected duration is
   `median call seconds x median calls per cell` for its (model, geometry), from a timing
   table (`solver_timing.json` in the registry when present, or `HAENV_SOLVER_TIMING`). Cells are
@@ -50,6 +57,7 @@ import statistics
 import threading
 import time
 from pathlib import Path
+from .semantic_budget import BudgetExceeded
 
 log = logging.getLogger("haenv.scheduler")
 
@@ -70,12 +78,16 @@ STALL_FACTOR = 1.5
 def _default_timing_path() -> Path:
     from . import data_root
     return data_root() / "registry" / "solver_timing.json"
-POOLINGS = ("model", "backend")
+#: Pool sizing per model under `elastic` pooling: the most cells one model keeps in flight
+#: when `config.eval.model_workers` does not name it. 16 is the largest single-model
+#: concurrency the backend probe exercised (google, relay, dashscope).
+DEFAULT_ELASTIC_MAX = 16
+POOLINGS = ("model", "backend", "elastic")
 
 
 def _cfg() -> dict:
+    from .config import load_cfg
     try:
-        from .cli import load_cfg
         return load_cfg() or {}
     except Exception as e:                                   # noqa: BLE001
         log.warning("[scheduler] could not read config: %s; using the built-in defaults", e)
@@ -84,8 +96,8 @@ def _cfg() -> dict:
 
 def _load_backend_limits() -> dict[str, int]:
     """`config.yaml:backend_limits` (merged with `config.local.yaml`) over the fallback."""
+    from .config import load_cfg
     try:
-        from .cli import load_cfg
         got = (load_cfg() or {}).get("backend_limits") or {}
         if isinstance(got, dict) and got:
             merged = dict(_BACKEND_LIMITS_FALLBACK)
@@ -109,6 +121,16 @@ def paid_limits(cfg: dict | None = None) -> tuple[int, int]:
     return limit, reserved
 
 
+#: Configured defaults (`config.paid.global_request_limit` / `judge_reserved_lanes`), used
+#: while neither the runtime file nor `capacity.json` sets a ceiling.
+GLOBAL_REQUEST_LIMIT, JUDGE_RESERVED_LANES = paid_limits()
+
+
+#: Solver requests may hold at most `global - judge_reserved` lanes (the rest stay reachable
+#: by judges). Static value at import, for importers; `request_slot` uses the live value.
+SOLVER_LANES = GLOBAL_REQUEST_LIMIT - JUDGE_RESERVED_LANES
+
+
 def model_workers(cfg: dict | None = None) -> dict[str, int]:
     """`config.eval.model_workers`: per-model pool sizes that replace `workers` for those
     models (for a model whose cells are much longer than the rest)."""
@@ -116,6 +138,15 @@ def model_workers(cfg: dict | None = None) -> dict[str, int]:
     if not isinstance(got, dict) or any(type(v) is not int or v < 1 for v in got.values()):
         raise ValueError("config.eval.model_workers must map model names to positive integers")
     return {str(k): int(v) for k, v in got.items()}
+
+
+def elastic_max(cfg: dict | None = None) -> int:
+    """`config.eval.elastic_max`: pool size of a model under `elastic` pooling."""
+    got = ((cfg if cfg is not None else _cfg()).get("eval") or {}).get("elastic_max",
+                                                                       DEFAULT_ELASTIC_MAX)
+    if type(got) is not int or got < 1:
+        raise ValueError("config.eval.elastic_max must be a positive integer")
+    return got
 
 
 def wall_budgets(cfg: dict | None = None) -> dict[str, float]:
@@ -226,7 +257,9 @@ def lpt_order(items: list, estimate_of) -> list:
 class PrioritySlot:
     """A counting semaphore that admits waiters highest priority first (FIFO on ties).
 
-    Records the peak number of holders, which the cap tests read.
+    `priority` is a number, or a zero-argument callable read each time a waiter is chosen
+    (so a waiter's rank follows the state of the run while it waits). Records the peak
+    number of holders, which the cap tests read.
     """
 
     def __init__(self, capacity: int, name: str = ""):
@@ -236,23 +269,36 @@ class PrioritySlot:
         self._cv = threading.Condition()
         self._waiting: list = []
         self._seq = itertools.count()
+        self._stale, self._pick = True, None
         self.in_use = 0
         self.peak = 0
 
-    def acquire(self, priority: float = 0.0) -> None:
+    def acquire(self, priority=0.0) -> None:
         with self._cv:
-            ticket = (-float(priority), next(self._seq))
-            heapq.heappush(self._waiting, ticket)
-            while not (self.in_use < self.capacity and self._waiting[0] == ticket):
+            waiter = (priority, next(self._seq))
+            self._waiting.append(waiter)
+            self._stale = True
+            while not (self.in_use < self.capacity and self._best() is waiter):
                 self._cv.wait()
-            heapq.heappop(self._waiting)
+            self._waiting.remove(waiter)
             self.in_use += 1
             self.peak = max(self.peak, self.in_use)
+            self._stale = True
             self._cv.notify_all()
+
+    def _best(self):
+        """The waiter to admit next: highest current priority, first come on ties. Chosen
+        again after any arrival, admission or release (the lock is held)."""
+        if self._stale:
+            self._stale = False
+            self._pick = max(self._waiting, key=lambda w: (
+                float(w[0]() if callable(w[0]) else w[0]), -w[1]))
+        return self._pick
 
     def release(self) -> None:
         with self._cv:
             self.in_use -= 1
+            self._stale = True
             self._cv.notify_all()
 
 
@@ -437,13 +483,14 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
         geometry_of=None, pooling: str | None = None, backend_limits: dict | None = None,
         timing: dict | None = None, batch_dir: Path | None = None,
         per_model: dict | None = None, wall_budget: dict | None = None,
-        clock=time.monotonic) -> list[dict]:
+        elastic_size: int | None = None, clock=time.monotonic) -> list[dict]:
     """Run every task once through `fn`, persist each row with `emit`, return rows in task order.
 
     `key_of(task)` names the model, `backend_of(model)` its backend, `geometry_of(task)`
     the geometry the cell runs on. `workers <= 1` runs serially in task order; otherwise a
     model's pool size is `per_model[model]` (default `config.eval.model_workers`) or
-    `workers`, never more than its backend's cap or its cell count. A task whose model has
+    `workers` (`elastic_size` or `config.eval.elastic_max` under `elastic` pooling), never
+    more than its backend's cap or its cell count. A task whose model has
     spent its `wall_budget` (default `config.eval.model_wall_budget_s`) is not started and
     has no row.
     """
@@ -468,7 +515,6 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
         _write_plan(batch_dir, {"mode": "serial", "cells": len(tasks)}, rows, stats)
         return rows
 
-    from .semantic_budget import BudgetExceeded
 
     pooling = pooling or pooling_mode()
     limits = dict(backend_limits if backend_limits is not None else _load_backend_limits())
@@ -478,28 +524,35 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
     indexed = list(enumerate(tasks))
     est = {i: estimate_cell_s(timing, model_of(t), geometry_of(t) if geometry_of else None)
            for i, t in indexed}
-    if pooling == "model":
+    by_model = pooling in ("model", "elastic")
+    if by_model:
         indexed = lpt_order(indexed, lambda it: est[it[0]])
 
-    # Pools: one per model (new) or one per backend (legacy, task order, no priority).
+    # Pools: one per model or one per backend (legacy, task order, no priority).
     pools: dict[str, list] = {}
     pool_backend: dict[str, str] = {}
     for i, t in indexed:
         m = model_of(t)
         b = backend_for(m)
-        key = m if pooling == "model" else b
+        key = m if by_model else b
         pools.setdefault(key, []).append((i, t))
         pool_backend[key] = b
     slots = {b: PrioritySlot(limits.get(b, DEFAULT_BACKEND_LIMIT), b)
              for b in set(pool_backend.values())}
     overrides = {}
-    if pooling == "model":
+    if by_model:
         overrides = model_workers() if per_model is None else dict(per_model)
-    size = {k: min(int(overrides.get(k, workers)), slots[pool_backend[k]].capacity, len(v))
+    default_size = (elastic_size or elastic_max()) if pooling == "elastic" else workers
+    size = {k: min(int(overrides.get(k, default_size)), slots[pool_backend[k]].capacity, len(v))
             for k, v in pools.items()}
     gauges = {k: _Gauge() for k in pools}
     known = [e for e in est.values() if e is not None]
     mid = statistics.median(known) if known else 0.0
+    # Expected work not yet finished per pool (cells queued or running), the rank a model's
+    # waiting cells carry for the backend slot under `elastic` pooling. Without timing
+    # history every cell weighs 1, so the rank is the number of cells left.
+    weight = {i: (est[i] if est[i] is not None else (mid or 1.0)) for i, _ in indexed}
+    left = {k: sum(weight[i] for i, _ in v) for k, v in pools.items()}
 
     log.info("[eval] parallel: pooled by %s %s · backend caps %s · %d cell(s) with timing "
              "history (LPT)%s", pooling,
@@ -521,7 +574,8 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
                     return
                 i, t = queue.pop(0)
             prio = est[i] if est[i] is not None else mid
-            slot.acquire(prio if pooling == "model" else 0.0)
+            slot.acquire((lambda k=key: left[k]) if pooling == "elastic"
+                         else prio if pooling == "model" else 0.0)
             try:
                 if stopped.is_set():
                     return
@@ -550,6 +604,8 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
                     errors.append(exc)
                 return
             finally:
+                with lock:
+                    left[key] -= weight[i]
                 slot.release()
 
     threads = []
@@ -568,6 +624,7 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
                   "wall_budget_stops": walls.stops})
     _write_plan(batch_dir, {"mode": "parallel", "pooling": pooling, "workers": int(workers),
                             "model_workers": overrides,
+                            "elastic_max": default_size if pooling == "elastic" else None,
                             "backend_caps": {b: s.capacity for b, s in slots.items()},
                             "pools": {k: {"cells": len(v), "threads": size[k],
                                           "backend": pool_backend[k]} for k, v in pools.items()},
@@ -648,7 +705,6 @@ def _write_plan(batch_dir, plan: dict, rows: list, stats: dict) -> None:
     if batch_dir is None:
         return
     try:
-        from .paid_slots import GLOBAL_REQUEST_LIMIT, SOLVER_LANES
         deadlines = {}
         timing = load_timing()
         timeout_s = float(_cfg().get("timeout_s", 900))

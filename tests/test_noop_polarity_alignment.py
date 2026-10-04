@@ -33,7 +33,10 @@ sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 def _probe_polarities() -> set[str]:
     """The polarity values the production probe actually emits -- read from the source, not hand-copied a second time."""
     import ast
-    src = (ROOT / "haenv" / "evaluate.py").read_text(encoding="utf-8")
+    import inspect
+    from haenv import evaluate as E
+    # The file that defines the probe builder, wherever it lives.
+    src = pathlib.Path(inspect.getsourcefile(E.build_noop_probe)).read_text(encoding="utf-8")
     out: set[str] = set()
     for n in ast.walk(ast.parse(src)):
         # `"polarity": ("gap" if want_gap else "covered")`
@@ -72,7 +75,7 @@ def test_report_covers_every_polarity_the_probe_emits():
                     cov = vals
     assert gap and cov, "报告侧没有声明极性取值集 ⇒ 这条断言没有对象"
     emitted = _probe_polarities()
-    assert emitted, "从 `evaluate.py` 取不到探针的极性取值 ⇒ 前提不成立"
+    assert emitted, "从探针所在模块取不到极性取值 ⇒ 前提不成立"
     missing = sorted(emitted - (gap | cov))
     assert not missing, (
         f"探针会产出 {sorted(emitted)},而报告侧只认 {sorted(gap | cov)} ⇒ "

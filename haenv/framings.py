@@ -10,6 +10,9 @@ import hashlib
 
 from . import process
 from .prompts import PROMPT  # noqa: F401  (re-exported)
+from .external_gold import (  # noqa: F401
+    _BUILTIN_FRAMING_NAMES,
+)
 
 
 #: The diagnosis prompt has no drivers block (no ddx judge scores it) and its
@@ -143,10 +146,6 @@ def derive_scope_prompt(base: str = "") -> str:
 
 DDX_SCOPE_PROMPT = derive_scope_prompt()
 DDX_SCOPE2_PROMPT = derive_scope2_prompt()
-
-
-_BUILTIN_FRAMING_NAMES = frozenset({
-    "PROMPT", "DDX_PROMPT", "DDX_SCOPE_PROMPT", "DDX_SCOPE2_PROMPT", "DDX_TRACE_PROMPT"})
 
 
 def _framings() -> dict[str, str]:

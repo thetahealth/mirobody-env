@@ -23,11 +23,19 @@ if str(_HERE) not in sys.path:
 
 ROOT = _HERE.parent
 
+# In-repo judge groups (`plugins/*.dist-info`, e.g. `haenv.m2`) are discovered through
+# `importlib.metadata`, which only scans `sys.path`: a shipped job that declares one
+# (`inputs/m2-core.job.yaml`) must load in the test session as it does from the command line.
+if str(ROOT / "plugins") not in sys.path:
+    sys.path.insert(0, str(ROOT / "plugins"))
+
 # Subprocesses that run a script under tools/ must import this tree's `haenv`. A worktree whose
 # virtualenv holds an editable install of another checkout would otherwise test that one.
 import os as _os
 _os.environ["PYTHONPATH"] = _os.pathsep.join(
-    [str(ROOT), *(p for p in _os.environ.get("PYTHONPATH", "").split(_os.pathsep) if p and p != str(ROOT))])
+    [str(ROOT), str(ROOT / "plugins"),
+     *(p for p in _os.environ.get("PYTHONPATH", "").split(_os.pathsep)
+       if p and p not in (str(ROOT), str(ROOT / "plugins")))])
 
 
 @pytest.fixture(autouse=True)

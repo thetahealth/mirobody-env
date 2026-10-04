@@ -8,11 +8,10 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
-import os
 from pathlib import Path
-import tempfile
 import threading
 
+from .paid_slots import persist_json
 from .semantic_budget import BudgetExceeded, _amount
 
 #: The in-flight marker of the request this thread is sending (set only around `dispatch`).
@@ -37,7 +36,7 @@ def note_generation(generation_id) -> None:
 
 def is_quota_exhausted(evidence: dict) -> bool:
     """The relay's "this key's quota is used up" refusal (the markers the key pool uses)."""
-    from .evaluate import _is_exhausted
+    from .call_log import _is_exhausted
     return _is_exhausted(" ".join(str(evidence.get(k) or "") for k in
                                   ("error_body_head", "error_message", "error_metadata_head")))
 
@@ -86,7 +85,6 @@ def zero_completion_bill(response, missing: Exception) -> dict:
     re-raises, so the cost stays unknown. The receipt names its evidence; the
     final audit re-queries each id.
     """
-    from .solver_accounting import NoGenerationRecord
     if not isinstance(missing, NoGenerationRecord):
         raise missing
     if not (isinstance(response, dict) and response.get("error") and not response.get("choices")):
@@ -287,7 +285,7 @@ class AccountedCompletion:
         self._sleep, self._clock = sleep, clock
 
     def request(self, request_id: str, prompt: str, settings: dict, dispatch, *,
-                attempt: dict | None = None) -> dict:
+                attempt: dict | None = None, cell: dict | None = None) -> dict:
         if settings.get("model") != self.prices.model:
             raise ValueError("Request model does not match the verified price schedule")
         if settings.get("backend") != self.backend:
@@ -313,17 +311,11 @@ class AccountedCompletion:
                 from .paid_slots import request_slot
                 with request_slot(self.ledger.path, role="solver"):
                     return self._request_locked(request_id, prompt, dispatch, bound, identity,
-                                                receipt, attempt or {}, route)
+                                                receipt, attempt or {}, route, cell)
             finally:
                 fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
-    @staticmethod
-    def _persist(path: Path, value: dict) -> None:
-        with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, delete=False) as file:
-            json.dump(value, file, ensure_ascii=False)
-            file.flush()
-            os.fsync(file.fileno())
-        os.replace(file.name, path)
+    _persist = staticmethod(persist_json)
 
     def _unchanged_usage_rejection(self, key, before, evidence, meta) -> dict | None:
         """relay quota-exhausted refusal: $0 only when the key's used quota did not move.
@@ -398,7 +390,7 @@ class AccountedCompletion:
             ops_log(self.ledger.path, "budget_resumed", **pause)
 
     def _request_locked(self, request_id, prompt, dispatch, bound, identity, receipt, attempt,
-                        route=None):
+                        route=None, cell=None):
         prior = self.ledger.snapshot()["requests"].get(request_id)
         if prior is None and (receipt.is_file() or receipt.with_suffix(".failed.json").is_file()):
             prior = self._book_from_receipt(request_id, bound, identity, receipt)
@@ -463,7 +455,12 @@ class AccountedCompletion:
                                 "generation_id": None, **meta}
             try:
                 response = dispatch(prompt)
+                from .transport import served_of
+                # `cell` (case, solver) joins the receipt to its grid cell; `served` is who the
+                # response says served it. Neither is part of the request identity.
                 self._persist(receipt, {"request": identity, "route": route, "response": response,
+                                        **({"cell": cell} if cell else {}),
+                                        "served": served_of(response),
                                         **({"attempt": meta} if meta else {})})
                 _INFLIGHT.marker = None
                 inflight.unlink(missing_ok=True)
@@ -482,7 +479,13 @@ class AccountedCompletion:
                 # blank lines, then the connection closed early => `Expecting value`) is a cut
                 # transport, like a cut stream: retryable, counted at its bound until settled.
                 cut = evidence.get("response_started") is True
+                from .transport import pinned_upstream
                 failed = {"request": identity, "route": route,
+                          **({"cell": cell} if cell else {}),
+                          # A refusal under a pin (e.g. the pinned upstream is unavailable) is
+                          # this failed attempt; the router was told not to try another one.
+                          **({"pinned_upstream": pinned_upstream((route or {}).get("provider"))}
+                             if pinned_upstream((route or {}).get("provider")) else {}),
                           "error_class": type(error).__name__,
                           **({"attempt": meta} if meta else {}),
                           **({"transport_cut": ("body_unparseable_after_start"
@@ -574,3 +577,11 @@ class AccountedCompletion:
         elif _amount(prior["actual_usd"]) != actual:
             raise BudgetExceeded("Provider receipt cost differs from the settled ledger")
         return response
+
+
+class NoGenerationRecord(ValueError):
+    """Every lookup answered 404: OpenRouter holds no billed generation under this id."""
+
+    def __init__(self, generation_id: str, lookups: int, waited_s: float):
+        super().__init__("No generation record")
+        self.generation_id, self.lookups, self.waited_s = generation_id, lookups, waited_s

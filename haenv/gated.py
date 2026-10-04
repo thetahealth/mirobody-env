@@ -51,7 +51,7 @@ def _pricing() -> dict[str, str]:
     _ps = _cached_yaml(_dr() / "registry" / "gated_pricing_streams.yaml") or {}
     for t, k in (_ps.get("streams") or {}).items():
         out[str(t)] = str(k)
-    for grp in ("tests", "decoy_signals"):
+    for grp in ("tests", "decoy_signals", "discriminator_tests"):
         for t, k in (reg.get(grp) or {}).items():
             out[str(t)] = str(k)
     return out
@@ -73,7 +73,7 @@ def kind_of(target: str, withheld: dict | None = None) -> str:
 def test_catalogue() -> list[str]:
     """Union of gold `tests` across all conditions, deduped and sorted. The catalogue is far
     larger than any one case's gold, so it offers options, not an answer key."""
-    import joint_scenarios as _JS                      # kernel
+    import haenv_kernel.joint_scenarios as _JS    # kernel
     from .overlay import haenv_comorbid_specs, haenv_independent_specs
     specs = {**_JS.DDX_SPECS, **haenv_comorbid_specs(_JS.DDX_SPECS),
              **haenv_independent_specs()}
@@ -82,6 +82,75 @@ def test_catalogue() -> list[str]:
         t = ((sp.get("adjudication") or {}).get("ddx") or {}).get("tests") or sp.get("tests") or []
         out.update(str(x) for x in t)
     return sorted(out)
+
+
+def discriminator_tests() -> list[str]:
+    """Rival discriminator tests that no condition's gold `tests` names
+    (`registry/gated_pricing.yaml:discriminator_tests`), minus any already in the gold
+    catalogue. One fixed list for every case."""
+    reg = _cached_yaml(_dr() / "registry" / "gated_pricing.yaml") or {}
+    have = set(test_catalogue())
+    return [str(t) for t in (reg.get("discriminator_tests") or {}) if str(t) not in have]
+
+
+@functools.lru_cache(maxsize=1)
+def _resolves_to() -> dict[str, tuple[str, ...]]:
+    """`registry/gated_pricing.yaml:resolves_to`, checked: every name is priced and every id
+    is in the findings vocabulary (no fallback on a bad row)."""
+    from .registry import load_findings
+    reg = _cached_yaml(_dr() / "registry" / "gated_pricing.yaml") or {}
+    fd = load_findings()
+    pr = _pricing()
+    out: dict[str, tuple[str, ...]] = {}
+    for name, ids in (reg.get("resolves_to") or {}).items():
+        ids = tuple(str(i) for i in (ids or ()))
+        if str(name) not in pr:
+            raise PricingUnregistered(f"resolves_to: {name!r} has no price")
+        bad = [i for i in ids if i not in fd]
+        if not ids or bad:
+            raise KeyError(f"resolves_to: {name!r} -> {list(ids)}: not in findings.yaml: {bad or 'empty'}")
+        out[str(name)] = ids
+    return out
+
+
+def has_reading_model(fspec: dict) -> bool:
+    """A finding can be read out only when it carries a reference range or is qualitative.
+    Upstream-vocabulary `add` entries (catalogue names turned into findings) carry neither."""
+    return bool((fspec or {}).get("qualitative")) or isinstance((fspec or {}).get("ref"), dict)
+
+
+def menu_findings(target: str, findings: dict | None = None) -> tuple[str, ...]:
+    """Finding ids a menu item stands for: the explicit `resolves_to` row, else the unique
+    `_resolve_target` match, else (). Ids with no reading model are dropped (a purchase of
+    them returns nothing, so there is nothing to credit)."""
+    t = str(target or "").strip()
+    ids = _resolves_to().get(t)
+    if ids:
+        return ids
+    if findings is None:
+        from .registry import load_findings
+        findings = load_findings()
+    f = _resolve_target(t, findings)
+    return (f,) if f and has_reading_model(findings.get(f)) else ()
+
+
+def synth_menu_target(raw, target: str, T: int) -> list[dict] | None:
+    """Reading for a purchased item: none for a decoy (`DECOY_SIGNALS`: the purchase is charged and
+    recorded, the result is unavailable); otherwise one `synth_on_demand` point per `resolves_to` id (all
+    or nothing, since a composite read half-way cannot be interpreted); otherwise
+    `synth_on_demand` on the name itself."""
+    if str(target or "").strip() in DECOY_SIGNALS:
+        return None                  # a decoy is never readable, whatever it resolves to
+    ids = _resolves_to().get(str(target or "").strip())
+    if not ids:
+        return synth_on_demand(raw, target, T)
+    pts: list[dict] = []
+    for fid in ids:
+        p = synth_on_demand(raw, fid, T)
+        if not p:
+            return None
+        pts.extend(p)
+    return pts
 
 
 #: Typical test count used to derive the budget; a constant, since the case's own gold
@@ -95,14 +164,14 @@ def menu_for(sp, withheld: dict, case_id: str = "") -> list[dict]:
     """Menu handed to the model: real signals, decoys and tests with kind and unit price,
     shuffled by `sha256(case_id + name)` so position is not a clue."""
     import hashlib
-    from gatekeeper import COST                     # kernel
+    from haenv_kernel.gatekeeper import COST                     # kernel
     real = sorted(available_targets(sp, withheld))
     # ---- Section 1: monitoring signals (scores T1 grounding / T2 redundancy) ----
     items = [{"target": t, "kind": kind_of(t), "real": True, "is_test": False} for t in real]
     items += [{"target": t, "kind": kind_of(t), "real": False, "is_test": False} for t in DECOY_SIGNALS]
     # ---- Section 2: test items (scored by tests_recall / tests_precision, not T1) ----
     items += [{"target": t, "kind": kind_of(t), "real": None, "is_test": True}
-              for t in test_catalogue()]
+              for t in test_catalogue() + discriminator_tests()]
     for it in items:
         it["cost"] = COST.get(it["kind"], 5.0)
     items.sort(key=lambda x: hashlib.sha256(f"{case_id}|{x['target']}".encode()).hexdigest())
@@ -181,7 +250,7 @@ def available_targets(sp, withheld: dict) -> set[str]:
 def _parse_step(txt: str) -> dict:
     """Parses the model's output for this round. Uses the same extractor as the main
     pipeline, no separate one."""
-    from .evaluate import _extract_json
+    from haenv_kernel.solver import _extract_json
     try:
         d = _extract_json(txt or "")
     except Exception:
@@ -249,6 +318,95 @@ def _resolve_target(target: str, findings: dict) -> str | None:
     return sub[0] if len(sub) == 1 else None
 
 
+def _obs_cfg() -> tuple[dict, dict]:
+    """(`physio_streams.yaml:clinical_observation`, `clinical_measurement.cv`)."""
+    from .regpath import load_registry
+    doc = load_registry("physio_streams.yaml") or {}
+    return (doc.get("clinical_observation") or {},
+            ((doc.get("clinical_measurement") or {}).get("cv") or {}))
+
+
+def _u(key: str) -> float:
+    import hashlib
+    h = hashlib.blake2b(key.encode("utf-8"), digest_size=8).digest()
+    return int.from_bytes(h, "big") / float(1 << 64)
+
+
+def _pick_w(weights: dict, u: float):
+    tot = float(sum(float(w) for w in weights.values())) or 1.0
+    acc = 0.0
+    for k, w in weights.items():
+        acc += float(w) / tot
+        if u < acc:
+            return k
+    return list(weights)[-1]
+
+
+def _report_face(case_id: str, fid: str, flag: str) -> tuple[str | None, str]:
+    """The reporting lab's printed name for `fid` (`name_variants`; `None` = the vocabulary
+    name) and its flag symbol for `flag` (H / L / NORMAL -> `named_flags`)."""
+    cfg, _ = _obs_cfg()
+    names = (cfg.get("name_variants") or {}).get(fid)
+    name = _pick_w(names, _u(f"{case_id}|named-name|{fid}")) if names else None
+    fl = cfg.get("named_flags") or {}
+    side = {"H": "high", "L": "low"}.get(flag, "normal")
+    sym = _pick_w(fl[side], _u(f"{case_id}|named-flag|{side}")) if fl.get(side) else flag
+    return name, str(sym)
+
+
+def flag_side(sym: str) -> str:
+    """The side (`H` / `L` / `NORMAL`) a printed flag symbol stands for (`named_flags`);
+    other symbols (POSITIVE / NEGATIVE) come back unchanged."""
+    cfg, _ = _obs_cfg()
+    for side, syms in (cfg.get("named_flags") or {}).items():
+        if sym in (syms or {}):
+            return {"high": "H", "low": "L"}.get(side, "NORMAL")
+    return str(sym)
+
+
+def _named_on_stream(raw, fid: str, fspec: dict, T: int) -> list[dict] | None:
+    """A named test whose indicator is one of the case's live lab streams: a new draw on day
+    T -- the latest draw at or before T times one draw's measurement variation
+    (`clinical_measurement.cv`), at the registered precision.
+    `None` when the case carries no such stream."""
+    import math
+    import statistics
+    from .findings_render import _TS_TO_PANEL, _band
+    from .indicators import of
+    stream = {v: k for k, v in _TS_TO_PANEL.items()}.get(fid)
+    ld = getattr(raw, "longitudinal_data", None) or {}
+    pts = sorted((q for q in (ld.get(stream) or [])
+                  if isinstance(q, dict) and isinstance(q.get("value"), (int, float))
+                  and not isinstance(q.get("value"), bool)),
+                 key=lambda q: int(q["ts"]))
+    if not stream or not pts:
+        return None
+    # Centred on the latest draw at or before T: nothing after T (no later draw, no later
+    # measurement error) reaches a reading the solver gets on day T.
+    before = [q for q in pts if int(q["ts"]) <= int(T)]
+    v = float((before[-1] if before else pts[0])["value"])
+    case_id = str(getattr(raw, "case_id", "CASE"))
+    _, cv = _obs_cfg()
+    u = min(max(_u(f"{case_id}|named|{stream}|{int(T)}"), 1e-9), 1 - 1e-9)
+    z = max(-3.0, min(3.0, statistics.NormalDist().inv_cdf(u)))
+    v *= math.exp(float(cv.get(stream) or 0.0) * z)
+    nd = int(of(stream)["ndigits"])
+    # the reporting lab's print precision, the same decision as on the stream
+    u_p, acc = _u(f"{case_id}|labprint"), 0.0
+    for d, pr in sorted(((_obs_cfg()[0].get("print_decimals_mix") or {}).get(stream) or {}).items()):
+        acc += float(pr)
+        if u_p < acc:
+            nd = max(nd, int(d))
+            break
+    v = round(v, nd) if nd else float(round(v))
+    lo, hi = _band(fspec)
+    flag = "H" if (hi is not None and v > hi) else ("L" if (lo is not None and v < lo) else "NORMAL")
+    name, sym = _report_face(case_id, fid, flag)
+    return [{"ts": int(T), "value": v, "unit": fspec.get("unit", ""), "ref_low": lo,
+             "ref_high": hi, "flag": sym, "finding_id": fid,
+             "name": name or fspec.get("name_cn", fid)}]
+
+
 def synth_on_demand(raw, target: str, T: int) -> list[dict] | None:
     """Synthesize a reading for a test not embedded in the data (`need_synth`): abnormal per
     the condition's `condition_findings.yaml` declaration, otherwise within the reference
@@ -269,7 +427,16 @@ def synth_on_demand(raw, target: str, T: int) -> list[dict] | None:
         return None
 
     fspec = findings[matched_fid]
+    if not has_reading_model(fspec):
+        # An entry with no reference range and no qualitative reading cannot say what normal
+        # is; a value drawn for it always reads normal, whatever the patient has.
+        return None
     case_id = getattr(raw, "case_id", "CASE")
+    # A named test on one of the case's live lab streams is a new draw of that stream
+    # (the two channels must agree), not an independent value.
+    _on_stream = _named_on_stream(raw, matched_fid, fspec, T)
+    if _on_stream is not None:
+        return _on_stream
     lp = getattr(raw, "latent_premise", {}) or {}
     pb = lp.get("patient_basics") or {}
     # Condition comes from the case itself (`overlay.spec_id_of`), keeping the batch
@@ -315,6 +482,7 @@ def synth_on_demand(raw, target: str, T: int) -> list[dict] | None:
     unit = fspec.get("unit", "")
     name_cn = fspec.get("name_cn", matched_fid)
     flag = ("H" if val > hi else ("L" if val < lo else "NORMAL")) if isinstance(val, (int, float)) else "NORMAL"
+    _name, _sym = _report_face(str(case_id), matched_fid, flag)
 
     return [{
         "ts": T,
@@ -322,9 +490,9 @@ def synth_on_demand(raw, target: str, T: int) -> list[dict] | None:
         "unit": unit,
         "ref_low": lo,
         "ref_high": hi,
-        "flag": flag,
+        "flag": _sym,
         "finding_id": matched_fid,
-        "name": name_cn,
+        "name": _name or name_cn,
     }]
 
 
@@ -334,8 +502,8 @@ def run_gated(raw, T: int, solver, budget: float = DEFAULT_BUDGET,
     `{"queries": [...], "commit": bool, ...answer fields}`; any answer field counts as
     converging. `trace`, if given, receives the event log, including tool results that cannot
     be reconstructed afterwards."""
-    from build import build_instance                    # kernel
-    from gatekeeper import Gatekeeper                   # kernel
+    from haenv_kernel.build import build_instance                    # kernel
+    from haenv_kernel.gatekeeper import Gatekeeper                   # kernel
     from .solve_guard import guarded_solve as _guarded_solve
     # The solver instance is reused across cells, so clear its per-round log.
     if hasattr(solver, "_gated_round_log"):
@@ -404,6 +572,8 @@ def run_gated(raw, T: int, solver, budget: float = DEFAULT_BUDGET,
                     "finish_reason": getattr(out, "_finish", None),
                     "max_tokens": getattr(out, "_max_tokens", None),
                     "latency_s": getattr(out, "_latency_s", None),
+                    "request_prompt_sha256": getattr(out, "_prompt_sha_full", None),
+                    "requests": getattr(out, "_requests", None),
                     "queries": qs_raw if (qs_raw := d.get("queries")) else None})
         if trace is not None:
             trace.append("assistant/message", {
@@ -474,7 +644,7 @@ def run_gated(raw, T: int, solver, budget: float = DEFAULT_BUDGET,
                         "spent_after": round(gk.spent, 2)}, step=r)
                 raise
             if res.get("need_synth") and target:
-                synth_pts = synth_on_demand(raw, target, T)
+                synth_pts = synth_menu_target(raw, target, T)
                 if synth_pts:
                     res["series"] = synth_pts
                     res["need_synth"] = False

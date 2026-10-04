@@ -1,4 +1,4 @@
-"""Two-sided controls for `core/verifier.py::_test_tier` and the
+"""Two-sided controls for `haenv_kernel/verifier.py::_test_tier` and the
 `invasive_before_firstline` hard gate.
 
 Background
@@ -33,7 +33,7 @@ for _p in (str(_ROOT), str(_ROOT / "core")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from verifier import _test_tier  # noqa: E402
+from haenv_kernel.verifier import _test_tier  # noqa: E402
 
 
 # --------------------------------------------------------------------------------------

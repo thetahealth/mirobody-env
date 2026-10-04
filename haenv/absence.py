@@ -15,6 +15,9 @@ it mounted but had nothing to judge (its denominator field in `DENOM_FIELD` is e
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from .row_store import (  # noqa: F401
+    geometry_of,
+)
 
 # ---------------------------------------------------------------- controlled vocabulary (changing it = changing the contract)
 REASONS: dict[str, str] = {
@@ -81,7 +84,7 @@ def absence_of(row: dict, dim: str) -> str | None:
     """
     from .quantities import BY_NAME as _QBY  # deferred import: avoids a cycle with report
     from .quantities import row_names as _qrow_names
-    from .report import _rowdim
+    from .analytics import _rowdim
     if isinstance(_rowdim(row, dim), (int, float)):
         return None
     _ov = str(row.get("overall", ""))
@@ -104,17 +107,6 @@ def absence_of(row: dict, dim: str) -> str | None:
     return "absent_unclassified"
 
 
-def geometry_of(rows: list[dict]) -> str:
-    """This batch's execution geometry, used to tell a not-applicable dimension from a defect."""
-    if any(r.get("slice_rows") for r in rows):
-        return "slices"
-    if any(r.get("rounds") for r in rows):
-        return "multi"
-    if any(r.get("tool_budget") is not None for r in rows):
-        return "gated"
-    return "single"
-
-
 def absence_report(rows: list[dict], dims: list[str],
                    recs: list[dict] | None = None) -> list[dict]:
     """Per dimension: null rate, reason counts and class. `rows` should hold only real-model cells.
@@ -123,7 +115,7 @@ def absence_report(rows: list[dict], dims: list[str],
     are computed by `rank_ddx`. Pass its output as `recs` to tell them apart from
     `not_wired`; without `recs` such a dimension is classed `unknown_layer` and not failed.
     """
-    from .report import _REC_KEY
+    from .analytics import _REC_KEY
     from .scoring import load_profile
     # Geometry applicability and aggregate status come from the profile's declarations
     # (`applies_on` / `is_aggregate`), not from inference.

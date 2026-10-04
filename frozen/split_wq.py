@@ -53,10 +53,7 @@ import yaml                                           # noqa: E402
 
 from haenv import canary as C                       # noqa: E402  <- the strings, defined once
 from haenv.wq import Q_TRUTH_FIELDS, W_TRUTH_FIELDS  # noqa: E402  <- single source of truth, see rule 2 above
-
-sys.path.insert(0, str((ROOT / yaml.safe_load(
-    (ROOT / "config.yaml").read_text(encoding="utf-8"))["kernel_path"]).resolve()))
-from build import _filter_le_T                      # noqa: E402  <- kernel truncation rule, see rule 6 above
+from haenv_kernel.build import _filter_le_T          # noqa: E402  <- kernel truncation rule, see rule 6 above
 
 #: W-side record of `case`'s original key order.
 ORDER_KEY = "_case_key_order"
