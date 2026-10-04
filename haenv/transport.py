@@ -47,6 +47,93 @@ ROUTE_KEYS = ("backend", "model", "endpoint_sha256", "max_tokens_field", "stream
 DIRECT_UPSTREAM = {"google": "google", "dashscope": "alibaba-dashscope"}
 #: Body keys of an OpenAI-compatible request that only route or transport it.
 _OPENAI_ROUTE_BODY_KEYS = {"provider", "stream", "stream_options"}
+#: Keys of a model's `sampling` block (`config.models.<m>.sampling`, part of the answer view).
+#: `temperature` is a number sent as is, or `"unsupported:<why>"` for a model whose provider
+#: takes no temperature (then nothing is sent and the reason is the record). `thinking_budget`
+#: is Google's `generationConfig.thinkingConfig.thinkingBudget`.
+SAMPLING_KEYS = ("temperature", "thinking_budget")
+UNSUPPORTED = "unsupported:"
+
+
+def check_sampling(name: str, backend: str, sampling) -> dict | None:
+    """The validated `sampling` block of model `name` (None when it declares none)."""
+    if sampling is None:
+        return None
+    if not isinstance(sampling, dict) or not sampling:
+        raise ValueError(f"config.models[{name}].sampling must be a non-empty mapping")
+    bad = sorted(set(sampling) - set(SAMPLING_KEYS))
+    if bad:
+        raise ValueError(f"config.models[{name}].sampling has unknown key(s) {bad}")
+    t = sampling.get("temperature")
+    if isinstance(t, str):
+        if not t.startswith(UNSUPPORTED) or not t[len(UNSUPPORTED):].strip():
+            raise ValueError(f"config.models[{name}].sampling.temperature: a number, or "
+                             f"'{UNSUPPORTED}<why>' for a provider that takes none")
+    elif t is not None and (isinstance(t, bool) or not isinstance(t, (int, float)) or not 0 <= t <= 2):
+        raise ValueError(f"config.models[{name}].sampling.temperature must be in [0, 2]")
+    tb = sampling.get("thinking_budget")
+    if tb is not None and (backend != "google" or type(tb) is not int or tb < 0):
+        raise ValueError(f"config.models[{name}].sampling.thinking_budget is a Google "
+                         f"thinking budget (backend google, integer >= 0)")
+    return dict(sampling)
+
+
+#: Model-entry keys that are the model's conditions *as a solver under test* (upstream pin,
+#: sampling). A judge built from the same `config.models` entry does not inherit them: its
+#: request is defined by the judging policy.
+SOLVER_ONLY_KEYS = ("provider", "sampling")
+
+
+def judge_spec(spec: dict) -> dict:
+    """`spec` without the solver-only conditions (see `SOLVER_ONLY_KEYS`)."""
+    return {k: v for k, v in dict(spec).items() if k not in SOLVER_ONLY_KEYS}
+
+
+def sent_temperature(sampling) -> float | None:
+    """The temperature a request carries (None: not sent)."""
+    t = (sampling or {}).get("temperature")
+    return None if t is None or isinstance(t, str) else t
+
+
+class UpstreamMismatch(RuntimeError):
+    """A pinned OpenRouter request was served by another upstream than the pin names."""
+
+
+def pinned_upstream(provider) -> str | None:
+    """The one upstream an OpenRouter `provider` object pins with fallbacks off, else None."""
+    only = (provider or {}).get("only")
+    if isinstance(only, list) and len(only) == 1 and (provider or {}).get("allow_fallbacks") is False:
+        return str(only[0])
+    return None
+
+
+def check_pin(name: str, backend: str, provider) -> None:
+    """A `provider` object pins exactly one upstream with fallbacks off, or is refused."""
+    if provider is None:
+        return
+    if backend != "openrouter" or not isinstance(provider, dict):
+        raise ValueError(f"config.models[{name}].provider is an OpenRouter routing object "
+                         f"(needs backend: openrouter and a mapping); got backend={backend!r}")
+    if pinned_upstream(provider) is None:
+        raise ValueError(f"config.models[{name}].provider must pin one upstream with fallbacks "
+                         f"off (only: [<upstream>], allow_fallbacks: false); got {provider!r}")
+
+
+def served_of(response) -> dict:
+    """Who served a completion, as the response says (absent fields are None)."""
+    r = response if isinstance(response, dict) else {}
+    return {"provider": r.get("provider") if isinstance(r.get("provider"), str) else None,
+            "model": r.get("model") or r.get("modelVersion"),
+            "generation_id": r.get("_generation_id") or r.get("id") or r.get("responseId"),
+            "gateway_request_id": r.get("_gateway_request_id")}
+
+
+def check_served(solver, response) -> None:
+    """Refuse a completion a pinned route says another upstream served (never silent)."""
+    pin = pinned_upstream(getattr(solver, "provider", None))
+    got = served_of(response)["provider"]
+    if pin is not None and got is not None and got != pin:
+        raise UpstreamMismatch(f"pinned upstream {pin!r} but served by {got!r}")
 
 
 class WireMismatch(BudgetExceeded):
@@ -114,22 +201,27 @@ def wire_view(backend: str, body: bytes, max_tokens_field: str = "max_tokens") -
         contents = data.get("contents") or []
         parts = [(p or {}).get("text") for c in contents for p in (c or {}).get("parts") or []]
         cfg = dict(data.get("generationConfig") or {})
+        thinking = cfg.get("thinkingConfig") if isinstance(cfg.get("thinkingConfig"), dict) else {}
         extra = sorted((set(data) - {"contents", "generationConfig"})
-                       | (set(cfg) - {"maxOutputTokens"}))
+                       | (set(cfg) - {"maxOutputTokens", "temperature", "thinkingConfig"})
+                       | {f"thinkingConfig.{k}" for k in set(thinking) - {"thinkingBudget"}})
         roles = [(c or {}).get("role", "user") for c in contents]
         messages = ([{"role": "user", "content": parts[0]}]
                     if len(parts) == 1 and roles == ["user"] and isinstance(parts[0], str)
                     else {"contents": contents})
         return {"messages": messages, "model": None, "max_tokens": cfg.get("maxOutputTokens"),
-                "reasoning_effort": None, "response_format": None, "unexpected_keys": extra}
+                "reasoning_effort": None, "response_format": None,
+                "temperature": cfg.get("temperature"),
+                "thinking_budget": thinking.get("thinkingBudget"), "unexpected_keys": extra}
     effort = data.get("reasoning_effort")
     if isinstance(data.get("reasoning"), dict):
         effort = data["reasoning"].get("effort")
     known = {"model", "messages", max_tokens_field, "reasoning", "reasoning_effort",
-             "response_format"} | _OPENAI_ROUTE_BODY_KEYS
+             "response_format", "temperature"} | _OPENAI_ROUTE_BODY_KEYS
     return {"messages": data.get("messages"), "model": data.get("model"),
             "max_tokens": data.get(max_tokens_field),
             "reasoning_effort": effort, "response_format": data.get("response_format"),
+            "temperature": data.get("temperature"), "thinking_budget": None,
             "unexpected_keys": sorted(set(data) - known)}
 
 
@@ -153,6 +245,11 @@ def verify_wire(solver, body: bytes, prompt: str) -> None:
         problems.append("response_format")
     if backend != "google" and seen["model"] != solver.model:
         problems.append("model")
+    sampling = getattr(solver, "sampling", None)
+    if seen["temperature"] != sent_temperature(sampling):
+        problems.append("temperature")
+    if seen["thinking_budget"] != (sampling or {}).get("thinking_budget"):
+        problems.append("thinking_budget")
     if seen["unexpected_keys"]:
         problems.append("unexpected body keys " + ",".join(seen["unexpected_keys"]))
     if problems:
@@ -200,10 +297,10 @@ _SETTINGS: list = [None]
 
 
 def _settings() -> dict:
+    from .config import load_cfg
     if _SETTINGS[0] is not None:
         return _SETTINGS[0]
     try:
-        from .cli import load_cfg
         got = (load_cfg() or {}).get("transport") or {}
     except Exception:                                        # noqa: BLE001
         got = {}

@@ -27,6 +27,9 @@ import os
 from pathlib import Path
 import sys
 import time
+from .semantic_budget import read_state
+from .semantic_budget import BudgetLedger
+from .semantic_budget import BudgetExceeded
 
 ZERO = Decimal("0")
 UNATTRIBUTED = "(unattributed)"
@@ -44,7 +47,6 @@ def _dec(value) -> Decimal:
 
 def read_ledger(path: Path) -> dict:
     """Plain read of the ledger (snapshot + journal): no lock, no lock file, no write."""
-    from .semantic_budget import read_state
     return read_state(Path(path))
 
 
@@ -665,13 +667,11 @@ def plan_reconcile(state: dict, index: dict, lookup=None, *, key_usage_evidence=
 
 def apply_reconcile(actions: list[Action], ledger_path: Path, evidence_dir: Path) -> dict:
     """Write evidence files, then settle through BudgetLedger.settle_unknown_later. Over-bound: refuse."""
-    from .semantic_budget import BudgetLedger
     limit = read_ledger(Path(ledger_path))["limit_usd"]
     led = BudgetLedger(Path(ledger_path), limit_usd=str(limit))
     evidence_dir = Path(evidence_dir)
     evidence_dir.mkdir(parents=True, exist_ok=True)
     done, refused = [], []
-    from .semantic_budget import BudgetExceeded
     for a in actions:
         if a.decision == "refuse_over_bound":
             # Evidence of a charge above the bound: book the actual charge (never keep the lower
@@ -749,6 +749,7 @@ def _resolve_batches(args) -> list[Path]:
 
 
 def main(argv=None) -> int:
+    from .config import load_cfg
     argv = list(sys.argv[1:] if argv is None else argv)
     mode = "spend"
     if argv and argv[0] == "reconcile":
@@ -777,7 +778,6 @@ def main(argv=None) -> int:
         by = tuple(args.by) if args.by else DEFAULT_BY
         bal = None
         if args.balances:
-            from .cli import load_cfg
             relay = ((load_cfg().get("backends") or {}).get("relay") or {})
             bal = fetch_balances(relay_base=relay.get("quota_url"),
                                  relay_key_prefix=relay.get("key_env_pool"))
