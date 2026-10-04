@@ -137,7 +137,7 @@ def register_event_pool(name: str, spec: dict, *, source: str, replace: bool = F
 def register_effect(drug: str, spec: dict, *, source: str, replace: bool = False) -> None:
     """A drug-effect entry; it must pass the same field checks as the in-repo table."""
     _guard_label_bearing("effect", drug, spec)
-    from .drug_effects import DrugEffectsError, check_entry
+    from .drug_schema import DrugEffectsError, check_entry
     try:
         check_entry(drug, spec)
     except DrugEffectsError as e:

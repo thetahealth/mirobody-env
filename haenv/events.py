@@ -20,12 +20,9 @@ from . import world_plugins as _wp
 
 import copy as _copy
 import threading as _threading
-import hashlib
 import json
 import logging
 import math
-import pathlib as _pathlib
-from dataclasses import dataclass, field
 from haenv import data_root as _dr   # resource root: source tree = repo root, wheel = haenv/_data
 from haenv import streams as _streams
 
@@ -37,218 +34,6 @@ log = logging.getLogger("haenv.events")
 AUX_WHITELIST = set(_streams.aux_metrics())
 
 
-# ============================================================ raw_case baseline facts
-@dataclass
-class Facts:
-    """raw_case's baseline facts; the daily metrics must be consistent with them."""
-    case_id: str
-    disease: str
-    drug: str
-    devices: tuple[str, ...]
-    comorbidities: tuple[str, ...]
-    age_lo: int
-    sex: str
-    start_weight: float
-    nadir_weight: float
-    bmi: float | None
-    baseline_vitals: dict            # baseline vitals explicitly stated in the
-                                      # raw case (e.g. resting HR 102 / lowest
-                                      # overnight SpO2 86)
-    symptoms: tuple[dict, ...]       # genuine symptoms recorded in raw_case
-                                      # [{day,text,context}]
-    sampling_days: int
-    target_event: str = "weight_regain"   # the predicted outcome (decides which
-                                           # events would "hand the solver a
-                                           # ready-made attribution")
-    # Whether this task type judges this outcome at all (default True). For a
-    # diagnosis task it is False, so outcome-explaining tags are not banned.
-    outcome_graded: bool = True
-    # Conditioning axes for distractor events; empty = unconditioned sampling.
-    cond_axes: tuple[str, ...] = ()
-
-    @property
-    def hyperthyroid(self) -> bool:
-        """Whether the patient is currently hyperthyroid (`_treated` excluded).
-
-        Unlike `proxy_tags`, which includes `_treated`: treatment normalizes
-        the metabolic rate, but the history is still a differential clue.
-        """
-        return any(c.startswith("hyperthyroidism") and not c.endswith("_treated")
-                   for c in self.comorbidities)
-
-    @property
-    def hypothyroid(self) -> bool:
-        return any(c.startswith("hypothyroid") for c in self.comorbidities)
-
-    @property
-    def osa(self) -> bool:
-        return any(c.upper() == "OSA" for c in self.comorbidities)
-
-    @property
-    def heavy(self) -> bool:
-        """Clinically significant obesity (affects the actual level of activity /
-        SpO2 / resting HR). BMI takes priority; falls back to the weight band
-        when BMI is missing."""
-        return (self.bmi or 0) >= 34 or self.start_weight >= 105
-
-    @property
-    def elderly(self) -> bool:
-        return self.age_lo >= 65
-
-
-def facts_of(cs) -> Facts:
-    from .job import raw_field as _raw_field
-    raw = cs.raw
-    age = str(_raw_field(raw, "age_range"))
-    try:
-        age_lo = int(age.split("-")[0])
-    except ValueError:
-        age_lo = 45
-    # Defaults come only from `job.CaseSpec.RAW_DEFAULTS` (via `_raw_field`).
-    start = float(_raw_field(raw, "start_weight"))
-    return Facts(
-        case_id=cs.case_id,
-        disease=_raw_field(raw, "disease"),
-        drug=_raw_field(raw, "drug"),
-        devices=tuple(raw.get("devices", []) or []),
-        comorbidities=tuple(_raw_field(raw, "comorbidities") or []),
-        age_lo=age_lo, sex=_raw_field(raw, "sex"),
-        start_weight=start, nadir_weight=float(_raw_field(raw, "nadir_weight")),
-        bmi=(float(raw["bmi"]) if raw.get("bmi") else None),
-        baseline_vitals=dict(raw.get("baseline_vitals", {}) or {}),
-        symptoms=tuple({"day": int(s["day"]), "text": s.get("text", ""),
-                        "context": s.get("context", "")} for s in (raw.get("symptoms") or [])),
-        sampling_days=int(_raw_field(raw, "sampling_days")),
-        target_event=str(cs.latent.get("target_event", "weight_regain")),
-        outcome_graded=not bool((raw.get("adjudication") or {}).get("ddx")
-                                or (cs.latent or {}).get("ddx_spec_id")),
-        # Not in `job.LATENT_REGISTRY`; set only by an explicit caller.
-        cond_axes=normalize_cond_axes((cs.latent or {}).get("distractor_cond_axes")),
-    )
-
-
-# ============================================================ daily metric catalog
-@dataclass
-class MetricSpec:
-    name: str
-    devices: tuple[str, ...]          # any one in inventory suffices for daily
-                                       # sampling (empty = self-reported diary,
-                                       # needs no device)
-    unit: str
-    base: float                       # default healthy-person baseline
-    amp: float                        # intraday/day-to-day physiological
-                                       # fluctuation amplitude
-    period: int                       # deterministic waveform period (days;
-                                       # unrelated to T / the reversal week)
-    ndigits: int                      # 0 = round to integer
-    hard_range: tuple[float, float]   # hard physiological range: any point
-                                       # outside it fails validation
-    tol: float                        # tolerance between the mean and the
-                                       # profile's expected baseline
-    vital_key: str | None = None      # if the raw case states this vital's
-                                       # baseline, defer to it
-    tags: tuple[str, ...] = ()        # used for "driver proxy" exclusion
-
-
-#: Baseline adjustments per population trait. Order matters (floating-point
-#: addition is not associative). Entry shapes:
-#:   `("<a boolean attribute on Facts>", delta)`  -- add delta when it matches
-#:   `("age_decade_over", (anchor, delta))`      -- add delta per decade past anchor
-#:   `("drug_prefix", (prefix, delta))`          -- add delta when the drug name
-#:                                                  matches this prefix
-BASELINE_ADJUST: dict[str, tuple[tuple[str, object], ...]] = {
-    "steps":            (("heavy", -2200), ("elderly", -1500), ("osa", -600)),
-    "activity_index":   (("heavy", -16), ("elderly", -12)),
-    "resting_hr":       (("hyperthyroid", 30), ("hypothyroid", -6),
-                         ("heavy", 4), ("elderly", -3)),
-    "hrv":              (("age_decade_over", (40, -5)), ("hyperthyroid", -12), ("heavy", -5)),
-    "sleep_hours":      (("osa", -0.7), ("elderly", -0.4)),
-    "spo2":             (("osa", -1.6), ("heavy", -0.6)),
-    "body_temp":        (("hyperthyroid", 0.2),),
-    "skin_temp":        (("hyperthyroid", 0.15),),
-    "gi_symptom_score": (("drug_prefix", ("metformin", 0.8)),),
-}
-#: The entry shapes that are not boolean attributes of `Facts`.
-BASELINE_ADJUST_FORMS = ("age_decade_over", "drug_prefix")
-
-
-def _adj(name: str, base: float, f: Facts) -> float:
-    """Adjust a metric's baseline by the raw case's baseline facts (`BASELINE_ADJUST`)."""
-    v = base
-    for kind, arg in BASELINE_ADJUST.get(name, ()):
-        if kind == "age_decade_over":
-            anchor, delta = arg                                   # type: ignore[misc]
-            v += delta * max(0, (f.age_lo - anchor) // 10)
-        elif kind == "drug_prefix":
-            prefix, delta = arg                                   # type: ignore[misc]
-            v += delta if f.drug.startswith(prefix) else 0.0
-        else:
-            # No default: a misspelled trait name must raise, not read as False.
-            if getattr(f, kind):
-                v += arg                                          # type: ignore[operator]
-    return v
-
-
-# The daily metrics, in manifest order (`registry/streams.yaml`, `render`).
-METRICS: tuple[MetricSpec, ...] = tuple(MetricSpec(**f) for f in _streams.metric_fields())
-METRIC_BY_NAME = {m.name: m for m in METRICS}
-
-# True driver -> the "driver proxy" tags isomorphic to it; never injected as neutral.
-DRIVER_PROXY_TAGS: dict[str, tuple[str, ...]] = {
-    "poor_medication_adherence": ("adherence", "travel", "cost"),
-    "medication_intolerance": ("gi", "med_side_effect"),
-    "calorie_intake_change": ("diet", "appetite"),
-    "activity_decline": ("activity",),
-    "sleep_decline": ("sleep",),
-    "concurrent_medication_effect": ("med_new", "supplement"),
-    "acute_illness": ("infection", "fever"),
-    "fluid_or_GI_weight_variation": ("gi", "fluid"),
-    "cost_or_access_issue": ("cost",),
-    "measurement_noise": ("device",),
-    "insufficient_dose_exposure": ("adherence",),
-    "unknown_or_multifactorial": ("supplement", "med_new"),   # raw cases often
-}
-# Comorbidity -> its own differential-clue tags (also excluded).
-COMORBID_PROXY_TAGS: dict[str, tuple[str, ...]] = {
-    "hyperthyroidism": ("cardiac", "heat", "tremor"),
-    "hypothyroidism": ("cold", "fatigue"),
-    "OSA": ("sleep", "respiratory", "snore"),
-}
-
-
-def proxy_tags(f: Facts, driver: str) -> set[str]:
-    """Answer-relevant tags (driver proxies + comorbidity clues); gates stream admission."""
-    out = set(DRIVER_PROXY_TAGS.get(driver, ()))
-    for c in f.comorbidities:
-        for key, tags in COMORBID_PROXY_TAGS.items():
-            if c.startswith(key):
-                out.update(tags)
-    return out
-
-
-# Tags that could supply a causal story for the predicted outcome. Banned for
-# discrete events only: a dated event ("birthday dinner on day X") is a
-# ready-made attribution, a flat step-count stream is not.
-OUTCOME_EXPLAINING_TAGS: dict[str, tuple[str, ...]] = {
-    "weight": ("diet", "appetite", "activity"),
-    "glucose": ("diet", "appetite"),
-    "dysglycemia": ("diet", "appetite"),
-    "hepatic": ("diet", "supplement"),
-}
-
-
-def event_proxy_tags(f: Facts, driver: str) -> set[str]:
-    """Forbidden tags for discrete events: `proxy_tags` plus outcome-explaining
-    tags, the latter only when this task type judges that outcome."""
-    out = proxy_tags(f, driver)
-    # `getattr` with default True: duck-typed stand-ins for `Facts` keep the ban.
-    if getattr(f, "outcome_graded", True):
-        for key, tags in OUTCOME_EXPLAINING_TAGS.items():
-            if key in (f.target_event or ""):
-                out.update(tags)
-    return out
-
-
 # ============================================================ benign event pool (answer-irrelevant)
 # The pool lives in `registry/benign_events.yaml`; a failed read raises (no
 # built-in fallback). Optional per-item `cond`:
@@ -256,32 +41,90 @@ def event_proxy_tags(f: Facts, driver: str) -> set[str]:
 # Every (item, openable axis) pair not covered by `cond` must be listed in
 # `CONDITION_NEUTRAL_ITEMS`, or loading raises.
 from .regpath import registry_path as _rp
-_REGISTRY = _rp("benign_events.yaml")
-
-
-def _load_event_pools() -> dict:
-    import yaml as _yaml
-    if not _REGISTRY.is_file():
-        raise FileNotFoundError(
-            f"{_REGISTRY} not found: no source for the distractor event pools (no built-in fallback).")
-    from .regpath import overlaid_yaml as _overlaid_yaml
-    d = _overlaid_yaml(_REGISTRY) or {}      # merged with the world-plugin overlay
-    for k in ("benign_events", "life_events", "condition_neutral_items", "inherited_profile"):
-        if k not in d:
-            raise KeyError(f"{_REGISTRY}: missing `{k}:`")
-    return d
-
-
-def _as_item(d: dict) -> dict:
-    """Convert YAML lists back to the tuples the code and freeze metric expect."""
-    o = dict(d)
-    o["tags"] = tuple(o.get("tags") or ())
-    if "age_w" in o:
-        o["age_w"] = tuple(float(x) for x in o["age_w"])
-    if "cond" in o:
-        o["cond"] = {ax: ({**spec, "deny": tuple(spec["deny"])} if "deny" in spec else dict(spec))
-                     for ax, spec in (o["cond"] or {}).items()}
-    return o
+from .events_text import (  # noqa: F401
+    ANNOTATION_MARKERS,
+    _LATIN_SUFFIXES,
+    _load_symptom_topics,
+    _norm_symptom,
+    alias_hit,
+    scrub_annotation,
+    symptom_topic,
+)
+from .events_pools import (  # noqa: F401
+    AGE_PRIOR_BANDS,
+    AXIS_LEAK_TOKENS,
+    COMORBID_PROXY_TAGS,
+    CONDITION_AXIS_SPECS,
+    COND_MULTIPLIER_RANGE,
+    ConditionSpecError,
+    DRIVER_PROXY_TAGS,
+    EVENT_RATE_DEFAULTS,
+    Facts,
+    OUTCOME_EXPLAINING_TAGS,
+    PoolPriorMissing,
+    SEASONS,
+    TAG_KEYWORDS,
+    _AXIS_DOMAIN,
+    _AXIS_OPENABLE,
+    _AXIS_STATUS,
+    _AXIS_VALUE_FN,
+    _NON_METRIC_NDIGITS,
+    _POOLS_LOCK,
+    _REGISTRY,
+    _as_item,
+    _axis_decl,
+    _declared_ndigits,
+    _event_ok,
+    _load_event_pools,
+    _round_to_declared_digits,
+    activity_of,
+    age_band_index,
+    age_prior,
+    axis_neutrality_problems,
+    axis_value,
+    check_axis_neutrality,
+    cond_denied,
+    cond_multiplier,
+    effective_tags,
+    event_prior,
+    event_proxy_tags,
+    event_weeks,
+    expected_event_counts,
+    facts_of,
+    infer_tags,
+    normalize_cond_axes,
+    proxy_tags,
+    role_tags,
+    season_of,
+    weighted_order,
+)
+from .world_knobs import PHYSIO_ENABLED
+from .events_streams import (  # noqa: F401
+    BASELINE_ADJUST,
+    BASELINE_ADJUST_FORMS,
+    METRICS,
+    METRIC_BY_NAME,
+    MetricSpec,
+    StreamPlan,
+    _AR_PHI,
+    _AR_SD_FRAC,
+    _adj,
+    _adj_full,
+    CASE_OFFSET_CUT_SD,
+    INDIVIDUAL_ADJUST,
+    INDIVIDUAL_ADJUST_FORMS,
+    individual_shift,
+    _det_shock,
+    _gold_signal_of_driver,
+    _render_calibrated,
+    _wearable_cadence,
+    plan_streams,
+    render_stream,
+    world_layer_base_signals,
+)
+from .world_knobs import (  # noqa: F401
+    FINDINGS_ENABLED,
+)
 
 
 _POOLS = _load_event_pools()
@@ -303,7 +146,6 @@ _INHERITED_PROFILE: dict[str, dict] = {
 # as they were. Every reader of the pools calls it first.
 _POOLS_TOKEN: tuple = _wp.overlay_token("benign_events.yaml")
 _POOLS_HOLD: tuple = _wp.overlay_values("benign_events.yaml")
-_POOLS_LOCK = _threading.RLock()
 _POOLS_SYNCING: int | None = None     # id of the thread that is rebuilding, if any
 
 
@@ -377,73 +219,12 @@ def _apply_coupling(facts) -> dict:
     return rec
 
 
-_NON_METRIC_NDIGITS: dict[str, int] = {}
-
-
-def _declared_ndigits(name: str) -> int | None:
-    """A stream's declared decimal precision from the indicator registry, or
-    `None` (unregistered, or `ndigits: null` for panel items) to leave it as is."""
-    from . import indicators as _ind
-    try:
-        nd = _ind.of(name)["ndigits"]
-    except _ind.IndicatorUnregistered:
-        return None
-    return None if nd is None else int(nd)
-
-
-def _round_to_declared_digits(ld: dict) -> None:
-    """Round every stream back to its declared precision after the physiology
-    layer, whose 4-decimal output would otherwise reveal which streams it touched."""
-    for name, pts in list(ld.items()):
-        nd = _declared_ndigits(name)
-        if nd is None or not isinstance(pts, list):
-            continue
-        for p in pts:
-            if isinstance(p, dict) and isinstance(p.get("value"), float):
-                p["value"] = round(p["value"], nd) if nd else float(round(p["value"]))
-
-
-def _apply_physio_if_enabled(raw, case_id: str, schedule: list[dict]) -> dict | None:
-    """Run the physiology layer if enabled; `None` when off. Errors propagate."""
-    if not PHYSIO_ENABLED[0]:
-        return None
-    from pathlib import Path as _P
-
-    from .physio import apply as _pa
-    from .physio import kernel as _pk
-
-    streams = _pa.load_stream_registry(_rp("physio_streams.yaml"))
-    kernels = _pk.load_physio_registry(_rp("physio_kernels.yaml"))
-    # Keep the pre-noise ground-truth trajectory. The kernel's slope gate bounds
-    # the true rate of weight change, so slope and anchors are judged on this
-    # copy and only the value range on the observation. It is verifier-only:
-    # never in `injected`, `raw` or `manifest["injected"]`.
-    clean_ld = _copy.deepcopy(raw.longitudinal_data)
-    new_ld, summary = _pa.apply_physio(case_id, raw.longitudinal_data, streams,
-                                       events=schedule, kernels=kernels)
-    _round_to_declared_digits(new_ld)
-    raw.longitudinal_data = new_ld
-    covered = sum(1 for r in schedule
-                  if r.get("topic") in kernels.emitted_topics())
-    return {
-        "_clean_longitudinal_data": clean_ld,   # verifier-only, `_` prefix follows the same convention as other out-of-band fields
-        "clip_rate": summary.projection.clip_rate,
-        "n_clipped": summary.projection.n_clipped,
-        "n_points": summary.projection.n_total,
-        "n_series": len(summary.distributions),
-        "n_events": len(schedule),
-        "n_events_with_kernel": covered,
-        "n_dist_violations": len(summary.violations),
-        "dist_violations": list(summary.violations)[:20],
-    }
-
-
 def pool_event_topics() -> frozenset[str]:
     """Topics of the benign/life event pools: the option set for the LLM
     planning path (genuine-symptom topics are excluded)."""
     _sync_pools()
     return frozenset(str(it["topic"]) for pool in (BENIGN_EVENTS, LIFE_EVENTS)
-                     for it in pool if it.get("topic"))
+                     for it in pool if it.get("topic") and not it.get("plugin_only"))
 
 
 def event_topics() -> frozenset[str]:
@@ -462,58 +243,6 @@ def event_topics() -> frozenset[str]:
     return frozenset(pool_topics | sym_topics)
 
 
-# Deterministic text -> tag inference, unioned with self-reported tags so an
-# LLM-planned event cannot label itself neutral.
-TAG_KEYWORDS: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
-    (("聚餐", "外食", "大餐", "夜宵", "加餐", "宴", "自助", "下午茶", "甜点", "零食",
-      "饮酒", "喝酒", "火锅", "烧烤", "点外卖"), ("diet",)),
-    (("食欲", "嘴馋", "想吃", "饥饿"), ("appetite",)),
-    (("出差", "旅行", "外地", "返乡", "度假", "探亲同住"), ("travel",)),
-    (("跑步", "爬山", "登山", "健身", "游泳", "骑行", "球赛", "打球", "马拉松", "徒步",
-      "负重", "深蹲", "长走"), ("activity", "exertion")),
-    (("熬夜", "失眠", "通宵", "倒班", "夜班", "加班到"), ("sleep",)),
-    (("忘记吃", "漏服", "漏打", "漏针", "没吃药", "停用", "中断用药", "少打", "自行减量"),
-     ("adherence",)),
-    (("费用", "涨价", "自费", "报销", "买不起", "医保", "缺货"), ("cost",)),
-    (("保健品", "补剂", "新开了", "新增药", "中药", "维生素", "蛋白粉"), ("med_new", "supplement")),
-    (("发热", "发烧", "感冒", "流感", "腹泻", "呕吐", "感染", "咳嗽不止"), ("infection",)),
-    (("心悸", "心慌", "怕热", "手抖", "多汗", "脖子变粗"), ("cardiac", "heat", "tremor")),
-    (("怕冷", "浮肿", "便秘", "脱发"), ("cold", "fatigue")),
-    (("打鼾", "鼾声", "憋醒", "嗜睡", "打呼", "血氧"), ("sleep", "respiratory", "snore")),
-)
-
-
-def infer_tags(text: str, context: str = "") -> tuple[set[str], bool]:
-    """Infer tags and "does this require physical exertion" from the event text
-    (independent of any self-reported field)."""
-    blob = f"{text} {context}"
-    tags: set[str] = set()
-    exertion = False
-    for keys, tg in TAG_KEYWORDS:
-        if any(k in blob for k in keys):
-            tags.update(t for t in tg if t != "exertion")
-            exertion = exertion or "exertion" in tg
-    return tags, exertion
-
-
-def effective_tags(item: dict) -> tuple[set[str], bool]:
-    """Self-reported/pool tags UNION tags inferred from text and context."""
-    inf_tags, inf_ex = infer_tags(item.get("text", ""), item.get("context", ""))
-    return set(item.get("tags", ())) | inf_tags, bool(item.get("exertion")) or inf_ex
-
-
-def role_tags(item: dict) -> set[str]:
-    """Tags for the event's role, used for the answer-relevance verdict.
-
-    Structured tags plus tags inferred from `text`; a tag inferred only from
-    `context` does not count, so an incidental word in the setting does not
-    change the verdict. Plausibility (`exertion`) still uses `effective_tags`.
-    """
-    struct = set(item.get("tags", ()))
-    from_text, _ = infer_tags(item.get("text", ""), "")
-    return struct | from_text
-
-
 def effective_pool_size(f: Facts, driver: str) -> dict[str, int]:
     """Number of pool entries admissible for this patient, per rate key. Both
     the feasibility check and sampling must use this, not the nominal pool size."""
@@ -524,237 +253,10 @@ def effective_pool_size(f: Facts, driver: str) -> dict[str, int]:
             "life_event_rate": sum(1 for it in LIFE_EVENTS if _event_ok(it, f, banned)[0])}
 
 
-#: Default event-density rates (items/week); every consumer reads them from here.
-EVENT_RATE_DEFAULTS: dict[str, float] = {"symptom_rate": 0.1, "life_event_rate": 0.05}
-
-
-def event_weeks(T: int | float) -> float:
-    """Weeks in the observation window. Lower bound 1.0 -- a window under a week
-    should not compute the number of items to inject as 0."""
-    return max(1.0, float(T) / 7.0)
-
-
-def expected_event_counts(event_density: dict | None, T: int | float) -> dict[str, int]:
-    """Declared density x observation-window weeks => item counts to inject.
-    `gates.check_event_density` requires exact equality."""
-    ed = event_density or {}
-    w = event_weeks(T)
-    return {k: max(0, int(round(float(ed.get(k, d) if ed.get(k, d) is not None else d) * w)))
-            for k, d in EVENT_RATE_DEFAULTS.items()}
-
-
-def _event_ok(item: dict, f: Facts, banned: set[str],
-              proxy_exempt: bool = False,
-              cond: tuple[str, ...] | None = None) -> tuple[bool, str]:
-    """Whether a benign event is plausible for this patient and answer-irrelevant.
-    Returns (ok, reason).
-
-    `proxy_exempt=True` skips only the answer-relevant tag check (for lookalike
-    distractors); plausibility is still checked. `cond=None` takes
-    `Facts.cond_axes`.
-    """
-    # Relevance by role (`role_tags`); plausibility by wording (`effective_tags`).
-    _, exertion = effective_tags(item)
-    hit = role_tags(item) & banned
-    if hit and not proxy_exempt:
-        return False, f"answer_relevant_tag:{sorted(hit)}"
-    if exertion and (f.heavy or f.elderly):
-        return False, "exertion_implausible_for_profile"
-    if item.get("max_age") and f.age_lo > int(item["max_age"]):
-        return False, "age_implausible_for_profile"
-    axes = normalize_cond_axes(cond if cond is not None else getattr(f, "cond_axes", ()))
-    if axes:
-        hit_c = cond_denied(item, f, axes)
-        if hit_c:
-            return False, f"{hit_c[0]}_implausible_for_profile:{hit_c[1]}"
-    return True, ""
-
-
-# ============================================================ Iron law 3: events are conditioned on the patient
-# Benign/life events are drawn by a per-event age prior, optionally times
-# multipliers from conditioning axes. An axis must be answer-neutral, i.e.
-# drawn from case_id alone; see `CONDITION_AXIS_SPECS`.
-AGE_PRIOR_BANDS: tuple[tuple[int, int, str], ...] = ((0, 39, "18-39"), (40, 64, "40-64"),
-                                                     (65, 200, "65+"))
-
-
-class PoolPriorMissing(ValueError):
-    """An event in the pool has no declared age prior (there is no default)."""
-
-
-def age_band_index(age_lo: int) -> int:
-    for i, (lo, hi, _name) in enumerate(AGE_PRIOR_BANDS):
-        if lo <= age_lo <= hi:
-            return i
-    raise ValueError(f"age {age_lo} falls in no registered age band")
-
-
-def age_prior(item: dict, f: Facts) -> float:
-    """This event's relative incidence rate for this patient (0 = cannot occur in
-    this age band)."""
-    w = item.get("age_w")
-    if w is None:
-        raise PoolPriorMissing(f"event {item.get('topic') or item.get('text')!r} declares no age_w")
-    return float(w[age_band_index(f.age_lo)])
-
-
-# ============================================================ Conditioning: axis registry
-# Columns: (axis name, value domain (ordered), value source, neutrality
-# evidence, status, note). Only `opt_in` axes can be turned on
-# (`Facts.cond_axes`); `opt_in_restricted`, `deferred` and `forbidden` rows
-# record why an axis is not usable.
-CONDITION_AXIS_SPECS: tuple[tuple[str, tuple[str, ...], str, str, str, str], ...] = (
-    ("season", ("spring", "summer", "autumn", "winter"),
-     "season_of(f) ← rng.pick(SEASONS, case_id, 'index_date_anchor')",
-     "构造性:取值函数只吃 case_id,不读 spec / latent / 诊断 / join_gold(check_axis_neutrality 机检)",
-     "opt_in",
-     "换季鼻炎 / 日晒 / 蚊虫 / 露天泳池 / 干燥倒刺这几类小毛病的发生率强烈随季节"),
-    ("activity", ("sedentary", "active"),
-     "activity_of(f) ← Facts.devices 是否含 wearable",
-     "构造性:devices 由 demographics.sample_profile 采出,而它只吃 case_id",
-     "opt_in",
-     "有可穿戴 ⇒ 日常运动量大 ⇒ 水泡 / 肌肉酸痛 / 膝痛更常见;久坐 ⇒ 鼠标手 / 眼睑跳更常见"),
-    ("stage", ("early", "mid", "late"),
-     "index_time_T / course_end_day 分档",
-     "C 类旋钮:两者都在 provenance.FIELD_SPECS 里标 sampled",
-     "deferred",
-     "取值要 index_time_T,而准入检查 `_event_ok` 只拿到 `Facts`(不含 T);"
-     "启用需先给 Facts 加一个由 build 传入的字段"),
-    ("drug", ("metformin", "semaglutide", "tirzepatide", "liraglutide"),
-     "Facts.drug",
-     "构造性同 age;但与 proxy_tags / OUTCOME_EXPLAINING_TAGS 的冲突面大",
-     "opt_in_restricted",
-     "药物能拉动的良性事件集中在不良反应域(胃肠道 ↔ medication_intolerance),"
-     "正是驱动代理;在当前题包上 driver 恒定,负对照无法被行使。未启用"),
-    ("sex", ("F", "M"),
-     "Facts.sex",
-     "非中性:ddx._sex_of = 题面症状里的解剖学互斥词 + CONDITION_SEX_SKEW[spec_id]",
-     "forbidden",
-     "性别可以进题面,但不进干扰的选择规则:后者会把题面里的弱性别信号"
-     "复制成话题分布上的信号。启用需先让 sex 脱离 spec"),
-    ("disease", (),
-     "Facts.disease",
-     "当前题包恒为单一疾病",
-     "forbidden",
-     "取值恒定,轴不会被行使"),
-    ("comorbidity", (),
-     "latent.ddx_threads / Facts.comorbidities",
-     "Facts 侧恒为空;latent 侧即金标,且 spec_id 与 case 1:1",
-     "forbidden",
-     "按 latent 条件化 ⇒ 干扰分布成为诊断的单射函数,一张「话题组合 → 诊断」的查找表"),
-)
-
-#: Axes allowed to be turned on.
-_AXIS_OPENABLE = tuple(name for name, _dom, _src, _why, st, _note in CONDITION_AXIS_SPECS
-                       if st == "opt_in")
-_AXIS_DOMAIN = {name: dom for name, dom, _s, _w, _st, _n in CONDITION_AXIS_SPECS}
-_AXIS_STATUS = {name: st for name, _d, _s, _w, st, _n in CONDITION_AXIS_SPECS}
-
-SEASONS = _AXIS_DOMAIN["season"]
-
-
-class ConditionSpecError(ValueError):
-    """Invalid conditioning declaration. Raised at load or call time; no defaults."""
-
-
-def normalize_cond_axes(axes) -> tuple[str, ...]:
-    """Normalize the caller-given list of axis names and check each one against
-    the registry. Empty/None => `()` = unconditioned sampling."""
-    if not axes:
-        return ()
-    out = []
-    for a in axes:
-        a = str(a)
-        if a not in _AXIS_STATUS:
-            raise ConditionSpecError(
-                f"unregistered conditioning axis {a!r}; registered: {sorted(_AXIS_STATUS)}")
-        if a not in _AXIS_OPENABLE:
-            raise ConditionSpecError(
-                f"axis {a!r} has status={_AXIS_STATUS[a]!r} and cannot be enabled; "
-                f"enableable axes: {list(_AXIS_OPENABLE)} (see CONDITION_AXIS_SPECS)")
-        if a not in out:
-            out.append(a)
-    return tuple(out)
-
-
-def season_of(f: Facts) -> str:
-    """This item's calendar season, drawn from case_id only."""
-    from . import rng
-    return rng.pick(SEASONS, f.case_id, "index_date_anchor")
-
-
-def activity_of(f: Facts) -> str:
-    """`active` if a wearable is in the device set (drawn from case_id only)."""
-    return "active" if "wearable" in set(f.devices) else "sedentary"
-
-
-#: Axis -> value function (`opt_in` axes only).
-_AXIS_VALUE_FN = {"season": season_of, "activity": activity_of}
-
 #: Per axis, the item topics explicitly declared irrelevant to that axis.
 CONDITION_NEUTRAL_ITEMS: dict[str, frozenset] = {
     ax: frozenset(v) for ax, v in _POOLS["condition_neutral_items"].items()
 }
-
-#: Allowed range of the composite multiplier, the same order of magnitude as
-#: `age_w`'s dynamic range, so a new axis cannot dominate the distribution.
-COND_MULTIPLIER_RANGE = (0.125, 8.0)
-
-
-def axis_value(axis: str, f: Facts) -> str:
-    """This patient's value on this axis. An unregistered axis name / a value
-    outside the value domain raises."""
-    fn = _AXIS_VALUE_FN.get(axis)
-    if fn is None:
-        raise ConditionSpecError(f"axis {axis!r} has no value function (status={_AXIS_STATUS.get(axis)!r})")
-    v = fn(f)
-    if v not in _AXIS_DOMAIN[axis]:
-        raise ConditionSpecError(
-            f"axis {axis!r} produced out-of-domain value {v!r}; domain: {list(_AXIS_DOMAIN[axis])}")
-    return v
-
-
-def _axis_decl(item: dict, axis: str) -> dict | None:
-    return ((item.get("cond") or {}).get(axis)) or None
-
-
-def cond_denied(item: dict, f: Facts, axes: tuple[str, ...]) -> tuple[str, str] | None:
-    """The conditioning admission component: returns (axis name, value) meaning
-    "this event cannot occur for this patient"."""
-    for axis in axes:
-        dec = _axis_decl(item, axis)
-        if not dec:
-            continue
-        v = axis_value(axis, f)
-        if v in tuple(dec.get("deny") or ()):
-            return axis, v
-    return None
-
-
-def cond_multiplier(item: dict, f: Facts, axes: tuple[str, ...]) -> float:
-    """Conditioning multiplier (relative incidence after admission), default 1.0.
-
-    Multiplicative, so a declared "rarer" can never become "impossible" (a
-    weight <= 0 drops the candidate); impossibility goes through `deny`.
-    """
-    m = 1.0
-    for axis in axes:
-        dec = _axis_decl(item, axis)
-        if not dec:
-            continue
-        w = dec.get("w")
-        if not w:
-            continue
-        m *= float(w.get(axis_value(axis, f), 1.0))
-    return m
-
-
-def event_prior(item: dict, f: Facts, cond: tuple[str, ...] | None = None) -> float:
-    """Age prior x conditioning multipliers; equals `age_prior` with no axes."""
-    axes = normalize_cond_axes(cond if cond is not None else getattr(f, "cond_axes", ()))
-    w = age_prior(item, f)
-    return w * cond_multiplier(item, f, axes) if axes else w
-
 
 def check_condition_specs() -> list[str]:
     """Load-time self-check (default-deny):
@@ -831,52 +333,6 @@ def check_condition_specs() -> list[str]:
     return bad
 
 
-#: Gold-label tokens an axis value function must not read (input-side
-#: neutrality check; a statistical test at pack size would be underpowered).
-AXIS_LEAK_TOKENS = ("ddx_", "spec_id", "diagnosis", "join_gold", "aliases",
-                    "adjudication", "outcome_label", "gold_", "_sex_of", "SEX_SKEW")
-
-
-def axis_neutrality_problems(fn) -> list[str]:
-    """Input-side neutrality: a gold-label token in the value function's code => failing."""
-    import ast
-    import inspect
-    import textwrap
-    try:
-        src = inspect.getsource(fn)
-    except (OSError, TypeError) as e:                    # source unavailable => judged failing, not exempted
-        return [f"{getattr(fn, '__name__', fn)!r}: 取不到源码({e.__class__.__name__}) —— "
-                f"取不到就不能声称中性"]
-    # Scan code only (docstrings stripped); on parse failure scan the raw source.
-    try:
-        tree = ast.parse(textwrap.dedent(src))
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.Module, ast.ClassDef,
-                                 ast.FunctionDef, ast.AsyncFunctionDef)):
-                body = getattr(node, "body", None)
-                if (body and isinstance(body[0], ast.Expr)
-                        and isinstance(body[0].value, ast.Constant)
-                        and isinstance(body[0].value.value, str)):
-                    node.body = body[1:] or [ast.Pass()]
-        scanned = ast.unparse(ast.fix_missing_locations(tree))
-    except (SyntaxError, ValueError):
-        scanned = src
-    return [f"{getattr(fn, '__name__', fn)!r}: 源码含金标记号 {t!r}"
-            for t in AXIS_LEAK_TOKENS if t in scanned]
-
-
-def check_axis_neutrality() -> list[str]:
-    """Load-time: every openable axis's value function must pass the neutrality check."""
-    bad: list[str] = []
-    for axis in _AXIS_OPENABLE:
-        fn = _AXIS_VALUE_FN.get(axis)
-        if fn is None:
-            bad.append(f"轴 {axis!r} status=opt_in 却没有取值函数")
-            continue
-        bad += [f"轴 {axis!r} 未过 L1:{m}" for m in axis_neutrality_problems(fn)]
-    return bad
-
-
 def check_pool_priors() -> list[str]:
     """Load-time self-check: every pool event declares a valid `age_w`."""
     _sync_pools()
@@ -896,27 +352,6 @@ def check_pool_priors() -> list[str]:
     return bad
 
 
-def weighted_order(pool: list[dict], f: Facts, kind: str,
-                   cond: tuple[str, ...] | None = None) -> list[int]:
-    """Deterministic weighted sampling without replacement by prior; returns the
-    draw order of pool indices.
-
-    Efraimidis-Spirakis keys `-ln(u_i) / w_i`: each key depends only on its own
-    topic, so adding an event does not move existing keys. `w_i == 0` never draws.
-    """
-    import math
-    from . import rng
-    keys = []
-    for i, it in enumerate(pool):
-        w = event_prior(it, f, cond)
-        if w <= 0:
-            continue
-        u = rng.unit(f.case_id, kind, "sel", it.get("topic") or it.get("text", ""))
-        u = min(max(u, 1e-12), 1 - 1e-12)
-        keys.append((-math.log(u) / w, i))
-    return [i for _k, i in sorted(keys)]
-
-
 _PRIOR_PROBLEMS = check_pool_priors()
 if _PRIOR_PROBLEMS:
     raise PoolPriorMissing("; ".join(_PRIOR_PROBLEMS))
@@ -924,180 +359,6 @@ if _PRIOR_PROBLEMS:
 _COND_PROBLEMS = check_condition_specs() + check_axis_neutrality()
 if _COND_PROBLEMS:
     raise ConditionSpecError("; ".join(_COND_PROBLEMS))
-
-
-# ============================================================ Daily-metric stream planning/rendering
-@dataclass
-class StreamPlan:
-    spec: MetricSpec
-    base_eff: float                  # actual baseline derived from profile (+ the raw case's baseline vitals)
-    step_days: int                   # sampling step (derived from event_density.measure_per_week)
-    source: str                      # baseline source: profile | raw_case_vital
-    phase: int = 0
-
-
-def _gold_signal_of_driver(driver: str) -> str | None:
-    """The gold-evidence stream for this driver, from `build.GOLD_EVIDENCE`
-    (same source as `verify.GOLD_SIGNAL_OF`); imported lazily to avoid a cycle."""
-    try:
-        from .build import GOLD_EVIDENCE
-    except Exception:                                  # noqa: BLE001
-        return None
-    g = (GOLD_EVIDENCE or {}).get(driver) or {}
-    return g.get("signal")
-
-
-def _wearable_cadence(f: Facts, m: MetricSpec, step: int) -> tuple[int, str | None]:
-    """Sampling step for a planned stream, or the reason it is not planned.
-
-    A calibrated wearable stream is sampled daily (a property of the device,
-    not the follow-up plan). Whether a device reports a metric is drawn from
-    case_id only.
-    """
-    if not _wear.is_calibrated(m.name):
-        return step, None
-    if not _wear.stream_available(str(getattr(f, "case_id", "") or ""), m.name):
-        return 0, "device_does_not_report_metric"
-    return 1, None
-
-
-def world_layer_base_signals(raw, world_signals=()) -> set[str]:
-    """Names in `raw.longitudinal_data` that `plan_streams` must leave alone.
-
-    Everything upstream wrote, except a calibrated stream that the kernel's
-    `inject_distractors` wrote as a distractor and that is not gold evidence:
-    that copy is replaced by the calibrated render.
-    """
-    upstream = set(getattr(raw, "longitudinal_data", None) or {})
-    adj = getattr(raw, "adjudication", None) or {}
-    distractor = set(adj.get("distractor_signals") or ()) if isinstance(adj, dict) else set()
-    world = set(world_signals or ())
-    free = {n for n in distractor & upstream if _wear.is_calibrated(n) and n not in world}
-    return upstream - free
-
-
-def plan_streams(f: Facts, event_density: dict, driver: str,
-                 drop: set[str] | None = None,
-                 base_signals=None) -> tuple[list[StreamPlan], list[dict]]:
-    """Select the daily metrics to inject: device in the kit, not a driver
-    proxy, not already provided by the world layer (`base_signals`, which
-    holds gold evidence the injector must not touch)."""
-    drop = drop or set()
-    banned = proxy_tags(f, driver)
-    mpw = float(event_density.get("measure_per_week", 7) or 7)
-    step = max(1, int(round(7.0 / max(0.5, mpw))))
-    plans, skipped = [], []
-    for i, m in enumerate(METRICS):
-        if m.name in _wear.DERIVED_BINDINGS:
-            # Derived streams are produced from their parents after rendering.
-            continue
-        if m.name in drop:
-            skipped.append({"item": m.name, "reason": "dropped_by_verifier"})
-            continue
-        if m.name in (base_signals or ()):
-            # Gold evidence from the world layer; do not overwrite.
-            skipped.append({"item": m.name, "reason": "provided_by_world_layer"})
-            continue
-        if m.devices and not (set(m.devices) & set(f.devices)):
-            skipped.append({"item": m.name, "reason": f"no_device{list(m.devices)}"})
-            continue
-        if set(m.tags) & banned:
-            skipped.append({"item": m.name, "reason": "driver_or_comorbid_proxy"})
-            continue
-        base = _adj(m.name, m.base, f)
-        src = "profile"
-        vk = m.vital_key
-        if vk and f.baseline_vitals.get(vk) is not None:   # the raw case wrote an actual level for this vital -> use it
-            base, src = float(f.baseline_vitals[vk]), "raw_case_vital"
-        lo, hi = m.hard_range
-        base = min(max(base, lo + m.amp + 1e-9), hi - m.amp - 1e-9)
-        step_eff, why = _wearable_cadence(f, m, step)
-        if why:
-            skipped.append({"item": m.name, "reason": why})
-            continue
-        plans.append(StreamPlan(spec=m, base_eff=round(base, m.ndigits or 0) if m.ndigits else round(base),
-                                step_days=step_eff, source=src, phase=(i * 3) % 7))
-    return plans, skipped
-
-
-#: AR(1) day-scale coefficient. ACF(k) = phi^k, so phi^7 < 0.35 requires
-#: phi < 0.862; 0.80 gives ACF(1)=0.80, ACF(7)=0.21.
-_AR_PHI = 0.80
-#: Stationary sd = `_AR_SD_FRAC x amp`, kept small because AR(1) has
-#: Gaussian-like tails and `base_eff` only reserves `amp` headroom.
-_AR_SD_FRAC = 0.35
-
-
-def _det_shock(seed: str, k: int) -> float:
-    """A deterministic [-1, 1) uniform shock from `blake2b(seed|k)`; no RNG
-    state, so results do not depend on call order."""
-    h = hashlib.blake2b(f"{seed}|{k}".encode("utf-8"), digest_size=8).digest()
-    return int.from_bytes(h, "big") / float(1 << 63) - 1.0
-
-
-def _render_calibrated(p: "StreamPlan", end_day: int, seed: str,
-                       stats: dict | None) -> list[dict]:
-    """Render a stream calibrated in `haenv.wearable`: empirical distribution
-    family, lag-1 persistence and spread, plus a two-state non-wear mask."""
-    m = p.spec
-    days = list(range(0, end_day + 1, max(1, int(p.step_days))))
-    series = _wear.ar1(m.name, float(p.base_eff), days, seed, m.hard_range, stats)
-    if series is None:                                   # not calibrated after all
-        return []
-    mask = _wear.worn_on(seed, m.name, days)
-    lo, hi = m.hard_range
-    out, n_clip = [], 0
-    for d, v, worn in zip(days, series, mask):
-        if not worn:
-            continue
-        if v < lo or v > hi:
-            n_clip += 1
-        v = min(max(v, lo), hi)
-        out.append({"ts": d, "value": round(v, m.ndigits) if m.ndigits else int(round(v))})
-    if stats is not None:
-        stats["n"] = stats.get("n", 0) + len(out)
-        stats["n_clipped"] = stats.get("n_clipped", 0) + n_clip
-    return out
-
-
-def render_stream(p: StreamPlan, end_day: int, seed: str = "",
-                  stats: dict | None = None) -> list[dict]:
-    """A deterministic AR(1) waveform over [0, end_day]; never reads the outcome.
-
-    AR(1) rather than fixed sines, which would give the corpus a lag-7
-    fingerprint. `seed` must carry the case identity (phases vary only by
-    stream index). When `stats` is given, `{"n", "n_clipped"}` are recorded.
-    """
-    m, out = p.spec, []
-    if _wear.is_calibrated(m.name):
-        return _render_calibrated(p, end_day, seed, stats)
-    sd = _AR_SD_FRAC * m.amp
-    phi_s = _AR_PHI ** max(1, int(p.step_days))          # scaled by the sampling step
-    sig_s = sd * math.sqrt(max(0.0, 1.0 - phi_s * phi_s))
-    bound = sig_s * math.sqrt(3.0)                       # uniform distribution: sd = bound/sqrt(3)
-    key = f"{seed}|{m.name}|{p.phase}"
-    # Start from the stationary distribution (no visible warm-up).
-    x = sd * _det_shock(key, -1)
-    n_clip = 0
-    for k, d in enumerate(range(0, end_day + 1, p.step_days)):
-        if k:
-            x = phi_s * x + bound * _det_shock(key, k)
-        v = p.base_eff + x
-        if m.name == "scale_qc_flag":                     # binary QC: one calibration failure every 17 days
-            # Binary QC flag: a fixed comb (period 17, phase per patient),
-            # replacing the AR(1) value. A random draw would exceed
-            # `gates.A5_MIN_REL_SPAN`, which is calibrated against this comb.
-            t = d + p.phase
-            v = 0.0 if (t % m.period == 0 and d > 0) else 1.0
-        lo, hi = m.hard_range
-        if v < lo or v > hi:
-            n_clip += 1
-        v = min(max(v, lo), hi)
-        out.append({"ts": d, "value": round(v, m.ndigits) if m.ndigits else int(round(v))})
-    if stats is not None:
-        stats["n"] = stats.get("n", 0) + len(out)
-        stats["n_clipped"] = stats.get("n_clipped", 0) + n_clip
-    return out
 
 
 # ============================================================ Event EV planning
@@ -1152,90 +413,6 @@ def sanitize_context(ctx: str) -> tuple[str, bool]:
     if any(k in ctx for k in ATTRIBUTIVE_MARKERS + JOIN_STRUCTURE_MARKERS):
         return "", True
     return ctx, False
-
-
-# Morphological suffixes allowed after a Latin alias stem on the scoring side
-# only (`hypothyroid` -> `Hypothyroidism`). A closed set: `sle` must not match
-# `sleep`, `insulin` must not match `insulinoma`.
-_LATIN_SUFFIXES = ("ism", "osis", "oses", "ic", "ical", "ia", "emia", "aemia",
-                   "y", "ies", "s", "es", "al", "ous", "otic", "oidism")
-
-
-def alias_hit(text: str, aliases, allow_suffix: bool = False) -> list[str]:
-    """Diagnosis aliases found in the text.
-
-    Latin aliases match on word boundaries (underscore counts as a word
-    character); Chinese aliases match by substring. `allow_suffix=True`
-    (scoring only) also accepts a suffix from `_LATIN_SUFFIXES`; the leak
-    scanner keeps it off to err toward false positives.
-    """
-    import re
-    out = []
-    for a in (aliases or []):
-        a = str(a).strip()
-        if not a:
-            continue
-        if a.isascii():
-            tail = (rf"(?:{'|'.join(_LATIN_SUFFIXES)})?" if allow_suffix else "")
-            if re.search(rf"(?<![A-Za-z0-9_]){re.escape(a)}{tail}(?![A-Za-z0-9_])",
-                         text, re.I):
-                out.append(a)
-        elif a in text:
-            out.append(a)
-    return out
-
-
-# Parentheticals that mark a disease thread ("(diabetes thread)") are author
-# annotations and would reveal join_gold; they are scrubbed when they contain
-# the case's diagnosis alias or one of these markers. Clinical content in
-# parentheses is kept.
-ANNOTATION_MARKERS = ("线程",)
-
-
-def scrub_annotation(text: str, aliases) -> tuple[str, list[str]]:
-    """Scrub parentheticals naming this case's diagnosis or marking a thread.
-    Returns (scrubbed text, removed parentheticals)."""
-    import re
-    removed: list[str] = []
-
-    def _sub(m):
-        inner = m.group(2)
-        if alias_hit(inner, aliases) or any(k in inner for k in ANNOTATION_MARKERS):
-            removed.append(m.group(0))
-            return ""
-        return m.group(0)
-
-    out = re.sub(r"([((])([^))]*)([))])",
-                 lambda m: _sub(re.match(r"([((])([^))]*)([))])", m.group(0))), text)
-    return out.strip(" 、,,+"), removed
-
-
-@_wp.overlay_cached("symptom_topics.yaml")
-def _load_symptom_topics() -> dict[str, str]:
-    from .regpath import load_registry as _lr
-    _d = _lr("symptom_topics.yaml") or {}
-    return {_norm_symptom(k): str(v["topic"])
-            for k, v in (_d.get("symptoms") or {}).items()
-            if isinstance(v, dict) and v.get("topic")}
-
-
-def symptom_topic(text: str) -> str | None:
-    """Genuine symptom text -> physiology `topic` from the hand-written
-    `registry/symptom_topics.yaml` (plus world-plugin registrations), or `None` if not
-    registered.
-
-    Exact match on the normalized full text; similar prefixes can mean
-    different things clinically.
-    """
-    return _load_symptom_topics().get(_norm_symptom(text))
-
-
-def _norm_symptom(text: str) -> str:
-    """Normalize whitespace and full-width punctuation (used for registry and lookup)."""
-    t = str(text or "").strip()
-    for a, b in (("（", "("), ("）", ")"), ("，", ","), ("、", ","), ("：", ":")):
-        t = t.replace(a, b)
-    return "".join(t.split())
 
 
 def plan_real_symptom_evs(f: Facts, T: int, drop: set[str] | None = None,
@@ -1316,16 +493,117 @@ def _day_jitter(case_id: str, kind: str, i: int, amp: int) -> int:
     return int.from_bytes(h, "big") % (2 * amp + 1) - amp
 
 
+#: Self-reported event timing. Real encounter and symptom-report gaps are over-dispersed: the
+#: per-person coefficient of variation of the gaps has median 1.37-1.53 in outpatient records
+#: (coronary disease, hypothyroidism), where a Poisson stream gives 1.0 and an even grid
+#: 0.3-0.5. A person rarely reports twice in two days, though, so the dispersion has to come
+#: from long quiet stretches, not from piling reports onto adjacent days (an episode layout
+#: did that: gap median 3 days, 34% of gaps <= 1 day). The layout is a renewal process: a gap
+#: is a short follow-up report (`EVENT_SHORT_SHARE`, `EVENT_SHORT_GAP_DAYS`) or a quiet stretch
+#: (refractory days plus a log-normal share of the rest of the window, `EVENT_GAP_LOG_SD`). The
+#: layout is a function of the case, and an event's slot
+#: in it of its evidence id, so benign symptoms, life events and upstream distractor events
+#: share one layout and no label enters it.
+EVENT_GAP_LOG_SD = 1.5
+#: Refractory part of a quiet stretch (days).
+EVENT_REFRACTORY_DAYS = 2.0
+#: Share of follow-up reports (a second report of the same episode) and their gap (days).
+EVENT_SHORT_SHARE = 0.45
+EVENT_SHORT_GAP_DAYS = (1.5, 3.5)
+#: Smallest gap between two self-reported events, genuine-symptom days included (days).
+EVENT_MIN_GAP_DAYS = 1
+#: `verify.check_event_spread` fails a case with more than 0.6 of its non-genuine events in the
+#: last third of the window; the layout is drawn again (next `attempt`) until at most this
+#: share lands there, so the check stays a property of the case and not of luck.
+EVENT_LATE_SHARE_MAX = 0.5
+EVENT_LAYOUT_ATTEMPTS = 32
+
+
+def _renewal_days(keys: list[str], case_id: str, T: int, attempt: int) -> list[int]:
+    """Nominal days in [7, T] of the events `keys` under layout `attempt` (see above)."""
+    n = len(keys)
+    span = float(max(1, T - 7))
+    # n + 1 stretches: before the first event, n - 1 between events, after the last. An interior
+    # stretch is a follow-up report (`EVENT_SHORT_GAP_DAYS`) with `EVENT_SHORT_SHARE`, else a
+    # quiet stretch: the refractory days plus a log-normal share of the remaining window.
+    short = [0.0] * (n + 1)
+    for i in range(1, n):
+        if _wear._unit(case_id, "evt_short", attempt, i) < EVENT_SHORT_SHARE:
+            a, b = EVENT_SHORT_GAP_DAYS
+            short[i] = a + _wear._unit(case_id, "evt_short_len", attempt, i) * (b - a)
+    ex = [0.0 if short[i] else math.exp(EVENT_GAP_LOG_SD * _wear._gauss(case_id, "evt_gap", attempt, i))
+          for i in range(n + 1)]
+    ref = [EVENT_REFRACTORY_DAYS if (0 < i < n and not short[i]) else 0.0 for i in range(n + 1)]
+    free = max(0.0, span - sum(ref) - sum(short))
+    tot = sum(ex) or 1.0
+    t, slots = 7.0, []
+    for i in range(n):
+        t += short[i] + ref[i] + free * ex[i] / tot
+        slots.append(min(T, max(7, int(round(t)))))
+    order = sorted(range(n), key=lambda i: (_wear._unit(case_id, "evt_slot", keys[i]), keys[i]))
+    out = [0] * n
+    for j, i in enumerate(order):
+        out[i] = slots[j]
+    return out
+
+
+def _place_self_reports(keys: list[str], case_id: str, T: int, avoid: set[int],
+                        attempt: int) -> list[int]:
+    """Days for events `keys` under layout `attempt`: each takes the free day nearest its
+    nominal day, at least `EVENT_MIN_GAP_DAYS` from `avoid` and from each other (in
+    nominal-day order)."""
+    taken = set(avoid)
+    span = max(1, T - 7)
+    nominal = _renewal_days(keys, case_id, T, attempt)
+    out = [0] * len(keys)
+    for i in sorted(range(len(keys)), key=lambda i: (nominal[i], keys[i])):
+        day = nominal[i]
+        for gap in dict.fromkeys((EVENT_MIN_GAP_DAYS, 1)):   # a crowded window falls back to 1
+            hit = next((c for off in range(0, span + 1) for c in (day + off, day - off)
+                        if 7 <= c <= T and all(c + j not in taken for j in range(1 - gap, gap))),
+                       None)
+            if hit is not None:
+                day = hit
+                break
+        taken.add(day)
+        out[i] = day
+    return out
+
+
+def retime_self_reports(evs: list[dict], case_id: str, T: int, avoid: set[int]) -> None:
+    """Put self-reported events (benign symptoms, life events, upstream distractor events) on
+    the case's burst layout, in place; text and topic are untouched. Days avoid `avoid`
+    (genuine-symptom days) and each other; the first layout whose last-third share is at most
+    `EVENT_LATE_SHARE_MAX` is used (else the one with the smallest share)."""
+    if not evs or T < 7:
+        return
+    keys = [str(ev.get("evidence_id", i)) for i, ev in enumerate(evs)]
+    edge = 7 + 2 * max(3, T - 7) / 3.0
+    best = None
+    for a in range(EVENT_LAYOUT_ATTEMPTS):
+        days = _place_self_reports(keys, case_id, T, avoid, a)
+        late = sum(1 for d in days if d >= edge) / len(days)
+        if best is None or late < best[0]:
+            best = (late, days)
+        if late <= EVENT_LATE_SHARE_MAX:
+            break
+    for ev, d in zip(evs, best[1]):
+        ev["source_timestamp"] = d
+
+
 def plan_benign_evs(f: Facts, event_density: dict, driver: str, T: int,
                     drop: set[str] | None = None, n_inherited: int = 0,
                     used_topics: set[str] | None = None,
                     aliases: list | None = None,
-                    cond: tuple[str, ...] | None = None) -> tuple[list[dict], list[dict]]:
-    """Benign-event and life-event EVs spread over [7, T] at `event_density`.
+                    cond: tuple[str, ...] | None = None,
+                    avoid_days: set[int] | None = None,
+                    plugin: bool = False) -> tuple[list[dict], list[dict]]:
+    """Benign-event and life-event EVs spread over [7, T] at `event_density`. `plugin`: a plugin
+    task's case, the only one that draws the pool's `plugin_only` items.
 
     `n_inherited`: validated upstream benign events, subtracted from the target
     count. `used_topics`: topics already used upstream (deduplicated).
-    `cond=None` takes `Facts.cond_axes`.
+    `cond=None` takes `Facts.cond_axes`. `avoid_days`: days other events already hold.
     """
     drop = drop or set()
     _sync_pools()
@@ -1340,6 +618,8 @@ def plan_benign_evs(f: Facts, event_density: dict, driver: str, T: int,
     pool_sym, pool_life, skipped = [], [], []
     for pool, out in ((BENIGN_EVENTS, pool_sym), (LIFE_EVENTS, pool_life)):
         for it in pool:
+            if it.get("plugin_only") and not plugin:
+                continue
             if it.get("topic") in used_topics:
                 skipped.append({"item": it["text"], "reason": f"duplicate_topic:{it['topic']}"})
                 continue
@@ -1353,7 +633,7 @@ def plan_benign_evs(f: Facts, event_density: dict, driver: str, T: int,
             (out if ok else skipped).append(it if ok else {"item": it["text"], "reason": why})
 
     evs: list[dict] = []
-    used_days: set[int] = set()          # benign/life events must not share a day with each other either
+    used_days: set[int] = set(avoid_days or ())   # benign/life events must not share a day with each other either
     for kind, pool, n, src in (("B", pool_sym, n_sym, "patient_reported_symptom"),
                                ("L", pool_life, n_life, "patient_reported_context")):
         span = max(1, T - 7)
@@ -1468,10 +748,11 @@ def _catalog_for(f: Facts, driver: str) -> list[dict]:
 def plan_via_llm(f: Facts, event_density: dict, driver: str, T: int, dispatch,
                  drop: set[str] | None = None, feedback: dict | None = None,
                  n_inherited: int = 0) -> tuple[list[StreamPlan], list[dict], list[dict]]:
-    """Let the LLM choose streams, baselines and benign events; the numeric
-    series is still rendered deterministically (see `render_stream`), and every
-    choice is checked by `verify.py`."""
-    from solver import _extract_json                     # kernel: JSON extraction tolerant of banners/fences
+    """Let the LLM write the benign and life events (text, day, topic), checked by
+    `verify.py`. The prompt also asks for streams and baselines; those are not adopted:
+    the daily metrics are `plan_streams`'s, the same as on the deterministic channel, so
+    no stream value or stream choice comes from the model. Returns `([], events, skipped)`."""
+    from haenv_kernel.solver import _extract_json                     # kernel: JSON extraction tolerant of banners/fences
 
     drop = drop or set()
     weeks = event_weeks(T)
@@ -1496,38 +777,7 @@ def plan_via_llm(f: Facts, event_density: dict, driver: str, T: int, dispatch,
         feedback=json.dumps(feedback or {}, ensure_ascii=False) or "(首轮,无)")
     data = _extract_json(dispatch(prompt, require_json=True))
 
-    mpw = float(event_density.get("measure_per_week", 7) or 7)
-    step = max(1, int(round(7.0 / max(0.5, mpw))))
     plans, skipped = [], []
-    for i, item in enumerate(data.get("streams") or []):
-        name = str(item.get("name", ""))
-        m = METRIC_BY_NAME.get(name)
-        if m is None:
-            skipped.append({"item": name or f"stream#{i}", "reason": "llm_unknown_metric"})
-            continue
-        if name in drop:
-            skipped.append({"item": name, "reason": "dropped_by_verifier"})
-            continue
-        if any(p.spec.name == name for p in plans):
-            skipped.append({"item": name, "reason": "llm_duplicate_stream"})
-            continue
-        try:
-            base = float(item["base"])
-        except (KeyError, TypeError, ValueError):
-            skipped.append({"item": name, "reason": "llm_bad_base"})
-            continue
-        if name in _wear.DERIVED_BINDINGS:
-            skipped.append({"item": name, "reason": "derived_from_parent"})
-            continue
-        step_eff, why = _wearable_cadence(f, m, step)
-        if why:
-            skipped.append({"item": name, "reason": why})
-            continue
-        lo, hi = m.hard_range                            # only a fallback clamp for "physically impossible," not correcting the model's judgment
-        base = min(max(base, lo + m.amp), hi - m.amp)
-        plans.append(StreamPlan(spec=m, base_eff=round(base, m.ndigits) if m.ndigits else round(base),
-                                step_days=step_eff, source="llm", phase=(i * 3) % 7))
-
     evs: list[dict] = []
     for kind, key, src in (("B", "benign_events", "patient_reported_symptom"),
                            ("L", "life_events", "patient_reported_context")):
@@ -1568,6 +818,115 @@ def plan_via_llm(f: Facts, event_density: dict, driver: str, T: int, dispatch,
     return plans, evs, skipped
 
 
+#: Pool events that fill an LLM-planned case up to its density take slot ids from here
+#: on (`EV-<case>-B101`...), clear of the model's own `B<n>` / `L<n>`.
+POOL_BACKFILL_ID_OFFSET = 100
+
+
+def shown_drugs(case_id: str, disease, comorbidities, drug: str) -> list[str]:
+    """The medicines a plugin task's record shows the patient taking: the primary drug and the concurrent
+    medicines the world gives for the known conditions (`med_course.concurrent_medicines`)."""
+    from . import med_course
+    cm = med_course.concurrent_medicines(case_id, disease, comorbidities or [], drug, 1)
+    return ([drug] if drug else []) + [m["drug"] for m in cm]
+
+
+def side_effect_topics(drugs) -> frozenset[str]:
+    """Benign pool topics that coincide with a known side effect of one of `drugs`
+    (`registry/drug_side_effects.yaml`)."""
+    d = (_cached_yaml(_rp("drug_side_effects.yaml")) or {}).get("drugs") or {}
+    return frozenset(t for x in drugs for t in (d.get(x) or {}).get("topics") or ())
+
+
+#: Words a patient of the given sex does not say about herself or himself (grooming that belongs to the
+#: other sex; the anatomical words are `gates.SEX_EXCLUSIVE`).
+SEX_LAY_EXCLUSIVE = {"F": ("刮胡子", "剃须"), "M": ()}
+
+
+def sex_words(sex: str | None) -> tuple[str, ...]:
+    from .gate_tables import SEX_EXCLUSIVE
+    s = str(sex or "").upper()[:1]
+    return tuple(SEX_EXCLUSIVE.get(s, ())) + SEX_LAY_EXCLUSIVE.get(s, ())
+
+
+def symptom_lay(sex: str | None = None) -> dict[str, list[str]]:
+    """`registry/symptom_lay.yaml`: a symptom phrase of a condition template or an explained-away
+    finding -> the hand-written ways a patient of `sex` says it (`lay_F` / `lay_M` when the entry has
+    them, else `lay`)."""
+    d = _cached_yaml(_rp("symptom_lay.yaml")) or {}
+    k = f"lay_{str(sex or '').upper()[:1]}"
+    return {str(p): [str(t) for t in (v.get(k) or v["lay"])] for p, v in (d.get("phrases") or {}).items()}
+
+
+def symptom_lay_every() -> dict[str, list[str]]:
+    """Every lay sentence of each phrase, all sexes (for the audits that recognise an entered sentence)."""
+    d = _cached_yaml(_rp("symptom_lay.yaml")) or {}
+    return {str(p): [str(t) for k, ts in v.items() if k == "lay" or k.startswith("lay_") for t in ts]
+            for p, v in (d.get("phrases") or {}).items()}
+
+
+def enter_symptoms(ledger: list[dict], sex: str | None = None) -> dict[str, str]:
+    """Every symptom sentence of a plugin task's ledger is entered as a patient of `sex` says it: a
+    template, finding or pool phrase takes one of its hand-written lay sentences (`symptom_lay`), drawn
+    by the evidence id and different from the sentences already entered in the case. Half-width comma,
+    no closing stop. Returns `{evidence_id: phrase before entry}` for the verifier-side audit."""
+    from . import rng as _rng
+    lay = symptom_lay(sex)
+    src, said = {}, set()
+    for e in ledger:
+        if e.get("source_type") != "patient_reported_symptom":
+            continue
+        eid = str(e["evidence_id"])
+        src[eid] = t = str(e.get("symptom"))
+        out = t
+        if t in lay:
+            ways = [w for w in lay[t] if w not in said] or lay[t]
+            out = _rng.pick(ways, "symptom_lay", eid, t)
+        said.add(out)
+        e["symptom"] = out.replace("，", ",").replace("。", ",").strip().rstrip("、,")
+    return src
+
+
+def _pool_backfill(f: Facts, ed: dict, driver: str, T: int, drop: set[str],
+                   llm_evs: list[dict], inh_evs: list[dict], aliases) -> tuple[list[dict], list[dict]]:
+    """Pool events that bring the LLM planner's events up to the declared density.
+
+    The planner is asked once per case; when the verifier drops some of its events or
+    of the inherited ones, the shortfall comes from the benign/life pools (as on the
+    deterministic channel), on days no other event holds."""
+    want = expected_event_counts(ed, T)
+    n_b = sum(1 for e in llm_evs if str(e["evidence_id"]).rsplit("-", 1)[-1].startswith("B"))
+    n_l = sum(1 for e in llm_evs if str(e["evidence_id"]).rsplit("-", 1)[-1].startswith("L"))
+    need = {"B": max(0, want["symptom_rate"] - len(inh_evs) - n_b),
+            "L": max(0, want["life_event_rate"] - n_l)}
+    if not any(need.values()):
+        return [], []
+    off = POOL_BACKFILL_ID_OFFSET
+    pre = f"EV-{f.case_id}-"
+
+    def to_pool(eid: str) -> str:
+        k, n = eid[len(pre)], int(eid[len(pre) + 1:])
+        return f"{pre}{k}{n - off}"
+    pool_drop = {to_pool(d) for d in drop
+                 if d.startswith(pre) and d[len(pre):len(pre) + 1] in "BL"
+                 and d[len(pre) + 1:].isdigit() and int(d[len(pre) + 1:]) > off}
+    used_topics = {t for e in inh_evs
+                   if (t := (inherited_profile(e.get("symptom", "")) or {}).get("topic"))}
+    taken = {int(e["source_timestamp"]) for e in llm_evs + inh_evs}
+    evs, skipped = plan_benign_evs(f, ed, driver, T, pool_drop,
+                                   n_inherited=want["symptom_rate"] - need["B"],
+                                   used_topics=used_topics, aliases=aliases, avoid_days=taken)
+    out, n_seen = [], {"B": 0, "L": 0}
+    for e in evs:
+        k = str(e["evidence_id"]).rsplit("-", 1)[-1][0]
+        if n_seen[k] >= need[k]:
+            continue
+        n_seen[k] += 1
+        e["evidence_id"] = f"{pre}{k}{int(str(e['evidence_id']).rsplit('-', 1)[-1][1:]) + off}"
+        out.append(e)
+    return out, skipped
+
+
 # ============================================================ Injection
 def inject(raw, cs, premise, driver: str, drop: set[str] | None = None,
            dispatch=None, feedback: dict | None = None) -> tuple[object, dict]:
@@ -1580,7 +939,7 @@ def inject(raw, cs, premise, driver: str, drop: set[str] | None = None,
     Gold fields are never touched (CC-1).
     """
     f = facts_of(cs)
-    from .build import GOLD_EVIDENCE            # deferred import: build depends on this module, a top-level import would cycle
+    from .registry import GOLD_EVIDENCE  # deferred import: build depends on this module, a top-level import would cycle
     world_signals = {g["signal"] for g in GOLD_EVIDENCE.values()}
     ed = dict(premise.event_density or {})
     T = int(raw.prediction_context["prediction_time_T"])
@@ -1588,15 +947,16 @@ def inject(raw, cs, premise, driver: str, drop: set[str] | None = None,
     end_day = T + (int(win) if win.isdigit() else 281)
 
     llm_evs: list[dict] = []
-    if dispatch is not None:                     # LLM planning (values are still rendered deterministically by render_stream)
+    # The daily metrics are `plan_streams`'s on both channels; the LLM writes events only.
+    plans, skipped = plan_streams(f, ed, driver, drop,
+                                  base_signals=world_layer_base_signals(raw, world_signals))
+    if dispatch is not None:
         n_inh = sum(1 for e in raw.evidence_ledger
                     if str(e.get("evidence_id", "")).rsplit("-", 1)[-1].startswith("D")
                     and str(e.get("evidence_id", "")) not in (drop or set()))
-        plans, llm_evs, skipped = plan_via_llm(f, ed, driver, T, dispatch, drop,
-                                               feedback=feedback, n_inherited=n_inh)
-    else:
-        plans, skipped = plan_streams(f, ed, driver, drop,
-                                      base_signals=world_layer_base_signals(raw, world_signals))
+        _, llm_evs, _sk = plan_via_llm(f, ed, driver, T, dispatch, drop,
+                                       feedback=feedback, n_inherited=n_inh)
+        skipped += _sk
     mine = {p.spec.name for p in plans}
 
     # Streams planned here replace upstream copies of the same name; other
@@ -1685,31 +1045,49 @@ def inject(raw, cs, premise, driver: str, drop: set[str] | None = None,
 
     # Upstream benign EVs (`-D` suffix) are validated like the others and count
     # toward the density quota.
+    # A plugin task's case (external latent) has no kernel distractor events (a fixed list of ten): its
+    # whole symptom quota is drawn from the registry pool, seeded by the case.
+    from . import external_gold as _EG
+    plugin = bool((premise.meta or {}).get(_EG.SLOT))
     inh_evs, ev_rows = [], []
     kept_ledger = []
     for e in raw.evidence_ledger:
         eid = str(e.get("evidence_id", ""))
         if eid.rsplit("-", 1)[-1].startswith("D"):
+            if plugin:
+                continue
             if eid in drop:
                 skipped.append({"item": eid, "reason": "dropped_by_verifier"})
                 continue
             inh_evs.append(e)
         kept_ledger.append(e)
     raw.evidence_ledger = kept_ledger
+    if plugin:
+        raw.adjudication["distractor_evidence_ids"] = []
 
     # The case's aliases plus the registry's `leak_only` words (as `verify._ddx_aliases`).
     from .overlay import leak_aliases_for
     _ddx = getattr(cs, 'ddx', None) or {}
     aliases = leak_aliases_for(_ddx.get('spec_id'), _ddx.get('aliases'))
     real_evs, sk1 = plan_real_symptom_evs(f, T, drop, aliases=aliases)
+    backfill: set[str] = set()
     if dispatch is not None:
         benign_evs, sk2 = llm_evs, []
+        _extra, sk2 = _pool_backfill(f, ed, driver, T, drop, llm_evs, inh_evs, aliases)
+        backfill = {e["evidence_id"] for e in _extra}
+        benign_evs = benign_evs + _extra
     else:
         used_topics = {t for e in inh_evs
                        if (t := (inherited_profile(e.get("symptom", "")) or {}).get("topic"))}
+        if plugin:      # no benign complaint that is a known side effect of a drug the record shows
+            used_topics |= side_effect_topics(shown_drugs(f.case_id, f.disease, f.comorbidities, f.drug))
         benign_evs, sk2 = plan_benign_evs(f, ed, driver, T, drop, n_inherited=len(inh_evs),
-                                          used_topics=used_topics, aliases=aliases)
+                                          used_topics=used_topics, aliases=aliases, plugin=plugin)
     skipped += [x for x in sk1 + sk2 if isinstance(x, dict) and "reason" in x]
+    # Self-report timing is code-owned on both channels: bursty, not an even grid.
+    retime_self_reports(inh_evs + benign_evs, f.case_id, T,
+                        avoid={int(s["day"]) for s in f.symptoms if int(s["day"]) <= T}
+                        | {int(e["source_timestamp"]) for e in real_evs})
 
     # Out-of-band fields (`_claim`, `_topic`) go only into the manifest and are
     # popped before the events enter `evidence_ledger`.
@@ -1748,7 +1126,8 @@ def inject(raw, cs, premise, driver: str, drop: set[str] | None = None,
                         "day": ev["source_timestamp"],
                         "text": ev.get("symptom") or ev.get("note", ""),
                         "context": ev.get("context", ""),
-                        "source": "llm" if dispatch is not None else "pool",
+                        "source": ("llm" if dispatch is not None and ev["evidence_id"] not in backfill
+                                   else "pool"),
                         "claim": claims.get(ev["evidence_id"]),
                         # None on the LLM path: this event has no kernel.
                         "topic": topics.get(ev["evidence_id"])})
@@ -1778,6 +1157,14 @@ def inject(raw, cs, premise, driver: str, drop: set[str] | None = None,
     _injector_view = {r["name"]: _copy.deepcopy(raw.longitudinal_data.get(r["name"]) or [])
                       for r in stream_rows if r.get("kind") == "daily_metric"}
     physio_report = _apply_physio_if_enabled(raw, cs.case_id, injected["event_schedule"])
+    # The panel follows the final streams: TC from same-day LDL/TG, declared
+    # screening items shown on the stream that carries them.
+    if lab_evs:
+        from .findings_render import align_panel_to_streams
+        align_panel_to_streams(raw, normal_before_day=_pre)
+        # `build.observe_labs` draws the lab streams again after the events; it re-runs
+        # the alignment on the observed streams with the same onset day.
+        PANEL_ALIGN_PENDING[str(cs.case_id)] = _pre
     # Remove the ground-truth trajectory before the report enters `injected`.
     _clean_ld = physio_report.pop("_clean_longitudinal_data", None) if physio_report else None
     if physio_report is not None:
@@ -1803,14 +1190,6 @@ def inject(raw, cs, premise, driver: str, drop: set[str] | None = None,
              sum(1 for r in stream_rows if r["kind"] == "inherited_metric"),
              len(ev_rows), len(inh_evs), len(skipped))
     return raw, manifest
-
-# ---------------------------------------------------------------- Findings-layer hook
-FINDINGS_ENABLED: list = [False]      # set by run/build from job.findings; off by default
-
-#: Physiology-layer switch (`job.yaml: physio`), off by default. When on,
-#: rendered streams go through `haenv.physio.apply_physio`.
-PHYSIO_ENABLED: list = [False]
-
 
 def _render_lookalikes(raw, cs, T: int) -> list[dict]:
     """Render this condition's lookalike distractors as EVs, in the same format
@@ -1855,6 +1234,11 @@ def _render_lookalikes(raw, cs, T: int) -> list[dict]:
     return out
 
 
+#: Per case id, the onset day the panel was aligned with (`align_panel_to_streams`), for
+#: `build.observe_labs` to re-align the panel on the observed lab streams.
+PANEL_ALIGN_PENDING: dict[str, int | None] = {}
+
+
 def _render_findings_if_enabled(raw, *, normal_before_day: int | None = None) -> list[dict]:
     """Render the findings panel if the switch is on; `[]` when off."""
     if not FINDINGS_ENABLED[0]:
@@ -1890,3 +1274,38 @@ def _render_findings_if_enabled(raw, *, normal_before_day: int | None = None) ->
     except Exception as e:                      # a rendering failure must never be silently swallowed
         log.error("[findings] rendering failed %s: %s", getattr(raw, "case_id", "?"), e)
         raise
+
+
+def _apply_physio_if_enabled(raw, case_id: str, schedule: list[dict]) -> dict | None:
+    """Run the physiology layer if enabled; `None` when off. Errors propagate."""
+    if not PHYSIO_ENABLED[0]:
+        return None
+    from pathlib import Path as _P
+
+    from .physio import apply as _pa
+    from .physio import kernel as _pk
+
+    streams = _pa.load_stream_registry(_rp("physio_streams.yaml"))
+    kernels = _pk.load_physio_registry(_rp("physio_kernels.yaml"))
+    # Keep the pre-noise ground-truth trajectory. The kernel's slope gate bounds
+    # the true rate of weight change, so slope and anchors are judged on this
+    # copy and only the value range on the observation. It is verifier-only:
+    # never in `injected`, `raw` or `manifest["injected"]`.
+    clean_ld = _copy.deepcopy(raw.longitudinal_data)
+    new_ld, summary = _pa.apply_physio(case_id, raw.longitudinal_data, streams,
+                                       events=schedule, kernels=kernels)
+    _round_to_declared_digits(new_ld)
+    raw.longitudinal_data = new_ld
+    covered = sum(1 for r in schedule
+                  if r.get("topic") in kernels.emitted_topics())
+    return {
+        "_clean_longitudinal_data": clean_ld,   # verifier-only, `_` prefix follows the same convention as other out-of-band fields
+        "clip_rate": summary.projection.clip_rate,
+        "n_clipped": summary.projection.n_clipped,
+        "n_points": summary.projection.n_total,
+        "n_series": len(summary.distributions),
+        "n_events": len(schedule),
+        "n_events_with_kernel": covered,
+        "n_dist_violations": len(summary.violations),
+        "dist_violations": list(summary.violations)[:20],
+    }

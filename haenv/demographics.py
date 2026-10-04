@@ -82,7 +82,7 @@ DRUGS: tuple[tuple[str, tuple[float, ...]], ...] = (
 
 def doses_per_week(drug: str) -> int:
     """Doses per week for this drug, from `gates.DRUG_DOSES_PER_WEEK` (also read by GEN20b)."""
-    from .gates import DRUG_DOSES_PER_WEEK
+    from .gate_tables import DRUG_DOSES_PER_WEEK
     return DRUG_DOSES_PER_WEEK[drug]
 
 

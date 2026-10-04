@@ -26,6 +26,8 @@ import types
 import pytest
 
 from haenv import build as B
+from haenv import build_weight as BW   # where the skeleton helpers are read
+from _patch_bound import patch_bound  # noqa: E402
 from haenv import gates
 from haenv import rng
 from haenv.latent_rules import (DESCENT_BUDGET_FRAC, MIN_CHANGE_FRAC, MIN_CHANGE_KG,
@@ -112,7 +114,7 @@ def test_g1_negative_control_outcome_bump(monkeypatch):
             meta = {**meta, "base": base}
         return base, meta
 
-    monkeypatch.setattr(B, "_skeleton_base", leaky)
+    monkeypatch.setattr(BW, "_skeleton_base", leaky)
     assert len(_pre_t_mismatches()) == N_CASES
 
 
@@ -189,15 +191,15 @@ def test_g3_label_rule_reads_the_declared_outcome(normal_render):
 def test_g3_negative_control_long_episodes_break_the_rule(monkeypatch):
     """Two-sided: 120-day, 2 kg hills must break the rule somewhere once the guard is
     switched off (the check has an object); with the guard on they must not."""
-    monkeypatch.setattr(B, "_episode_plan", lambda ep, bd, *a: {
+    monkeypatch.setattr(BW, "_episode_plan", lambda ep, bd, *a: {
         "kind": "up", "height": 2.0, "rise": 60, "n": 120, "residual": 0.5, "tau": 200.0,
         "valley": 10})
     assert _label_breaks() == []
     # A guard that reads one constant verdict for every series accepts everything;
     # no-regain cases also lose the stop at the low point.
-    monkeypatch.setattr(B, "gates", types.SimpleNamespace(
+    monkeypatch.setattr(BW, "gates", types.SimpleNamespace(
         derive_outcome=lambda ld, rule: ("event_occurred", {})))
-    monkeypatch.setattr(B, "_no_regain_until", lambda plain, outcome: None)
+    monkeypatch.setattr(BW, "_no_regain_until", lambda plain, outcome: None)
     assert _label_breaks() != []
 
 
@@ -235,9 +237,9 @@ def test_g4_daily_step_stays_within_the_descent_budget(normal_render):
 def test_g4_negative_control_unscaled_episodes(monkeypatch):
     """Episodes applied at full height, with no step caps and no guard step check, must
     break the limit."""
-    monkeypatch.setattr(B, "_step_caps", lambda ref, bd: [1e9] * (len(ref) - 1))
-    monkeypatch.setattr(B, "_steps_within", lambda *a, **k: True)
-    monkeypatch.setattr(B, "_episode_plan", lambda ep, bd, *a: {
+    monkeypatch.setattr(BW, "_step_caps", lambda ref, bd: [1e9] * (len(ref) - 1))
+    monkeypatch.setattr(BW, "_steps_within", lambda *a, **k: True)
+    monkeypatch.setattr(BW, "_episode_plan", lambda ep, bd, *a: {
         "kind": "up", "height": 1.5, "rise": 2, "n": 20, "residual": 0.2, "tau": 60.0,
         "valley": 10})
     assert _step_breaks() != []
@@ -293,7 +295,7 @@ def test_g5_negative_control_pre_t_choice_reads_the_whole_course(monkeypatch):
         ok = real(plain, T, outcome, nadir)
         return lambda series, upto=None: ok(series) if upto is not None else ok(series)
 
-    monkeypatch.setattr(B, "_label_guard", leaky)
+    monkeypatch.setattr(BW, "_label_guard", leaky)
     bad = []
     for i in range(N_CASES):
         pre = []
@@ -332,7 +334,7 @@ def _forced_failure(monkeypatch):
         ok = real(plain, T, outcome, nadir)
         return lambda series, upto=None: ok(series, upto) if upto is not None else False
 
-    monkeypatch.setattr(B, "_label_guard", strict)
+    monkeypatch.setattr(BW, "_label_guard", strict)
 
 
 def _pre_t_of_both_paths(render=_render) -> dict:
@@ -368,7 +370,7 @@ def test_g6_negative_control_fallback_to_the_plain_course(monkeypatch, normal_pr
     """A last fallback that restores the whole plain course, pre-T included, must be seen."""
     normal = normal_pre_t
     _forced_failure(monkeypatch)
-    monkeypatch.setattr(B, "_post_t_plain", lambda base, plain, T, bd: list(plain))
+    monkeypatch.setattr(BW, "_post_t_plain", lambda base, plain, T, bd: list(plain))
     forced = _pre_t_of_both_paths()
     assert [k for k in normal if k[1] == "det" and normal[k] != forced[k]] != []
 
@@ -429,6 +431,6 @@ def test_g5_negative_control_one_curve_across_t(monkeypatch):
         seen["all"] = sorted({int(q["ts"]): float(q["value"]) for q in model_pts}.items())
         return real_overlay(lin_pts, model_pts, *a, **k)
 
-    monkeypatch.setattr(B, "_pchip_daily", across)
-    monkeypatch.setattr(B, "_weight_overlay", overlay)
+    monkeypatch.setattr(BW, "_pchip_daily", across)
+    patch_bound(monkeypatch, "_weight_overlay", overlay, source="haenv.build")
     assert _t7_pre_t_mismatches() != []

@@ -11,6 +11,7 @@ their declared bands.
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from _patch_bound import patch_bound  # noqa: E402
 
 import json
 
@@ -194,7 +195,7 @@ def _f2_draws(monkeypatch):
         r = orig(p)
         used[str((p.meta or {}).get("case_id"))] = r
         return r
-    monkeypatch.setattr(B, "_drug_response_of", spy)
+    patch_bound(monkeypatch, "_drug_response_of", source="haenv.build", value=spy)
     base = C.spec_of(C.T2D_JOB, "T2G-07")
     series, resp = set(), []
     for i in range(12):
@@ -225,7 +226,7 @@ def test_f2_negative_control_response_ignores_the_person(monkeypatch):
     from haenv import drug_effects as DE
     fixed = lambda p: DE.response_for("FIXED", (p.meta or {}).get("driver"), B._drug_of(p),
                                       (p.meta or {}).get("drug_response"))
-    monkeypatch.setattr(B, "_drug_response_of", fixed)
+    patch_bound(monkeypatch, "_drug_response_of", source="haenv.build", value=fixed)
     _, resp = _f2_draws(monkeypatch)
     assert resp and not max(resp) - min(resp) > 0.2, resp
 

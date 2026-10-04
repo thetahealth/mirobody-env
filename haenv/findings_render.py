@@ -16,6 +16,7 @@ SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+import functools
 import logging
 import math
 
@@ -28,7 +29,11 @@ log = logging.getLogger("haenv.findings_render")
 
 # Magnitude tier -> multiple of the reference-range width by which the value
 # clears the boundary.
-MAG_FACTOR = {"mild": (0.05, 0.25), "moderate": (0.3, 0.7), "marked": (0.9, 1.6)}
+#: `mild` starts at the boundary (P0-1, 2026-09-30): real abnormal readings sit
+#: just past the bound 7.4% of the time (within 0.05 band widths), the old floor of
+#: 0.05 made that 0.4%. A designed abnormality still clears the bound by at least
+#: one printed digit (`_value`), so it cannot round back onto the boundary.
+MAG_FACTOR = {"mild": (0.0, 0.25), "moderate": (0.3, 0.7), "marked": (0.9, 1.6)}
 QUALITATIVE_DIRECTIONS = {"positive", "negative"}
 
 
@@ -72,25 +77,169 @@ def _progressive_mag(declared: str | None, k: int, n: int) -> str | None:
     return ladder[min(k, len(ladder) - 1)]
 
 
-def _round(v: float) -> float:
-    """Four decimals below 0.1 (e.g. a suppressed TSH), two above."""
-    return round(v, 4 if abs(v) < 0.1 else 2)
+#: Panel item -> dossier name in `registry/indicators.yaml`, where the two differ.
+_DOSSIER_NAME: dict[str, str] = {"FBG": "fasting_glucose", "TG": "triglycerides"}
+
+
+def _ndigits(fid: str | None) -> int | None:
+    """Declared precision of a panel item (`registry/indicators.yaml:ndigits`), or
+    `None` when the item has no dossier or declares `null`."""
+    if not fid:
+        return None
+    from . import indicators as _ind
+    try:
+        nd = _ind.of(_DOSSIER_NAME.get(fid, fid))["ndigits"]
+    except _ind.IndicatorUnregistered:
+        return None
+    return None if nd is None else int(nd)
+
+
+def _round(v: float, fid: str | None = None):
+    """Rounds to the item's declared precision (`indicators.yaml`); items without a
+    dossier keep the magnitude rule: four decimals below 0.1, two above.
+    `ndigits: 0` returns an int, so the printed value has no decimal point."""
+    nd = _ndigits(fid)
+    if nd is None:
+        return round(v, 4 if abs(v) < 0.1 else 2)
+    return int(round(v)) if nd == 0 else round(v, nd)
+
+
+def _step(fid: str | None, v: float) -> float:
+    """One printed digit of this item at value `v`."""
+    nd = _ndigits(fid)
+    if nd is None:
+        nd = 4 if abs(v) < 0.1 else 2
+    return 10.0 ** (-nd)
+
+
+def _fmt(fid: str | None, v) -> str:
+    """Printed value: fixed width at the declared precision, so 4.20 prints as
+    `4.20` the way a lab report does, not `4.2`."""
+    if not isinstance(v, (int, float)):
+        return str(v)
+    nd = _ndigits(fid)
+    if nd is None:
+        return str(v)
+    return f"{v:.{nd}f}"
+
+
+#: Decision lines are not reference intervals. LDL 3.37, TG 1.7, TC 5.17, HDL 1.04, HbA1c 5.6,
+#: FBG 6.1, ALT 25/33, CRP 10, Ferritin 30-200 and VitD 30 are action thresholds that the
+#: general population crosses far more often than 5%. Those items take their not-diseased
+#: readings from `registry/panel_background.yaml` (NHANES aggregate quantile tables, cut
+#: below the referral line; a generated table), not from the
+#: band-fitted log-normal below. Items whose band is a true 95% interval keep the model below.
+#:
+#: A reference interval is the central 95% of a healthy reference population (2.5th
+#: to 97.5th percentile; CLSI EP28-A3c), so a healthy reading falls outside it 5% of
+#: the time, 2.5% on each side of a two-sided band, and mostly just outside: the
+#: log-normal fitted to the band puts 0.3-0.4% of readings beyond 0.27 band widths
+#: (0.7-1.1% on one-sided bands). This is the only source of incidental abnormalities on
+#: benign and insufficient-tier panels. One-sided
+#: bands (`low` = 0) are log-normal with 5% above the upper bound; `sigma` sets the
+#: skew (median = hi * exp(-1.645 * sigma)).
+NORMAL_OUT_OF_BAND = 0.05
+_ONE_SIDED_LOG_SIGMA = 0.30
+
+
+def _normal_value(lo: float, hi: float, u: float, spill: bool) -> float:
+    """A normal-direction reading from quantile `u`, covering the whole band.
+
+    `spill=True` lets `NORMAL_OUT_OF_BAND` of readings fall just outside the band
+    (background abnormality of a healthy item); `spill=False` truncates to the band
+    (a declared-normal or pre-onset disease item must read in range).
+    """
+    if not spill:
+        u = (NORMAL_OUT_OF_BAND / 2 + u * (1 - NORMAL_OUT_OF_BAND)) if lo > 0 \
+            else u * (1 - NORMAL_OUT_OF_BAND)
+    u = min(1 - 1e-9, max(1e-9, u))
+    z = _ppf(u)
+    if lo > 0:
+        m = 0.5 * (math.log(lo) + math.log(hi))
+        s = (math.log(hi) - math.log(lo)) / (2 * 1.959964)
+        v = math.exp(m + s * z)
+    else:
+        med = hi * math.exp(-1.644854 * _ONE_SIDED_LOG_SIGMA)
+        v = med * math.exp(_ONE_SIDED_LOG_SIGMA * z)
+    if not spill:
+        v = min(hi, max(lo, v))
+    return v
+
+
+@functools.lru_cache(maxsize=1)
+def _background_tables() -> dict[str, dict[str, tuple[float, ...]]]:
+    """General-population quantile tables of the decision-line items (`registry/panel_background.yaml`,
+    `adopt: true`): item -> sex (`F` / `M` / `all`) -> 101 quantiles p0..p100."""
+    from .regpath import load_registry
+    doc = load_registry("panel_background.yaml") or {}
+    out: dict[str, dict[str, tuple[float, ...]]] = {}
+    for fid, e in (doc.get("background") or {}).items():
+        if not (e or {}).get("adopt"):
+            continue
+        out[fid] = {sx: tuple(float(x) for x in e[sx]["q"]) for sx in ("F", "M", "all") if sx in e}
+    return out
+
+
+def _background_value(fid: str | None, sex: str | None, u: float) -> float | None:
+    """Reading of a not-diseased person from the item's general-population table at quantile `u`;
+    `None` when the item is not tabulated (a true 95% reference interval keeps `_normal_value`)."""
+    t = _background_tables().get(fid or "")
+    if not t:
+        return None
+    q = t.get(sex or "all") or t["all"]
+    x = min(max(u, 0.0), 1.0) * (len(q) - 1)
+    i = min(int(x), len(q) - 2)
+    return q[i] + (x - i) * (q[i + 1] - q[i])
+
+
+def _background_masses(fid: str | None, sex: str | None, lo: float, hi: float) -> tuple[float, float]:
+    """(below, above) probability mass outside the printed band of a not-diseased reading of `fid`."""
+    e = _background_info().get(fid or "")
+    if e:
+        return e.get(sex or "all") or e["all"]
+    return (0.025, 0.025) if lo > 0 else (0.0, NORMAL_OUT_OF_BAND)
+
+
+@functools.lru_cache(maxsize=1)
+def _background_info() -> dict[str, dict[str, tuple[float, float]]]:
+    from .regpath import load_registry
+    doc = load_registry("panel_background.yaml") or {}
+    return {fid: {sx: (float(e[sx]["out_of_band"]["below"]), float(e[sx]["out_of_band"]["above"]))
+                  for sx in ("F", "M", "all") if sx in e}
+            for fid, e in (doc.get("background") or {}).items() if (e or {}).get("adopt")}
+
+
+def _tail_quantile(u: float, below: float, above: float) -> float:
+    """Map u in [0, 1) onto the out-of-band part of the background distribution."""
+    t = u * (below + above)
+    return t if t < below else 1.0 - above + (t - below)
 
 
 def _value(spec: dict, direction: str, magnitude: str | None,
-           case_id: str, fid: str, k: int, declared: bool = True) -> float:
+           case_id: str, fid: str, k: int, declared: bool = True,
+           spill: bool = False, tail: bool = False) -> float:
     """The value for one reading; reads only case_id, field name and reading index.
 
     Undeclared items (`declared=False`) are mixed with their shared cause
-    (`FACTOR_LOADING`); declared items already are the shared cause.
+    (`FACTOR_LOADING`); declared items already are the shared cause. `spill`
+    applies to normal readings only (see `_normal_value`).
     """
     lo, hi = _band(spec)
     width = hi - lo
     u = rng.unit(case_id, "finding", fid, str(k))
     if not declared:
-        u = _shared_u(case_id, fid, u)
+        if direction == "normal" and spill and fid in _copula_index():
+            u = _copula_u(case_id, fid, k, spec.get("bg_sex"))
+        else:
+            u = _shared_u(case_id, fid, u)
     if direction == "normal":
-        return _round(lo + 0.2 * width + u * 0.6 * width)
+        if spill and tail:
+            u = _tail_quantile(u, *_background_masses(fid, spec.get("bg_sex"), lo, hi))
+        if spill:
+            _bg = _background_value(fid, spec.get("bg_sex"), u)
+            if _bg is not None:
+                return _round(_bg, fid)
+        return _round(_normal_value(lo, hi, u, spill), fid)
     f_lo, f_hi = MAG_FACTOR.get(str(magnitude or "moderate"), MAG_FACTOR["moderate"])
     off = width * (f_lo + u * (f_hi - f_lo))
     val = (hi + off) if direction == "high" else (lo - off)
@@ -107,7 +256,13 @@ def _value(spec: dict, direction: str, magnitude: str | None,
         if val < _floor:
             val = _floor * (1.0 + 0.6 * u)
         val = max(val, _floor)
-    return _round(val)
+    out = _round(val, fid)
+    # An abnormal reading clears its bound by at least one printed digit.
+    if direction == "high" and out <= hi:
+        out = _round(hi + _step(fid, hi), fid)
+    elif direction == "low" and out >= lo and lo > 0:
+        out = _round(lo - _step(fid, lo), fid)
+    return out
 
 
 # ---------------------------------------------------------------- Shared cause
@@ -127,6 +282,50 @@ FACTOR_LOADING: dict[str, tuple[str, float]] = {
     "AST": ("hepatic",   +0.889),
     # Ca/Alb is coupled by the `R3-mech` derivation instead of a loading.
 }
+
+
+# ---------------------------------------------------------------- Benign cross-item copula
+#
+# A benign reading's quantile is not drawn alone: the items of one panel move together as they
+# do in the general population (NHANES normal-score correlation, `registry/panel_copula.yaml`,
+# a generated table). `z = L e`, `e_j = Phi^-1(u_j)` with `u_j` a draw of
+# its own per item and reading index (not the item's `finding` draw, so a declared reading never
+# steers a benign one) and `L` the Cholesky factor, so every `u` stays exactly uniform and the
+# marginals of `panel_background.yaml` are kept. Without it the count of
+# out-of-band items per benign panel is too narrow (variance 2.8 against 4.1 in NHANES).
+
+
+@functools.lru_cache(maxsize=1)
+def _copula() -> tuple[tuple[str, ...], dict[str, list[list[float]]]]:
+    """(items, sex -> lower Cholesky factor) of the benign copula; empty when not registered."""
+    from .regpath import load_registry
+    doc = load_registry("panel_copula.yaml") or {}
+    items = tuple(str(x) for x in (doc.get("items") or ()))
+    out: dict[str, list[list[float]]] = {}
+    for sx, e in (doc.get("copula") or {}).items():
+        c = [[float(x) for x in row] for row in e["corr"]]
+        n = len(c)
+        L = [[0.0] * n for _ in range(n)]
+        for i in range(n):
+            for j in range(i + 1):
+                acc = c[i][j] - sum(L[i][m] * L[j][m] for m in range(j))
+                L[i][j] = math.sqrt(max(acc, 1e-12)) if i == j else acc / L[j][j]
+        out[str(sx)] = L
+    return items, out
+
+
+@functools.lru_cache(maxsize=1)
+def _copula_index() -> dict[str, int]:
+    return {f: i for i, f in enumerate(_copula()[0])}
+
+
+def _copula_u(case_id: str, fid: str, k: int, sex: str | None) -> float:
+    """The copula-coupled quantile of benign reading `k` of `fid` (see the section comment)."""
+    items, Ls = _copula()
+    L = Ls.get(sex or "") or Ls.get("F") or next(iter(Ls.values()))
+    i = _copula_index()[fid]
+    z = sum(L[i][j] * _ppf(rng.unit(case_id, "bgcopula", items[j], str(k))) for j in range(i + 1))
+    return min(1.0 - 1e-12, max(1e-12, _cdf(z)))
 
 
 def _cluster_members(name: str) -> list[tuple[str, float]]:
@@ -279,11 +478,55 @@ _PANEL_RELATION_ITEMS: frozenset[str] = frozenset({
 #: Probability that an orphan item is ordered.
 _PANEL_OPTIONAL_P = 0.5
 
-#: Screening items outside `ROUTINE_PANEL` declared by at least two conditions,
-#: always rendered in full so the item list does not identify the condition.
+#: Screening items outside `ROUTINE_PANEL` declared by at least two conditions. A case gets
+#: the ones its condition declares, the ones a suspected condition would declare, and the rest
+#: at `SPECIALTY_COVERAGE` (see `_specialty_items`).
 _SPECIALTY_SCREEN: tuple[tuple[str, int], ...] = (
     ("ESR", 1), ("CRP", 1), ("ANA", 1), ("Ferritin", 1), ("Insulin", 1), ("VitD25", 1),
 )
+
+#: Share of real patients with the item ever measured: median of the three outpatient /
+#: inpatient cohorts of the RC readout (diabetes, coronary disease, hypothyroidism;
+#: `panel_item_patient_coverage`, ranges ESR 0.09-0.36, CRP 0.55-1.0, ANA 0.03-0.06, ferritin
+#: 0.06-0.23, fasting insulin 0.18-1.0, 25-OH-D 0.16-0.99).
+SPECIALTY_COVERAGE: dict[str, float] = {
+    "ESR": 0.211, "CRP": 0.984, "ANA": 0.044, "Ferritin": 0.191, "Insulin": 0.564, "VitD25": 0.379,
+}
+
+
+@functools.lru_cache(maxsize=1)
+def _specialty_catalog() -> tuple[tuple[frozenset, ...], dict[str, float]]:
+    """(specialty items each catalog condition declares, for conditions that declare any
+    finding; share of those conditions declaring each item)."""
+    from .registry import condition_findings_for_case
+    screen = {f for f, _ in _SPECIALTY_SCREEN}
+    profs = tuple(frozenset({p["id"] for p in (spec or {}).get("findings") or ()} & screen)
+                  for _sid, spec in sorted(condition_findings_for_case().items())
+                  if (spec or {}).get("findings"))
+    n = max(1, len(profs))
+    return profs, {f: sum(f in p for p in profs) / n for f in screen}
+
+
+def _specialty_items(case_id: str, prof: dict, inc: dict) -> list[tuple[str, int]]:
+    """The specialty items this case gets. Declared and incidental items are always kept (the
+    gold's evidence stays on the panel). A case whose condition declares nothing (benign) is
+    worked up for a suspected condition, drawn uniformly from the catalog, so "declared =>
+    ordered" holds for benign and diagnosed cases alike and an item's presence does not mark a
+    diagnosis. Any other item is ordered with `q = (c - d) / (1 - d)`, `c` its real coverage and
+    `d` the catalog share declaring it, so its overall coverage is about `max(c, d)`. The tier
+    never enters."""
+    profs, share = _specialty_catalog()
+    if prof or not profs:
+        suspected: frozenset = frozenset()
+    else:
+        suspected = profs[min(len(profs) - 1, int(rng.unit(case_id, "panel-suspect") * len(profs)))]
+    keep: list[tuple[str, int]] = []
+    for fid, n in _SPECIALTY_SCREEN:
+        c, d = SPECIALTY_COVERAGE[fid], share.get(fid, 0.0)
+        q = max(0.0, (c - d) / (1.0 - d)) if d < 1.0 else 1.0
+        if fid in prof or fid in inc or fid in suspected or rng.unit(case_id, "panel-sp", fid) < q:
+            keep.append((fid, n))
+    return keep
 
 
 #: Longitudinal stream name -> panel item. When the timeline produces a stream
@@ -300,7 +543,7 @@ def _panel_items_for(case_id: str, prof: dict, inc: dict,
                      ts_signals: object = ()) -> list[tuple[str, int]]:
     """Lab items this case produces, in `ROUTINE_PANEL` order. Declared,
     incidental and relation items are always kept; the orphans are sampled per
-    case; the specialty group is always appended.
+    case; the specialty group follows `_specialty_items`.
     """
     _dropped = {_TS_TO_PANEL[s] for s in (ts_signals or ()) if s in _TS_TO_PANEL}
     keep: list[tuple[str, int]] = []
@@ -311,7 +554,7 @@ def _panel_items_for(case_id: str, prof: dict, inc: dict,
             keep.append((fid, n))
         elif rng.unit(case_id, "panel", fid) < _PANEL_OPTIONAL_P:
             keep.append((fid, n))
-    keep += list(_SPECIALTY_SCREEN)
+    keep += _specialty_items(case_id, prof, inc)
     return keep
 
 
@@ -363,6 +606,11 @@ def with_sex_ref(vocab: dict, sex: str | None) -> dict:
         spec = out.get(fid)
         if isinstance(spec, dict) and spec.get("action_threshold") is None:
             out[fid] = {**spec, "action_threshold": thr}
+    _bg_sx = str(sex).upper() if sex and str(sex).upper() in ("F", "M") else "all"
+    for fid in _background_tables():
+        spec = out.get(fid)
+        if isinstance(spec, dict):
+            out[fid] = {**spec, "bg_sex": _bg_sx}
     if not sex or str(sex).upper() not in ("F", "M"):
         return out
     _sx = str(sex).upper()
@@ -387,10 +635,13 @@ def _disease_abnormality_pool() -> dict[tuple[str, str], int]:
     global _DECOY_POOL
     if _DECOY_POOL is not None:
         return _DECOY_POOL
-    from .registry import condition_findings_for_case
+    from .registry import composition_v2_pair_ids, condition_findings_for_case
     routine = {f for f, _ in ROUTINE_PANEL}
     pool: dict[tuple[str, str], int] = {}
-    for spec in condition_findings_for_case().values():
+    _skip = composition_v2_pair_ids()          # legacy draws must not move when a v2 pair is added
+    for _sid, spec in condition_findings_for_case().items():
+        if _sid in _skip:
+            continue
         prof = {p["id"]: p for p in (spec or {}).get("findings") or ()}
         seen: set[tuple[str, str]] = set()
         for fid, p in prof.items():
@@ -445,40 +696,115 @@ def _insufficient_decoys(case_id: str, items: list[tuple[str, int]], prof: dict,
     return out
 
 
+def _background_compensation(case_id: str, items: list[tuple[str, int]], prof: dict, inc: dict,
+                             inc_disease: set, vocab: dict, sex: str | None) -> set[str]:
+    """Items of an insufficient-tier panel that carry one incidental abnormality each, to keep the
+    background pool equal across tiers.
+
+    A blanked disease item must not cross its band (the tier shows none of the gold), so it gives
+    up the background abnormality it would have had on the sufficient tier, where it is a designed
+    abnormality instead. With 5% background that shortfall was invisible; with the general
+    population's rate on decision-line items it shows up in the abnormal count and the largest
+    excursion. For each blanked item, with that item's own background out-of-band probability, one
+    other undeclared item (weighted by its background out-of-band probability) takes an
+    out-of-band reading drawn from the tail of its background distribution (`_tail_quantile`),
+    i.e. sized like an incidental abnormality, not like a declared finding.
+    """
+    blanked = [fid for fid, _ in items
+               if (fid in prof and (prof[fid] or {}).get("direction") in ("high", "low", "positive"))
+               or fid in inc_disease]
+    near = {pf for df in prof for pf, _ in _partners_of(df)}
+    cands = [fid for fid, _ in items
+             if fid not in prof and fid not in inc and fid not in near and fid not in _DERIVED_ITEMS
+             and (vocab.get(fid) or {}).get("ref") is not None
+             and not (vocab.get(fid) or {}).get("qualitative")]
+
+    def _rate(fid: str) -> float:
+        lo, hi = _band(vocab.get(fid) or {})
+        return sum(_background_masses(fid, sex if sex in ("F", "M") else None, lo, hi))
+    out: set[str] = set()
+    for b in blanked:
+        if not cands:
+            break
+        w = [_rate(f) for f in cands]
+        # the picked item would have been abnormal with probability `rbar` anyway, so it adds
+        # only `1 - rbar` to the expected count
+        rbar = sum(x * x for x in w) / sum(w)
+        if rng.unit(case_id, "bgtail", b) >= min(1.0, _rate(b) / (1.0 - rbar)):
+            continue
+        u, acc, pick = rng.unit(case_id, "bgtail-pick", b) * sum(w), 0.0, cands[-1]
+        for f, x in zip(cands, w):
+            acc += x
+            if u < acc:
+                pick = f
+                break
+        out.add(pick)
+        cands.remove(pick)
+    return out
+
+
+#: Items whose value the panel derives rather than draws.
+_DERIVED_ITEMS: frozenset[str] = frozenset({"TC"})
+
+_MAG_DIST: dict[tuple[str, str], dict[str, int]] | None = None
+
+
+def _declared_magnitudes() -> dict[tuple[str, str], dict[str, int]]:
+    """`(fid, direction) -> {magnitude: count}` over declared screening findings in
+    the catalog, plus `("*", "*")` pooled. Built once."""
+    global _MAG_DIST
+    if _MAG_DIST is not None:
+        return _MAG_DIST
+    from .registry import condition_findings_for_case
+    out: dict[tuple[str, str], dict[str, int]] = {}
+    for spec in condition_findings_for_case().values():
+        for p in (spec or {}).get("findings") or ():
+            d, m = (p or {}).get("direction"), (p or {}).get("magnitude")
+            if p.get("role") != "screening" or d not in ("high", "low") or m not in _MAGS:
+                continue
+            for key in ((p["id"], d), ("*", "*")):
+                out.setdefault(key, {})
+                out[key][m] = out[key].get(m, 0) + 1
+    _MAG_DIST = out
+    return out
+
+
+def _draw_magnitude(case_id: str, fid: str, direction: str, salt: str) -> str:
+    """Magnitude for an undeclared designed abnormality (partner, decoy), drawn
+    from the declared magnitudes of the same item and direction, so its size does
+    not mark it as undeclared. Items the catalog never declares use the pooled
+    mild/moderate share (`marked` only where some condition declares it)."""
+    dist = _declared_magnitudes()
+    w = dist.get((fid, direction))
+    if not w:
+        w = {m: c for m, c in (dist.get(("*", "*")) or {"mild": 1}).items() if m != "marked"}
+    tot = float(sum(w.values()))
+    u = rng.unit(case_id, "mag", fid, salt)
+    acc = 0.0
+    for m in _MAGS:
+        if m in w:
+            acc += w[m] / tot
+            if u < acc:
+                return m
+    return [m for m in _MAGS if m in w][-1]
+
+
 def render_routine_panel(case_id: str, profile: dict, vocab: dict, index_T: int,
                          sex: str | None = None, ts_signals: object = (),
                          normal_before_day: int | None = None) -> list[dict]:
     """Renders the fixed initial-visit routine panel. Declared items follow the
-    declaration; the rest read normal apart from incidental findings.
+    declaration; the rest are healthy readings of the general population, so each
+    one falls outside its band with the reference interval's 5% (`_normal_value`,
+    `spill=True`), mostly just outside.
     """
     vocab = with_sex_ref(vocab, sex)
     prof = {p["id"]: p for p in (profile or {}).get("findings") or ()}
-    # Incidental findings: 0-2 mild abnormalities per case, unrelated to the
-    # diagnosis, so the count of abnormal items does not identify the case. The
-    # pool includes the specialty group so single-condition items are not tells.
-    _pool = [fid for fid, _ in (*ROUTINE_PANEL, *_SPECIALTY_SCREEN) if fid not in prof]
-    _n_inc = int(rng.unit(case_id, "incidental", "n") * 3)          # 0/1/2
-    # fid -> direction; a shared-cause partner may move the opposite way.
+    # fid -> direction / magnitude of undeclared abnormalities.
     _inc: dict[str, str] = {}
-    for _i in range(_n_inc):
-        if not _pool:
-            break
-        # Prefer a shared-cause partner of the previous pick.
-        _pk = None
-        if _inc:
-            _last = list(_inc)[-1]
-            _cands = [(f, d) for f, d in _partners_of(_last) if f in _pool]
-            if _cands:
-                _j = int(rng.unit(case_id, "incidental", "partner", str(_i)) * len(_cands))
-                _pk, _dir = _cands[min(_j, len(_cands) - 1)]
-                _inc[_pk] = "high" if _dir > 0 else "low"
-        if _pk is None:
-            _pk = _pool[int(rng.unit(case_id, "incidental", str(_i)) * len(_pool)) % len(_pool)]
-            _inc[_pk] = "high"
-        _pool.remove(_pk)
+    _inc_mag: dict[str, str] = {}
 
     # Partners of declared abnormalities follow the declared direction and the
-    # cluster sign; they are outside the incidental budget.
+    # cluster sign. TC is derived from its partners (R2), so it is never pulled.
     _inc_disease: set[str] = set()
     for _df, _dspec in prof.items():
         _ddir = (_dspec or {}).get("direction")
@@ -486,11 +812,12 @@ def render_routine_panel(case_id: str, profile: dict, vocab: dict, index_T: int,
             continue
         for _pf, _sgn in _partners_of(_df):
             _pd = _disease_partner_direction(_ddir, _sgn)
-            if _pf in prof or _pd is None:
+            if _pf in prof or _pd is None or _pf in _DERIVED_ITEMS:
                 continue
             if not any(_pf == f for f, _ in ROUTINE_PANEL):
                 continue
             _inc[_pf] = _pd
+            _inc_mag[_pf] = _draw_magnitude(case_id, _pf, _pd, "partner")
             _inc_disease.add(_pf)
 
     # One shared set of draw days, opened at presentation (`ddx.presentation_day`)
@@ -499,10 +826,24 @@ def render_routine_panel(case_id: str, profile: dict, vocab: dict, index_T: int,
     _draws = draw_days(case_id, index_T, max(n for _, n in ROUTINE_PANEL),
                        not_before=presentation_day(normal_before_day, index_T))
     _items = _panel_items_for(case_id, prof, _inc, ts_signals)
+    _on_panel = {f for f, _ in _items}
+    _insufficient = normal_before_day is not None and int(normal_before_day) > int(index_T)
     # Insufficient tier: blanked disease abnormalities are replaced by as many
-    # mild decoys, so "any abnormal lab" does not identify the sufficient tier.
-    if normal_before_day is not None and int(normal_before_day) > int(index_T):
-        _inc.update(_insufficient_decoys(case_id, _items, prof, _inc, _inc_disease, vocab))
+    # decoys, sized like declared findings, so neither "any abnormal lab" nor the
+    # size of the largest one identifies the sufficient tier.
+    _decoys: dict[str, str] = {}
+    _tails: set[str] = set()
+    if _insufficient:
+        _decoys = _insufficient_decoys(case_id, _items, prof, _inc, _inc_disease, vocab)
+        for _f, _d in _decoys.items():
+            _inc[_f] = _d
+            _inc_mag[_f] = _draw_magnitude(case_id, _f, _d, "decoy")
+        _designed = set(_decoys)
+        _tails = _background_compensation(case_id, _items, prof, _inc, _inc_disease, vocab, sex)
+    else:
+        _designed = ({f for f, p in prof.items()
+                      if (p or {}).get("direction") in ("high", "low", "positive")}
+                     | _inc_disease) & _on_panel
     out: list[dict] = []
     for fid, n_fixed in _items:
         spec = vocab.get(fid)
@@ -510,13 +851,18 @@ def render_routine_panel(case_id: str, profile: dict, vocab: dict, index_T: int,
             continue
         p = prof.get(fid)
         _default_dir = _inc.get(fid, "normal")
-        item = {"id": fid, "declared": p is not None,
-                "direction": (p or {}).get("direction", _default_dir),
-                "magnitude": (p or {}).get("magnitude", "mild" if fid in _inc else None),
-                "trajectory": (p or {}).get("trajectory", "stable"),
-                "n": n_fixed, "role": "screening"}
         # The pre-onset rule applies only to disease-caused items.
         _disease = p is not None or fid in _inc_disease
+        item = {"id": fid, "declared": p is not None,
+                "direction": (p or {}).get("direction", _default_dir),
+                "magnitude": (p or {}).get("magnitude", _inc_mag.get(fid)),
+                "trajectory": (p or {}).get("trajectory", "stable"),
+                "n": n_fixed, "role": "screening",
+                # Undeclared, not disease-caused readings are the only source of
+                # incidental abnormalities: the general-population tail of the band
+                # (`_normal_value`, `spill=True`), not a hospital cohort's rate.
+                "_spill": not _disease and fid not in _DERIVED_ITEMS,
+                "_tail": fid in _tails}
         out += render_findings(case_id, {"findings": (item,)}, vocab, index_T,
                                days_override=_draws, _keep_private=True,
                                normal_before_day=normal_before_day if _disease else None)
@@ -541,18 +887,201 @@ def render_routine_panel(case_id: str, profile: dict, vocab: dict, index_T: int,
         _vals["Ca_corrected"] = _vals.pop("Ca")
     _new, _log = reconcile_panel(_vals, _declared, vocab)
     _new.pop("Ca_corrected", None)
+    # A derived panel TC carries the real signed Friedewald residual (the identity is exact only
+    # in the formula; real same-day draws have |rho| median 0.114).
+    if (all(k in _new for k in ("TC", "LDL", "HDL", "TG")) and "TC" not in _declared
+            and _new["TC"] != _vals.get("TC") and _new["TG"] < FRIEDEWALD_TG_MAX_MMOL):
+        _rho = panel_friedewald_residual(case_id, _new["LDL"], _new["TG"])
+        _new["TC"] = (_new["LDL"] + _new["HDL"] + _new["TG"] / FRIEDEWALD_TG_DIVISOR
+                      - _rho * _new["LDL"])
+        _log.append(f"R2 残差 rho={_rho:.3f} ⇒ TC {_new['TC']:.2f}")
     for _fid, _nv in _new.items():
         if _fid in _idx and _vals.get(_fid) != _nv:
             _i = _idx[_fid]
             _spec = vocab.get(_fid) or {}
             _ref = _spec.get("ref") or {}
+            _nv = _round(_nv, _fid)
             out[_i]["_val"] = _nv
-            out[_i]["symptom"] = (
-                f"{_spec.get('name_cn', _fid)} {_nv} {_spec.get('unit', '')}"
-                + (f"(参考 {_ref.get('low')}–{_ref.get('high')})" if _ref else "")).strip()
+            out[_i]["symptom"] = _panel_text(case_id, _fid, _spec, _nv)
     if _log:
         log.debug("reconcile[%s] %s", case_id, " | ".join(_log))
     return _strip_private(out)
+
+
+# ---------------------------------------------------------------- Panel x streams
+#
+# When LDL / TG / FBG / HbA1c / ALT / AST are longitudinal streams, the panel omits
+# them (`_TS_TO_PANEL`), so the panel alone cannot keep cross-item identities or
+# show a declared finding on those items. `align_panel_to_streams` runs once the
+# streams are final (after the physiology layer and rounding) and
+#   (a) raises / lowers the post-onset stream points of a declared screening item
+#       onto the declared side, so the finding is visible where the item is shown;
+#   (b) derives panel TC from the same-day (nearest) LDL and TG and the panel HDL:
+#       TC = LDL + HDL + TG/2.2 - rho * LDL, rho the real signed Friedewald residual.
+
+_PANEL_TO_TS: dict[str, str] = {v: k for k, v in _TS_TO_PANEL.items()}
+
+#: Signed relative Friedewald residual of the cross-surface TC,
+#: rho = (LDL - (TC - HDL - TG/2.2)) / LDL, as the real same-day distribution: quantiles at
+#: 2%, 4%, ..., 98% of n = 12597 real four-item draws with TG < 4.5 mmol/L (RA-labs
+#: definition, `shortcuts.B_cross_surface.real_friedewald_rel_residual`: 5/25/50/75/95% =
+#: -0.394 / -0.134 / -0.022 / 0.093 / 0.315). Both signs occur; TC is drawn as
+#: LDL + HDL + TG/2.2 - rho * LDL, with rho truncated at TG / (2.2 * LDL) so TC >= LDL + HDL.
+TC_RESIDUAL_Q_LEVELS: tuple[float, ...] = tuple(k / 50 for k in range(1, 50))
+TC_RESIDUAL_Q: tuple[float, ...] = (
+    -0.567, -0.4311, -0.3569, -0.3051, -0.2719, -0.2438, -0.2201, -0.1998, -0.1818, -0.1678,
+    -0.1522, -0.139, -0.1274, -0.1171, -0.1068, -0.0966, -0.0871, -0.0773, -0.07, -0.0621,
+    -0.0545, -0.0456, -0.0384, -0.0303, -0.0221, -0.0142, -0.0068, 0.001, 0.01, 0.0188,
+    0.0278, 0.0374, 0.0461, 0.0563, 0.0655, 0.0759, 0.0875, 0.0985, 0.1109, 0.1252,
+    0.1408, 0.1573, 0.1765, 0.198, 0.2231, 0.2496, 0.2908, 0.3467, 0.451)
+
+
+def _tc_residual_cdf(x: float) -> float:
+    """Piecewise-linear CDF of `TC_RESIDUAL_Q` (clamped to its 2%-98% range)."""
+    q, lv = TC_RESIDUAL_Q, TC_RESIDUAL_Q_LEVELS
+    if x <= q[0]:
+        return lv[0]
+    if x >= q[-1]:
+        return lv[-1]
+    i = max(j for j in range(len(q) - 1) if q[j] <= x)
+    return lv[i] + (lv[i + 1] - lv[i]) * (x - q[i]) / (q[i + 1] - q[i])
+
+
+def _tc_residual_ppf(p: float) -> float:
+    """Inverse of `_tc_residual_cdf`."""
+    q, lv = TC_RESIDUAL_Q, TC_RESIDUAL_Q_LEVELS
+    p = min(max(float(p), lv[0]), lv[-1])
+    i = min(max(j for j in range(len(lv)) if lv[j] <= p), len(lv) - 2)
+    return q[i] + (q[i + 1] - q[i]) * (p - lv[i]) / (lv[i + 1] - lv[i])
+
+
+def tc_friedewald_residual(cid: str, ldl: float, tg: float) -> float:
+    """rho for one case: the real signed distribution (its 2%-98% range) truncated at
+    TG / (2.2 * LDL)."""
+    cap = (tg / FRIEDEWALD_TG_DIVISOR) / ldl if ldl > 0 else float("inf")
+    lo = TC_RESIDUAL_Q_LEVELS[0]
+    return _tc_residual_ppf(lo + rng.unit(cid, "tc_residual") * (_tc_residual_cdf(cap) - lo))
+
+
+def panel_friedewald_residual(cid: str, ldl: float, tg: float) -> float:
+    """rho of a panel-internal derived TC: as `tc_friedewald_residual` (the real signed
+    distribution truncated at TG / (2.2 * LDL), so TC >= LDL + HDL), on its own draw."""
+    cap = (tg / FRIEDEWALD_TG_DIVISOR) / ldl if ldl > 0 else float("inf")
+    lo = TC_RESIDUAL_Q_LEVELS[0]
+    return _tc_residual_ppf(lo + rng.unit(cid, "tc_residual_panel") * (_tc_residual_cdf(cap) - lo))
+
+
+def _stream_value_at(pts: list, day: int) -> float | None:
+    """The stream point on `day`, else the nearest one (ties: the earlier)."""
+    best = None
+    for q in pts or ():
+        if not isinstance(q, dict) or not isinstance(q.get("value"), (int, float)):
+            continue
+        key = (abs(int(q["ts"]) - int(day)), int(q["ts"]))
+        if best is None or key < best[0]:
+            best = (key, float(q["value"]))
+    return None if best is None else best[1]
+
+
+def _panel_value(entry: dict, spec: dict) -> float | None:
+    import re as _re
+    m = _re.match(_re.escape(str(spec.get("name_cn", ""))) + r" (-?\d+(?:\.\d+)?)",
+                  str(entry.get("symptom") or ""))
+    return float(m.group(1)) if m else None
+
+
+def align_panel_to_streams(raw, normal_before_day: int | None = None) -> list[str]:
+    """Reconciles the rendered panel with the final longitudinal streams in place
+    (see the section comment). Returns a log. Reads the declaration, never the
+    diagnosis; the insufficient tier (onset after `T`) is left alone.
+    """
+    from .registry import condition_findings_for_case, load_findings
+    from .wq import resolve_path
+    cid = str(getattr(raw, "case_id", ""))
+    ld = getattr(raw, "longitudinal_data", None) or {}
+    ledger = getattr(raw, "evidence_ledger", None) or []
+    log_: list[str] = []
+    pref = f"EV-{cid}-L"
+    ent = {str(e.get("evidence_id"))[len(pref):]: e for e in ledger
+           if e.get("relevance") == "routine_panel"
+           and str(e.get("evidence_id", "")).startswith(pref)}
+    if not ent:
+        return log_
+    vocab0 = load_findings()
+    sid = resolve_path(raw, "W.adjudication.ddx.spec_id")
+    prof = (condition_findings_for_case(vocab0).get(sid) or {}) if isinstance(sid, str) else {}
+    vocab = with_sex_ref(vocab0, (getattr(raw, "user_profile", None) or {}).get("sex"))
+    T = int((getattr(raw, "prediction_context", None) or {}).get("prediction_time_T") or 84)
+    onset = int(normal_before_day) if normal_before_day is not None else 0
+
+    # (a) declared screening findings carried by a stream. Only when no point up to
+    # T already shows the declared side; never on a stream that is a diagnostic
+    # signal of the base disease (the base disease owns that stream's level, e.g.
+    # TG in dyslipidemia); values stay inside the kernel's physiological domain.
+    from .indicators import _declared_ndigits
+    from . import indicators as _ind
+    _pb = ((getattr(raw, "latent_premise", None) or {}).get("patient_basics") or {})
+    _base = str(_pb.get("disease") or "")
+    _base_sigs = set(((_ind.diagnoses() or {}).get(_base) or {}).get("any_of") or ())
+    try:
+        from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN as _DOM
+        _dom = _DOM.get(_base) or {}
+    except ImportError:                            # kernel not on the path
+        _dom = {}
+    if onset <= T:
+        for p in (prof.get("findings") or ()):
+            fid, d = p.get("id"), p.get("direction")
+            s = _PANEL_TO_TS.get(fid)
+            if p.get("role") != "screening" or d not in ("high", "low") or not s or not ld.get(s):
+                continue
+            spec = vocab.get(fid) or {}
+            lo, hi = _band(spec)
+            pts = sorted((q for q in ld[s] if isinstance(q, dict)
+                          and isinstance(q.get("value"), (int, float))), key=lambda q: int(q["ts"]))
+
+            def _on(v):
+                return v > hi if d == "high" else v < lo
+            if any(_on(float(q["value"])) for q in pts if int(q["ts"]) <= T):
+                continue
+            if s in _base_sigs:
+                log_.append(f"{s}: declared {fid} {d} not shown -- base-disease signal of {_base}")
+                continue
+            nd = _declared_ndigits(s)
+            dlo, dhi = ((_dom.get(s) or {}).get("range") or (float("-inf"), float("inf")))
+            for k_on, q in enumerate(q for q in pts if int(q["ts"]) >= onset):
+                v = float(q["value"])
+                if _on(v):
+                    continue
+                tv = float(_value(spec, d, p.get("magnitude"), cid, fid, k_on))
+                tv = min(float(dhi), max(float(dlo), tv))
+                tv = round(tv, nd) if nd else float(round(tv))
+                if not _on(tv):
+                    log_.append(f"{s}@{q['ts']}: declared {fid} {d} cannot be shown inside the domain")
+                    continue
+                log_.append(f"{s}@{q['ts']} {v} -> {tv} (declared {fid} {d})")
+                q["value"] = tv
+
+    # (b) TC from same-day LDL / TG (stream or panel) and the panel HDL
+    tc_e, hdl_e = ent.get("TC0"), ent.get("HDL0")
+    if tc_e is not None and hdl_e is not None and (ld.get("LDL") or ld.get("triglycerides")):
+        day = int(tc_e.get("source_timestamp", 0))
+        L = (_stream_value_at(ld["LDL"], day) if ld.get("LDL")
+             else (_panel_value(ent["LDL0"], vocab.get("LDL") or {}) if "LDL0" in ent else None))
+        G = (_stream_value_at(ld["triglycerides"], day) if ld.get("triglycerides")
+             else (_panel_value(ent["TG0"], vocab.get("TG") or {}) if "TG0" in ent else None))
+        H = _panel_value(hdl_e, vocab.get("HDL") or {})
+        if None not in (L, G, H):
+            floor = L + H                                  # TC >= LDL + HDL
+            rho = tc_friedewald_residual(cid, L, G)
+            tc = _round(L + H + G / FRIEDEWALD_TG_DIVISOR - rho * L, "TC")
+            while tc < floor:
+                tc = _round(tc + _step("TC", tc), "TC")
+            spec = vocab.get("TC") or {}
+            tc_e["symptom"] = _panel_text(cid, "TC", spec, tc)
+            log_.append(f"TC@{day} = LDL {L} + HDL {H} + TG {G}/2.2 - {rho:.3f}*LDL = {tc}")
+    if log_:
+        log.debug("align[%s] %s", cid, " | ".join(log_))
+    return log_
 
 
 def render_findings(case_id: str, profile: dict, vocab: dict, index_T: int,
@@ -595,7 +1124,8 @@ def render_findings(case_id: str, profile: dict, vocab: dict, index_T: int,
                 elif traj == "progressive":
                     mag = _progressive_mag(p.get("magnitude"), k, len(days))
                     val = _value(spec, d, mag, case_id, p["id"], k,
-                                 declared=bool(p.get("declared", True)))
+                                 declared=bool(p.get("declared", True)),
+                                 spill=bool(p.get("_spill")), tail=bool(p.get("_tail")))
                     out.append(_entry(case_id, spec, p, day, val, k))
                     continue
                 elif traj == "fluctuating" and k_on >= 0 and k_on % 2 == 1:
@@ -604,7 +1134,8 @@ def render_findings(case_id: str, profile: dict, vocab: dict, index_T: int,
                       and k_on >= 1):
                     d = "normal"
                 val = _value(spec, d, p.get("magnitude"), case_id, p["id"], k,
-                             declared=bool(p.get("declared", True)))
+                             declared=bool(p.get("declared", True)),
+                             spill=bool(p.get("_spill")), tail=bool(p.get("_tail")))
             out.append(_entry(case_id, spec, p, day, val, k))
     return out if _keep_private else _strip_private(out)
 
@@ -623,8 +1154,11 @@ CA_ALB_SLOPE_EMPIRICAL = 0.0164
 #: panel lacks.
 NA_CL_GAP = (30.0, 42.0)
 
-#: Which Friedewald item is recomputed first (LDL is the one labs compute).
-_DERIVE_RANK = {"LDL": 0, "TC": 1, "HDL": 2, "TG": 3}
+#: Which Friedewald item is recomputed first. TC is derived from LDL + HDL + TG/2.2
+#: (P0-3, 2026-09-30): sampling TC and HDL on one shared cause with opposite
+#: loadings made TC~HDL negative (-0.19 against +0.41 real), while TC contains HDL.
+#: TC is never declared and always renders normal, so it always carries the identity.
+_DERIVE_RANK = {"TC": 0, "LDL": 1, "HDL": 2, "TG": 3}
 
 #: Cap on repair rounds; still moving at the cap logs `unstable`.
 _MAX_ROUNDS = 8
@@ -854,10 +1388,12 @@ def reconcile_panel(vals: dict[str, float], declared: set[str],
                 _tgt = NA_CL_GAP[1] if d > NA_CL_GAP[1] else NA_CL_GAP[0]
                 import math as _m
                 _M = 0.05
+                # Cl is printed at its declared precision, so round on that grid.
+                _inv = 1.0 / _step("Cl", v["Cl"])
                 if d > NA_CL_GAP[1]:
-                    nv = _m.ceil((v["Na"] - _tgt + _M) * 10) / 10
+                    nv = _m.ceil((v["Na"] - _tgt + _M) * _inv) / _inv
                 else:
-                    nv = _m.floor((v["Na"] - _tgt - _M) * 10) / 10
+                    nv = _m.floor((v["Na"] - _tgt - _M) * _inv) / _inv
                 # `NA_CL_GAP` is absolute, so the result must also pass the
                 # plausibility band.
                 _r7 = (vocab.get("Cl") or {}).get("ref") or {}
@@ -903,10 +1439,36 @@ def _strip_private(entries: list[dict]) -> list[dict]:
     return [{k: v for k, v in e.items() if not str(k).startswith("_")} for e in entries]
 
 
-def _entry(case_id: str, spec: dict, p: dict, day: int, val, k: int) -> dict:
+#: Share of reports that print no flag column at all (real EMR: `(empty)` 6-35%
+#: of rows per item, RC-observation `real_readout.json` `format.*.flags`).
+FLAG_ABSENT_SHARE = 0.25
+
+
+def _flag(case_id: str, val, ref: dict) -> str:
+    """Report flag as real lab reports print it: `H` / `L` out of range, `N` in
+    range, nothing when this case's report has no flag column."""
+    if not ref or not isinstance(val, (int, float)):
+        return ""
+    if rng.unit(case_id, "flagcol") < FLAG_ABSENT_SHARE:
+        return ""
+    lo, hi = ref.get("low"), ref.get("high")
+    if hi is not None and val > float(hi):
+        return "H"
+    if lo is not None and val < float(lo):
+        return "L"
+    return "N"
+
+
+def _panel_text(case_id: str, fid: str | None, spec: dict, val) -> str:
     ref = spec.get("ref") or {}
-    txt = (f"{spec['name_cn']} {val} {spec.get('unit', '')}"
+    txt = (f"{spec.get('name_cn', fid)} {_fmt(fid, val)} {spec.get('unit', '')}"
            + (f"(参考 {ref.get('low')}–{ref.get('high')})" if ref else ""))
+    fl = _flag(case_id, val, ref)
+    return (txt.strip() + (f" {fl}" if fl else "")).strip()
+
+
+def _entry(case_id: str, spec: dict, p: dict, day: int, val, k: int) -> dict:
+    txt = _panel_text(case_id, p["id"], spec, val)
     return {"evidence_id": f"EV-{case_id}-L{p['id']}{k}",
             "source_type": "lab_result",
             "source_timestamp": int(day),

@@ -206,3 +206,16 @@ def weight_noise_shaped(case_id: str, day: int, eps: float, mass: float,
     week_var = sum(f * f for f in WEIGHT_WEEKDAY_FRAC) / len(WEIGHT_WEEKDAY_FRAC)
     keep = math.sqrt(max(0.0, 1.0 - week_var / max(1e-12, sd_frac * sd_frac)))
     return eps * keep + mass * WEIGHT_WEEKDAY_FRAC[weight_weekday(case_id, day)]
+
+
+#: Display resolution of a consumer bathroom scale, kg. Home scales report to 0.1 kg (some to
+#: 0.05); the payload's weight readings sit on this grid. Applied to the observed series after
+#: every reading artifact and before carried-forward copies (`post_inject`), so a copied
+#: reading repeats a grid value.
+WEIGHT_SCALE_RESOLUTION_KG = 0.1
+
+
+def weight_on_scale_grid(value: float) -> float:
+    """`value` rounded to the home scale's display resolution."""
+    step = WEIGHT_SCALE_RESOLUTION_KG
+    return round(round(float(value) / step) * step, 2)

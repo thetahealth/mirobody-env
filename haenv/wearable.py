@@ -205,6 +205,26 @@ SHARED_LOADING: dict[str, float | tuple[float, float]] = {
 }
 
 
+#: Day-of-week shift of the process centre on the working scale (log for `steps`, hours for
+#: `sleep_hours`), Monday first, summing to zero over the week. The calendar phase is the one
+#: the weight rhythm uses (`physio.noise.weight_weekday`: days 5 and 6 are the weekend).
+#: `steps`: about 21% fewer steps at the weekend, Sunday lowest (pedometer and wrist-device
+#: cohorts put weekend counts roughly 9-26% under weekday counts, Sunday usually lowest).
+#: `sleep_hours` is the night ending on that morning: 0.63 h longer on Saturday and Sunday
+#: mornings (weekend catch-up sleep; social jet lag of about 44 min in working adults,
+#: Roenneberg et al. 2012, Curr Biol 22:939-943). Other streams carry no weekday shift.
+WEEKDAY_SHIFT: dict[str, tuple[float, ...]] = {
+    "steps":       (0.068, 0.068, 0.068, 0.068, 0.068, -0.120, -0.220),
+    "sleep_hours": (-0.18, -0.18, -0.18, -0.18, -0.18, 0.45, 0.45),
+}
+
+
+def weekday_of(seed: str, day: int) -> int:
+    """Weekday (0 = Monday) of course day `day` for case `seed`; the weight rhythm's phase."""
+    from .physio.noise import weight_weekday
+    return weight_weekday(seed, day)
+
+
 def ar1(name: str, base: float, days: list[int], seed: str,
         hard_range: tuple[float, float],
         stats: dict | None = None) -> list[float] | None:
@@ -231,13 +251,15 @@ def ar1(name: str, base: float, days: list[int], seed: str,
         z2 = a2 * _gauss(seed, "shared2", key) if a2 else 0.0
         return a1 * _gauss(seed, "shared", key) + z2 + b * _gauss(seed, name, key)
 
+    wk = WEEKDAY_SHIFT.get(name)
     x = cal.sigma * _shock("init")
     out: list[float] = []
     n_soft = 0
     for i, d in enumerate(days):
         if i:
             x = phi * x + innov * _shock(d)
-        y, softened = _soft_bound(centre + x, lo, hi, margin)
+        y, softened = _soft_bound(centre + x + (wk[weekday_of(seed, d)] if wk else 0.0),
+                                  lo, hi, margin)
         n_soft += int(softened)
         out.append(math.exp(y) if cal.log_scale else y)
     if stats is not None:
@@ -257,8 +279,20 @@ def stream_available(case_id: str, name: str) -> bool:
 #: Share of the rarest stream's non-wear that is device-level (shared by all streams on a
 #: day); fitted to the reference corpus's co-missingness.
 SHARED_OFF_FRACTION = 0.9
-#: Persistence of the shared chain, taken from `steps`, whose non-wear is almost all shared.
-SHARED_P_OFF_OFF = 0.6957
+#: Persistence of the device-level chain, and of each stream's own chain (`OWN_P_OFF_OFF`;
+#: `CALIBRATION.p_off_off` is the stream's marginal persistence in the corpus). A day is
+#: missing when either chain is off, so two chains each at the marginal persistence merge
+#: into runs longer than the corpus's. Fitted jointly on the corpus's 28-day windows (share
+#: of one-day runs, share of runs over three days, non-wear rate, for all seven streams, and
+#: as counter-metrics the pairwise phi of the missing indicators, 0.519 against 0.572, and
+#: the within-window spread of per-stream rates, 0.071 against 0.061), on synthetic case ids;
+#: with 0.6957 and the marginal persistences, one-day runs were 0.27-0.48 of all runs against
+#: 0.42-0.68 in the corpus.
+SHARED_P_OFF_OFF = 0.60
+OWN_P_OFF_OFF: dict[str, float] = {
+    "resting_hr": 0.15, "hrv": 0.15, "steps": 0.15, "stress_score": 0.55,
+    "sleep_hours": 0.15, "skin_temp": 0.15, "spo2": 0.35,
+}
 
 
 #: Shape of the per-patient compliance multiplier (Gamma, mean 1): 1 / 0.91^2 matches the
@@ -346,7 +380,7 @@ def worn_on(case_id: str, name: str, days: list[int]) -> list[bool]:
         return [True] * len(days)
     shared, own, _ = case_rates(case_id, name)
     dev_off = _chain(case_id, ("device",), days, shared, SHARED_P_OFF_OFF)
-    own_off = _chain(case_id, (name,), days, own, cal.p_off_off)
+    own_off = _chain(case_id, (name,), days, own, OWN_P_OFF_OFF.get(name, cal.p_off_off))
     out: list[bool] = []
     gap = 0
     for a, b in zip(dev_off, own_off):

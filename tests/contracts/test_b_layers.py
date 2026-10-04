@@ -82,23 +82,28 @@ B2_CASES = ([(job, cid, None) for job, cid in COHORT]
 
 
 def _b2_changes(b) -> list[str]:
+    # The home scale shows 0.1 kg, and `apply_post_injection` puts the observed weight on that grid
+    # before any reading is copied forward. A reading may therefore equal its own artifact-layer
+    # value on the 0.1 kg grid, or the reading before it; nothing else.
+    from haenv.physio.noise import weight_on_scale_grid
     ar = sorted(C.series(b.layers["artifacts"]["longitudinal_data"], "weight").items())
     po = sorted(C.series(b.layers["post_inject"]["longitudinal_data"], "weight").items())
     if [d for d, _ in ar] != [d for d, _ in po]:
         return ["post-injection changed the set of days"]
     return [f"day {d} re-valued without copying" for i, ((d, a), (_, b2)) in enumerate(zip(ar, po))
-            if a != b2 and (i == 0 or b2 != po[i - 1][1])]
+            if b2 != weight_on_scale_grid(a) and (i == 0 or b2 != po[i - 1][1])]
 
 
 @pytest.mark.parametrize("job,cid,noise", B2_CASES)
 def test_b2_post_injection_only_copies_readings(job, cid, noise):
     """Between the reading-artifact layer and the post-injection layer, the weight series
-    keeps the same days, and every reading that changed now equals the reading before it
-    (carried-forward is the only recording behaviour registered for `weight`).
+    keeps the same days, and every reading equals its artifact-layer value on the home
+    scale's 0.1 kg grid or the reading before it (the scale resolution and carried-forward
+    are the only recording behaviours registered for `weight`; the grid since 51bbfba3).
 
-    Catches: a post-injection layer that adds, drops or re-values readings, artifact readings
-    included. Turns red when a new post-injector is registered for weight without a contract
-    of its own."""
+    Catches: a post-injection layer that adds, drops or re-values readings beyond the display
+    rounding, artifact readings included. Turns red when a new post-injector is registered for
+    weight without a contract of its own."""
     b = _built(job, cid, noise=noise)
     if "post_inject" not in b.layers:
         pytest.fail(f"{cid}: not emitted or post-injection not reached ({b.audit.get('post_noise_conflicts')})")
@@ -124,6 +129,28 @@ def test_b2_negative_control_revalued_reading(monkeypatch):
     finally:
         C._build_cached.cache_clear()
     assert _b2_changes(b), "a re-valued reading went unnoticed"
+
+
+def test_b2_negative_control_coarser_scale_grid(monkeypatch):
+    """Negative control for the grid allowance: a post-injection layer that rounds weight to
+    0.5 kg (not the registered 0.1 kg) must be caught, so the allowance is the grid itself and
+    not any rounding."""
+    from haenv import post_inject as PI
+    orig = PI.apply_post_injection
+
+    def coarse(raw, **k):
+        res = orig(raw, **k)
+        for q in raw.longitudinal_data["weight"]:
+            q["value"] = round(round(q["value"] / 0.5) * 0.5, 2)
+        return res
+    job, cid = COHORT[0]
+    monkeypatch.setattr(PI, "apply_post_injection", coarse)
+    C._build_cached.cache_clear()
+    try:
+        b = C.build(C.variant(C.spec_of(job, cid), case_id="NC-B2g"), template=job, capture=True)
+    finally:
+        C._build_cached.cache_clear()
+    assert _b2_changes(b), "weight rounded to 0.5 kg went unnoticed"
 
 
 # ------------------------------------------------------------------ B3 gold is fixed early
@@ -240,7 +267,7 @@ def test_b4_negative_control_artifacts_before_events(monkeypatch):
     """Negative control: with every noise class applied before the events layer, a spike
     case must list `weight_ref` somewhere else than the same case without it."""
     from haenv import build as B
-    import noise as N
+    import haenv_kernel.noise as N
     job, cid = COHORT[0]
     base = C.spec_of(job, cid)
     monkeypatch.setattr(B, "NOISE_BEFORE_PHYSIO", frozenset(N.NOISE_CLASSES))
@@ -309,7 +336,7 @@ def test_b5_negative_control_kernel_reference_kept(monkeypatch):
     import copy
 
     from haenv import build as B
-    import noise as N
+    import haenv_kernel.noise as N
     orig = B._inject_observation_artifacts
 
     def keep_kernel_reference(raw, cs, *a, **k):

@@ -154,7 +154,7 @@ def register_with_kernel() -> None:
     come from here, so adding a stream does not mean editing the kernel.
     """
     try:
-        import synth                                          # kernel
+        from haenv_kernel import synth
     except ImportError:
         return
     register = getattr(synth, "register_aux_signals", None)

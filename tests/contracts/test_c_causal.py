@@ -10,6 +10,8 @@ SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from _patch_bound import patch_bound  # noqa: E402
+
 import pytest
 
 import _cohort as C
@@ -26,7 +28,15 @@ def _pair(job, cid, a: dict, b: dict):
 
 
 def _lab(b, sig, day):
-    return C.series(b.raw.longitudinal_data, sig).get(day)
+    """The lab *truth* at `day` (linear between its draw days): these contracts test the
+    physiology; the measurement layer on top of it is contract group J."""
+    tr = (b.audit.get("lab_truth") or {}).get(sig)
+    if not tr:
+        return C.series(b.raw.longitudinal_data, sig).get(day)
+    for (t0, v0), (t1, v1) in zip(tr, tr[1:]):
+        if t0 <= day <= t1:
+            return v0 + (v1 - v0) * (day - t0) / max(1, t1 - t0)
+    return tr[0][1] if day < tr[0][0] else tr[-1][1]
 
 
 def _need(*bs):
@@ -95,10 +105,17 @@ def test_c1b_lower_adherence_raises_hba1c_in_the_same_person():
 
 def test_c1_negative_control_adherence_ignored(monkeypatch):
     """Negative control: with the drug effect no longer scaled by adherence, C1b's
-    difference must vanish."""
+    difference must vanish.
+
+    The rendered drug term is `effect_along` (the dose read day by day from the dose line);
+    `effect_at` remains the single-dose form. Adherence is cut out of both, so the control
+    removes it from the production path whichever one `render_clinical` calls."""
     from haenv import drug_effects as DE
-    orig = DE.effect_at
-    monkeypatch.setattr(DE, "effect_at", lambda drug, sig, day, adherence, **k: orig(drug, sig, day, 1.0, **k))
+    orig_at, orig_along = DE.effect_at, DE.effect_along
+    monkeypatch.setattr(DE, "effect_at",
+                        lambda drug, sig, day, adherence, *a, **k: orig_at(drug, sig, day, 1.0, *a, **k))
+    monkeypatch.setattr(DE, "effect_along",
+                        lambda drug, sig, day, adherence, *a, **k: orig_along(drug, sig, day, 1.0, *a, **k))
     job, cid = C.T2D_JOB, "T2G-01"
     base = C.spec_of(job, cid)
     hi = C.build_uncached(C.variant(base, adherence_low=0.85), template=job)
@@ -136,7 +153,7 @@ def test_c2_negative_control_response_ignored(monkeypatch):
     """Negative control: with every person's response fixed at 1.0, the declared response
     no longer reaches the labs and C2's glucose comparison must fail."""
     from haenv import build as B
-    monkeypatch.setattr(B, "_drug_response_of", lambda p: 1.0)
+    patch_bound(monkeypatch, "_drug_response_of", source="haenv.build", value=lambda p: 1.0)
     job, cid = MAINTAINER
     base = C.spec_of(job, cid)
     weak = C.build_uncached(C.variant(base, drug_response=0.6), template=job)
@@ -162,7 +179,7 @@ def test_c2_negative_control_response_leaks_into_steps(monkeypatch):
         for pt in raw.longitudinal_data.get("steps") or []:
             pt["value"] += 1000 * seen.get("r", 0)
         return res
-    monkeypatch.setattr(B, "_drug_response_of", resp)
+    patch_bound(monkeypatch, "_drug_response_of", source="haenv.build", value=resp)
     monkeypatch.setattr(PI, "apply_post_injection", post)
     job, cid = MAINTAINER
     base = C.spec_of(job, cid)
@@ -232,7 +249,7 @@ def _c4_pair(build):
 
 def _n_distractor(b) -> int:
     """Symptom entries whose text comes from the kernel's distractor pool."""
-    import noise as N
+    import haenv_kernel.noise as N
     pool = [str(d[0] if isinstance(d, (tuple, list)) else d.get("symptom") if isinstance(d, dict) else d)
             for d in N._DISTRACTOR_SYMPTOMS]
     return sum(1 for e in b.raw.evidence_ledger if e.get("source_type") == "patient_reported_symptom"

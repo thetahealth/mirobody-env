@@ -42,7 +42,7 @@ def _names() -> dict[str, str]:
 
 def _panels(built) -> dict[int, dict[str, tuple[float, float, float]]]:
     """Solver-visible lab panel per draw day: fid -> (value, ref_lo, ref_hi)."""
-    from build import build_instance                                  # kernel
+    from haenv_kernel.build import build_instance                                  # kernel
     sp, _ = build_instance(built.raw, built.raw.prediction_context["prediction_time_T"])
     out: dict = {}
     for e in sp.evidence_ledger or []:
@@ -81,10 +81,36 @@ def _violations(check_panel):
 
 
 # ------------------------------------------------------------------ D2 per-draw relations
+#: Print rounding of the solver payload (two decimals on TC, HDL, TG, LDL): the worst-case
+#: error of LDL - (TC - HDL - TG/2.2) is 0.005 x (3 + 1/2.2) ~ 0.017 mmol/L.
+R2_PRINT_TOL_MMOL = 0.02
+
+
+def check_panel_residual(tc: float, hdl: float, tg: float, ldl: float) -> R.Check:
+    """R2 as the panel now renders it: a derived TC carries the real signed Friedewald
+    residual, TC = LDL + HDL + TG/2.2 - rho x LDL with rho drawn from `TC_RESIDUAL_Q` (the
+    2%-98% quantiles of 12597 real four-item draws). So rho = (LDL - Friedewald LDL) / LDL must
+    lie inside that range, up to print rounding. Outside Friedewald's domain (TG >= 4.5) the
+    relation does not apply, as before."""
+    from haenv import findings_render as FR
+    pred = R.friedewald_ldl(tc, hdl, tg)
+    if pred is None:
+        return R.check_friedewald(tc, hdl, tg, ldl, tol_mmol=R2_PRINT_TOL_MMOL)
+    rho = (ldl - pred) / ldl
+    tol = R2_PRINT_TOL_MMOL / ldl
+    lo, hi = FR.TC_RESIDUAL_Q[0], FR.TC_RESIDUAL_Q[-1]
+    return R.Check("R2", lo - tol <= rho <= hi + tol,
+                   f"LDL observed={ldl:.3f} Friedewald={pred:.3f} rho={rho:+.3f} "
+                   f"(real range [{lo}, {hi}] +- {tol:.3f})", rho)
+
+
 def _r2(p):
+    # A panel-internal derived TC
+    # carries the real signed Friedewald residual instead of the exact identity (real same-day
+    # |rho| median 0.114). The exact check (+-0.1 mmol/L) encoded the identity.
     if not all(k in p for k in ("TC", "HDL", "TG", "LDL")):
         return None
-    return R.check_friedewald(p["TC"][0], p["HDL"][0], p["TG"][0], p["LDL"][0], tol_mmol=0.1)
+    return check_panel_residual(p["TC"][0], p["HDL"][0], p["TG"][0], p["LDL"][0])
 
 
 def _r3(p):
@@ -103,8 +129,8 @@ def _r7(p):
                                         ("R7 Na-Cl gap", _r7)])
 def test_d2_panel_relations_hold_on_the_solver_payload(name, check):
     """Every draw on the solver payload that carries the items of a relation satisfies it
-    (Friedewald within 0.1 mmol/L after rounding; corrected calcium inside its envelope;
-    Na-Cl inside the gap the renderer enforces).
+    (Friedewald residual rho inside the real 2%-98% range after rounding; corrected calcium
+    inside its envelope; Na-Cl inside the gap the renderer enforces).
 
     Catches: a step after the renderer (rounding, measurement variation, a later layer)
     breaking a relation the renderer established. Turns red when such a step is added."""
@@ -114,9 +140,14 @@ def test_d2_panel_relations_hold_on_the_solver_payload(name, check):
 
 
 def test_d2_negative_control_broken_ldl():
-    """Negative control: an LDL 0.5 mmol/L off Friedewald must be reported."""
-    res = R.check_friedewald(4.0, 1.2, 1.1, 4.0 - 1.2 - 1.1 / 2.2 + 0.5, tol_mmol=0.1)
-    assert res.ok is False
+    """Negative controls: an LDL whose residual leaves the real range on either side
+    (rho = +0.50 > 0.451; rho = -1.09 < -0.567) is reported; one inside it (rho = 0.0, the old
+    exact identity, and rho = -0.20) is not."""
+    pred = 4.0 - 1.2 - 1.1 / 2.2                                     # 2.3
+    assert check_panel_residual(4.0, 1.2, 1.1, 2 * pred).ok is False
+    assert check_panel_residual(4.0, 1.2, 1.1, pred - 1.2).ok is False
+    assert check_panel_residual(4.0, 1.2, 1.1, pred).ok is True
+    assert check_panel_residual(4.0, 1.2, 1.1, pred / 1.2).ok is True
 
 
 def test_d2_negative_control_broken_calcium_and_na_cl():

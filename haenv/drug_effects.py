@@ -23,6 +23,10 @@ from .rng import unit as _unit
 # Resource root: the repo root in a source checkout, `haenv/_data` in a wheel.
 from haenv import data_root as _data_root
 from haenv.regpath import registry_path as _rp
+from .drug_schema import (  # noqa: F401
+    DrugEffectsError,
+    check_entry,
+)
 ROOT = _data_root()
 REGISTRY = _rp("drug_effects.yaml")
 
@@ -42,10 +46,6 @@ HALF_TIME_DAYS = {"glucose": 6.3, "HbA1c": 34.6}
 LOW_RESPONSE_DRIVER = "biological_low_response"
 
 
-class DrugEffectsError(ValueError):
-    """Registry validation failure, or a drug effect applied to a forbidden signal."""
-
-
 def _doc() -> dict[str, Any]:
     """The validated table, with world-plugin `register_effect` entries merged in.
 
@@ -54,23 +54,6 @@ def _doc() -> dict[str, Any]:
     """
     from . import world_plugins as _wp
     return _doc_at(str(REGISTRY), _wp.overlay_token(_wp.TARGETS["effect"][0]))
-
-
-def check_entry(name: str, spec: Any) -> None:
-    """Field checks for one drug entry (in-repo or plugin); raises `DrugEffectsError`."""
-    if not isinstance(spec, dict):
-        raise DrugEffectsError(f"{name}: entry must be a mapping")
-    for f in ("total_hba1c_pp", "trial_weight_kg", "readout_weeks",
-              "background", "source", "review"):
-        if f not in spec:
-            raise DrugEffectsError(f"{name} is missing `{f}:`")
-    if spec["background"] not in ("monotherapy_vs_placebo", "add_on_to_metformin"):
-        raise DrugEffectsError(
-            f"{name}.background={spec['background']!r} is not an allowed value; "
-            "state whether the trial is monotherapy vs placebo or add-on to metformin")
-    for f in ("total_fpg_mmol", "sd_change_hba1c_pp"):
-        if f not in spec:
-            raise DrugEffectsError(f"{name} is missing `{f}:` (null is allowed, absence is not)")
 
 
 @functools.lru_cache(maxsize=1)
@@ -234,6 +217,48 @@ def _kinetic_fraction(signal: str, day: int, drive) -> float:
         g += kg * (drive(d) - g)
         a += ka * (g - a)
     return g if signal == "fasting_glucose" else a
+
+
+def kinetic_level(signal: str, day: int, drive, start: float = 0.0) -> float:
+    """`_kinetic_fraction` for a drive of any sign and size, from a steady state `start`
+    (both stages at `start` on day 0)."""
+    kg = 1.0 - 0.5 ** (1.0 / HALF_TIME_DAYS["glucose"])
+    ka = 1.0 - 0.5 ** (1.0 / HALF_TIME_DAYS["HbA1c"])
+    g = a = float(start)
+    for d in range(1, int(day) + 1):
+        g += kg * (drive(d) - g)
+        a += ka * (g - a)
+    return g if signal == "fasting_glucose" else a
+
+
+def effect_along(drug: str, signal: str, day: int, adherence, dose_at,
+                 per_kg: float, atten: float, onset_days: int = 7,
+                 cohort: str | None = None, response: float = 1.0) -> float:
+    """`effect_at` with the dose read day by day from `dose_at(day)` (the dose line) instead of
+    one dose for the whole course: the drive on day `d` is `direct(dose(d)) x adherence(d)`, 0
+    during a hold (dose 0) and before `onset_days`; a laddered drug reads its rung each day."""
+    if signal in FORBIDDEN:
+        raise DrugEffectsError(
+            f"{signal!r} is on the forbidden list: it carries the gold label (`label_rule` reads it) "
+            "and drug effects may not change it.")
+    if signal not in EFFECT_FIELDS or not applies_to(cohort):
+        return 0.0
+    adh = adherence if callable(adherence) else (lambda _d, _v=float(adherence): _v)
+    memo: dict[float, float] = {}
+
+    def direct(dose: float) -> float:
+        if dose <= 0:
+            return 0.0
+        if dose not in memo:
+            memo[dose] = direct_effect(drug, per_kg, atten, dose, signal) or 0.0
+        return memo[dose]
+
+    def drive(dd: int) -> float:
+        if dd <= onset_days:
+            return 0.0
+        return direct(float(dose_at(dd))) * max(0.0, min(1.0, float(adh(dd))))
+
+    return kinetic_level(signal, day, drive) * float(response)
 
 
 def effect_at(drug: str, signal: str, day: int, adherence,
