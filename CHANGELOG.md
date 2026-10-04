@@ -6,6 +6,45 @@ The package version (`pyproject.toml`) versions the code. Scores are versioned s
 score row carries the judging fingerprint of the code that produced it, and boards produced under
 different fingerprints are not comparable (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [1.2.0] - 2026-10-04
+
+The benchmark is four task packs, each asking one clinical decision at `T`. Boards produced under
+1.x are not comparable with boards of 1.2.0: the world, the questions and the scoring changed. The
+bridge items of pack ① are the only link between the two.
+
+### Added
+
+- Four task packs: ① differential diagnosis (a second condition behind findings the first one
+  explains, and clinician review), ② acute triage (four dispositions), ③ chronic medication
+  adjustment (five decisions) and ④ follow-up interpretation (true change, noise, pre-analytical
+  artefact or method difference, and the size of the true change). Packs ②–④ are scored by code
+  against the world's truth; pack ① uses one LLM judge for free-text diagnoses and tests.
+- `tools/make_pack.py`: one command from pack, size and seed to a built and audited pack, with no
+  model call. Jobs carry `pack: {n_items, seed_sha256}`; batches record the seed's hash, never the
+  seed. The shipped jobs are the public sample packs; official boards use a private seed.
+- `tools/pack_audit.py`: the generation-time audit every pack shares; `haenv run` refuses a pack's
+  items without a passing audit.
+- Chance-corrected decision scores (`cc = (m · BA − 1) / (m − 1)`): a random or constant answer
+  scores 0.
+- Complaints in the patient's own words, the medication of each known condition in the record,
+  and known comorbidities that change the gold answer in packs ③ and ④.
+
+### Changed
+
+- Registered measures have three roles: scored, profile (computed and shown, not in the
+  composite) and retired (found to judge wrongly). `dx_hit` and `tool_target_grounded_rate` are
+  retired.
+- The over-triage and missed-clinician-review gates are reported outside the hard-gate multiplier;
+  clinician review is scored once, as chance-corrected `review_utility_cc`.
+- The simulation kernel is the package `haenv_kernel`; each run carries its own `RunContext`.
+- Default models are reached directly: Gemini through Google, Qwen through DashScope, the others
+  through OpenRouter pinned to one upstream with fallbacks off (the vendor's endpoint where
+  zero data retention allows it, else a named host serving the same weights).
+- Deterministic generation runs on a process pool; the output is byte-identical to a serial run
+  (`--gen-workers 1`).
+- The four pack judge groups register through entry points, so an installed wheel builds and
+  scores the packs.
+
 ## [1.1.1] - 2026-10-01
 
 The judging fingerprint (`67dd5866790e9cb9`), the world fingerprint (`25f31527b09e6abe`), the
