@@ -1,0 +1,4 @@
+Metadata-Version: 2.1
+Name: haenv-pack2
+Version: 0.1.0
+Summary: Entry-point shim for the in-repo haenv.pack2 judge group (put plugins/ on PYTHONPATH)

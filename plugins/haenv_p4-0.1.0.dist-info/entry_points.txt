@@ -1,0 +1,2 @@
+[haenv.p4]
+p4 = haenv.p4.plugin:judges
