@@ -5,7 +5,7 @@ For what each judge measures, see `docs/design/judge-inventory.md` (generated fr
 
 | | Called | What it is | Defined by |
 |---|---|---|---|
-| ① | **kernel five tracks A–E** | final-state scores from `core/verifier.py`, in the `tracks` field of `eval.jsonl` | `core/verifier.py` |
+| ① | **kernel five tracks A–E** | final-state scores from `haenv_kernel/verifier.py`, in the `tracks` field of `eval.jsonl` | `haenv_kernel/verifier.py` |
 | ② | **six process labels** | Tools / Repair / Alternative / Coherence / Evidence / Scope | haenv's grouping of its process judges; a label is a heading, not a score |
 | ③ | **haenv process judges** | haenv's own process judges (`haenv/tracks.py`, `haenv/judges/`), grouped under ②'s labels | code + `mount_table.MOUNT` |
 
@@ -52,7 +52,7 @@ non-empty, not what it says.
 * **Letters A/C/E**: kernel Track A (data quality), C (attribution) and E (retrospective loop) are
   unrelated to the Alternative, Coherence and Evidence labels, and to the action tiers `A0`–`A5`.
   The kernel's `score_track_E` is one of the Coherence judges.
-* **`T`**: `T1`–`T4` are the Tools judges; "T6" in `core/verifier.py` is the kernel's own capability
+* **`T`**: `T1`–`T4` are the Tools judges; "T6" in `haenv_kernel/verifier.py` is the kernel's own capability
   numbering; the `"T"` field in rows is the index time.
 * **`late_convergence`**: `judge_slices` defines it differently per gold kind (`unified`,
   `comorbidity`, `driver`). Split by `slice_kind` before aggregating.
@@ -72,7 +72,7 @@ non-empty, not what it says.
 ## 5. How to check
 
 ```bash
-grep -n "^def _track_\|^def score_track_E" core/verifier.py
+grep -n "^def _track_\|^def score_track_E" haenv_kernel/verifier.py
 uv run python -c "from haenv import mount_table as M; print(M.holes()); print(M.coverage())"
 grep -rn "oscillation_penalty\|flipback_penalty" haenv/ | grep -v "^haenv/tracks.py"   # expect nothing
 ```

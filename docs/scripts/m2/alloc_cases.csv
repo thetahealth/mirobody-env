@@ -1,0 +1,100 @@
+case,spec_id,fw,frame,join,urgency,insufficient,wk,tl,tier_v101,diagnosis,disease
+JD-01,JD-PCOS,F0,F0,unified,🟡,True,0.8244750000000001,0.6174000000000001,easy,多囊卵巢综合征(PCOS),MASLD
+JD-02,JD-CUSH,F0,F0,unified,🟠,False,0.6430111111111109,0.8906416666666667,mid,库欣综合征,MASLD
+JD-02v2,JD-CUSH,F0,F0,unified,🟠,True,0.5,0.0,hard,库欣综合征,obesity
+JD-03,JD-HYPO,F0,F0,unified,🟡,True,0.6648083333333333,0.2109666666666666,mid,原发性甲状腺功能减退(桥本),obesity
+JD-04,JD-OSA,F0,F0,unified,🟡,False,0.7203722222222216,0.7388916666666666,mid,阻塞性睡眠呼吸暂停(OSA),obesity
+JD-04v2,JD-OSA,F0,F0,unified,🟡,True,0.4166666666666667,0.0,hard,阻塞性睡眠呼吸暂停(OSA),MASLD
+JD-05v3,JD-IR,F0,F0,unified,🟡,False,0.7435777777777774,0.808725,mid,早期2型糖尿病/胰岛素抵抗,dyslipidemia
+JD-06,JD-ALDO,F0,F0,unified,🟠,False,0.7429388888888884,0.78995,mid,原发性醛固酮增多症,hypertension
+JD-07,JD-HEMO,F0,F0,unified,🟡,False,0.8683611111111107,0.8124083333333333,easy,遗传性血色病(铁过载),MASLD
+JD-08v2,JD-GRAVES,F0,F0,unified,🟡,False,0.9210666666666664,0.8953250000000001,easy,甲状腺功能亢进(Graves),obesity
+JD-09v2,JD-PHEO,F0,F0,unified,🟡,True,0.3333333333333333,0.0,hard,嗜铬细胞瘤,hypertension
+JD-09v3,JD-PHEO,F1,F1,unified,🔴,False,0.6159555555555553,0.8879000000000001,mid,嗜铬细胞瘤,T2D
+JD-10v2,JD-ACRO,F0,F0,unified,🟡,False,0.8911499999999997,0.8720250000000002,easy,肢端肥大症,T2D
+JD-11,JD-PHPT,F0,F0,unified,🟠,True,0.5,0.0,hard,原发性甲状旁腺功能亢进(高钙血症),MASLD
+JD-11v2,JD-PHPT,F0,F0,unified,🟠,False,0.8572444444444441,0.8041916666666665,easy,原发性甲状旁腺功能亢进(高钙血症),obesity
+JD-12v2,JD-B12,F0,F0,unified,🟡,False,0.8071777777777775,0.8225250000000001,easy,维生素B12缺乏(亚急性联合变性),hypertension
+JD-13,JD-SLE,F0,F0,unified,🟠,False,0.8717055555555554,0.8640666666666666,easy,系统性红斑狼疮(SLE),obesity
+JD-14v3,JD-LADA,F0,F0,unified,🟠,False,0.784694444444444,0.94435,mid,成人隐匿性自身免疫糖尿病(LADA),dyslipidemia
+JD-15,JD-ADDISON,F0,F0,unified,🟠,True,0.4166666666666667,0.05555,hard,原发性肾上腺皮质功能减退(Addison),obesity
+JD-15v3,JD-ADDISON,F0,F0,unified,🟠,False,0.8996388888888887,0.8357416666666667,easy,原发性肾上腺皮质功能减退(Addison),T2D
+JD-16v2,JD-CKM,F2,F2,comorbidity,🟠,False,0.6142444444444443,0.7919166666666667,mid,心肾代谢综合征:2型糖尿病失控 + 慢性肾病进展,MASLD
+JD-17v2,JD-BENIGN2,F1,F1-neg,independent,🟢,False,0.8333333333333334,,easy,无统一病理:彼此独立的良性事件,dyslipidemia
+JD-17v3,JD-BENIGN2,F2,F2-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,T2D
+JD-20,HD-COM-03,F2,F2,comorbidity,🟡,False,0.7780055555555555,0.6924666666666667,mid,甲状腺功能亢进(Graves) + 遗传性血色病(铁过载),dyslipidemia
+JD-20v3,HD-COM-03,F2,F2,comorbidity,🟡,False,0.6772277777777774,0.6343083333333334,mid,甲状腺功能亢进(Graves) + 遗传性血色病(铁过载),hypertension
+JD-21v3,HD-COM-04,F2,F2,comorbidity,🟠,False,0.5272444444444442,0.8931,hard,原发性甲状腺功能减退(桥本) + 原发性甲状旁腺功能亢进(高钙血症),obesity
+JD-22,HD-COM-05,F2,F2,comorbidity,🟡,False,0.921372222222222,0.7409583333333333,easy,维生素B12缺乏(亚急性联合变性) + 多囊卵巢综合征(PCOS),T2D
+JD-22v3,HD-COM-05,F2,F2,comorbidity,🟡,False,0.8379833333333333,0.8685,easy,维生素B12缺乏(亚急性联合变性) + 多囊卵巢综合征(PCOS),dyslipidemia
+JD-25,HD-COM-08,F2,F2,comorbidity,🟠,False,0.8195444444444441,0.5701166666666667,easy,库欣综合征 + 维生素B12缺乏(亚急性联合变性),dyslipidemia
+JD-25v3,HD-COM-08,F2,F2,comorbidity,🟠,False,0.7868999999999996,0.5929333333333334,mid,库欣综合征 + 维生素B12缺乏(亚急性联合变性),hypertension
+JD-26v2,HD-COM-09,F1,F1,comorbidity,🔴,False,0.8484666666666666,0.8771833333333334,easy,嗜铬细胞瘤 + 原发性甲状腺功能减退(桥本),T2D
+JD-26v3,HD-COM-09,F1,F1,comorbidity,🔴,False,0.298061111111111,0.8418500000000003,hard,嗜铬细胞瘤 + 原发性甲状腺功能减退(桥本),obesity
+JD-28v3,HD-IND-01,F3,F3-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,obesity
+JD-29v2,HD-IND-02,F1,F1-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,hypertension
+JD-29v4,HD-IND-02,F2,F2-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,MASLD
+JD-30v2,HD-IND-03,F3,F3-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,T2D
+JD-30v4,HD-IND-03,F1,F1-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,obesity
+JD-30v5,HD-IND-03,F2,F2-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,dyslipidemia
+JD-31,HD-COM-11,F1,F1,comorbidity,🔴,False,0.8473277777777777,0.8851000000000001,easy,嗜铬细胞瘤 + 系统性红斑狼疮(SLE),obesity
+JD-32,HD-COM-12,F1,F1,comorbidity,🔴,False,0.7597555555555552,0.6277083333333332,mid,嗜铬细胞瘤 + 遗传性血色病(铁过载),dyslipidemia
+JD-32v2,HD-COM-12,F1,F1,comorbidity,🔴,False,0.8243055555555552,0.7945083333333335,easy,嗜铬细胞瘤 + 遗传性血色病(铁过载),T2D
+JD-32v3,HD-COM-12,F1,F1,comorbidity,🔴,False,0.6767999999999997,0.6154666666666665,mid,嗜铬细胞瘤 + 遗传性血色病(铁过载),MASLD
+JD-33,HD-IND-04,F3,F3-neg,independent,🟢,False,0.1666666666666666,,hard,无统一病理:彼此独立的良性事件,obesity
+JD-33v3,HD-IND-04,F1,F1-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,hypertension
+JD-34v2,HD-IND-05,F2,F2-neg,independent,🟢,False,0.5,,hard,无统一病理:彼此独立的良性事件,obesity
+JD-34v3,HD-IND-05,F3,F3-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,MASLD
+JD-34v5,HD-IND-05,F1,F1-neg,independent,🟢,False,0.5,,hard,无统一病理:彼此独立的良性事件,T2D
+JD-35,HD-IND-06,F2,F2-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,hypertension
+JD-35v2,HD-IND-06,F3,F3-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,T2D
+JD-35v4,HD-IND-06,F1,F1-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,MASLD
+JD-35v5,HD-IND-06,F2,F2-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,obesity
+JD-36,HD-IND-07,F3,F3-neg,independent,🟢,False,1.0,,easy,无统一病理:彼此独立的良性事件,dyslipidemia
+JD-36v3,HD-IND-07,F1,F1-neg,independent,🟢,False,0.3333333333333333,,hard,无统一病理:彼此独立的良性事件,MASLD
+JD-36v5,HD-IND-07,F2,F2-neg,independent,🟢,False,0.5,,hard,无统一病理:彼此独立的良性事件,hypertension
+JD-37v2,HD-COM-13,F3,F3,comorbidity,🟠,False,0.9273499999999996,0.8484583333333333,easy,系统性红斑狼疮(SLE) + 维生素B12缺乏(亚急性联合变性),T2D
+JD-39,HD-UNI-01,F0,F0,unified,🟡,False,0.8829277777777773,0.866625,easy,乳糜泻(麸质敏感性肠病),obesity
+JD-39v2,HD-UNI-01,F0,F0,unified,🟡,True,0.5,0.0,hard,乳糜泻(麸质敏感性肠病),MASLD
+JD-40,HD-UNI-02,F0,F0,unified,🟠,True,0.4166666666666667,0.0,hard,系统性硬化症(局限皮肤型),MASLD
+JD-40v2,HD-UNI-02,F0,F0,unified,🟠,False,0.8718388888888885,0.8634083333333332,easy,系统性硬化症(局限皮肤型),dyslipidemia
+JD-41v2,HD-UNI-03,F0,F0,unified,🟠,True,0.3333333333333333,0.0,hard,中轴型脊柱关节炎(强直性脊柱炎),dyslipidemia
+JD-41v3,HD-UNI-03,F0,F0,unified,🟠,False,0.9407999999999996,0.8897500000000002,easy,中轴型脊柱关节炎(强直性脊柱炎),obesity
+JD-42,HD-UNI-04,F0,F0,unified,🟠,True,0.1666666666666666,0.0,hard,结节病,hypertension
+JD-42v2,HD-UNI-04,F0,F0,unified,🟠,False,0.8921166666666663,0.83855,easy,结节病,dyslipidemia
+JD-43v3,HD-UNI-05,F1,F1,unified,🔴,False,0.8438666666666664,0.8286666666666669,easy,胰岛素瘤(内源性高胰岛素性低血糖),hypertension
+JD-49,HD-UNI-06,F0,F0,unified,🟡,True,0.5,0.1263166666666666,hard,胰腺外分泌肿瘤相关新发糖尿病,MASLD
+JD-49v3,HD-UNI-06,F1,F1,unified,🔴,False,0.8899611111111109,0.7379666666666668,easy,胰腺外分泌肿瘤相关新发糖尿病,obesity
+JD-52v2,HD-COM-17,F3,F3,comorbidity,🟠,False,0.6658055555555552,0.5332083333333332,mid,遗传性血色病(铁过载) + 系统性红斑狼疮(SLE),MASLD
+JD-53v2,HD-COM-18,F2,F2,comorbidity,🟠,False,0.8379333333333331,0.5149499999999999,easy,原发性醛固酮增多症 + 维生素B12缺乏(亚急性联合变性),obesity
+JD-53v3,HD-COM-18,F2,F2,comorbidity,🟠,False,0.3469888888888886,0.4228833333333328,hard,原发性醛固酮增多症 + 维生素B12缺乏(亚急性联合变性),dyslipidemia
+JD-55v3,HD-COM-20,F2,F2,comorbidity,🟠,False,0.5873999999999997,0.6816749999999999,hard,成人隐匿性自身免疫糖尿病(LADA) + 原发性甲状旁腺功能亢进(高钙血症),T2D
+JD-56v2,HD-COM-21,F3,F3,comorbidity,🟠,False,0.7467555555555552,0.740325,mid,遗传性血色病(铁过载) + 原发性甲状旁腺功能亢进(高钙血症),dyslipidemia
+JD-56v3,HD-COM-21,F3,F3,comorbidity,🟠,False,0.6123222222222219,0.7635083333333333,mid,遗传性血色病(铁过载) + 原发性甲状旁腺功能亢进(高钙血症),T2D
+JD-57,HD-COM-22,F2,F2,comorbidity,🟠,False,0.783472222222222,0.8247333333333332,mid,库欣综合征 + 原发性甲状旁腺功能亢进(高钙血症),dyslipidemia
+JD-57v3,HD-COM-22,F2,F2,comorbidity,🟠,False,0.7118388888888885,0.8483833333333334,mid,库欣综合征 + 原发性甲状旁腺功能亢进(高钙血症),obesity
+JD-58,HD-COM-23,F1,F1,comorbidity,🔴,False,0.6446055555555552,0.6786083333333331,mid,成人隐匿性自身免疫糖尿病(LADA) + 嗜铬细胞瘤,MASLD
+JD-58v3,HD-COM-23,F1,F1,comorbidity,🔴,False,0.6345777777777776,0.522475,mid,成人隐匿性自身免疫糖尿病(LADA) + 嗜铬细胞瘤,T2D
+JD-60v2,HD-COM-25,F2,F2,comorbidity,🟠,False,0.8659666666666662,0.7580833333333334,easy,库欣综合征 + 系统性红斑狼疮(SLE),hypertension
+JD-62v2,HD-COM-27,F3,F3,comorbidity,🟠,False,0.710494444444444,0.8376916666666666,mid,原发性肾上腺皮质功能减退(Addison) + 阻塞性睡眠呼吸暂停(OSA),obesity
+JD-63v2,HD-COM-28,F2,F2,comorbidity,🟠,False,0.6962333333333329,0.7715416666666665,mid,早期2型糖尿病/胰岛素抵抗 + 原发性甲状旁腺功能亢进(高钙血症),dyslipidemia
+JD-63v3,HD-COM-28,F2,F2,comorbidity,🟠,False,0.6522388888888886,0.8239916666666667,mid,早期2型糖尿病/胰岛素抵抗 + 原发性甲状旁腺功能亢进(高钙血症),MASLD
+JD-67,HD-COM-32,F3,F3,comorbidity,🟠,False,0.816561111111111,0.8462999999999999,easy,原发性肾上腺皮质功能减退(Addison) + 原发性甲状旁腺功能亢进(高钙血症),MASLD
+JD-67v2,HD-COM-32,F3,F3,comorbidity,🟠,False,0.7723388888888886,0.8062083333333332,mid,原发性肾上腺皮质功能减退(Addison) + 原发性甲状旁腺功能亢进(高钙血症),hypertension
+JD-67v3,HD-COM-32,F3,F3,comorbidity,🟠,False,0.7730277777777776,0.8318583333333334,mid,原发性肾上腺皮质功能减退(Addison) + 原发性甲状旁腺功能亢进(高钙血症),T2D
+JD-69,HD-COM-34,F3,F3,comorbidity,🟡,False,0.9032499999999998,0.798275,easy,维生素B12缺乏(亚急性联合变性) + 遗传性血色病(铁过载),dyslipidemia
+JD-69v3,HD-COM-34,F3,F3,comorbidity,🟡,False,0.9218499999999996,0.7291000000000002,easy,维生素B12缺乏(亚急性联合变性) + 遗传性血色病(铁过载),hypertension
+JD-71,HD-COM-36,F2,F2,comorbidity,🟡,False,0.7057111111111108,0.5447166666666667,mid,肢端肥大症 + 维生素B12缺乏(亚急性联合变性),obesity
+JD-73,HD-COM-38,F3,F3,comorbidity,🟠,False,0.7766722222222219,0.7705333333333333,mid,维生素B12缺乏(亚急性联合变性) + 原发性甲状旁腺功能亢进(高钙血症),MASLD
+JD-73v2,HD-COM-38,F3,F3,comorbidity,🟠,False,0.7112111111111109,0.8074083333333335,mid,维生素B12缺乏(亚急性联合变性) + 原发性甲状旁腺功能亢进(高钙血症),T2D
+JD-73v3,HD-COM-38,F3,F3,comorbidity,🟠,False,0.7358277777777774,0.8461166666666667,mid,维生素B12缺乏(亚急性联合变性) + 原发性甲状旁腺功能亢进(高钙血症),obesity
+JD-75v3,HD-COM-40,F1,F1,comorbidity,🔴,False,0.7567722222222214,0.5603500000000001,mid,多囊卵巢综合征(PCOS) + 嗜铬细胞瘤,dyslipidemia
+JD-80v3,HD-COM-45,F2,F2,comorbidity,🟠,False,0.7611388888888886,0.8994916666666667,mid,肢端肥大症 + 系统性红斑狼疮(SLE),dyslipidemia
+JD-81,HD-COM-46,F2,F2,comorbidity,🟠,False,0.8058333333333328,0.8263416666666666,easy,原发性醛固酮增多症 + 系统性红斑狼疮(SLE),hypertension
+JD-89,HD-COM-54,F3,F3,comorbidity,🟠,False,0.7558722222222221,0.8625166666666667,mid,阻塞性睡眠呼吸暂停(OSA) + 原发性甲状旁腺功能亢进(高钙血症),hypertension
+JD-89v3,HD-COM-54,F3,F3,comorbidity,🟠,False,0.7082777777777777,0.8231666666666668,mid,阻塞性睡眠呼吸暂停(OSA) + 原发性甲状旁腺功能亢进(高钙血症),T2D
+JD-90,HD-COM-55,F2,F2,comorbidity,🟠,False,0.7895611111111109,0.8180666666666667,mid,原发性醛固酮增多症 + 原发性甲状旁腺功能亢进(高钙血症),dyslipidemia
+JD-93,HD-COM-58,F1,F1,comorbidity,🔴,False,0.7107611111111108,0.8317916666666667,mid,维生素B12缺乏(亚急性联合变性) + 嗜铬细胞瘤,dyslipidemia
+JD-93v2,HD-COM-58,F1,F1,comorbidity,🔴,False,0.9029222222222222,0.7668500000000001,easy,维生素B12缺乏(亚急性联合变性) + 嗜铬细胞瘤,hypertension
+JD-93v3,HD-COM-58,F1,F1,comorbidity,🔴,False,0.6950499999999998,0.8484583333333333,mid,维生素B12缺乏(亚急性联合变性) + 嗜铬细胞瘤,MASLD
+JD-97v3,HD-COM-62,F2,F2,comorbidity,🟠,False,0.6901611111111107,0.6683833333333333,mid,成人隐匿性自身免疫糖尿病(LADA) + 系统性红斑狼疮(SLE),T2D

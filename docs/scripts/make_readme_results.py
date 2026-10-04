@@ -5,7 +5,9 @@ complete cases (`semantic_report.track_board`, rule R0, exported by the demo as
 `semantic_judge.<track>.board_rule`). There the models are grouped into tiers, a tier being 1 +
 the number of models significantly higher (paired case bootstrap, Holm correction), with each
 model's 95% interval drawn as a line; models in one tier are not ordered. Every track shows its
-per-dimension readings.
+per-dimension readings. When no scored dimension of the diagnosis track has a passing validity
+reading, the public diagnosis board has no columns; the figure then states that those dimensions
+await validation by clinical blind annotation.
 
     uv run --with matplotlib python docs/scripts/make_readme_results.py
     uv run --with matplotlib python docs/scripts/make_readme_results.py --check
@@ -43,11 +45,15 @@ PRELIMINARY_LABELS = {
     "disc_recall": "Discriminating\ntests",
     "noop_ok": "Data status\nConsistency",
     "review_macro": "Clinician review\nBalance",
+    "review_utility_cc": "Clinician review\nUtility",
     "quant_ok": "Numerical\nreading",
     "tool_target_grounded_rate": "Tool targets\nGrounded",
 }
 TRACK_LABELS = {"answers": "Diagnosis", "trace": "Budgeted tools"}
 PUBLIC_BOARDS = {"answers": "board", "trace": "tool_board"}
+#: Shown on the diagnosis track when its public board has no publishable column.
+DIAGNOSIS_VALIDITY_PENDING = ("Diagnosis-track scored dimensions: validity pending",
+                              "(awaiting clinical blind annotation); no public column")
 
 
 def pending_dim(dim: str, pending: set[str]) -> bool:
@@ -66,9 +72,12 @@ def prepare(data: dict) -> dict:
     if not board["judging"] == snapshot["judging_sha16"] == release["judging_sha16"]:
         raise ValueError("Result judging fingerprints differ")
     dims = board["dims"]
-    if not dims or len(dims) != len(set(dims)):
-        raise ValueError("Result dimensions must be nonempty and unique")
+    if not isinstance(dims, list) or len(dims) != len(set(dims)):
+        raise ValueError("Result dimensions must be a list of unique names")
     blocked = {item["metric"] for item in board["withheld"]}
+    if not dims and not blocked:
+        # An empty public board is legitimate only when its dimensions are withheld for validity.
+        raise ValueError("An empty public board must disclose its withheld dimensions")
     for dim in dims:
         if set(dim.split("+")) & blocked:
             raise ValueError(f"Withheld dimension cannot be plotted: {dim}")
@@ -100,7 +109,7 @@ def prepare(data: dict) -> dict:
         "dims": dims, "solvers": solvers, "values": values,
         "labels": [data["solver_labels"][solver]["model"] for solver in solvers],
         "snapshot": snapshot, "profile": board["profile"], "release": release,
-        "cases": cases, "withheld": sorted(blocked),
+        "cases": cases, "withheld": sorted(blocked), "validity_pending": not dims,
     }
 
 
@@ -132,7 +141,7 @@ def _unit_value(value: object, label: str) -> None:
 def prepare_preliminary(data: dict) -> dict:
     """Require the explicit provisional contract; never recompute production scores."""
     # The separate publication-eligible subset must still satisfy its old contract.
-    prepare(data)
+    public_board = prepare(data)
     preliminary, provenance = data["preliminary"], data["provenance"]
     if preliminary["status"] != "preliminary" or preliminary["not_final"] is not True:
         raise ValueError("Preliminary results must be explicitly marked not final")
@@ -206,7 +215,8 @@ def prepare_preliminary(data: dict) -> dict:
         raise ValueError("Clinical review counts differ from the track contexts")
     return {"tracks": tracks, "release": provenance["release"],
             "pending": sorted(pending_sets[0]), "clinical": clinical,
-            "rank_rule": data["rank_rule"]["rule"]}
+            "rank_rule": data["rank_rule"]["rule"],
+            "diagnosis_validity_pending": public_board["validity_pending"]}
 
 
 def _board(data: dict, key: str, solvers: list[str]) -> dict:
@@ -305,6 +315,10 @@ def draw(result: dict, output: Path) -> None:
                  f"{context['geometry']}  |  {len(rows)} models  |  "
                  f"{context['n_pending']} cases use conditions awaiting clinical review",
                  fontsize=14, color=muted)
+        if key == "answers" and result.get("diagnosis_validity_pending"):
+            for line_no, line in enumerate(DIAGNOSIS_VALIDITY_PENDING):
+                fig.text(.04, top + .026 - line_no * .014, line, fontsize=13,
+                         weight="bold", color="#946122")
         ax = fig.add_axes([.04, top - height, .385, height])
         heat = fig.add_axes([.465, top - height, .495, height])
         ax.set_xlim(0, 1)

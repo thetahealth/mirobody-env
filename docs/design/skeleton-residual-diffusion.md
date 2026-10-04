@@ -14,7 +14,7 @@ function of `z`:
 | Primary signal (weight) | Piecewise trend (decline → plateau → rebound) with a small fluctuation whose amplitude `amp ≤ 0.12` is back-computed from the physiological budget | `haenv/build.py` `_weight_series` |
 | Clinical labs (10 items) | A univariate ramp lagging weight: `normal + (abnormal−normal)·min(1,(d−onset)/28)` | `haenv/build.py` `CLINICAL_SPEC` |
 | Daily auxiliary streams | A waveform around `base`, with `base` looked up from BMI/age/comorbidity | `haenv/events.py` `MetricSpec` |
-| Noise | Six kinds of episodic artifact (device-swap offset, transient spikes, contextual confounds, unit errors, MNAR gaps, adherence cliffs), each acting on a window `[d0,d1]` | kernel `core/noise.py` |
+| Noise | Six kinds of episodic artifact (device-swap offset, transient spikes, contextual confounds, unit errors, MNAR gaps, adherence cliffs), each acting on a window `[d0,d1]` | kernel `haenv_kernel/noise.py` |
 
 The six artifact kinds are events, not a process: without a stationary measurement/physiological
 noise process, the gaps between them are smooth deterministic curves. Daily weight is then too
@@ -52,7 +52,7 @@ The gold label reads only `s`, never `x_obs`. This is the load-bearing wall of t
 solver read only that. Before and after residual injection, the gold-label fields and the offline
 solver's conclusion must be byte-for-byte identical.
 
-The kernel's `_add_clean_ref` (`core/noise.py`) keeps a 28-day sampled sparse clinic-scale reference
+The kernel's `_add_clean_ref` (`haenv_kernel/noise.py`) keeps a 28-day sampled sparse clinic-scale reference
 (`weight_ref`) as a prompt-side field for the solver to cross-check against — that is separate from
 the complete clean series `s` itself, which is carried as a verifier-only out-of-band field (an
 `_`-prefixed key at the top of `manifest`) and popped out before anything reaches `injected`: it never
@@ -168,7 +168,7 @@ Freeze the measurement script first, then touch the data. Then:
    non-convergence.
 3. The kernel judges the weekly slope point-by-point, which assumes weekly sampling. A daily
    residual will necessarily exceed that point-by-point tolerance. Two ways out: change the kernel to
-   a windowed convention (a change to `core/synth.py`, in the generation segment, which requires
+   a windowed convention (a change to `haenv_kernel/synth.py`, in the generation segment, which requires
    regenerating the question packs), or add the residual only at the observation layer while leaving
    the clean skeleton untouched. This design takes the latter — the cost is that the clean skeleton
    stays too smooth; only what the solver sees becomes realistic.

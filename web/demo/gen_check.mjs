@@ -8,7 +8,7 @@
  *
  * It checks the browser generator against the golden vectors in `data.json`: weight and
  * lab series, the daily course behind the weight readings, the carried-forward copies and
- * the abnormal-value flags.
+ * the abnormal-value flags, and the recorded readings after the scale's observation noise.
  * `check_page_data.py` checks that those golden vectors are what production code computes now.
  * `.github/workflows/pages.yml` runs both before publishing.
  *
@@ -30,4 +30,5 @@ if (!r.ok) {
 }
 console.log(`ok: ${r.nCases} parameter set(s) · ${r.nPoints} point(s) matched point for point`
   + ` (worst weight deviation ${r.worstWeight} · lab ${r.worstClinical}, tolerance ${r.tol};`
-  + ` daily course ${r.worstBase}) · ${r.nCopies} carried-forward copies reproduced`);
+  + ` daily course ${r.worstBase}) · ${r.nCopies} carried-forward copies reproduced`
+  + ` · ${r.nObserved} recorded readings with scale noise (worst ${r.worstObserved})`);

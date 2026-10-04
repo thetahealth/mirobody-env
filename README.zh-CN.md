@@ -18,6 +18,7 @@
   <a href="https://github.com/thetahealth/mirobody-env/blob/main/README.md">English</a> &middot; <strong>简体中文</strong>
   &nbsp;|&nbsp;
   <a href="https://thetahealth.github.io/mirobody-env/">在线演示</a> &middot;
+  <a href="#四个题包">题包</a> &middot;
   <a href="#合成病人">合成病人</a> &middot;
   <a href="#快速开始">快速开始</a> &middot;
   <a href="#工作原理">工作原理</a> &middot;
@@ -28,7 +29,7 @@
   <a href="#引用">引用</a>
 </p>
 
-> 带答案的文件都带有 canary 串（[`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md)），请勿将其放入训练数据。
+> 整条管线公开：渲染病人的世界、写题的生成器、判分器。canary 串（[`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md)）标记本题包的文本，便于检测它是否出现在某个语料中；允许用公开样例训练；正式榜使用私有种子。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_patient.png" alt="一个合成病人：2 型糖尿病，使用替尔泊肽。家用秤与诊室秤体重、步数与静息心率、剂量与依从性、上报事件；T 之后的记录以灰底标为隐藏" width="92%">
@@ -40,43 +41,75 @@
 
 HAEnv（Health Agent Environment）的代码仓库是 `mirobody-env`，安装后的 Python 包与命令行工具名为 `haenv`。
 
-HAEnv 评测随时间展开的临床判断。合成病人的病历按月增长，agent 看到截止时点 `T` 之前的记录，
-需要做出预测、诊断或修正；答案在 `T` 之后，诊断类形式中则是 `T` 之前已确定、对 agent 隐藏的诊断。
+HAEnv 评测在随时间展开的病历上做出的临床决定。合成病人的病历按月增长，agent 看到截止时点 `T` 之前的记录，做出一个决定。正确答案由渲染这份病历的世界在写出病历之前就已确定，对 agent 隐藏。
 
 HAEnv 负责生成病人、设定难度、推出金标。要用已发表的健康基准（如 ESL-Bench）评测现成系统，请用
 [mirobody-eval](https://github.com/thetahealth/mirobody-eval)。
 
-- **按时点截断。** 判分器既看结论，也看 agent 在什么时点改变了判断。
-- **病人内部自洽。** 体重、化验、用药、可穿戴数据流和生活事件由同一套规则在同一条时间线上生成。
-- **先定金标。** 结局、驱动因素、反转点、依从性和噪声在渲染病程之前确定，金标由代码从这些隐变量推出。
+### 四个题包
+
+基准由四个任务题包组成，每道题考一个核心决定。
+
+| 题包 | `T` 处的决定 | 答案 | 判分方式 |
+|---|---|---|---|
+| ① 鉴别诊断 | 哪些病能解释这份病历——第二种病藏在被第一种病解释掉的表现背后；是否需要临床复核 | 鉴别诊断、要开的检查、复核标记 | 代码对世界真值判；由一个 LLM 裁判把自由文本的诊断与检查对到金标 |
+| ② 急性分诊 | 病人现在该去哪 | `ed_now` · `within_24h` · `routine_followup` · `watchful_waiting` | 代码对世界真值判 |
+| ③ 慢病调药 | 这次随访时药该怎么办 | `uptitrate` · `downtitrate` · `maintain` · `switch` · `check_adherence_or_adverse_effect` | 代码对世界记录的剂量线、取药与控制目标判 |
+| ④ 随访解读 | 与上次结果相比的变化是不是真的 | `true_change` · `analytic_biological_noise` · `preanalytical` · `method_difference`，以及真变化的幅度 | 代码对世界的真值与逐读数扰动记录判 |
+
+1.x 榜的两条诊断轨 `ddx-timeline` 与 `ddx-workup` 作为桥接轨保留在仓内：题包 ① 带有取自它们的桥接题，它们是 1.x 榜与各题包之间唯一的联系。
+
+- **先定金标。** 疾病、药物反应、依从性、化验真值与测量噪声在渲染病程之前确定，各题包的金标由代码从它们推出。
+- **病人内部自洽。** 体重、化验、用药、可穿戴数据流和生活事件由同一套规则在同一条时间线上生成。已知共病会进入世界的表，所以在题包 ③ 和 ④ 里，它会在该改变答案的地方改变正确答案。
+- **病历读起来像病历。** 主诉是病人自己的口语说法，病历列出病人已知的病以及每种病的用药。
 - **难度是参数。** 测量伪影、干扰事件、临床转折的时点都是 job 文件里的设置。
-- **安全失误不会被平均掉。** 九道硬性门槛（包括越权改药、编造证据、漏掉红旗症状、过度分诊和过早下结论）命中任何一道，整例记零分，其他得分无法抵消；`slices` 形式中部分动作类门槛（包括漏请临床复核）只清零触发它的那个时间片。第十道 `acted_on_unverified_signal`（在金标标为伪影的读数上升级处理）照常判出并报告，但不进乘子。
+- **安全失误不会被平均掉。** 硬性门槛（包括越权改药、编造证据、漏掉急症、过早下结论）命中任何一道，该题记零分，其他得分无法抵消。过度分诊与漏请临床复核这两道倾向门照常判出并报告，但不进乘子。
 
 | 术语 | 含义 |
 |---|---|
-| 截断时点 `T` | 题面只含 `T` 之前的记录；判分用 `T` 之后的部分 |
-| 隐变量 | 结局、驱动因素、反转点、依从性、噪声，在渲染病程之前写在 job 文件里 |
+| 截断时点 `T` | 题面只含 `T` 之前的记录；判分用 `T` 之后的部分或世界已定的真值 |
+| 隐变量 | 世界在渲染之前定下的隐藏状态：疾病、药物反应、依从性、真值、噪声 |
+| 题包 | 一个任务的题集，由生成器按 job 文件出题、经题包审计检查 |
+| 种子 | 决定题包抽哪些病例、各答案类别如何分配；题包只记种子的 sha256 |
 | 出题闸门 | 生成的病例发布前必须通过的检查：前提校验、逐项校验、泄漏探针 |
 | 硬性门槛 | 使所在计分单元记零分的安全失误 |
-| 形式（代码中称 `geometry`） | 提问方式：`single`、`gated`、`slices` 或 `multi` |
 | 批次 | 一次运行的目录：病例、回答、得分与指纹 |
 
-### 发布内容
+### 题包是管线
+
+题包不是一份固定文件。题量和种子由你定，一条命令写出 job、用确定性生成器出包，并跑所有题包共用的出题期审计，全程不调用模型：
+
+```bash
+uv run --with scikit-learn --with joblib python tools/make_pack.py --pack p4 --n 50 --out packs/p4
+```
+
+`--pack` 取 `m2`（①）、`pack2`（②）、`p3`（③）或 `p4`（④）；`--n` 是题量（50、100……）；`--seed`（或 `HAENV_PACK_SEED`）设种子。同一题包、同一题量、同一种子出的包相同。job 带 `pack: {n_items, seed_sha256}` 头，`batch.json` 记录题量、种子的哈希和 job，从不记种子本身。任何题量下各类占比都按该题包的比例表分配。
+
+| 题包 | job 文件 | N = 50 时的题数 | N = 50 时的答案类别 |
+|---|---|---:|---|
+| ① 鉴别诊断 | `inputs/m2-pack1.job.yaml` | 50 | 34 道新题（24 道有隐藏病、10 道没有）与 16 道桥接题 |
+| ② 急性分诊 | `inputs/pack2-triage.job.yaml` | 50 | `ed_now` 13 · `within_24h` 13 · `routine_followup` 12 · `watchful_waiting` 12 |
+| ③ 慢病调药 | `inputs/p3-meds.job.yaml` | 50 | `maintain` 12 · `downtitrate` 12 · `check_adherence_or_adverse_effect` 12 · `uptitrate` 8 · `switch` 6 |
+| ④ 随访解读 | `inputs/p4-followup.job.yaml` | 50 | `true_change` 13 · `analytic_biological_noise` 13 · `preanalytical` 12 · `method_difference` 12 |
+
+- **公开样例包。** 随仓发布的 job 文件用公开种子；照着出就得到公开样例包。
+- **正式榜用私有种子。** 榜的批次只记种子的哈希，从仓库无法重出榜上的题。换榜时公开旧榜的种子，旧榜随之可复现。
+- **审计是发布闸门。** `tools/pack_audit.py` 检查出好的批次：job 计划的每个格子都在，从记录重新推出的金标与存下的金标一致，不看题面的桩与表面特征预测不了答案。审计没过，`haenv run` 拒绝评测该包的题。
+
+桥接轨和两个较小的示例任务以普通 job 文件发布：
 
 | 任务 | job 文件 | 病例规格数 | 形式 |
 |---|---|---|---|
+| 多时点鉴别诊断（桥接） | `inputs/ddx-timeline.job.yaml` | 145 | 在多个时点分别提问 |
+| 限预算开检查（桥接） | `inputs/ddx-workup.job.yaml` | 145 | agent 在预算内自行开检查 |
 | 体重回升预测与驱动因素归因 | `inputs/early_warning-20.job.yaml` | 20 | 在 `T` 处提问一次 |
 | 多轮随访复盘 | `inputs/tracking_review-20.job.yaml` | 20 | 分轮推进，agent 可修正 |
-| 鉴别诊断、检查、紧急程度、信息不足判断 | `inputs/ddx-timeline.job.yaml` | 145 | 在多个时点分别提问 |
-| 限预算开检查 | `inputs/ddx-workup.job.yaml` | 145 | agent 在预算内自行开检查 |
 
-规格通过出题闸门才会成为病例；两个诊断题包收齐了各自 job 文件里的 145 条规格。这两个题包由 LLM 生成器出题；用离线生成器（`--gen deterministic`）重出任一题包会得到 144 例，因为 `JD-32v2` 过不了锚点检查（`anchor_not_honored`）。诊断类任务背后的临床登记表含 67 条病种规格（单病种与共病组合）。冻结题包、病例数和已知缺口见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md)。
+规格通过出题闸门才会成为病例。题包、病例数和已知缺口见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md)。
 
-**一条流水线，多个任务。** 上表那四行是四个**任务**，不是四套程序。一个任务 = 一种金标形状 + 一份作答契约：预测结局并指认驱动因素；给出排序的鉴别诊断并判断各条线索是同一病理过程、多病共存还是彼此无关；在预算内自行开检查。它们的病人由同一个生成器渲染，过同一道逐项校验的发射门，由同一张判据表打分；不同的只是金标形状与问法措辞，而一个病例归到哪个任务，看的是**它自己带的金标**，不是 job 文件上的标签。
+**一条流水线，多个任务。** 一个任务 = 一种金标形状 + 一份作答契约。各题包的病人由同一个世界渲染、过同一道逐项校验的出题闸门，每个题包把自己的金标与计分登记为一个判据组。自己加一个任务类型不需要改本仓，而是一个仓外的包：见[评测你自己的 agent](#评测你自己的-agent) 与 [`docs/design/external-task-contract.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md)。
 
-同一批病人还能以四种形式提问：`single` / `gated` / `slices` / `multi`（见[工作原理](#工作原理)）。形式是任务**内部**的一个条件，所以同一个诊断题包可以把病例问成 `T` 处的一次提问、多个时点的分别提问，或可修正的多轮推进。判据登记在同一张挂载表上、横跨这四种形式，每条都带着自己挂了哪些形式。自己加一个任务类型不需要改本仓，而是一个仓外的包：见[评测你自己的 agent](#评测你自己的-agent) 与 [`docs/design/external-task-contract.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md)。
-
-**语言。** 题面与病例内容为中文：指令部分，以及病历中的自由文本字段（上报症状、情境、事件）。字段名、数据流名、答案枚举值与各类编号为英文。
+**语言。** 题面与病例内容为中文：指令部分，以及病历中的自由文本字段（主诉、情境、事件）。字段名、数据流名、答案枚举值与各类编号为英文。
 
 ## 合成病人
 
@@ -142,6 +175,20 @@ uv run haenv report inputs/example-ew.job.yaml --offline                     # �
 重出题会让新题目配上旧作答计分。同理，`verify` 要在 `run` 之前。
 </details>
 
+用同样的方式出一个公开样例包，全程不调用模型（审计需要 `scikit-learn`）：
+
+```bash
+uv run --with scikit-learn --with joblib python tools/make_pack.py --pack p4 --n 50 --out packs/p4
+```
+
+出包与审计各门全部通过时退出码为 0，并打印这个包的记录：
+
+```
+{"pack": "p4", "n_items": 50, "seed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "steps": {"gen": 0, "build": 0, "audit": 0}, "job": "<repo>/packs/p4/p4-followup.job.yaml", "batch": "<repo>/packs/p4/results/joint_dx/p4-followup/<batch>", "ref": null}
+```
+
+出好的批次在 `packs/p4/results/` 下，审计结果在 `packs/p4/audit/` 下。
+
 <details>
 <summary>从 PyPI 安装</summary>
 
@@ -190,7 +237,7 @@ uv run haenv run inputs/example-ew.job.yaml --judge-budget-usd 50 \
   "longitudinal_data": {
     "dose_timeline":        [{"ts": 0, "value": 2.5}, {"ts": 28, "value": 5.0}, {"ts": 56, "value": 7.5}],
     "medication_adherence": [{"ts": 42, "value": 0.95}, {"ts": 56, "value": 0.88}, {"ts": 84, "value": 0.8}],
-    "weight":               [{"ts": 0, "value": 98.73}, ..., {"ts": 84, "value": 87.13}],
+    "weight":               [{"ts": 0, "value": 98.70}, ..., {"ts": 84, "value": 87.10}],
     ...
   },
   "evidence_ledger": [
@@ -222,21 +269,31 @@ agent 返回一个 JSON 对象：风险预测、从固定列表中选出并排�
 
 job 文件声明病人事实（病种、药物、剂量阶梯、设备、起始体重）和隐变量。生成器渲染病程，并注入配置的伪影和干扰。
 病例必须通过出题闸门（emission gate）才会放行：前提校验拒绝自相矛盾的规格，逐项校验检查每条数据流和事件，
-泄漏探针在每条题面发出之前检查它。之后还有批次级闸门检查整个题包，例如真实症状不能靠数据足迹与干扰事件区分开。渲染病人的仿真内核包含在本仓库中，位于 `core/`。
+泄漏探针在每条题面发出之前检查它。之后还有批次级闸门和题包审计检查整个题包，例如真实症状不能靠数据足迹与干扰事件区分开。渲染病人的仿真内核包含在本仓库中，位于 `haenv_kernel/`。
+
+- **题包是插件。** 每个题包是一个判据组，登记自己的金标块、问法模板和计分；核心流水线不知道有哪些题包。
+- **一次运行，一份上下文。** 一次评测运行带着自己的状态（`RunContext`）：同一进程里的两次运行不共用表。
+- **指纹跟着定义走。** 判分代码与出题代码各有一个指纹，打在每一行、每个批次上。只搬动定义的重构按定义逐条认证，所以只有算的东西变了，指纹才变。
 
 同一批病人可以用四种形式出题（代码里称为 geometry）：`single`、`gated`（在预算内开检查）、
-`slices`（在多个时点分别独立提问）和 `multi`（分轮推进，agent 可修正）。28 个判分器登记在同一张挂载表里，覆盖四种形式；此外各形式另有专门的探针。
+`slices`（在多个时点分别独立提问）和 `multi`（分轮推进，agent 可修正）。每个题包在 `T` 处考一个决定；题包 ① 允许 agent 先买检查再作答。
 
 ## 计分
 
-- 金标由代码推导。硬性门槛、`dx_listed`、`review_macro` 与 `quant_ok` 由代码判定；`noop_ok`、`tests_recall`、`tests_precision` 用同一个语义裁判模型把自由文本回答与金标比对，投票全量落盘；自由文本鉴别论证由可选插件调用模型，裁定结果限定为三选一。
-- 总分为各能力维度的平均值乘以（1 − 硬性门槛判负率）。各榜的完整公式见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#scoring)。
-- 每行成绩都带有判分代码的指纹，指纹不一致的榜会被发布闸门拒绝。
-- 语义投票存放在各批次旁边封存的判分 run 里，不写回批次。主 run 之上叠加两个原子级更正：
-  `proposed-test-source-v1` 按回答字段而不是列表序号指明每条提议检查（在 `ddx-workup` 上，
-  经工具购买的检查不在 `tests_to_order` 里，按序号的问法让这些原子判不出来）；`test-reasoning-why-v1`
-  把回答里每次查询写明的理由给裁判看（`test_reasoning`，辅助项，不进综合分）。两者都先通过了预注册探针
-  再应用，门槛见数据卡。
+- **金标由代码推导**，来源是渲染这份病历的世界。题包 ②③④ 只用代码判分。题包 ① 用代码判分，另由一个 LLM 裁判（`gpt-6-luna`）把自由文本的诊断与检查对到金标，投票全量落盘。
+- **瞎猜得 0 分。** 题包的决定按机会校正的平衡准确率计分：`cc = (m · BA − 1) / (m − 1)`，`m` 是金标中出现的答案类别数。随机作答或总答同一类得 0，全对得 1。
+- **每个题包一个综合分。**
+
+  | 题包 | 综合分 |
+  |---|---|
+  | ① | 计分维（检查 F1、诊断列入、数值读数、机会校正的复核）的平均，下限 0，×（1 − 硬性门槛判负率） |
+  | ② | 去向的 `cc` ×（1 − 硬性门槛判负率）；`cc` 为负时门槛不会把它抬高 |
+  | ③ | 决定的 `cc`，下限 0，×（1 − 硬性门槛判负率） |
+  | ④ | 变化来源的 `cc` 与真变化幅度技能分 `1 − MAE / MAE_naive` 的平均（不乘门槛乘子） |
+
+  各题包分别出榜，综合分不合并。
+- **三栏。** 每条登记的度量属于三种角色之一。*计分*：进综合分。*画像*：判得对但区分不开模型，或还没有效度读数；照算、照存、照展示，不进综合分。*退役*：查明判错；留在登记表里并写明原因，不上任何榜。
+- 每行成绩都带有判分代码的指纹，各题包另加自己的指纹；指纹不一致的榜会被发布闸门拒绝。
 - 模型原始回答全量保存，修正判分只需重算（`tools/restamp_batch.py <batch>`），无需再次调用模型。
 - `verifier_core/` 包含指纹、发布闸门、硬性门槛乘子、分数上限和噪声下限审计。它不含临床词汇，也不引用临床层代码，
   可以单独审阅或复用。
@@ -264,7 +321,9 @@ models:
     price: {input_per_million_usd: 0, output_per_million_usd: 0}   # 美元/百万 token
 ```
 
-付费运行的每个请求都计入 `--judge-budget-usd`。`openrouter`、`relay`、`google`、`dashscope` 的价格来自服务商；自建后端按每个模型声明的 `price`，乘以接口在 `usage` 里返回的 token 数计费，免费的本地接口填 0。自建后端上没有声明 `price` 的模型，在发出任何请求之前就会被拒绝。
+默认模型都直连：Gemini 走 Google 的接口，Qwen 走 DashScope，其余模型走 OpenRouter，锁定一个上游、关闭回落：账号的零数据留存设置允许时锁原厂端点，否则锁一个提供同一权重的指定托管方（OpenAI 模型在 Azure，Claude 在 Google Vertex，MiniMax 在 Novita）。流水线与模型之间不经任何第三方中转。
+
+付费运行的每个请求都计入 `--judge-budget-usd`。`openrouter`、`google`、`dashscope` 的价格来自服务商；自建后端按每个模型声明的 `price`，乘以接口在 `usage` 里返回的 token 数计费，免费的本地接口填 0。自建后端上没有声明 `price` 的模型，在发出任何请求之前就会被拒绝。
 
 ```bash
 uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
@@ -301,29 +360,58 @@ uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
 - 出题的模型输出按「模型 + 提示词」缓存在 `cases/_llm_cache/`；用同一份 job 重出题包不调用模型。
 - 评测默认断点续跑，只补发还没有回答的格子。原始回答全部落盘，判分代码改了只需重算，不必重跑被测模型。
 - 对已有实测依据的模型，`max_tokens` 不得低于按输出长度推出的下限。这能降低截断风险，但不能保证每次回答都在预算内完成。`batch.json` 记录出题与评测用量（`gen_usage`、`eval_usage`）：有实测值时记总量，否则显式记录状态（缺失、不适用或错误）。
-- 量级：一个已作答的 `ddx-timeline` 格子平均约 85,860 输入 token、42,587 输出 token；`ddx-workup` 格子约 14,579 输入、11,831 输出（主批次，十个模型所有有实测用量的格子合并计算）。细节与重算命令见 [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching)。
+- 量级：题包的一道题是一次请求。N = 50 时跑一遍的费用（按每条题面的 token 数与拟合的服务商单价估算）：题包 ② 每个模型 $0.09–$9.55（十个 1.x 模型平均 $3.20），题包 ③ $0.09–$8.19（平均 $2.65），题包 ④ $0.09–$8.62（平均 $2.82）；题包 ②–④ 没有裁判费用。 细节与重算命令见 [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching)。
 
 ## 排行榜
 
-十个模型回答同一批 145 个合成病例（64 个病种），分两个题包：`ddx-timeline`（在多个时点提问）和
-`ddx-workup`（agent 在检查预算内逐步开检查）。两轨各有一张榜。
+1.2.0 榜在四个题包上给 10 个模型排名，每包 50 题，每题作答 3 次。总分是四个题包分数的等权平均，各分数取值 0 到 1。95% 区间来自按病例 × 轮次的 bootstrap（4,000 次，题目与轮次一起重抽）；名次按未取整的分数排。榜单题包用私有种子抽取，job 与批次里只记它的 sha256：`8f90c70f61fe7a53860e9a21576c0393e26515ba7eede0467a534360dfa7f9b9`。
 
-**初步榜。** 综合分含四个在当前裁判下没有盲标效度读数的维度（`dx_listed`、`noop_ok`、
-`tests_recall`、`tests_precision`），按[效度规则](https://github.com/thetahealth/mirobody-env/blob/main/docs/anchor/VALIDITY.md)暂时纳入，所以本榜标为初步。
+### 1.2.0 总分
 
-**默认规则。** 十个模型在每轨的同一批病例上排名：裁判把某个模型的某格判不出来时，这个病例对所有模型剔除
-（`ddx-timeline` 144 / 145 例，`ddx-workup` 138 / 145 例，清单见数据卡），其余病例全部进榜。
-没有可计分回答的格子，在所有适用维度上记 0 分，也不触发硬门：截止时未作答、超出检查预算、回答为空或无法解析、
-只有推理没有作答、流提前中断。分档用按病例的 bootstrap（10,000 次重抽样，Holm 校正 α = 0.05）；
-档号等于 1 加上显著优于它的模型数。同一档的模型在这个样本量下分不开，不同档的模型也未必两两可分
-（每轨 45 对中 22 对可分）。区间与分档只包含病例抽样误差，不含模型重答与裁判自身的波动。第一档内的综合分名次按并列读；
-这些模型在哪些维度上分得开，见[第一档在哪里分得开](#first-result)。
+| 名次 | 模型 | 总分 | 95% 区间 |
+|---:|---|---:|---:|
+| 1 | gemini-3.1-pro | 0.732 | 0.674–0.788 |
+| 2 | gemini-3.7-flash | 0.677 | 0.602–0.742 |
+| 3 | gpt-6-sol | 0.671 | 0.617–0.729 |
+| 4 | deepseek-v4-pro | 0.560 | 0.484–0.634 |
+| 5 | gpt-6-luna | 0.547 | 0.470–0.616 |
+| 6 | kimi-k3 | 0.547 | 0.470–0.622 |
+| 7 | minimax-m3 | 0.521 | 0.439–0.600 |
+| 8 | glm-5.3-flash | 0.483 | 0.408–0.564 |
+| 9 | deepseek-v4-flash | 0.426 | 0.347–0.500 |
+| 10 | qwen3.7-flash | 0.389 | 0.317–0.465 |
 
-<p align="center">
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_results.svg"><img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_results.png" alt="十个模型在诊断轨（ddx-timeline）与限预算工具轨（ddx-workup）上的综合分与各维度读数。每个面板在该轨的同一批病例上把十个模型分档，并画出各自综合分的 95% 区间；未作答的格子记 0 分。" width="100%"></a>
-</p>
+### 1.2.0 分包
 
-### ddx-timeline（初步）
+每格是该题包的分数和 95% 区间。
+
+| 模型 | ① 鉴别诊断 | ② 急诊分诊 | ③ 慢病调药 | ④ 随访解读 |
+|---|---:|---:|---:|---:|
+| gemini-3.1-pro | 0.834 (0.746–0.908) | 0.504 (0.364–0.645) | 0.799 (0.684–0.902) | 0.790 (0.691–0.871) |
+| gemini-3.7-flash | 0.755 (0.646–0.854) | 0.532 (0.389–0.673) | 0.667 (0.518–0.801) | 0.754 (0.581–0.890) |
+| gpt-6-sol | 0.607 (0.539–0.697) | 0.408 (0.265–0.554) | 0.785 (0.662–0.894) | 0.886 (0.815–0.944) |
+| deepseek-v4-pro | 0.566 (0.490–0.664) | 0.457 (0.311–0.598) | 0.677 (0.537–0.804) | 0.538 (0.366–0.693) |
+| gpt-6-luna | 0.547 (0.485–0.608) | 0.362 (0.234–0.493) | 0.743 (0.579–0.879) | 0.536 (0.339–0.712) |
+| kimi-k3 | 0.612 (0.517–0.726) | 0.468 (0.319–0.615) | 0.694 (0.556–0.818) | 0.411 (0.205–0.609) |
+| minimax-m3 | 0.552 (0.486–0.632) | 0.421 (0.277–0.569) | 0.806 (0.673–0.919) | 0.305 (0.099–0.491) |
+| glm-5.3-flash | 0.594 (0.489–0.717) | 0.497 (0.356–0.631) | 0.566 (0.421–0.703) | 0.277 (0.068–0.476) |
+| deepseek-v4-flash | 0.406 (0.292–0.523) | 0.306 (0.175–0.441) | 0.589 (0.460–0.710) | 0.403 (0.203–0.581) |
+| qwen3.7-flash | 0.428 (0.341–0.533) | 0.329 (0.187–0.487) | 0.542 (0.413–0.655) | 0.258 (0.050–0.464) |
+
+[交互式榜单](https://thetahealth.github.io/mirobody-env/#act3) ·
+[榜单数据（JSON）](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/board.json)
+
+### 1.x 榜（历史版本）
+
+1.x 榜在两条诊断轨 `ddx-timeline` 与 `ddx-workup`（各 145 例）上给十个模型排名。它按发布时的样子保留，与各题包的榜**不可比**：世界、题目与计分此后都变了。桥接题是两者之间唯一的联系。
+
+<details>
+<summary>1.x 的两张表</summary>
+
+1.x 的综合分是计分维的平均值乘以（1 − 硬性门槛判负率），取值 0 到 1；*95% 区间* 是按病例的 bootstrap 区间（10,000 次重抽），档号 = 1 + 显著优于它的模型数（Holm 校正，α = 0.05）。*已作答* 是 145 格中有可计分回答的格数；没有可计分回答的格记 0 分。每格只跑一次。该综合分里的诊断维没有盲标效度读数，所以那张榜标为初步。
+
+### ddx-timeline（1.x）
+
 
 | 名次 | 模型 | 综合分 | 95% 区间 | 档 | 已作答 |
 |---:|---|---:|---:|---:|---:|
@@ -338,7 +426,7 @@ uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
 | 9 | deepseek-v4-flash | 0.434 | 0.380–0.494 | 9 | 144 / 145 |
 | 10 | glm-5.3-flash | 0.048 | 0.024–0.076 | 10 | 17 / 145 |
 
-### ddx-workup（初步）
+### ddx-workup（1.x）
 
 | 名次 | 模型 | 综合分 | 95% 区间 | 档 | 已作答 |
 |---:|---|---:|---:|---:|---:|
@@ -353,82 +441,20 @@ uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
 | 9 | glm-5.3-flash | 0.375 | 0.303–0.446 | 8 | 116 / 145 |
 | 10 | deepseek-v4-flash | 0.304 | 0.247–0.365 | 9 | 145 / 145 |
 
-*综合分*是各计分维度的均值乘以（1 − 硬门失败率），取值 0 到 1。*95% 区间*是按病例的 bootstrap 区间。
-*已作答*是 145 格中有可计分回答的格数；`glm-5.3-flash` 名次低是因为在时限内没答完，而不是答错（见[局限](#局限)）。三位小数相同的分数并列同一名次。每格运行一次（k = 1）；
-另有 16 个病例每格运行三次，只能分维度测重复噪声（见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#current-evaluation)）。点击图片可查看无损放大的矢量图。
 
+[图](https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_results.svg) ·
 [原始数值（CSV）](https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_results.csv) ·
-[公开快照（JSON）](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/data.json) ·
-[重绘脚本](https://github.com/thetahealth/mirobody-env/blob/main/docs/scripts/make_readme_results.py)
-
-<details>
-<summary>综合分和各维度分别测什么</summary>
-
-| 维度 | 含义 |
-|---|---|
-| 综合分 | 各计分维度均值乘以硬门乘子；各轨分别排序 |
-| 诊断列入（`dx_listed`） | 金标诊断出现在鉴别列表且未被排除的比例；共病病例逐条金标线计分；由代码计算 |
-| 检查选择 | 逐例计算检查精确率与召回率的 F1，再对适用病例取平均 |
-| 数据可用性判断（`noop_ok`） | 所问信号不存在时声明数据缺失，存在时不误报缺失 |
-| 临床复核（`review_macro`） | 不该请复核时没有请复核（特异度）；漏转诊由两道复核硬门计 |
-| 数值读取（`quant_ok`） | 对病历中趋势、峰值日期和异常天数等问题的回答正确率，对照代码推出的金标 |
-| 工具目标接地率 | 工具查询的目标属于该病人实有信号的比例；仅 `ddx-workup` 计分 |
-
-硬门判负不能被其他高分抵消。每个维度格都有自己的适用病例数；工具接地率的分母可能远小于整轨病例数。
-两轨任务不同，不合并为一张总榜。
-
-```bash
-uv run --with matplotlib python docs/scripts/make_readme_results.py
-```
+[1.x 快照（JSON，键 `history_1x`）](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/data.json)
 
 </details>
 
-### 第一档在哪里分得开
-
-<a id="first-result"></a>**头部模型综合分打平，临床行为分野清楚。** 两个题包的第一档内，综合分上没有一对模型可分
-（`ddx-timeline` 六个模型，0.652–0.724；`ddx-workup` 七个模型，0.673–0.697）。分维度看则分得开：
-「不需要转诊时是否仍要求转诊」把第一档分成几组（`ddx-timeline` 15 对中 8 对可分，`ddx-workup` 21 对中 12 对）。
-在不需要转诊的病例上，`deepseek-v4-pro` 没有要求转诊的比例是 0.000 和 0.148，`gemini-3.1-pro` 是 0.786 和 1.000。
-`ddx-workup` 上，工具目标贴合（21 对中 9 对）与检查选择（21 对中 8 对）也把第一档分开。测量细节见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#current-evaluation)。
-
-<p align="center">
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_profile_timeline.svg"><img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_profile_timeline.png" alt="ddx-timeline：十个模型按综合分排成列，每行一个维度，第一档用括号标出。综合分一行第一档模型共享同一字母；临床复核把第一档分成不同字母组。同一行共享字母的模型不可分（按病例配对 bootstrap，10,000 次重抽样，45 对上 Holm α = 0.05）。" width="100%"></a>
-</p>
-<p align="center">
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_profile_workup.svg"><img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_profile_workup.png" alt="ddx-workup：十个模型按综合分排成列，每行一个维度，第一档用括号标出。综合分一行第一档模型共享同一字母；临床复核、工具目标贴合与检查选择把第一档分成不同字母组。" width="100%"></a>
-</p>
-
-### 哪些登记项进入综合分
-
-| 登记角色 | 登记项 | 读数出现的位置 |
-|---|---|---|
-| 计分维度 | `tests_recall` 与 `tests_precision`（合成一项 F1）、`dx_listed`、`noop_ok`、`review_macro`、`quant_ok`；`ddx-workup` 另有 `tool_target_grounded_rate` | 综合分 |
-| 描述性 | `tool_budget_used`（非单调：零查询也读 0）、`tool_dup_rate`、`tool_budget_thrift` | demo 与批次报告 |
-| 留出 | `disc_recall`：其 LLM 原子类型未通过跨协议稳定性检查 | 不报告 |
-| 诊断与仅报告 | 其余登记项，包括 `dx_hit`、`dx_top1`、归并与复核稳定性系列、过程轨 `trace_*` | 批次报告 |
-| 归一化锚 | `scope_anchor_unified` | 仅用于归一化 |
-
-[在线 demo](https://thetahealth.github.io/mirobody-env/) 的第 6–9 步展示已记录的回答、工具轨迹和得分拆解。
-demo 还能按失败原因逐类剔除未作答的格子，并在浏览器里重算榜单。
-
 ## 局限
 
-- **`glm-5.3-flash` 输在超时，不在正确率。** 它的推理时间远长于其他模型：`ddx-timeline` 上已作答格的耗时中位 69 分钟
-  （第二慢的是 24 分钟；两个 Gemini 模型没有记录耗时）。它在 `ddx-timeline` 上作答 17 / 145 格，在 `ddx-workup` 上作答
-  116 / 145 格，其余按默认规则记 0 分。`ddx-timeline` 上 128 个未作答格中，75 格是运行时限关闭批次时尚未开始或仍在作答，
-  其余 53 格也是同一个长度问题（回复在输出有效结果前结束 30、流被截断 18、只有推理没有最终答案 5）；`ddx-workup` 上
-  29 格中 28 格未开始、1 格超预算。在它作答了的格子上，`ddx-timeline` 综合分 0.556（17 例，低于 20 例门槛，仅作描述），
-  `ddx-workup` 0.473（116 例），与 `qwen3.7-flash` 在自己已作答格上的 0.590、0.506 接近。已作答口径各模型病例集不同，
-  不构成排名。
-- **单一裁判，且是被测模型之一。** 语义裁判是一个模型（`gpt-6-luna`，reasoning high），两票，分歧时加第三票。
-  同一模型及同厂的 `gpt-6-sol` 都在两张榜上，不能排除自偏好。没有第二个裁判，也没有医生标注来核对它的判定；
-  两票一致率只说明重复性。
-- **单次运行，没有综合分噪声底。** 每格只跑一次。16 例的重复子集低于综合分 20 例的门槛，只能分维度读重复噪声
-  （例如 `ddx-timeline` 上 `dx_hit` 三次之间最多差 0.129）。区间与分档只含病例抽样误差。
-- **前沿模型在综合分上打平。** 两轨第一档内都没有可分的模型对；分维度看，有若干对可分（见数据卡）。
-- **临床复核。** 六个罕见病病种标着 `clinical_review: pending`（145 例中 13 例用到），医学内容整体未经在职临床医生复核。
-- **原始回答不公开。** 榜单背后的模型回答不在本仓库中，公开 checkout 无法重算这张榜。
-- **合成数据。** 所有病人均为合成数据，基准仅用于评测；本仓库内容不构成医疗建议。
+- **题包 ② 分不开前几名。** 题包 ② 前六名两两之间没有一对的差超过 1.96 个标准误（15 对中 0 对）；题包 ③ 分开 3 对，题包 ① 8 对，题包 ④ 10 对。总榜前六名 15 对中 9 对可分。
+- **临床复核。** 题包 ② 和 ③ 背后的规则（哪些表现要送急诊、剂量调整何时算达标）以及若干登记条目带 `review: pending`；医学内容整体尚未经执业医生审阅。
+- **题包 ① 只有一个裁判。** 由一个模型（`gpt-6-luna`，reasoning high）把自由文本的诊断与检查对到金标，投两票、不一致时投第三票。同一厂商的模型也在被测之列，不能排除自我偏好；也没有第二个裁判或医生标注来核对它的判定。题包 ②–④ 没有 LLM 裁判。
+- **诊断维待效度。** 桥接轨上诊断轨的计分维依赖判断，等待临床盲标；在此之前不设公开列。
+- **合成数据。** 所有病人都是合成的，本基准仅用于评测，不构成任何医疗建议。
 
 完整清单（含计分、生成与世界层的缺口）见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#known-gaps)。
 
@@ -464,7 +490,7 @@ HAEnv 同时具备纵向病历、在 `T` 处截断的题面、先于数据确定
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.1.1}
+  version = {1.2.0}
 }
 ```
 

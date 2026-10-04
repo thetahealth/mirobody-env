@@ -29,7 +29,7 @@ def _kernel_extract_json():
             sys.path.insert(0, str(p))
     except Exception:                       # noqa: BLE001 -- keep trying even if the kernel path can't be found
         pass
-    from solver import _extract_json        # type: ignore[import-not-found]
+    from haenv_kernel.solver import _extract_json        # type: ignore[import-not-found]
     return _extract_json
 
 

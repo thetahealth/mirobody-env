@@ -3,8 +3,8 @@
 
 The page recomputes a few patients in the browser (`gen.mjs`) and compares them point for
 point with golden vectors carried in its data block. That comparison is only meaningful if
-the golden vectors, the kernel constants and the random-layer tables are themselves the
-current output of `haenv/build.py`. This script recomputes all three with `page_data.py`,
+the golden vectors, the kernel constants, the random-layer tables and the weight observation
+layer (`wnoise`) are themselves the current output of production code. This script recomputes all three with `page_data.py`,
 the same functions the export uses (no second implementation), and compares them with both
 `data.json` and the block inlined in `index.html`. The random-layer tables include the
 extra case ids of the "parallel futures" fan (`fan_personas`).
@@ -54,7 +54,7 @@ def _golden_diff(want: dict, have: dict) -> list[str]:
             continue
         if w["weight"] != h.get("weight"):
             bad.append(f"{w['label']}: weight series differs")
-        for part in ("skeleton", "rule_readout", "base", "carried_forward"):
+        for part in ("skeleton", "rule_readout", "base", "carried_forward", "observed"):
             if w.get(part) != h.get(part):
                 bad.append(f"{w['label']}: {part} differs")
         for sig, c in w["clinical"].items():
@@ -79,7 +79,7 @@ def main() -> int:
         return 2
     x = _page_data()
     want = {"golden": x._golden(), "kernel": x._kernel(), "personas": x._personas(),
-            "fan_personas": x._fan_personas()}
+            "fan_personas": x._fan_personas(), "wnoise": x._wnoise()}
     bad = []
     for name, have in (("data.json", json.loads(DATA.read_text(encoding="utf-8"))),
                        ("index.html", inlined)):
@@ -92,6 +92,8 @@ def main() -> int:
         diff = sorted(c for c in set(want["kernel"]) | set(k) if want["kernel"].get(c) != k.get(c))
         if diff:
             bad.append(f"{name}: kernel constants differ: {diff}")
+        if have.get("wnoise") != want["wnoise"]:
+            bad.append(f"{name}: the weight observation layer (wnoise) differs")
         for sec in ("personas", "fan_personas"):
             p = have.get(sec) or {}
             diff = sorted(c for c in set(want[sec]) | set(p) if want[sec].get(c) != p.get(c))
@@ -103,7 +105,7 @@ def main() -> int:
         return 1
     n = len(want["golden"]["cases"])
     print(f"ok: {n} golden case(s), {len(want['kernel'])} kernel constant(s) and "
-          f"{len(want['personas']) + len(want['fan_personas'])} random-layer table(s) match "
+          f"{len(want['personas']) + len(want['fan_personas'])} random-layer table(s) and the scale-noise layer match "
           f"production in data.json and index.html")
     return 0
 

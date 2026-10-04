@@ -237,7 +237,7 @@ does not affect any case.
 - the profile does not decide who reviews these values; it guarantees that every value has a
   source and every contradiction is flagged;
 - INV-2 can only be judged from emitted cases, which is more expensive than the other invariants;
-- the kernel's `DISEASE_SIGNAL_DOMAIN` lives in `core/latent.py` (generation segment); the profile
+- the kernel's `DISEASE_SIGNAL_DOMAIN` lives in `haenv_kernel/latent.py` (generation segment); the profile
   reconciles against its `range`/`max_weekly_delta` rather than taking them over, because changing
   them in the kernel changes the question packs;
 - `fasting_glucose` has no age- or cohort-specific bound, `FIB4` has no age stratification, and the

@@ -95,7 +95,7 @@ def _kernel() -> dict:
     from haenv import latent_rules as LR
     from haenv import drug_effects as DE
     from haenv import indicators as _ind
-    from latent import DISEASE_SIGNAL_DOMAIN as DOM          # kernel
+    from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN as DOM          # kernel
 
     # The descent curvature is sampled per case; only the registered target and spread
     # are kernel constants. Each persona's value is in `personas[cid].descent_k`.
@@ -241,6 +241,64 @@ def _personas() -> dict:
     return out
 
 
+#: Decimals kept for the observation-noise draws `u(d)`. They are scaled by at most
+#: `sd_frac x mass / marginal_sd` (< 1.6 for a 300 kg patient) before the 0.01 kg rounding;
+#: at 12 decimals no rounding of a reading can flip.
+_WNOISE_ND = 12
+
+
+def _wnoise() -> dict:
+    """The weight observation layer (`physio/apply.apply_physio` on the weight stream), as the
+    page needs it: the stream registry's constants and, per persona, the per-day draws
+    `noise.correlated_noise(case_id, d, [weight spec])` and the weekday phase of
+    `noise.weight_weekday`. Both depend on `case_id` and the day only, never on a knob."""
+    sys.path.insert(0, str(ROOT))
+    import hashlib
+    import math
+    from haenv import build as B
+    from haenv import events as E
+    from haenv.events_pools import _declared_ndigits
+    from haenv.physio import apply as PA
+    from haenv.physio import noise as NZ
+    reg = PA.load_stream_registry(E._rp("physio_streams.yaml"))
+    ws = reg.specs["weight"]
+    if ws.bound.transform != "identity":
+        raise ValueError("the page's observation layer assumes the identity transform for weight")
+    week_var = sum(f * f for f in NZ.WEIGHT_WEEKDAY_FRAC) / len(NZ.WEIGHT_WEEKDAY_FRAC)
+    sd = float(reg.weight_sd_frac)
+    consts = {"phi": float(reg.ar_phi.get("weight", 0.0)), "sd_frac": sd,
+              "marginal_sd": ws.noise.marginal_sd,
+              "keep": math.sqrt(max(0.0, 1.0 - week_var / max(1e-12, sd * sd))),
+              "weekday_frac": list(NZ.WEIGHT_WEEKDAY_FRAC), "lo": ws.bound.lo, "hi": ws.bound.hi,
+              "max_step": ws.bound.max_step, "ndigits": _declared_ndigits("weight"),
+              "grid": NZ.WEIGHT_SCALE_RESOLUTION_KG}
+    per = {}
+    for cid in PERSONAS:
+        phase = int(hashlib.sha256(str(cid).encode()).hexdigest()[:8], 16) % 7
+        if any(NZ.weight_weekday(cid, d) != (d + phase) % 7 for d in range(7)):
+            raise ValueError("noise.weight_weekday is no longer (day + sha256 phase) mod 7")
+        per[cid] = {"phase7": phase,
+                    "u": [round(NZ.correlated_noise(cid, d, [ws.noise])["weight"], _WNOISE_ND)
+                          for d in range(0, B.END + 1)]}
+    return {"consts": consts, "per": per,
+            "source": "haenv/physio/apply.py:apply_physio · haenv/physio/noise.py:weight_noise_shaped · "
+                      "haenv/physio/bounds.py:project · haenv/events_pools.py:_round_to_declared_digits · "
+                      "haenv/physio/noise.py:weight_on_scale_grid"}
+
+
+def _observed(cid: str, w: list[dict]) -> list[list]:
+    """Production's recorded readings for the weight course `w`: the physiology layer on the
+    weight stream (no symptom events), the declared rounding, then the scale's display grid."""
+    from haenv import events as E
+    from haenv.events_pools import _round_to_declared_digits
+    from haenv.physio import apply as PA
+    from haenv.physio.noise import weight_on_scale_grid
+    reg = PA.load_stream_registry(E._rp("physio_streams.yaml"))
+    ld, _ = PA.apply_physio(cid, {"weight": [dict(p) for p in w]}, reg)
+    _round_to_declared_digits(ld)
+    return [[p["ts"], weight_on_scale_grid(p["value"])] for p in ld["weight"]]
+
+
 #: Golden-vector parameter sets. Each one exercises a branch the others do not.
 _GOLDEN_CASES = (
     # (label, case_id, disease, start, nadir, T, outcome, rev_week, slope, mpw, adh_low, driver, devices)
@@ -275,6 +333,13 @@ _GOLDEN_CASES = (
     # The non-response band of `drug_effects.response_for`
     ("non-responder: low response multiplier", "DEMO-12", "T2D", 96.0, 86.0, 84, "maintain", 16,
      0.35, 7, 0.95, "biological_low_response", ("smart_scale", "lab_panel")),
+    # Weekly weighing with a late "today": the guard's whole-course anchor check decides the level
+    ("weekly weighing, late today: anchor check sets the guard level", "DEMO-09", "T2D", 75.0,
+     68.0, 200, "regain", 40, 0.2, 1, 0.55, "poor_medication_adherence", ("smart_scale", "lab_panel")),
+    ("three weigh-ins a week, early today", "DEMO-05", "obesity", 110.0, 95.0, 30, "regain", 30,
+     0.6, 3, 0.55, "poor_medication_adherence", ("smart_scale", "lab_panel")),
+    ("twice a week, maintain, late today", "DEMO-10", "T2D", 82.0, 74.0, 300, "maintain", 16, 0.35,
+     2, 0.9, "unknown_or_multifactorial", ("smart_scale", "lab_panel")),
 )
 
 #: Drug and dose per golden case (default semaglutide 1.0 mg). A dose-ladder drug exercises
@@ -337,6 +402,8 @@ def _golden() -> dict:
                        "course_end_day": ce, "drug": drug, "dose_mg": dose,
                        "devices": list(devs)},
             "weight": [[p["ts"], p["value"]] for p in w],
+            # The recorded readings after the scale's observation layer (`_observed`).
+            "observed": _observed(cid, w),
             "skeleton": {"level": wmeta["level"], "guard_ok": wmeta["guard_ok"],
                          "pre": wmeta["pre"], "regain": wmeta["regain"]},
             "rule_readout": {"verdict": verdict,

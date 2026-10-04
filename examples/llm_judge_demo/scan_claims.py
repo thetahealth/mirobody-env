@@ -50,14 +50,14 @@ def scan(batch_dir: Path) -> dict:
             vps[cid], sps[cid] = vp, sp
     print(f"[scan] payload source: {src}")
     if src != "disk":
-        from build import build_instance                    # kernel
+        from haenv_kernel.build import build_instance                    # kernel
         for cid, rawc in load_cases(cases_p).items():
             T = int(rawc.prediction_context["prediction_time_T"])
             sps[cid], vps[cid] = build_instance(rawc, T)
     else:
         load_cases(cases_p)          # register the Q-side injection ledger back into `wq` (needed for the judge's full visible-EV set)
 
-    from solver import _extract_json                        # kernel (the same parser as the pipeline)
+    from haenv_kernel.solver import _extract_json                        # kernel (the same parser as the pipeline)
 
     n_rows = n_with_rivals = n_with_claim = n_claims = n_unparsed = 0
     prompts: set[str] = set()

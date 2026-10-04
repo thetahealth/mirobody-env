@@ -45,11 +45,15 @@
  * | `abnormalSide` | `haenv/indicators.py:abnormal_side` |
  * | `kineticFraction` | `haenv/drug_effects.py:_kinetic_fraction` |
  * | `responseOf` | `haenv/drug_effects.py:response_for` (per-person draw looked up from `PER.response`) |
+ * | `weightObserved` | `haenv/physio/apply.py:apply_physio` (weight stream: AR(1) over the weigh-in days, scaled to the first reading) · `haenv/physio/noise.py:weight_noise_shaped` · `haenv/physio/bounds.py:project` · `haenv/events_pools.py:_round_to_declared_digits` · `haenv/physio/noise.py:weight_on_scale_grid` (draws looked up from `WN.per`) |
  *
  * The skeleton's uniforms (`build._skeleton_draws`) depend on `case_id` only and are looked
  * up from `PER.skel`; its constants (`SKEL_*`) and the label rule come from
- * `kernel.skel` and `kernel.label_rule`. The weight observation noise
- * (`haenv/physio/noise.py:weight_noise_shaped`) is not drawn: the page shows the true course.
+ * `kernel.skel` and `kernel.label_rule`. The weight observation noise is the production
+ * observation layer (`weightObserved`): the per-day draws `u(d)` and the weekday phase depend
+ * only on `case_id` and are looked up from `data.json:wnoise`; the constants come from the
+ * stream registry through the same section. It is exact for the page's patients, whose only
+ * physiology-rendered stream is weight (scale + lab panel) and who carry no symptom events.
  *
  * SYNTHETIC data, evaluation use only, not medical advice.
  */
@@ -552,7 +556,12 @@
       const pvals = plain.filter(q => upto == null || q[0] <= upto).map(q => q[1]);
       let line = nadir - S.anchor_margin_kg;
       if (pvals.length) line = Math.min(line, Math.min(...pvals));
-      return !vals.length || Math.min(...vals) >= line - 1e-9;
+      if (vals.length && Math.min(...vals) < line - 1e-9) return false;
+      // Over the whole course the low point must also come down to the declared nadir,
+      // or as far as the plain series does.
+      let top = nadir + S.anchor_margin_kg;
+      if (pvals.length) top = Math.max(top, Math.min(...pvals));
+      return upto != null || !vals.length || Math.min(...vals) <= top + 1e-9;
     };
     return (series, upto) => {
       if (!anchorOk(series, upto)) return false;
@@ -1099,11 +1108,36 @@
     return { fields: got, hits: hits };
   }
 
+  /* ── Weight observation layer (physio/apply.apply_physio on the weight stream) ─────────
+       eps(d) = a*eps(prev) + sqrt(1-a^2)*u(d), a = phi^(days since the previous weigh-in);
+       noise = eps * scale * keep + mass * weekday_frac[weekday(d)], scale = sd_frac*mass/marginal_sd;
+       projected into [lo, hi] and within max_step of the previous reading, rounded to 4 then to
+       the declared digits, then put on the scale's display grid. `u(d)` and the weekday phase
+       come from `WN.per[case_id]` (computed by production). */
+  function weightObserved(pts, WP, C) {
+    if (!pts.length || !WP || !C) return [];
+    const mass = pts[0][1], scale = C.sd_frac * mass / C.marginal_sd;
+    let prevDay = null, prevE = 0, prev = null;
+    return pts.map(([d, base]) => {
+      const u = WP.u[d];
+      let e;
+      if (prevDay === null || C.phi === 0) e = u;
+      else { const a = Math.pow(C.phi, Math.max(1, d - prevDay)); e = a * prevE + Math.sqrt(Math.max(0, 1 - a * a)) * u; }
+      prevE = e; prevDay = d;
+      const n = e * scale * C.keep + mass * C.weekday_frac[(d + WP.phase7) % 7];
+      let y = Math.min(C.hi, Math.max(C.lo, base + n));
+      if (prev !== null) { y = Math.min(prev + C.max_step, Math.max(prev - C.max_step, y)); y = Math.min(C.hi, Math.max(C.lo, y)); }
+      prev = y;
+      const r = pyRound(pyRound(y, 4), C.ndigits);
+      return [d, pyRound(pyRound(r / C.grid, 0) * C.grid, 2)];
+    });
+  }
+
   /* ── Self-check: recompute the golden vector with this file, compare point-by-point ───── */
   function selfCheck(D) {
     const G = D.golden, K = D.kernel, PS = D.personas;
     if (!G || !K || !PS) return { ok: false, reason: "data.json has no golden / kernel / personas section" };
-    let worstW = 0, worstC = 0, worstB = 0, n = 0, nCf = 0, bad = [];
+    let worstW = 0, worstC = 0, worstB = 0, worstO = 0, n = 0, nO = 0, nCf = 0, bad = [];
     G.cases.forEach(g => {
       const P = Object.assign({}, g.params, { devices: g.params.devices });
       const PER = PS[P.case_id];
@@ -1117,6 +1151,15 @@
         worstW = Math.max(worstW, Math.abs(w[i][1] - g.weight[i][1])); n++;
       }
       bad.push(...sameSkeleton(g.label, w.meta, g.skeleton));
+      // The recorded readings after the scale's observation noise.
+      if (g.observed) {
+        const o = weightObserved(w, (D.wnoise || {}).per ? D.wnoise.per[P.case_id] : null, (D.wnoise || {}).consts);
+        if (o.length !== g.observed.length) bad.push(g.label + ": observed " + o.length + " points ≠ " + g.observed.length);
+        else for (let i = 0; i < o.length; i++) {
+          if (o[i][0] !== g.observed[i][0]) { bad.push(g.label + ": observed day mismatch at point " + i); break; }
+          worstO = Math.max(worstO, Math.abs(o[i][1] - g.observed[i][1])); nO++;
+        }
+      } else bad.push(g.label + ": no observed readings in the golden vector");
       if (g.rule_readout) {
         const [verdict, det] = deriveOutcome(w, labelRule(K));
         const got = Object.assign({ verdict: verdict }, ...Object.keys(g.rule_readout)
@@ -1167,8 +1210,9 @@
       bad.push(...sameSkeleton(o.label, w.meta, o.skeleton));
     });
     const tol = G.tol == null ? 0.005 : G.tol, tolBase = 1e-4;
-    return { ok: !bad.length && worstW <= tol && worstC <= tol && worstB <= tolBase,
-             worstWeight: worstW, worstClinical: worstC, worstBase: worstB, nPoints: n,
+    return { ok: !bad.length && worstW <= tol && worstC <= tol && worstB <= tolBase && worstO <= tol,
+             worstWeight: worstW, worstClinical: worstC, worstBase: worstB, worstObserved: worstO,
+             nObserved: nO, nPoints: n,
              nCopies: nCf, nCases: G.cases.length + (G.overlay || []).length, tol: tol, bad: bad };
   }
 
@@ -1185,7 +1229,7 @@
     pyRound, shape, feasibleK, stepOf, adherencePts, weightSeries, weightRender, weightOverlay,
     resampleToGrid, deriveOutcome, labelSeries, labelRule,
     clinicalSeries, effectAt, responseOf, kineticFraction, effectMilestones, quantizeWithinSlope,
-    signalsFor, specFor, gold, carryForward, abnormalSide, future,
+    signalsFor, specFor, gold, carryForward, abnormalSide, future, weightObserved,
     toJobYaml, parseJobYaml, fromCaseText, selfCheck, YAML_FIELDS, LEX,
   };
 })();

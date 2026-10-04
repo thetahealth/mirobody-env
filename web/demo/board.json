@@ -1,0 +1,3336 @@
+{
+ "_generated": "do not hand-edit; rebuild with `python web/demo/export_board.py` (see its docstring)",
+ "source": {
+  "boot": 4000,
+  "mode": "crossed (cases x rounds)",
+  "seed": 20261004,
+  "pack_seed_sha256": "8f90c70f61fe7a53860e9a21576c0393e26515ba7eede0467a534360dfa7f9b9"
+ },
+ "provenance": {
+  "readout_sha16": "cb897ff36b9f8d12",
+  "interim_readout_sha16": null,
+  "batches": {
+   "m2": "m2-pack1/20261004-083715",
+   "p3": "p3-meds/20261004-090904",
+   "p4": "p4-followup/20261004-144058",
+   "pack2": "pack2-triage/20261004-083658"
+  }
+ },
+ "models": [
+  "gemini-3.1-pro",
+  "gemini-3.7-flash",
+  "gpt-6-sol",
+  "deepseek-v4-pro",
+  "gpt-6-luna",
+  "kimi-k3",
+  "minimax-m3",
+  "glm-5.3-flash",
+  "deepseek-v4-flash",
+  "qwen3.7-flash"
+ ],
+ "packs": {
+  "m2": {
+   "job": "m2-pack1",
+   "status": "final",
+   "n_cases": 50,
+   "n_rounds": 3,
+   "board": [
+    {
+     "model": "gemini-3.1-pro",
+     "rank": 1,
+     "score": 0.8343598251309138,
+     "ci95": [
+      0.7461165690222546,
+      0.907868822939336
+     ],
+     "se": 0.042777288618527635
+    },
+    {
+     "model": "gemini-3.7-flash",
+     "rank": 2,
+     "score": 0.7554910604615491,
+     "ci95": [
+      0.6457593241244504,
+      0.853541181624805
+     ],
+     "se": 0.05249525540044621
+    },
+    {
+     "model": "kimi-k3",
+     "rank": 3,
+     "score": 0.6123024517141077,
+     "ci95": [
+      0.5167778113633945,
+      0.7257041788110216
+     ],
+     "se": 0.05213196087741417
+    },
+    {
+     "model": "gpt-6-sol",
+     "rank": 4,
+     "score": 0.6067423927014544,
+     "ci95": [
+      0.539271034785953,
+      0.6970926939252096
+     ],
+     "se": 0.03992506744820888
+    },
+    {
+     "model": "glm-5.3-flash",
+     "rank": 5,
+     "score": 0.5936754632856068,
+     "ci95": [
+      0.48866487315766666,
+      0.7170780574228018
+     ],
+     "se": 0.05805755201738469
+    },
+    {
+     "model": "deepseek-v4-pro",
+     "rank": 6,
+     "score": 0.5660774662689249,
+     "ci95": [
+      0.48985793487342455,
+      0.6635753573352707
+     ],
+     "se": 0.04525446836661398
+    },
+    {
+     "model": "minimax-m3",
+     "rank": 7,
+     "score": 0.5519917152845443,
+     "ci95": [
+      0.4862347801465741,
+      0.6319109419656537
+     ],
+     "se": 0.03682356393838034
+    },
+    {
+     "model": "gpt-6-luna",
+     "rank": 8,
+     "score": 0.5469309006204282,
+     "ci95": [
+      0.48545958038727116,
+      0.607808726378613
+     ],
+     "se": 0.031366698716667085
+    },
+    {
+     "model": "qwen3.7-flash",
+     "rank": 9,
+     "score": 0.4282330019900384,
+     "ci95": [
+      0.34067340507324334,
+      0.5326543655265061
+     ],
+     "se": 0.04911027105893704
+    },
+    {
+     "model": "deepseek-v4-flash",
+     "rank": 10,
+     "score": 0.40585956720229505,
+     "ci95": [
+      0.29203847979262465,
+      0.5231641694814084
+     ],
+     "se": 0.05831042990400372
+    }
+   ],
+   "per_round": {
+    "gemini-3.1-pro": [
+     0.8338607437774225,
+     0.8148680170317948,
+     0.854350714583524
+    ],
+    "deepseek-v4-pro": [
+     0.5722640657615211,
+     0.5048283945178063,
+     0.6211106766074964
+    ],
+    "gpt-6-sol": [
+     0.5813646905495627,
+     0.593347510309348,
+     0.6454038661343412
+    ],
+    "gpt-6-luna": [
+     0.525935313303031,
+     0.5616174666502496,
+     0.5531843663524482
+    ],
+    "kimi-k3": [
+     0.6278414314987505,
+     0.5623843175809439,
+     0.6461967529067134
+    ],
+    "gemini-3.7-flash": [
+     0.7209131055370822,
+     0.7405721783664544,
+     0.8049878974811109
+    ],
+    "qwen3.7-flash": [
+     0.4519995374251187,
+     0.39350015215202117,
+     0.43876037634957216
+    ],
+    "glm-5.3-flash": [
+     0.5157482246772983,
+     0.6734950667789348,
+     0.5932108216749425
+    ],
+    "minimax-m3": [
+     0.5706467872263566,
+     0.5393793121309668,
+     0.5461729609850686
+    ],
+    "deepseek-v4-flash": [
+     0.4059670113136397,
+     0.37541611413341786,
+     0.4373243436734957
+    ]
+   },
+   "stability": {
+    "gemini-3.1-pro": 0.12,
+    "deepseek-v4-pro": 0.38,
+    "gpt-6-sol": 0.2857,
+    "gpt-6-luna": 0.2449,
+    "kimi-k3": 0.3,
+    "gemini-3.7-flash": 0.18,
+    "qwen3.7-flash": 0.26,
+    "glm-5.3-flash": 0.36,
+    "minimax-m3": 0.34,
+    "deepseek-v4-flash": 0.84
+   },
+   "answered": {
+    "gemini-3.1-pro": [
+     150,
+     150
+    ],
+    "deepseek-v4-pro": [
+     150,
+     150
+    ],
+    "gpt-6-sol": [
+     149,
+     150
+    ],
+    "gpt-6-luna": [
+     149,
+     150
+    ],
+    "kimi-k3": [
+     150,
+     150
+    ],
+    "gemini-3.7-flash": [
+     150,
+     150
+    ],
+    "qwen3.7-flash": [
+     150,
+     150
+    ],
+    "glm-5.3-flash": [
+     150,
+     150
+    ],
+    "minimax-m3": [
+     150,
+     150
+    ],
+    "deepseek-v4-flash": [
+     150,
+     150
+    ]
+   },
+   "format_fail": {
+    "gemini-3.1-pro": 0,
+    "deepseek-v4-pro": 0,
+    "gpt-6-sol": 0,
+    "gpt-6-luna": 0,
+    "kimi-k3": 0,
+    "gemini-3.7-flash": 0,
+    "qwen3.7-flash": 0,
+    "glm-5.3-flash": 0,
+    "minimax-m3": 0,
+    "deepseek-v4-flash": 0
+   },
+   "unranked": [],
+   "top6": {
+    "top6": [
+     "gemini-3.1-pro",
+     "gemini-3.7-flash",
+     "kimi-k3",
+     "gpt-6-sol",
+     "glm-5.3-flash",
+     "deepseek-v4-pro"
+    ],
+    "pairs": [
+     {
+      "a": "gemini-3.1-pro",
+      "b": "gemini-3.7-flash",
+      "diff": 0.07886876466936465,
+      "se": 0.040810518532405374,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "kimi-k3",
+      "diff": 0.2220573734168061,
+      "se": 0.05181066806204638,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "gpt-6-sol",
+      "diff": 0.22761743242945942,
+      "se": 0.05680315565943424,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "glm-5.3-flash",
+      "diff": 0.24068436184530695,
+      "se": 0.07103751630786706,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "deepseek-v4-pro",
+      "diff": 0.2682823588619889,
+      "se": 0.05304079067709086,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "kimi-k3",
+      "diff": 0.14318860874744144,
+      "se": 0.05155609129954639,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "gpt-6-sol",
+      "diff": 0.14874866776009477,
+      "se": 0.055729649689620755,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "glm-5.3-flash",
+      "diff": 0.1618155971759423,
+      "se": 0.06965693154805229,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "deepseek-v4-pro",
+      "diff": 0.18941359419262427,
+      "se": 0.06136921775420801,
+      "separable": true
+     },
+     {
+      "a": "kimi-k3",
+      "b": "gpt-6-sol",
+      "diff": 0.005560059012653329,
+      "se": 0.0547433923021366,
+      "separable": false
+     },
+     {
+      "a": "kimi-k3",
+      "b": "glm-5.3-flash",
+      "diff": 0.018626988428500857,
+      "se": 0.07156083175099712,
+      "separable": false
+     },
+     {
+      "a": "kimi-k3",
+      "b": "deepseek-v4-pro",
+      "diff": 0.04622498544518283,
+      "se": 0.05830037324895861,
+      "separable": false
+     },
+     {
+      "a": "gpt-6-sol",
+      "b": "glm-5.3-flash",
+      "diff": 0.013066929415847528,
+      "se": 0.06198391322090905,
+      "separable": false
+     },
+     {
+      "a": "gpt-6-sol",
+      "b": "deepseek-v4-pro",
+      "diff": 0.0406649264325295,
+      "se": 0.04911968337032865,
+      "separable": false
+     },
+     {
+      "a": "glm-5.3-flash",
+      "b": "deepseek-v4-pro",
+      "diff": 0.027597997016681974,
+      "se": 0.08170112749667166,
+      "separable": false
+     }
+    ],
+    "n_separable": 8,
+    "adjacent_separable": 1
+   }
+  },
+  "pack2": {
+   "job": "pack2-triage",
+   "status": "final",
+   "n_cases": 50,
+   "n_rounds": 3,
+   "board": [
+    {
+     "model": "gemini-3.7-flash",
+     "rank": 1,
+     "score": 0.5318803418803418,
+     "ci95": [
+      0.3888824074074075,
+      0.6734103859103859
+     ],
+     "se": 0.07343966551915698
+    },
+    {
+     "model": "gemini-3.1-pro",
+     "rank": 2,
+     "score": 0.5042735042735043,
+     "ci95": [
+      0.36354738341580445,
+      0.6447871572871573
+     ],
+     "se": 0.07154979575874788
+    },
+    {
+     "model": "glm-5.3-flash",
+     "rank": 3,
+     "score": 0.49737416904083565,
+     "ci95": [
+      0.35647981118373273,
+      0.6313197767145137
+     ],
+     "se": 0.06937320361054862
+    },
+    {
+     "model": "kimi-k3",
+     "rank": 4,
+     "score": 0.467991452991453,
+     "ci95": [
+      0.31859487565715633,
+      0.6148607193732193
+     ],
+     "se": 0.07738875057349652
+    },
+    {
+     "model": "deepseek-v4-pro",
+     "rank": 5,
+     "score": 0.45726495726495725,
+     "ci95": [
+      0.3113881053586936,
+      0.5984574915824916
+     ],
+     "se": 0.07203134033848387
+    },
+    {
+     "model": "minimax-m3",
+     "rank": 6,
+     "score": 0.42080721747388405,
+     "ci95": [
+      0.27667931297097964,
+      0.5694679012345679
+     ],
+     "se": 0.07494543716056147
+    },
+    {
+     "model": "gpt-6-sol",
+     "rank": 7,
+     "score": 0.40811965811965817,
+     "ci95": [
+      0.26454587079587083,
+      0.5544444444444446
+     ],
+     "se": 0.07465826503502003
+    },
+    {
+     "model": "gpt-6-luna",
+     "rank": 8,
+     "score": 0.3618233618233619,
+     "ci95": [
+      0.2342568150448585,
+      0.49341179653679657
+     ],
+     "se": 0.06620167692372127
+    },
+    {
+     "model": "qwen3.7-flash",
+     "rank": 9,
+     "score": 0.3287321937321937,
+     "ci95": [
+      0.18692962962962964,
+      0.48678388727285793
+     ],
+     "se": 0.07657559201769906
+    },
+    {
+     "model": "deepseek-v4-flash",
+     "rank": 10,
+     "score": 0.3055555555555555,
+     "ci95": [
+      0.17460152116402114,
+      0.4408477633477634
+     ],
+     "se": 0.06893245055704908
+    }
+   ],
+   "per_round": {
+    "gemini-3.1-pro": [
+     0.4679487179487179,
+     0.49572649572649574,
+     0.5491452991452991
+    ],
+    "deepseek-v4-pro": [
+     0.4551282051282051,
+     0.4038461538461539,
+     0.5128205128205128
+    ],
+    "gpt-6-sol": [
+     0.40811965811965817,
+     0.40811965811965817,
+     0.40811965811965817
+    ],
+    "gpt-6-luna": [
+     0.3525641025641025,
+     0.3803418803418803,
+     0.3525641025641025
+    ],
+    "kimi-k3": [
+     0.44038461538461543,
+     0.518974358974359,
+     0.4451282051282051
+    ],
+    "gemini-3.7-flash": [
+     0.533974358974359,
+     0.5863247863247864,
+     0.4753418803418804
+    ],
+    "qwen3.7-flash": [
+     0.30128205128205127,
+     0.3032905982905983,
+     0.38162393162393166
+    ],
+    "glm-5.3-flash": [
+     0.5192307692307693,
+     0.4679487179487179,
+     0.5046581196581196
+    ],
+    "minimax-m3": [
+     0.33141025641025634,
+     0.4871794871794872,
+     0.4481196581196581
+    ],
+    "deepseek-v4-flash": [
+     0.3247863247863248,
+     0.32264957264957267,
+     0.2692307692307692
+    ]
+   },
+   "stability": {
+    "gemini-3.1-pro": 0.06,
+    "deepseek-v4-pro": 0.3061,
+    "gpt-6-sol": 0.06,
+    "gpt-6-luna": 0.06,
+    "kimi-k3": 0.12,
+    "gemini-3.7-flash": 0.2,
+    "qwen3.7-flash": 0.44,
+    "glm-5.3-flash": 0.28,
+    "minimax-m3": 0.2449,
+    "deepseek-v4-flash": 0.32
+   },
+   "answered": {
+    "gemini-3.1-pro": [
+     150,
+     150
+    ],
+    "deepseek-v4-pro": [
+     149,
+     150
+    ],
+    "gpt-6-sol": [
+     150,
+     150
+    ],
+    "gpt-6-luna": [
+     150,
+     150
+    ],
+    "kimi-k3": [
+     150,
+     150
+    ],
+    "gemini-3.7-flash": [
+     150,
+     150
+    ],
+    "qwen3.7-flash": [
+     150,
+     150
+    ],
+    "glm-5.3-flash": [
+     150,
+     150
+    ],
+    "minimax-m3": [
+     149,
+     150
+    ],
+    "deepseek-v4-flash": [
+     150,
+     150
+    ]
+   },
+   "format_fail": {
+    "gemini-3.1-pro": 0,
+    "deepseek-v4-pro": 0,
+    "gpt-6-sol": 0,
+    "gpt-6-luna": 0,
+    "kimi-k3": 0,
+    "gemini-3.7-flash": 0,
+    "qwen3.7-flash": 0,
+    "glm-5.3-flash": 0,
+    "minimax-m3": 1,
+    "deepseek-v4-flash": 0
+   },
+   "unranked": [],
+   "top6": {
+    "top6": [
+     "gemini-3.7-flash",
+     "gemini-3.1-pro",
+     "glm-5.3-flash",
+     "kimi-k3",
+     "deepseek-v4-pro",
+     "minimax-m3"
+    ],
+    "pairs": [
+     {
+      "a": "gemini-3.7-flash",
+      "b": "gemini-3.1-pro",
+      "diff": 0.027606837606837575,
+      "se": 0.09159499841760649,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "glm-5.3-flash",
+      "diff": 0.03450617283950619,
+      "se": 0.08449851128603422,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "kimi-k3",
+      "diff": 0.06388888888888883,
+      "se": 0.058340939575683634,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "deepseek-v4-pro",
+      "diff": 0.07461538461538458,
+      "se": 0.08703621507815502,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "minimax-m3",
+      "diff": 0.11107312440645778,
+      "se": 0.09279297544069896,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "glm-5.3-flash",
+      "diff": 0.006899335232668613,
+      "se": 0.08798661107030208,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "kimi-k3",
+      "diff": 0.03628205128205125,
+      "se": 0.09968999619309812,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "deepseek-v4-pro",
+      "diff": 0.04700854700854701,
+      "se": 0.09206198311282555,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "minimax-m3",
+      "diff": 0.0834662867996202,
+      "se": 0.08821440123037937,
+      "separable": false
+     },
+     {
+      "a": "glm-5.3-flash",
+      "b": "kimi-k3",
+      "diff": 0.02938271604938264,
+      "se": 0.0827306523734305,
+      "separable": false
+     },
+     {
+      "a": "glm-5.3-flash",
+      "b": "deepseek-v4-pro",
+      "diff": 0.040109211775878395,
+      "se": 0.07526406022715534,
+      "separable": false
+     },
+     {
+      "a": "glm-5.3-flash",
+      "b": "minimax-m3",
+      "diff": 0.07656695156695159,
+      "se": 0.07606371653636064,
+      "separable": false
+     },
+     {
+      "a": "kimi-k3",
+      "b": "deepseek-v4-pro",
+      "diff": 0.010726495726495755,
+      "se": 0.08247994036286076,
+      "separable": false
+     },
+     {
+      "a": "kimi-k3",
+      "b": "minimax-m3",
+      "diff": 0.04718423551756895,
+      "se": 0.07830738732897752,
+      "separable": false
+     },
+     {
+      "a": "deepseek-v4-pro",
+      "b": "minimax-m3",
+      "diff": 0.036457739791073196,
+      "se": 0.0918758794531462,
+      "separable": false
+     }
+    ],
+    "n_separable": 0,
+    "adjacent_separable": 0
+   }
+  },
+  "p3": {
+   "job": "p3-meds",
+   "status": "final",
+   "n_cases": 50,
+   "n_rounds": 3,
+   "board": [
+    {
+     "model": "minimax-m3",
+     "rank": 1,
+     "score": 0.8055555555555556,
+     "ci95": [
+      0.6729556197478992,
+      0.91875
+     ],
+     "se": 0.06285967539750568
+    },
+    {
+     "model": "gemini-3.1-pro",
+     "rank": 2,
+     "score": 0.7986111111111112,
+     "ci95": [
+      0.6844940476190476,
+      0.9019812091503268
+     ],
+     "se": 0.055871964530205105
+    },
+    {
+     "model": "gpt-6-sol",
+     "rank": 3,
+     "score": 0.7847222222222223,
+     "ci95": [
+      0.6619047619047618,
+      0.8944444444444444
+     ],
+     "se": 0.0579777136249901
+    },
+    {
+     "model": "gpt-6-luna",
+     "rank": 4,
+     "score": 0.7430555555555556,
+     "ci95": [
+      0.5794632644724557,
+      0.8792538190975691
+     ],
+     "se": 0.07610566511908151
+    },
+    {
+     "model": "kimi-k3",
+     "rank": 5,
+     "score": 0.6944444444444444,
+     "ci95": [
+      0.5559683372183373,
+      0.8178503787878788
+     ],
+     "se": 0.06652933819488041
+    },
+    {
+     "model": "deepseek-v4-pro",
+     "rank": 6,
+     "score": 0.6770833333333334,
+     "ci95": [
+      0.5374993235930736,
+      0.8039818948412699
+     ],
+     "se": 0.06753396019208796
+    },
+    {
+     "model": "gemini-3.7-flash",
+     "rank": 7,
+     "score": 0.6666666666666667,
+     "ci95": [
+      0.5183741830065359,
+      0.8012862137862138
+     ],
+     "se": 0.07150317618422967
+    },
+    {
+     "model": "deepseek-v4-flash",
+     "rank": 8,
+     "score": 0.5892592592592594,
+     "ci95": [
+      0.4599043410293411,
+      0.7096220538720538
+     ],
+     "se": 0.06345399542511161
+    },
+    {
+     "model": "glm-5.3-flash",
+     "rank": 9,
+     "score": 0.5659722222222222,
+     "ci95": [
+      0.4208238636363636,
+      0.7030767496392498
+     ],
+     "se": 0.0721235085723089
+    },
+    {
+     "model": "qwen3.7-flash",
+     "rank": 10,
+     "score": 0.5416666666666666,
+     "ci95": [
+      0.4133489774114774,
+      0.6551505207755209
+     ],
+     "se": 0.061854513343880486
+    }
+   ],
+   "per_round": {
+    "gemini-3.1-pro": [
+     0.7916666666666667,
+     0.8125,
+     0.7916666666666667
+    ],
+    "deepseek-v4-pro": [
+     0.6354166666666665,
+     0.7083333333333334,
+     0.6875
+    ],
+    "gpt-6-sol": [
+     0.75,
+     0.7916666666666667,
+     0.8125
+    ],
+    "gpt-6-luna": [
+     0.8125,
+     0.75,
+     0.6666666666666666
+    ],
+    "kimi-k3": [
+     0.7291666666666666,
+     0.6875,
+     0.6666666666666666
+    ],
+    "gemini-3.7-flash": [
+     0.6666666666666666,
+     0.6666666666666667,
+     0.6666666666666667
+    ],
+    "qwen3.7-flash": [
+     0.5208333333333334,
+     0.5416666666666666,
+     0.5625
+    ],
+    "glm-5.3-flash": [
+     0.6041666666666667,
+     0.5104166666666666,
+     0.5833333333333335
+    ],
+    "minimax-m3": [
+     0.75,
+     0.8541666666666667,
+     0.8125
+    ],
+    "deepseek-v4-flash": [
+     0.5833333333333335,
+     0.6125,
+     0.5716666666666668
+    ]
+   },
+   "stability": {
+    "gemini-3.1-pro": 0.02,
+    "deepseek-v4-pro": 0.2653,
+    "gpt-6-sol": 0.1,
+    "gpt-6-luna": 0.2,
+    "kimi-k3": 0.18,
+    "gemini-3.7-flash": 0.08,
+    "qwen3.7-flash": 0.2,
+    "glm-5.3-flash": 0.3,
+    "minimax-m3": 0.24,
+    "deepseek-v4-flash": 0.18
+   },
+   "answered": {
+    "gemini-3.1-pro": [
+     150,
+     150
+    ],
+    "deepseek-v4-pro": [
+     149,
+     150
+    ],
+    "gpt-6-sol": [
+     150,
+     150
+    ],
+    "gpt-6-luna": [
+     150,
+     150
+    ],
+    "kimi-k3": [
+     150,
+     150
+    ],
+    "gemini-3.7-flash": [
+     150,
+     150
+    ],
+    "qwen3.7-flash": [
+     150,
+     150
+    ],
+    "glm-5.3-flash": [
+     150,
+     150
+    ],
+    "minimax-m3": [
+     150,
+     150
+    ],
+    "deepseek-v4-flash": [
+     150,
+     150
+    ]
+   },
+   "format_fail": {
+    "gemini-3.1-pro": 0,
+    "deepseek-v4-pro": 0,
+    "gpt-6-sol": 0,
+    "gpt-6-luna": 0,
+    "kimi-k3": 0,
+    "gemini-3.7-flash": 0,
+    "qwen3.7-flash": 0,
+    "glm-5.3-flash": 0,
+    "minimax-m3": 0,
+    "deepseek-v4-flash": 0
+   },
+   "unranked": [],
+   "top6": {
+    "top6": [
+     "minimax-m3",
+     "gemini-3.1-pro",
+     "gpt-6-sol",
+     "gpt-6-luna",
+     "kimi-k3",
+     "deepseek-v4-pro"
+    ],
+    "pairs": [
+     {
+      "a": "minimax-m3",
+      "b": "gemini-3.1-pro",
+      "diff": 0.00694444444444442,
+      "se": 0.04587428689025214,
+      "separable": false
+     },
+     {
+      "a": "minimax-m3",
+      "b": "gpt-6-sol",
+      "diff": 0.02083333333333326,
+      "se": 0.07185808128437222,
+      "separable": false
+     },
+     {
+      "a": "minimax-m3",
+      "b": "gpt-6-luna",
+      "diff": 0.0625,
+      "se": 0.074084113983858,
+      "separable": false
+     },
+     {
+      "a": "minimax-m3",
+      "b": "kimi-k3",
+      "diff": 0.11111111111111116,
+      "se": 0.060886410113253776,
+      "separable": false
+     },
+     {
+      "a": "minimax-m3",
+      "b": "deepseek-v4-pro",
+      "diff": 0.1284722222222222,
+      "se": 0.05022707949538392,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "gpt-6-sol",
+      "diff": 0.01388888888888884,
+      "se": 0.06810563711331397,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "gpt-6-luna",
+      "diff": 0.05555555555555558,
+      "se": 0.06116411127080038,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "kimi-k3",
+      "diff": 0.10416666666666674,
+      "se": 0.04433538583820908,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "deepseek-v4-pro",
+      "diff": 0.12152777777777779,
+      "se": 0.05268660257501645,
+      "separable": true
+     },
+     {
+      "a": "gpt-6-sol",
+      "b": "gpt-6-luna",
+      "diff": 0.04166666666666674,
+      "se": 0.08625959734801385,
+      "separable": false
+     },
+     {
+      "a": "gpt-6-sol",
+      "b": "kimi-k3",
+      "diff": 0.0902777777777779,
+      "se": 0.0823468537949646,
+      "separable": false
+     },
+     {
+      "a": "gpt-6-sol",
+      "b": "deepseek-v4-pro",
+      "diff": 0.10763888888888895,
+      "se": 0.07730373032381999,
+      "separable": false
+     },
+     {
+      "a": "gpt-6-luna",
+      "b": "kimi-k3",
+      "diff": 0.04861111111111116,
+      "se": 0.06286977524128173,
+      "separable": false
+     },
+     {
+      "a": "gpt-6-luna",
+      "b": "deepseek-v4-pro",
+      "diff": 0.06597222222222221,
+      "se": 0.08259589976995749,
+      "separable": false
+     },
+     {
+      "a": "kimi-k3",
+      "b": "deepseek-v4-pro",
+      "diff": 0.01736111111111105,
+      "se": 0.06190003429685679,
+      "separable": false
+     }
+    ],
+    "n_separable": 3,
+    "adjacent_separable": 0
+   }
+  },
+  "p4": {
+   "job": "p4-followup",
+   "status": "final",
+   "n_cases": 50,
+   "n_rounds": 3,
+   "board": [
+    {
+     "model": "gpt-6-sol",
+     "rank": 1,
+     "score": 0.8861196504005264,
+     "ci95": [
+      0.8150160950549846,
+      0.9444572076023969
+     ],
+     "se": 0.034081973182402636
+    },
+    {
+     "model": "gemini-3.1-pro",
+     "rank": 2,
+     "score": 0.7895589555447,
+     "ci95": [
+      0.6906047608197979,
+      0.8714174496137007
+     ],
+     "se": 0.045680813627826826
+    },
+    {
+     "model": "gemini-3.7-flash",
+     "rank": 3,
+     "score": 0.7535935552437292,
+     "ci95": [
+      0.5813099799447129,
+      0.8904969342923722
+     ],
+     "se": 0.07924268170905904
+    },
+    {
+     "model": "deepseek-v4-pro",
+     "rank": 4,
+     "score": 0.5377962458003099,
+     "ci95": [
+      0.36629357014660047,
+      0.6930098120530158
+     ],
+     "se": 0.08354797507651818
+    },
+    {
+     "model": "gpt-6-luna",
+     "rank": 5,
+     "score": 0.5362132969984046,
+     "ci95": [
+      0.33882325351902587,
+      0.7115918212559088
+     ],
+     "se": 0.09517733292784922
+    },
+    {
+     "model": "kimi-k3",
+     "rank": 6,
+     "score": 0.4113520583718963,
+     "ci95": [
+      0.20458032958990136,
+      0.6093276312516568
+     ],
+     "se": 0.10347667759032089
+    },
+    {
+     "model": "deepseek-v4-flash",
+     "rank": 7,
+     "score": 0.4026750750635647,
+     "ci95": [
+      0.20298946264779116,
+      0.5808400250824595
+     ],
+     "se": 0.09665931486314626
+    },
+    {
+     "model": "minimax-m3",
+     "rank": 8,
+     "score": 0.30525277372467924,
+     "ci95": [
+      0.09925807540952827,
+      0.4914226997102549
+     ],
+     "se": 0.09804681277031739
+    },
+    {
+     "model": "glm-5.3-flash",
+     "rank": 9,
+     "score": 0.27671751733383143,
+     "ci95": [
+      0.06752108297320662,
+      0.47568599734652633
+     ],
+     "se": 0.10509427022143056
+    },
+    {
+     "model": "qwen3.7-flash",
+     "rank": 10,
+     "score": 0.2584266355647769,
+     "ci95": [
+      0.05001470946244929,
+      0.4639408153823041
+     ],
+     "se": 0.10405331011841223
+    }
+   ],
+   "per_round": {
+    "gemini-3.1-pro": [
+     0.7913252198605006,
+     0.7646158181510989,
+     0.8127358286225004
+    ],
+    "deepseek-v4-pro": [
+     0.4742138580106987,
+     0.535736568527889,
+     0.6034383108623422
+    ],
+    "gpt-6-sol": [
+     0.8912366028979883,
+     0.8920151704893338,
+     0.8751071778142574
+    ],
+    "gpt-6-luna": [
+     0.5706372582389586,
+     0.47160641352040517,
+     0.5663962192358498
+    ],
+    "kimi-k3": [
+     0.37794008250287797,
+     0.4801705405727876,
+     0.3759455520400234
+    ],
+    "gemini-3.7-flash": [
+     0.7415465193803108,
+     0.7193520527599988,
+     0.7998820935908781
+    ],
+    "qwen3.7-flash": [
+     0.25484836331450733,
+     0.2815601439804381,
+     0.23887139939938504
+    ],
+    "glm-5.3-flash": [
+     0.2778485309394442,
+     0.297490052800857,
+     0.25481396826119307
+    ],
+    "minimax-m3": [
+     0.18134541903139945,
+     0.4091270048032297,
+     0.3252858973394083
+    ],
+    "deepseek-v4-flash": [
+     0.42408328823297564,
+     0.36453424655984584,
+     0.4194076903978726
+    ]
+   },
+   "stability": {
+    "gemini-3.1-pro": 0.1,
+    "deepseek-v4-pro": 0.26,
+    "gpt-6-sol": 0.02,
+    "gpt-6-luna": 0.26,
+    "kimi-k3": 0.16,
+    "gemini-3.7-flash": 0.04,
+    "qwen3.7-flash": 0.24,
+    "glm-5.3-flash": 0.32,
+    "minimax-m3": 0.2,
+    "deepseek-v4-flash": 0.34
+   },
+   "answered": {
+    "gemini-3.1-pro": [
+     150,
+     150
+    ],
+    "deepseek-v4-pro": [
+     150,
+     150
+    ],
+    "gpt-6-sol": [
+     150,
+     150
+    ],
+    "gpt-6-luna": [
+     150,
+     150
+    ],
+    "kimi-k3": [
+     150,
+     150
+    ],
+    "gemini-3.7-flash": [
+     150,
+     150
+    ],
+    "qwen3.7-flash": [
+     150,
+     150
+    ],
+    "glm-5.3-flash": [
+     150,
+     150
+    ],
+    "minimax-m3": [
+     150,
+     150
+    ],
+    "deepseek-v4-flash": [
+     150,
+     150
+    ]
+   },
+   "format_fail": {
+    "gemini-3.1-pro": 0,
+    "deepseek-v4-pro": 0,
+    "gpt-6-sol": 0,
+    "gpt-6-luna": 0,
+    "kimi-k3": 0,
+    "gemini-3.7-flash": 0,
+    "qwen3.7-flash": 0,
+    "glm-5.3-flash": 0,
+    "minimax-m3": 0,
+    "deepseek-v4-flash": 0
+   },
+   "unranked": [],
+   "top6": {
+    "top6": [
+     "gpt-6-sol",
+     "gemini-3.1-pro",
+     "gemini-3.7-flash",
+     "deepseek-v4-pro",
+     "gpt-6-luna",
+     "kimi-k3"
+    ],
+    "pairs": [
+     {
+      "a": "gpt-6-sol",
+      "b": "gemini-3.1-pro",
+      "diff": 0.09656069485582641,
+      "se": 0.0368135764783412,
+      "separable": true
+     },
+     {
+      "a": "gpt-6-sol",
+      "b": "gemini-3.7-flash",
+      "diff": 0.13252609515679725,
+      "se": 0.06845861103471193,
+      "separable": false
+     },
+     {
+      "a": "gpt-6-sol",
+      "b": "deepseek-v4-pro",
+      "diff": 0.3483234046002165,
+      "se": 0.08091040788913349,
+      "separable": true
+     },
+     {
+      "a": "gpt-6-sol",
+      "b": "gpt-6-luna",
+      "diff": 0.34990635340212184,
+      "se": 0.08608112179308926,
+      "separable": true
+     },
+     {
+      "a": "gpt-6-sol",
+      "b": "kimi-k3",
+      "diff": 0.4747675920286301,
+      "se": 0.09754406769999312,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "gemini-3.7-flash",
+      "diff": 0.03596540030097084,
+      "se": 0.07198618174676946,
+      "separable": false
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "deepseek-v4-pro",
+      "diff": 0.2517627097443901,
+      "se": 0.08009491852301862,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "gpt-6-luna",
+      "diff": 0.2533456585462954,
+      "se": 0.08958858382848087,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.1-pro",
+      "b": "kimi-k3",
+      "diff": 0.3782068971728037,
+      "se": 0.10170797197089491,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "deepseek-v4-pro",
+      "diff": 0.21579730944341924,
+      "se": 0.0839774123259882,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "gpt-6-luna",
+      "diff": 0.2173802582453246,
+      "se": 0.06378984809985337,
+      "separable": true
+     },
+     {
+      "a": "gemini-3.7-flash",
+      "b": "kimi-k3",
+      "diff": 0.34224149687183286,
+      "se": 0.09301936797795013,
+      "separable": true
+     },
+     {
+      "a": "deepseek-v4-pro",
+      "b": "gpt-6-luna",
+      "diff": 0.0015829488019053484,
+      "se": 0.091907345727937,
+      "separable": false
+     },
+     {
+      "a": "deepseek-v4-pro",
+      "b": "kimi-k3",
+      "diff": 0.12644418742841362,
+      "se": 0.08084153181344216,
+      "separable": false
+     },
+     {
+      "a": "gpt-6-luna",
+      "b": "kimi-k3",
+      "diff": 0.12486123862650828,
+      "se": 0.08727821846811856,
+      "separable": false
+     }
+    ],
+    "n_separable": 10,
+    "adjacent_separable": 2
+   }
+  }
+ },
+ "overall": {
+  "status": "final",
+  "packs": [
+   "m2",
+   "pack2",
+   "p3",
+   "p4"
+  ],
+  "rule": "mean of the four pack composites, equal weight; independent per-pack bootstraps combined draw by draw",
+  "board": [
+   {
+    "model": "gemini-3.1-pro",
+    "rank": 1,
+    "score": 0.7317008490150573,
+    "ci95": [
+     0.6735275195433365,
+     0.7882060363356596
+    ],
+    "se": 0.029664509055625714
+   },
+   {
+    "model": "gemini-3.7-flash",
+    "rank": 2,
+    "score": 0.6769079060630717,
+    "ci95": [
+     0.6021117160235688,
+     0.7420724854079853
+    ],
+    "se": 0.035467265213494546
+   },
+   {
+    "model": "gpt-6-sol",
+    "rank": 3,
+    "score": 0.6714259808609653,
+    "ci95": [
+     0.6171229974421432,
+     0.7290704570165564
+    ],
+    "se": 0.028267130628807157
+   },
+   {
+    "model": "deepseek-v4-pro",
+    "rank": 4,
+    "score": 0.5595555006668813,
+    "ci95": [
+     0.4842302236787199,
+     0.6340591569569515
+    ],
+    "se": 0.03850729244189272
+   },
+   {
+    "model": "gpt-6-luna",
+    "rank": 5,
+    "score": 0.5470057787494376,
+    "ci95": [
+     0.4700278559521012,
+     0.6160057149960398
+    ],
+    "se": 0.037218014485209484
+   },
+   {
+    "model": "kimi-k3",
+    "rank": 6,
+    "score": 0.5465226018804754,
+    "ci95": [
+     0.4699553265037762,
+     0.6218370692083793
+    ],
+    "se": 0.03818859447215546
+   },
+   {
+    "model": "minimax-m3",
+    "rank": 7,
+    "score": 0.5209018155096657,
+    "ci95": [
+     0.438747452128204,
+     0.5998867305617783
+    ],
+    "se": 0.04114291340514528
+   },
+   {
+    "model": "glm-5.3-flash",
+    "rank": 8,
+    "score": 0.483434842970624,
+    "ci95": [
+     0.40817874605589805,
+     0.5635111419144115
+    ],
+    "se": 0.03918932565720783
+   },
+   {
+    "model": "deepseek-v4-flash",
+    "rank": 9,
+    "score": 0.42583736427016866,
+    "ci95": [
+     0.3471700767000453,
+     0.4996990963725706
+    ],
+    "se": 0.03985965048194746
+   },
+   {
+    "model": "qwen3.7-flash",
+    "rank": 10,
+    "score": 0.3892646244884189,
+    "ci95": [
+     0.3169840041182753,
+     0.4652830143446124
+    ],
+    "se": 0.0374459733429077
+   }
+  ],
+  "top6": {
+   "top6": [
+    "gemini-3.1-pro",
+    "gemini-3.7-flash",
+    "gpt-6-sol",
+    "deepseek-v4-pro",
+    "gpt-6-luna",
+    "kimi-k3"
+   ],
+   "pairs": [
+    {
+     "a": "gemini-3.1-pro",
+     "b": "gemini-3.7-flash",
+     "diff": 0.05479294295198556,
+     "se": 0.03764009721065278,
+     "separable": false
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "gpt-6-sol",
+     "diff": 0.060274868154092,
+     "se": 0.03687861940893265,
+     "separable": false
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "deepseek-v4-pro",
+     "diff": 0.17214534834817596,
+     "se": 0.03680298170857296,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "gpt-6-luna",
+     "diff": 0.1846950702656197,
+     "se": 0.03940453521501692,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "kimi-k3",
+     "diff": 0.18517824713458186,
+     "se": 0.04028840898616282,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "gpt-6-sol",
+     "diff": 0.005481925202106441,
+     "se": 0.030955615828840606,
+     "separable": false
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "deepseek-v4-pro",
+     "diff": 0.1173524053961904,
+     "se": 0.037562482652396235,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "gpt-6-luna",
+     "diff": 0.12990212731363415,
+     "se": 0.030552351440193654,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "kimi-k3",
+     "diff": 0.1303853041825963,
+     "se": 0.03131604486120587,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "deepseek-v4-pro",
+     "diff": 0.11187048019408397,
+     "se": 0.03769171609789999,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "gpt-6-luna",
+     "diff": 0.12442020211152771,
+     "se": 0.03498583151823372,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "kimi-k3",
+     "diff": 0.12490337898048987,
+     "se": 0.03792320911096478,
+     "separable": true
+    },
+    {
+     "a": "deepseek-v4-pro",
+     "b": "gpt-6-luna",
+     "diff": 0.012549721917443746,
+     "se": 0.043231845955773,
+     "separable": false
+    },
+    {
+     "a": "deepseek-v4-pro",
+     "b": "kimi-k3",
+     "diff": 0.0130328987864059,
+     "se": 0.03761632690016585,
+     "separable": false
+    },
+    {
+     "a": "gpt-6-luna",
+     "b": "kimi-k3",
+     "diff": 0.00048317686896215406,
+     "se": 0.03134759367961041,
+     "separable": false
+    }
+   ],
+   "n_separable": 9,
+   "adjacent_separable": 1
+  }
+ },
+ "decisions": {
+  "pack2": {
+   "classes": [
+    "ed_now",
+    "within_24h",
+    "routine_followup",
+    "watchful_waiting"
+   ],
+   "n_items": 50,
+   "n_rounds": 3,
+   "gold_counts": {
+    "ed_now": 13,
+    "within_24h": 13,
+    "routine_followup": 12,
+    "watchful_waiting": 12
+   },
+   "models": {
+    "gemini-3.1-pro": [
+     [
+      "ed_now",
+      "ed_now",
+      39
+     ],
+     [
+      "routine_followup",
+      "ed_now",
+      3
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      17
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      10
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      6
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      5
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      31
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      24
+     ],
+     [
+      "within_24h",
+      "routine_followup",
+      8
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      7
+     ]
+    ],
+    "gemini-3.7-flash": [
+     [
+      "ed_now",
+      "ed_now",
+      36
+     ],
+     [
+      "ed_now",
+      "within_24h",
+      3
+     ],
+     [
+      "routine_followup",
+      "ed_now",
+      3
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      8
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      12
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      13
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      2
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      34
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      17
+     ],
+     [
+      "within_24h",
+      "routine_followup",
+      1
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      21
+     ]
+    ],
+    "gpt-6-sol": [
+     [
+      "ed_now",
+      "ed_now",
+      39
+     ],
+     [
+      "routine_followup",
+      "ed_now",
+      1
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      8
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      4
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      23
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      11
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      25
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      27
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      12
+     ]
+    ],
+    "deepseek-v4-pro": [
+     [
+      "ed_now",
+      "ed_now",
+      39
+     ],
+     [
+      "routine_followup",
+      "ed_now",
+      3
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      7
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      4
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      22
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      13
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      23
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      16
+     ],
+     [
+      "within_24h",
+      "none",
+      1
+     ],
+     [
+      "within_24h",
+      "routine_followup",
+      1
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      21
+     ]
+    ],
+    "gpt-6-luna": [
+     [
+      "ed_now",
+      "ed_now",
+      39
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      3
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      7
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      26
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      11
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      25
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      27
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      12
+     ]
+    ],
+    "kimi-k3": [
+     [
+      "ed_now",
+      "ed_now",
+      33
+     ],
+     [
+      "ed_now",
+      "within_24h",
+      6
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      7
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      9
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      20
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      4
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      32
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      17
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      22
+     ]
+    ],
+    "minimax-m3": [
+     [
+      "ed_now",
+      "ed_now",
+      37
+     ],
+     [
+      "ed_now",
+      "none",
+      1
+     ],
+     [
+      "ed_now",
+      "within_24h",
+      1
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      5
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      5
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      26
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      10
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      26
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      20
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      19
+     ]
+    ],
+    "glm-5.3-flash": [
+     [
+      "ed_now",
+      "ed_now",
+      38
+     ],
+     [
+      "ed_now",
+      "within_24h",
+      1
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      15
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      5
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      16
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      8
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      28
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      24
+     ],
+     [
+      "within_24h",
+      "routine_followup",
+      1
+     ],
+     [
+      "within_24h",
+      "watchful_waiting",
+      1
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      13
+     ]
+    ],
+    "deepseek-v4-flash": [
+     [
+      "ed_now",
+      "ed_now",
+      39
+     ],
+     [
+      "routine_followup",
+      "ed_now",
+      10
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      9
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      1
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      16
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      23
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      12
+     ],
+     [
+      "watchful_waiting",
+      "within_24h",
+      1
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      26
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      13
+     ]
+    ],
+    "qwen3.7-flash": [
+     [
+      "ed_now",
+      "ed_now",
+      31
+     ],
+     [
+      "ed_now",
+      "within_24h",
+      8
+     ],
+     [
+      "routine_followup",
+      "routine_followup",
+      11
+     ],
+     [
+      "routine_followup",
+      "watchful_waiting",
+      3
+     ],
+     [
+      "routine_followup",
+      "within_24h",
+      22
+     ],
+     [
+      "watchful_waiting",
+      "routine_followup",
+      24
+     ],
+     [
+      "watchful_waiting",
+      "watchful_waiting",
+      12
+     ],
+     [
+      "within_24h",
+      "ed_now",
+      14
+     ],
+     [
+      "within_24h",
+      "routine_followup",
+      1
+     ],
+     [
+      "within_24h",
+      "within_24h",
+      24
+     ]
+    ]
+   }
+  },
+  "p3": {
+   "classes": [
+    "uptitrate",
+    "downtitrate",
+    "maintain",
+    "switch",
+    "check_adherence_or_adverse_effect"
+   ],
+   "n_items": 50,
+   "n_rounds": 3,
+   "gold_counts": {
+    "uptitrate": 8,
+    "downtitrate": 12,
+    "maintain": 12,
+    "switch": 6,
+    "check_adherence_or_adverse_effect": 12
+   },
+   "models": {
+    "gemini-3.1-pro": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      36
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      36
+     ],
+     [
+      "maintain",
+      "check_adherence_or_adverse_effect",
+      11
+     ],
+     [
+      "maintain",
+      "maintain",
+      16
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      9
+     ],
+     [
+      "switch",
+      "switch",
+      18
+     ],
+     [
+      "uptitrate",
+      "maintain",
+      6
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      18
+     ]
+    ],
+    "gemini-3.7-flash": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      20
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "switch",
+      5
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "uptitrate",
+      11
+     ],
+     [
+      "downtitrate",
+      "check_adherence_or_adverse_effect",
+      5
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      31
+     ],
+     [
+      "maintain",
+      "maintain",
+      18
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      18
+     ],
+     [
+      "switch",
+      "switch",
+      18
+     ],
+     [
+      "uptitrate",
+      "maintain",
+      6
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      18
+     ]
+    ],
+    "gpt-6-sol": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      36
+     ],
+     [
+      "downtitrate",
+      "check_adherence_or_adverse_effect",
+      14
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      22
+     ],
+     [
+      "maintain",
+      "maintain",
+      23
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      13
+     ],
+     [
+      "switch",
+      "check_adherence_or_adverse_effect",
+      2
+     ],
+     [
+      "switch",
+      "switch",
+      16
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      24
+     ]
+    ],
+    "deepseek-v4-pro": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      28
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "downtitrate",
+      2
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "switch",
+      3
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "uptitrate",
+      3
+     ],
+     [
+      "downtitrate",
+      "check_adherence_or_adverse_effect",
+      1
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      33
+     ],
+     [
+      "downtitrate",
+      "none",
+      1
+     ],
+     [
+      "downtitrate",
+      "switch",
+      1
+     ],
+     [
+      "maintain",
+      "check_adherence_or_adverse_effect",
+      2
+     ],
+     [
+      "maintain",
+      "downtitrate",
+      2
+     ],
+     [
+      "maintain",
+      "maintain",
+      13
+     ],
+     [
+      "maintain",
+      "switch",
+      1
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      18
+     ],
+     [
+      "switch",
+      "check_adherence_or_adverse_effect",
+      1
+     ],
+     [
+      "switch",
+      "switch",
+      17
+     ],
+     [
+      "uptitrate",
+      "check_adherence_or_adverse_effect",
+      1
+     ],
+     [
+      "uptitrate",
+      "downtitrate",
+      1
+     ],
+     [
+      "uptitrate",
+      "maintain",
+      5
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      17
+     ]
+    ],
+    "gpt-6-luna": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      34
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "uptitrate",
+      2
+     ],
+     [
+      "downtitrate",
+      "check_adherence_or_adverse_effect",
+      7
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      29
+     ],
+     [
+      "maintain",
+      "check_adherence_or_adverse_effect",
+      2
+     ],
+     [
+      "maintain",
+      "maintain",
+      21
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      13
+     ],
+     [
+      "switch",
+      "check_adherence_or_adverse_effect",
+      2
+     ],
+     [
+      "switch",
+      "switch",
+      16
+     ],
+     [
+      "uptitrate",
+      "maintain",
+      6
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      18
+     ]
+    ],
+    "kimi-k3": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      27
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "downtitrate",
+      3
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "switch",
+      2
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "uptitrate",
+      4
+     ],
+     [
+      "downtitrate",
+      "check_adherence_or_adverse_effect",
+      3
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      33
+     ],
+     [
+      "maintain",
+      "check_adherence_or_adverse_effect",
+      1
+     ],
+     [
+      "maintain",
+      "maintain",
+      13
+     ],
+     [
+      "maintain",
+      "switch",
+      3
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      19
+     ],
+     [
+      "switch",
+      "switch",
+      18
+     ],
+     [
+      "uptitrate",
+      "maintain",
+      6
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      18
+     ]
+    ],
+    "minimax-m3": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      27
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "downtitrate",
+      2
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "switch",
+      2
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "uptitrate",
+      5
+     ],
+     [
+      "downtitrate",
+      "check_adherence_or_adverse_effect",
+      2
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      34
+     ],
+     [
+      "maintain",
+      "maintain",
+      28
+     ],
+     [
+      "maintain",
+      "switch",
+      2
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      6
+     ],
+     [
+      "switch",
+      "switch",
+      18
+     ],
+     [
+      "uptitrate",
+      "downtitrate",
+      1
+     ],
+     [
+      "uptitrate",
+      "maintain",
+      5
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      18
+     ]
+    ],
+    "glm-5.3-flash": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      14
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "switch",
+      7
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "uptitrate",
+      15
+     ],
+     [
+      "downtitrate",
+      "check_adherence_or_adverse_effect",
+      9
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      27
+     ],
+     [
+      "maintain",
+      "check_adherence_or_adverse_effect",
+      1
+     ],
+     [
+      "maintain",
+      "maintain",
+      15
+     ],
+     [
+      "maintain",
+      "switch",
+      7
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      13
+     ],
+     [
+      "switch",
+      "switch",
+      18
+     ],
+     [
+      "uptitrate",
+      "check_adherence_or_adverse_effect",
+      1
+     ],
+     [
+      "uptitrate",
+      "maintain",
+      6
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      17
+     ]
+    ],
+    "deepseek-v4-flash": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      11
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "downtitrate",
+      3
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "switch",
+      7
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "uptitrate",
+      15
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      36
+     ],
+     [
+      "maintain",
+      "check_adherence_or_adverse_effect",
+      1
+     ],
+     [
+      "maintain",
+      "maintain",
+      12
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      23
+     ],
+     [
+      "switch",
+      "switch",
+      18
+     ],
+     [
+      "uptitrate",
+      "check_adherence_or_adverse_effect",
+      1
+     ],
+     [
+      "uptitrate",
+      "downtitrate",
+      2
+     ],
+     [
+      "uptitrate",
+      "maintain",
+      3
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      18
+     ]
+    ],
+    "qwen3.7-flash": [
+     [
+      "check_adherence_or_adverse_effect",
+      "check_adherence_or_adverse_effect",
+      3
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "downtitrate",
+      3
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "maintain",
+      3
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "switch",
+      8
+     ],
+     [
+      "check_adherence_or_adverse_effect",
+      "uptitrate",
+      19
+     ],
+     [
+      "downtitrate",
+      "downtitrate",
+      32
+     ],
+     [
+      "downtitrate",
+      "maintain",
+      4
+     ],
+     [
+      "maintain",
+      "maintain",
+      16
+     ],
+     [
+      "maintain",
+      "switch",
+      1
+     ],
+     [
+      "maintain",
+      "uptitrate",
+      19
+     ],
+     [
+      "switch",
+      "switch",
+      18
+     ],
+     [
+      "uptitrate",
+      "maintain",
+      6
+     ],
+     [
+      "uptitrate",
+      "uptitrate",
+      18
+     ]
+    ]
+   }
+  },
+  "p4": {
+   "classes": [
+    "true_change",
+    "analytic_biological_noise",
+    "preanalytical",
+    "method_difference"
+   ],
+   "n_items": 50,
+   "n_rounds": 3,
+   "gold_counts": {
+    "true_change": 13,
+    "analytic_biological_noise": 13,
+    "preanalytical": 12,
+    "method_difference": 12
+   },
+   "models": {
+    "gemini-3.1-pro": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      23
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      15
+     ],
+     [
+      "analytic_biological_noise",
+      "true_change",
+      1
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      36
+     ],
+     [
+      "preanalytical",
+      "method_difference",
+      1
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      35
+     ],
+     [
+      "true_change",
+      "true_change",
+      39
+     ]
+    ],
+    "gemini-3.7-flash": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      32
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      7
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      36
+     ],
+     [
+      "preanalytical",
+      "method_difference",
+      6
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      30
+     ],
+     [
+      "true_change",
+      "preanalytical",
+      5
+     ],
+     [
+      "true_change",
+      "true_change",
+      34
+     ]
+    ],
+    "gpt-6-sol": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      35
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      4
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      36
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      36
+     ],
+     [
+      "true_change",
+      "true_change",
+      39
+     ]
+    ],
+    "deepseek-v4-pro": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      11
+     ],
+     [
+      "analytic_biological_noise",
+      "method_difference",
+      7
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      12
+     ],
+     [
+      "analytic_biological_noise",
+      "true_change",
+      9
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      36
+     ],
+     [
+      "preanalytical",
+      "method_difference",
+      6
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      30
+     ],
+     [
+      "true_change",
+      "method_difference",
+      5
+     ],
+     [
+      "true_change",
+      "preanalytical",
+      5
+     ],
+     [
+      "true_change",
+      "true_change",
+      29
+     ]
+    ],
+    "gpt-6-luna": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      19
+     ],
+     [
+      "analytic_biological_noise",
+      "method_difference",
+      5
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      14
+     ],
+     [
+      "analytic_biological_noise",
+      "true_change",
+      1
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      32
+     ],
+     [
+      "method_difference",
+      "preanalytical",
+      4
+     ],
+     [
+      "preanalytical",
+      "method_difference",
+      4
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      32
+     ],
+     [
+      "true_change",
+      "method_difference",
+      9
+     ],
+     [
+      "true_change",
+      "preanalytical",
+      7
+     ],
+     [
+      "true_change",
+      "true_change",
+      23
+     ]
+    ],
+    "kimi-k3": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      13
+     ],
+     [
+      "analytic_biological_noise",
+      "method_difference",
+      5
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      17
+     ],
+     [
+      "analytic_biological_noise",
+      "true_change",
+      4
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      36
+     ],
+     [
+      "preanalytical",
+      "method_difference",
+      5
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      31
+     ],
+     [
+      "true_change",
+      "method_difference",
+      11
+     ],
+     [
+      "true_change",
+      "preanalytical",
+      8
+     ],
+     [
+      "true_change",
+      "true_change",
+      20
+     ]
+    ],
+    "minimax-m3": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      19
+     ],
+     [
+      "analytic_biological_noise",
+      "method_difference",
+      6
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      13
+     ],
+     [
+      "analytic_biological_noise",
+      "true_change",
+      1
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      36
+     ],
+     [
+      "preanalytical",
+      "method_difference",
+      4
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      32
+     ],
+     [
+      "true_change",
+      "method_difference",
+      22
+     ],
+     [
+      "true_change",
+      "preanalytical",
+      8
+     ],
+     [
+      "true_change",
+      "true_change",
+      9
+     ]
+    ],
+    "glm-5.3-flash": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      13
+     ],
+     [
+      "analytic_biological_noise",
+      "method_difference",
+      6
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      16
+     ],
+     [
+      "analytic_biological_noise",
+      "true_change",
+      4
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      34
+     ],
+     [
+      "method_difference",
+      "preanalytical",
+      2
+     ],
+     [
+      "preanalytical",
+      "method_difference",
+      5
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      30
+     ],
+     [
+      "preanalytical",
+      "true_change",
+      1
+     ],
+     [
+      "true_change",
+      "method_difference",
+      11
+     ],
+     [
+      "true_change",
+      "preanalytical",
+      14
+     ],
+     [
+      "true_change",
+      "true_change",
+      14
+     ]
+    ],
+    "deepseek-v4-flash": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      16
+     ],
+     [
+      "analytic_biological_noise",
+      "method_difference",
+      7
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      13
+     ],
+     [
+      "analytic_biological_noise",
+      "true_change",
+      3
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      36
+     ],
+     [
+      "preanalytical",
+      "method_difference",
+      6
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      30
+     ],
+     [
+      "true_change",
+      "method_difference",
+      16
+     ],
+     [
+      "true_change",
+      "preanalytical",
+      9
+     ],
+     [
+      "true_change",
+      "true_change",
+      14
+     ]
+    ],
+    "qwen3.7-flash": [
+     [
+      "analytic_biological_noise",
+      "analytic_biological_noise",
+      13
+     ],
+     [
+      "analytic_biological_noise",
+      "method_difference",
+      6
+     ],
+     [
+      "analytic_biological_noise",
+      "preanalytical",
+      15
+     ],
+     [
+      "analytic_biological_noise",
+      "true_change",
+      5
+     ],
+     [
+      "method_difference",
+      "method_difference",
+      34
+     ],
+     [
+      "method_difference",
+      "preanalytical",
+      2
+     ],
+     [
+      "preanalytical",
+      "method_difference",
+      5
+     ],
+     [
+      "preanalytical",
+      "preanalytical",
+      30
+     ],
+     [
+      "preanalytical",
+      "true_change",
+      1
+     ],
+     [
+      "true_change",
+      "method_difference",
+      17
+     ],
+     [
+      "true_change",
+      "preanalytical",
+      13
+     ],
+     [
+      "true_change",
+      "true_change",
+      9
+     ]
+    ]
+   }
+  }
+ }
+}

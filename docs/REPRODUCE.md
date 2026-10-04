@@ -145,7 +145,7 @@ What each check shows, and what to look for:
 
 | | Why |
 |---|---|
-| Model responses behind the published board | The responses and judge votes are run artifacts. A board you run yourself (§3) reproduces the procedure and gives new model answers, so its scores differ from the published board by sampling noise. The published board has no repeat-noise reading of its composite; the per-dimension repeat noise is in the [data card](DATA_CARD.md#current-evaluation) |
+| Model responses behind the published board | The responses and judge votes are run artifacts. A board you run yourself (§3) reproduces the procedure and gives new model answers, so its scores differ from the published board by sampling noise. The published board has no repeat-noise reading of its composite; the per-dimension repeat noise is in the [data card](DATA_CARD.md#1x-evaluation-historical) |
 | The real-EMR calibration round | Its derivatives are not in the repository. See [`ETHICS.md`](ETHICS.md) §2 |
 
 ## 6. Before you read a number

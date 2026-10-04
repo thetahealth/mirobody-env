@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Real-browser layout check for `web/demo/index.html`.
 
-Opens the built page in headless Chromium at 390, 900, 1440 and 1600 px, in English and Chinese,
-light and dark (16 configurations), presses "Generate" so every step renders, and fails
-when the page is visibly broken:
+Opens the built page in headless Chromium at 360, 390 and 430 px (phones), 768 px (tablet), 900,
+1440 and 1600 px, in English and Chinese, light and dark (28 configurations), and fails when the
+page is visibly broken:
 
 | kind | fails when |
 |---|---|
@@ -12,18 +12,20 @@ when the page is visibly broken:
 | `overflow` | an element sticks out past the viewport edge (clipped, so it cannot be scrolled to) |
 | `control-outside` | a button / link / input / summary is not fully inside the viewport, or is cut off by its own scroll box |
 | `control-overlap` | two controls intersect |
+| `tap-target` | at 900 px or narrower, a control is less than 40 px tall (a checkbox is measured by its label) |
 | `label-overlap` | a chart text label intersects another piece of text (another label, a legend, body copy) |
 | `label-on-data` | a chart text label is drawn on top of a plotted line or point |
-| `axis-misaligned` | two charts stacked in one card start their day axis at different x |
 | `truncated` | text is cut with an ellipsis and has no `title` carrying the full text |
 | `wrapped-number` | a number cell or tag breaks over two lines |
 | `empty-dd` | a `<dd>` has no content |
 | `empty-card` | a card has no content, or starts with a tall blank band |
 | `console` | the console shows an error, or the page throws |
 
-Every configuration is checked twice: as first rendered, and with every `<details>` opened.
+Every configuration is checked as first rendered, with every `<details>` opened, with both chart
+layers of the first act switched, on each of the four packs of the second act, and with another
+model selected in the third act.
 
-    python web/demo/layout_check.py                  # 16 configurations, exit 1 on any failure
+    python web/demo/layout_check.py                  # 28 configurations, exit 1 on any failure
     python web/demo/layout_check.py --shots DIR      # also save a full-page PNG per configuration
     python web/demo/layout_check.py --selftest       # negative controls: each defect kind is injected
                                                      # into a copy of the page and must be reported
@@ -44,7 +46,7 @@ import tempfile
 HERE = pathlib.Path(__file__).resolve().parent
 PAGE = HERE / "index.html"
 
-WIDTHS = (390, 900, 1440, 1600)
+WIDTHS = (360, 390, 430, 768, 900, 1440, 1600)
 LANGS = ("en", "zh")
 SCHEMES = ("light", "dark")
 
@@ -68,7 +70,7 @@ AUDIT_JS = r"""
   const inter = (a, b, m) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > m
                           && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > m;
   // Boxes that are meant to scroll sideways. Anything inside them may extend past the viewport.
-  const SCROLLERS = ".rail, .tablewrap, .heatwrap, .scroll, .toc";
+  const SCROLLERS = ".tablewrap, .scroll";
   const scroller = e => {
     for (let p = e.parentElement; p && p !== document.body; p = p.parentElement) {
       const ox = getComputedStyle(p).overflowX;
@@ -90,7 +92,7 @@ AUDIT_JS = r"""
   const header = document.querySelector("header .wrap");
   if (header) {
     const expected = contentEdges(header);
-    document.querySelectorAll(".flow, .flow section > .wrap, footer.wrap").forEach(e => {
+    document.querySelectorAll("main section > .wrap, footer.wrap").forEach(e => {
       const actual = contentEdges(e);
       if (actual.some((x, i) => Math.abs(x - expected[i]) > 1))
         add("content-alignment", name(e) + " edges " + actual.map(Math.round)
@@ -135,9 +137,14 @@ AUDIT_JS = r"""
     if (a.e.contains(b.e) || b.e.contains(a.e)) continue;
     if (inter(a.r, b.r, 2)) add("control-overlap", name(a.e) + " / " + name(b.e) + " in " + where(a.e));
   }
+  // tap-target: on a touch-sized screen every control is at least 40 px tall
+  if (vw <= 900) ctrls.forEach(c => {
+    const box = c.e.matches("input[type=checkbox]") && c.e.closest("label") ? R(c.e.closest("label")) : R(c.e);
+    if (box.height < 39.5) add("tap-target", name(c.e) + " in " + where(c.e) + " is " + Math.round(box.height) + " px tall");
+  });
 
   // text rectangles, one entry per line box of every visible text node
-  const CHART = ".plot, .strip, .striplab, .legend, .heatlegend, .axticks, .tl, .cs, .wf, .gstack";
+  const CHART = ".fig, .legend";
   const texts = [];
   const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let n = tw.nextNode(); n; n = tw.nextNode()) {
@@ -170,7 +177,7 @@ AUDIT_JS = r"""
   });
   // label-on-data: a chart label drawn over a plotted path or point
   const marks = [];
-  document.querySelectorAll(".plot svg, .tl-plot svg, .cs svg").forEach(svg => {
+  document.querySelectorAll(".fig svg").forEach(svg => {
     if (!shown(svg)) return;
     const pt = svg.createSVGPoint();
     svg.querySelectorAll("path").forEach(p => {
@@ -187,10 +194,6 @@ AUDIT_JS = r"""
       const s = pt.matrixTransform(m); marks.push([s.x, s.y, svg]);
     });
   });
-  document.querySelectorAll(".strip .dot").forEach(d => {
-    if (!shown(d)) return; const r = R(d);
-    for (let x = r.left + 1; x <= r.right - 1; x += 2) for (let y = r.top + 1; y <= r.bottom - 1; y += 2) marks.push([x, y, d]);
-  });
   const flagged = new Set();
   texts.forEach(a => {
     if (!a.chart || flagged.has(a.n)) return;
@@ -198,18 +201,6 @@ AUDIT_JS = r"""
     const hit = marks.find(([x, y]) => x > r.left + 1 && x < r.right - 1 && y > r.top + 2 && y < r.bottom - 2);
     if (hit) { flagged.add(a.n); add("label-on-data", '"' + a.s + '" in ' + where(a.p)); }
   });
-
-  // axis-misaligned: charts stacked in one card (same column) share their day axis
-  const boxes = [...document.querySelectorAll(".plot .plotbox")].filter(shown)
-    .map(b => ({ b, r: R(b), card: b.closest(".panel") }));
-  boxes.forEach((a, i) => boxes.slice(i + 1).forEach(c => {
-    if (!a.card || a.card !== c.card) return;
-    const ov = Math.min(a.r.right, c.r.right) - Math.max(a.r.left, c.r.left);
-    if (ov < 0.8 * Math.max(a.r.width, c.r.width) || Math.abs(a.r.right - c.r.right) > 1) return;
-    if (Math.abs(a.r.left - c.r.left) > 1)
-      add("axis-misaligned", "day axes start " + Math.round(Math.abs(a.r.left - c.r.left))
-          + " px apart in " + where(a.b));
-  }));
 
   // truncated
   all.forEach(e => {
@@ -221,7 +212,7 @@ AUDIT_JS = r"""
   });
 
   // wrapped-number
-  document.querySelectorAll("td.num, th.num, .tag, .figure b").forEach(e => {
+  document.querySelectorAll("td.cell, .knob b, .gold b").forEach(e => {
     if (!shown(e) || !e.textContent.trim()) return;
     const lh = parseFloat(getComputedStyle(e).lineHeight) || 20;
     const rg = document.createRange(); rg.selectNodeContents(e);
@@ -237,7 +228,7 @@ AUDIT_JS = r"""
   });
 
   // empty-card: nothing inside, or the first visible content starts far below the top edge
-  document.querySelectorAll(".panel, .dimcard").forEach(c => {
+  document.querySelectorAll(".card").forEach(c => {
     if (!shown(c)) return;
     if (!c.textContent.trim() && !c.querySelector("svg, input, select, textarea, img")) {
       add("empty-card", name(c) + " in " + where(c)); return;
@@ -288,18 +279,15 @@ def audit(browser, page_path: pathlib.Path, width: int, lang: str, scheme: str,
     initial = pg.evaluate("""() => ({theme: document.documentElement.getAttribute('data-theme'),
         background: getComputedStyle(document.body).backgroundColor})""")
     theme_fails = []
-    if initial != {"theme": "light", "background": "rgb(250, 250, 248)"}:
+    if initial != {"theme": "light", "background": "rgb(249, 249, 247)"}:
         theme_fails.append({"kind": "theme", "detail": f"initial {scheme}: {initial}"})
     if scheme == "dark":
         pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'dark')")
         actual = pg.evaluate("""() => ({theme: document.documentElement.getAttribute('data-theme'),
             background: getComputedStyle(document.body).backgroundColor})""")
-        if actual != {"theme": "dark", "background": "rgb(13, 13, 14)"}:
+        if actual != {"theme": "dark", "background": "rgb(13, 13, 13)"}:
             theme_fails.append({"kind": "theme", "detail": f"manual dark: {actual}"})
-    btn = pg.locator("#btn-born")
-    if btn.count():
-        btn.first.click()
-    pg.wait_for_timeout(700)
+    pg.wait_for_timeout(500)
     pg.evaluate("() => window.scrollTo(0, 0)")
     pg.wait_for_timeout(150)
     if inject:
@@ -308,48 +296,36 @@ def audit(browser, page_path: pathlib.Path, width: int, lang: str, scheme: str,
     fails = theme_fails + pg.evaluate(AUDIT_JS)
     if shot:
         pg.screenshot(path=str(shot), full_page=True)
-    pg.evaluate("() => document.querySelectorAll('details').forEach(d => d.open = true)")
-    pg.wait_for_timeout(250)
-    fails += [f for f in pg.evaluate(AUDIT_JS) if f not in fails]
-    # The tool track has an extra scored column and a separate, unranked budget panel.
-    pg.locator("#score-track").select_option("trace")
-    pg.locator("#score-dimension").select_option("tool_target_grounded_rate")
-    pg.evaluate("() => document.querySelectorAll('details').forEach(d => d.open = true)")
-    pg.wait_for_timeout(250)
-    fails += [f for f in pg.evaluate(AUDIT_JS) if f not in fails]
+
+    def again(js: str | None = None, wait: int = 200) -> None:
+        if js:
+            pg.evaluate(js)
+        pg.wait_for_timeout(wait)
+        fails.extend(f for f in pg.evaluate(AUDIT_JS) if f not in fails)
+
+    again("() => document.querySelectorAll('details').forEach(d => d.open = true)")
+    # the other layer state of the first act: truth only, then withheld after today
+    again("""() => { const n = document.querySelector('#L-noise'), c = document.querySelector('#L-cut');
+        n.checked = false; n.dispatchEvent(new Event('change', {bubbles: true}));
+        c.checked = true; c.dispatchEvent(new Event('change', {bubbles: true})); }""")
+    for key in ("pack2", "p3", "p4", "m2"):
+        again(f"() => document.querySelector('#tabs .tab[data-p=\"{key}\"]').click()")
+    again("""() => { const s = document.querySelector('#mp-model'); s.value = s.options[s.options.length - 1].value;
+        s.dispatchEvent(new Event('change', {bubbles: true}));
+        document.querySelectorAll('details').forEach(d => d.open = true); }""")
     fails += [{"kind": "console", "detail": e[:200]} for e in errs]
-    pg.locator("#judge-method").select_option("llm")
-    pg.evaluate("() => document.querySelectorAll('.criterion-details').forEach(d => d.open = true)")
-    pg.wait_for_timeout(100)
-    fails += [f for f in pg.evaluate(AUDIT_JS) if f not in fails]
-    pg.locator("#judge-reset").click()
-    # The v5 blocks in their other states: the truth view, a replay half-way, another answer
-    # day with another model selected, and a zoomed case timeline.
-    pg.evaluate("""() => {
-        const c = (s) => { const n = document.querySelector(s); if (n) n.click(); };
-        c('#cr-view button[data-v="truth"]');
-        const r = document.querySelector('#rp-scrub');
-        if (r){ r.value = String(Math.round(+r.max / 2)); r.dispatchEvent(new Event('input', {bubbles: true})); }
-        c('#mx-slice button');
-        const rows = document.querySelectorAll('#mx tbody tr[data-solver]');
-        if (rows.length > 2) rows[2].click();
-        const t = document.querySelector('#tl-case'); if (t && t._tl) t._tl.zoom(60, 200);
-        document.querySelectorAll('details').forEach(d => d.open = true);
-    }""")
-    pg.wait_for_timeout(250)
-    fails += [f for f in pg.evaluate(AUDIT_JS) if f not in fails]
     ctx.close()
     return fails
 
 
-def run_matrix(page_path: pathlib.Path, shots: pathlib.Path | None) -> int:
+def run_matrix(page_path: pathlib.Path, shots: pathlib.Path | None, widths=WIDTHS, langs=LANGS, schemes=SCHEMES) -> int:
     from playwright.sync_api import sync_playwright
     total = 0
     with sync_playwright() as p:
         b = launch(p)
-        for w in WIDTHS:
-            for lang in LANGS:
-                for scheme in SCHEMES:
+        for w in widths:
+            for lang in langs:
+                for scheme in schemes:
                     tag = f"{lang}-{w}-{scheme}"
                     shot = shots / f"{tag}.png" if shots else None
                     fails = audit(b, page_path, w, lang, scheme, shot)
@@ -358,7 +334,7 @@ def run_matrix(page_path: pathlib.Path, shots: pathlib.Path | None) -> int:
                     for f in fails:
                         print(f"     {f['kind']:16s} {f['detail']}")
         b.close()
-    print(f"\n{total} layout failure(s) across {len(WIDTHS) * len(LANGS) * len(SCHEMES)} configurations")
+    print(f"\n{total} layout failure(s) across {len(widths) * len(langs) * len(schemes)} configurations")
     return 1 if total else 0
 
 
@@ -366,45 +342,39 @@ def run_matrix(page_path: pathlib.Path, shots: pathlib.Path | None) -> int:
 #: raise its own kind; `console` is injected by the copy itself (a script tag), the rest by
 #: DOM edits after the page has rendered.
 DEFECTS = {
-    "content-alignment": """() => { document.querySelector('.flow').style.marginLeft = '24px'; }""",
-    "label-overlap": """() => { const a = document.querySelector('.plot .axlab');
+    "content-alignment": """() => { document.querySelector('#act2 > .wrap').style.marginLeft = '24px'; }""",
+    "label-overlap": """() => { const a = document.querySelector('#c1 .axlab');
         const b = a.cloneNode(true); b.textContent = 'overlapping label'; a.parentElement.appendChild(b);
-        b.style.left = a.offsetLeft + 'px'; b.style.top = a.offsetTop + 'px'; b.style.transform = 'none'; }""",
-    "label-on-data": """() => { const svg = document.querySelector('.plot svg'); const path = svg.querySelector('path');
+        b.style.left = a.style.left; b.style.top = a.style.top; }""",
+    "label-on-data": """() => { const svg = document.querySelector('#c1 svg'); const path = svg.querySelector('path');
         const L = path.getTotalLength(), q = path.getPointAtLength(L / 2), m = path.getScreenCTM();
         const pt = svg.createSVGPoint(); pt.x = q.x; pt.y = q.y; const s = pt.matrixTransform(m);
-        const host = svg.closest('.plot'), h = host.getBoundingClientRect();
+        const host = svg.closest('.fig'), h = host.getBoundingClientRect();
         const n = document.createElement('span'); n.className = 'axlab'; n.textContent = 'on the line';
         n.style.left = (s.x - h.left) + 'px'; n.style.top = (s.y - h.top - 7) + 'px'; host.appendChild(n); }""",
-    "label-on-data@timeline": """() => { const pl = document.querySelector('#tl-case .tl-plot[data-lane=weight]');
-        const path = pl.querySelector('path'); const L = path.getTotalLength(), q = path.getPointAtLength(L / 2);
-        const m = path.getScreenCTM(), svg = pl.querySelector('svg'), pt = svg.createSVGPoint(); pt.x = q.x; pt.y = q.y;
-        const s = pt.matrixTransform(m), h = pl.getBoundingClientRect();
-        const n = document.createElement('span'); n.className = 'axlab'; n.textContent = 'on the lane';
-        n.style.left = (s.x - h.left) + 'px'; n.style.top = (s.y - h.top - 7) + 'px'; pl.appendChild(n); }""",
-    "axis-misaligned": """() => { const b = document.querySelector('#p-c .plotbox');
-        b.style.marginLeft = (parseFloat(b.style.marginLeft) + 24) + 'px'; }""",
     "empty-dd": """() => { const d = document.querySelector('dd'); d.innerHTML = ''; }""",
     "overflow": """() => { const d = document.createElement('div'); d.style.width = '3000px'; d.style.height = '4px';
-        document.querySelector('#s3 .wrap').appendChild(d); }""",
+        document.querySelector('#act1 .wrap').appendChild(d); }""",
     "hscroll": """() => { const s = document.createElement('style');
         s.textContent = 'html,body{overflow-x:visible!important}'; document.head.appendChild(s);
         const d = document.createElement('div'); d.style.width = '3000px'; d.style.height = '4px';
-        document.querySelector('#s3 .wrap').appendChild(d); }""",
+        document.querySelector('#act1 .wrap').appendChild(d); }""",
     "control-outside": """() => { const b = document.createElement('button'); b.textContent = 'off screen';
-        b.style.position = 'relative'; b.style.left = (innerWidth + 50) + 'px';
-        document.querySelector('#s1 .wrap').prepend(b); }""",
+        b.style.position = 'relative'; b.style.left = (innerWidth + 50) + 'px'; b.style.minHeight = '44px';
+        document.querySelector('#act1 .wrap').prepend(b); }""",
     "control-overlap": """() => { const t = document.querySelector('#btn-theme'); const b = document.createElement('button');
         b.textContent = 'X'; b.style.position = 'absolute'; const r = t.getBoundingClientRect();
         b.style.left = (r.left + scrollX) + 'px'; b.style.top = (r.top + scrollY) + 'px'; b.style.zIndex = 99;
-        document.body.appendChild(b); }""",
+        b.style.minHeight = '44px'; document.body.appendChild(b); }""",
+    "tap-target": """() => { const s = document.querySelector('#k-sex'); s.style.setProperty('min-height', '0', 'important');
+        s.style.setProperty('height', '22px', 'important'); }""",
     "truncated": """() => { const s = document.createElement('span'); s.textContent = 'a label that is much too long to fit';
         Object.assign(s.style, {display: 'block', width: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'});
-        document.querySelector('#s1 .wrap').appendChild(s); }""",
-    "wrapped-number": """() => { const t = document.querySelector('.tag'); t.textContent = '25 sets of something';
+        document.querySelector('#act1 .wrap').appendChild(s); }""",
+    "wrapped-number": """() => { const t = document.querySelector('.knob b'); t.textContent = '25 sets of something';
         t.style.whiteSpace = 'normal'; t.style.display = 'inline-block'; t.style.width = '40px'; }""",
-    "empty-card": """() => { const p = document.createElement('div'); p.className = 'panel';
-        p.style.height = '80px'; document.querySelector('#s1 .wrap').appendChild(p); }""",
+    "empty-card": """() => { const p = document.createElement('div'); p.className = 'card';
+        p.style.height = '80px'; document.querySelector('#act1 .wrap').appendChild(p); }""",
     "console": None,
 }
 
@@ -444,6 +414,8 @@ def main() -> int:
     ap.add_argument("--page", type=pathlib.Path, default=PAGE)
     ap.add_argument("--shots", type=pathlib.Path)
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--widths", type=lambda v: tuple(int(x) for x in v.split(",")), default=WIDTHS,
+                    help="comma-separated widths (default: the full matrix)")
     a = ap.parse_args()
     if not a.page.is_file():
         print(f"{a.page} is missing; run `python web/demo/build.py` first", file=sys.stderr)
@@ -458,7 +430,7 @@ def main() -> int:
         return selftest(a.page.resolve())
     if a.shots:
         a.shots.mkdir(parents=True, exist_ok=True)
-    return run_matrix(a.page.resolve(), a.shots)
+    return run_matrix(a.page.resolve(), a.shots, widths=a.widths)
 
 
 if __name__ == "__main__":

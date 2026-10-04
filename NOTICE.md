@@ -11,10 +11,10 @@ licence is, and how it is used. It complements — it does not replace — [`LIC
 
 ## 1. Bundled — code that ships inside this repository
 
-### `core/`
+### `haenv_kernel/`
 
 The L0 kernel this project builds on. It carries its own licence file at
-[`core/LICENSE`](core/LICENSE) — **MIT,
+[`haenv_kernel/LICENSE`](haenv_kernel/LICENSE) — **MIT,
 Copyright (c) 2026 Theta Health** — and is therefore *not* covered by the repository's
 own MIT grant; read that file instead.
 

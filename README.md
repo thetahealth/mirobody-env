@@ -18,6 +18,7 @@
   <strong>English</strong> &middot; <a href="https://github.com/thetahealth/mirobody-env/blob/main/README.zh-CN.md">简体中文</a>
   &nbsp;|&nbsp;
   <a href="https://thetahealth.github.io/mirobody-env/">Live demo</a> &middot;
+  <a href="#the-four-packs">Packs</a> &middot;
   <a href="#synthetic-patients">Patients</a> &middot;
   <a href="#quick-start">Quick start</a> &middot;
   <a href="#how-it-works">How it works</a> &middot;
@@ -28,8 +29,10 @@
   <a href="#citation">Cite</a>
 </p>
 
-> Answer-bearing files carry canary strings ([`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md)). Please exclude them from
-> training data.
+> The whole pipeline is public: the world that renders the patients, the generators that write
+> the questions, and the judges. The canary string ([`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md))
+> marks this pack's text so its presence in a corpus can be detected; training on the public
+> sample is permitted; the official board uses private seeds.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_patient.png" alt="One synthetic patient with type 2 diabetes on tirzepatide: daily home weight and clinic weight, steps and resting heart rate, dose and adherence, and reported events; the record after index time T is shaded as hidden" width="92%">
@@ -43,72 +46,108 @@ begins after <code>T</code> at the latent reversal point.</sub></p>
 HAEnv (Health Agent Environment) lives in the `mirobody-env` repository and installs as the `haenv`
 Python package and command-line tool.
 
-HAEnv grades clinical judgement over time. A synthetic patient's record grows over months; the
-agent sees it up to an index time `T` and is asked to forecast, diagnose or revise. The answer lies
-after `T`, or, in the diagnosis formats, is fixed before `T` and hidden from the agent.
+HAEnv grades clinical decisions on a patient's record over time. A synthetic patient's record
+grows over months; the agent sees it up to an index time `T` and makes one decision. The world
+that rendered the record fixes the right answer before the record is written, and the answer is
+hidden from the agent.
 
 HAEnv generates the patients, sets their difficulty and derives their gold standard. To run an
 existing system against published health benchmarks such as ESL-Bench, use
 [mirobody-eval](https://github.com/thetahealth/mirobody-eval).
 
-- **Time-indexed prompts.** The judges score when the agent changed its assessment as well as what
-  it concluded.
-- **Coherent patients.** Weight, laboratory values, medication, wearable streams and life events are
-  rendered by one set of rules on one timeline.
-- **Gold standard first.** Outcome, driver, reversal point, adherence and noise are fixed before the
-  course is rendered, and the gold standard is derived from them by code.
+### The four packs
+
+The benchmark is four task packs. Each item asks for one core decision.
+
+| Pack | Decision at `T` | Answer | Judged by |
+|---|---|---|---|
+| ① Differential diagnosis | which conditions explain the record, when a second condition hides behind findings the first one explains; whether a clinician should review | a differential, the tests to order, a review flag | code against the world's truth; one LLM judge matches the free-text diagnoses and tests to the gold |
+| ② Acute triage | where the patient should go now | `ed_now` · `within_24h` · `routine_followup` · `watchful_waiting` | code, against the world's truth |
+| ③ Chronic medication adjustment | what to do with the drug at this follow-up visit | `uptitrate` · `downtitrate` · `maintain` · `switch` · `check_adherence_or_adverse_effect` | code, against the dose line, refills and the control target the world records |
+| ④ Follow-up interpretation | whether the change since the last result is real | `true_change` · `analytic_biological_noise` · `preanalytical` · `method_difference`, plus the size of the true change | code, against the world's true values and its per-reading perturbation records |
+
+The two diagnosis tracks of the 1.x board, `ddx-timeline` and `ddx-workup`, stay in the
+repository as bridge tracks: pack ① carries bridge items drawn from them, and they are the only
+link between the 1.x board and the packs.
+
+- **Gold standard first.** Disease, drug response, adherence, true lab values and measurement
+  noise are set before the course is rendered, and each pack's gold is derived from them by code.
+- **Coherent patients.** Weight, laboratory values, medication, wearable streams and life events
+  are rendered by one set of rules on one timeline. A known comorbidity enters the world tables, so
+  in packs ③ and ④ it changes the right answer where it should.
+- **Records read like records.** Complaints are in the patient's own words, and the record lists
+  the patient's known conditions with the medication for each.
 - **Difficulty as a parameter.** Measurement artifacts, distractor events and the timing of the
   clinical turn are settings in the job file.
-- **Safety failures are not averaged away.** Nine hard gates, among them an unauthorised medication
-  change, fabricated evidence, a missed red flag, over-triage and premature closure, zero the whole
-  case whatever else scored well; in the `slices` format some action-level gates, a missed
-  clinician review among them, zero only the time slice where they fire. A tenth,
-  `acted_on_unverified_signal` (escalating on a reading the gold marks as an artifact), is graded
-  and reported but does not enter the multiplier.
+- **Safety failures are not averaged away.** Hard gates, among them an unauthorised medication
+  change, fabricated evidence, a missed emergency and premature closure, zero the item whatever
+  else scored well. Two propensity gates, over-triage and a missed clinician review, are graded and
+  reported but do not enter the multiplier.
 
 | Term | Meaning |
 |---|---|
-| index time `T` | the cut: the prompt holds the record up to `T`; grading uses what follows |
-| latent variables | outcome, driver, reversal point, adherence and noise, set in the job file before the course is rendered |
+| index time `T` | the cut: the prompt holds the record up to `T`; grading uses what follows or what the world fixed |
+| latent variables | the hidden state the world fixes before rendering: disease, drug response, adherence, true values, noise |
+| pack | one task's question set, built from a job file by its generator and checked by the pack audit |
+| seed | orders which cases and answer classes a pack draws; a pack records only the seed's sha256 |
 | emission gate | the checks a generated case must pass to be released: premise check, per-item verification, leak probe |
 | hard gate | a safety failure that zeroes its scoring unit |
-| format (`geometry` in code) | how questions are posed: `single`, `gated`, `slices` or `multi` |
 | batch | one run directory: its cases, answers, scores and fingerprints |
 
-### What ships
+### Packs are pipelines
+
+A pack is not a fixed file. You choose its size and seed, and one command writes the job, builds
+the pack with the deterministic generator and runs the generation-time audit that every pack
+shares. It makes no model call:
+
+```bash
+uv run --with scikit-learn --with joblib python tools/make_pack.py --pack p4 --n 50 --out packs/p4
+```
+
+`--pack` is `m2` (①), `pack2` (②), `p3` (③) or `p4` (④); `--n` is the item count (50, 100, …);
+`--seed` (or `HAENV_PACK_SEED`) sets the seed. The pack is the same for the same pack, size and
+seed. The job carries a header `pack: {n_items, seed_sha256}`, and `batch.json` records the size,
+the seed's hash and the job, never the seed. Class shares follow each pack's proportion table at
+every size.
+
+| Pack | Job file | Items at N = 50 | Answer classes at N = 50 |
+|---|---|---:|---|
+| ① Differential diagnosis | `inputs/m2-pack1.job.yaml` | 50 | 34 new items (24 with a hidden condition, 10 without) and 16 bridge items |
+| ② Acute triage | `inputs/pack2-triage.job.yaml` | 50 | `ed_now` 13 · `within_24h` 13 · `routine_followup` 12 · `watchful_waiting` 12 |
+| ③ Chronic medication adjustment | `inputs/p3-meds.job.yaml` | 50 | `maintain` 12 · `downtitrate` 12 · `check_adherence_or_adverse_effect` 12 · `uptitrate` 8 · `switch` 6 |
+| ④ Follow-up interpretation | `inputs/p4-followup.job.yaml` | 50 | `true_change` 13 · `analytic_biological_noise` 13 · `preanalytical` 12 · `method_difference` 12 |
+
+- **Public sample packs.** The shipped job files use the public seed; building them reproduces the
+  public sample packs.
+- **Official boards use a private seed.** The board's batch records only the seed's hash, so the
+  board's items cannot be rebuilt from the repository. When a board is replaced, its seed is
+  published and the retired board becomes reproducible.
+- **The audit is a release gate.** `tools/pack_audit.py` checks the built batch: every cell the job
+  planned is present, gold re-derived from the records equals the stored gold, and question-blind
+  stubs and surface features do not predict the answer. `haenv run` refuses a pack's items without
+  a passing audit.
+
+The bridge tracks and two smaller example tasks ship as plain job files:
 
 | Task | Job file | Case specifications | Format |
 |---|---|---|---|
+| Differential diagnosis at several time points (bridge) | `inputs/ddx-timeline.job.yaml` | 145 | questions at several time points |
+| Budgeted test ordering (bridge) | `inputs/ddx-workup.job.yaml` | 145 | the agent orders tests against a budget |
 | Weight-regain forecast and driver attribution | `inputs/early_warning-20.job.yaml` | 20 | single question at `T` |
 | Multi-round follow-up review | `inputs/tracking_review-20.job.yaml` | 20 | rounds; the agent may revise |
-| Differential diagnosis, tests, urgency, insufficient information | `inputs/ddx-timeline.job.yaml` | 145 | questions at several time points |
-| Budgeted test ordering | `inputs/ddx-workup.job.yaml` | 145 | the agent orders tests against a budget |
 
-A specification becomes a case only if it passes the emission gate; both diagnosis packs hold
-all 145 specifications of their job files. They were generated with the LLM generator;
-regenerating either one offline (`--gen deterministic`) emits 144, since `JD-32v2` fails its
-anchor check (`anchor_not_honored`). The clinical registry behind the diagnosis tasks holds 67
-condition specifications (single conditions and co-morbid combinations). The frozen question packs,
-their case counts and the known gaps are in the [data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md).
+A specification becomes a case only if it passes the emission gate. The question packs, their case
+counts and the known gaps are in the [data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md).
 
-**One pipeline, several tasks.** Those four rows are four *tasks*, not four programs. A task is a
-gold-standard shape plus an answer contract — forecast an outcome and name its driver; rank a
-differential and say whether the threads are one process, several, or unrelated; buy tests against a
-budget. The same generator renders their patients, the same emission gate checks them item by item,
-and the same judge table scores them; what differs is the gold shape and the wording, and a case is
-assigned to a task by **the gold standard it carries**, not by a label on the job file.
-
-The same patients are also posed in four formats, `single` / `gated` / `slices` / `multi` (see
-[How it works](#how-it-works)); format is a condition *inside* a task, so a diagnosis pack can pose
-its cases as one question at `T`, as several time points, or as rounds the agent may revise. The
-judges are registered in one mount table across those formats, and each carries the list of formats it
-is mounted on. Adding a task type of your own is a package outside this repository, not a change to
-it: [Evaluate your own agent](#evaluate-your-own-agent) and
+**One pipeline, several tasks.** A task is a gold-standard shape plus an answer contract. The same
+world renders every pack's patients, the same emission gate checks them item by item, and each pack
+registers its gold and its scoring as a judge group. Adding a task type of your own is a package
+outside this repository, not a change to it: [Evaluate your own agent](#evaluate-your-own-agent) and
 [`docs/design/external-task-contract.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md).
 
 **Language.** Prompts and case content are in Chinese: the instruction block and the free-text
-fields of the record (reported symptoms, context, events). Field names, stream names, enumerated
-answer values and identifiers are in English.
+fields of the record (complaints, context, events). Field names, stream names, enumerated answer
+values and identifiers are in English.
 
 ## Synthetic patients
 
@@ -188,6 +227,20 @@ regenerating its questions would score new questions against old answers. For th
 `verify` runs before `run`.
 </details>
 
+Build a public sample pack the same way, with no model call (the audit needs `scikit-learn`):
+
+```bash
+uv run --with scikit-learn --with joblib python tools/make_pack.py --pack p4 --n 50 --out packs/p4
+```
+
+It exits 0 when the build and every audit gate pass, and prints the pack record:
+
+```
+{"pack": "p4", "n_items": 50, "seed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "steps": {"gen": 0, "build": 0, "audit": 0}, "job": "<repo>/packs/p4/p4-followup.job.yaml", "batch": "<repo>/packs/p4/results/joint_dx/p4-followup/<batch>", "ref": null}
+```
+
+The built batch is under `packs/p4/results/`, the audit under `packs/p4/audit/`.
+
 <details>
 <summary>Install from PyPI</summary>
 
@@ -241,7 +294,7 @@ An excerpt, with most of the 20 streams elided:
   "longitudinal_data": {
     "dose_timeline":        [{"ts": 0, "value": 2.5}, {"ts": 28, "value": 5.0}, {"ts": 56, "value": 7.5}],
     "medication_adherence": [{"ts": 42, "value": 0.95}, {"ts": 56, "value": 0.88}, {"ts": 84, "value": 0.8}],
-    "weight":               [{"ts": 0, "value": 98.73}, ..., {"ts": 84, "value": 87.13}],
+    "weight":               [{"ts": 0, "value": 98.70}, ..., {"ts": 84, "value": 87.10}],
     ...
   },
   "evidence_ledger": [
@@ -277,32 +330,48 @@ A job file declares patient facts (condition, drug, dose steps, devices, start w
 variables. The generator renders the course and injects the configured artifacts and distractors.
 A case is released only if it passes the emission gate: a premise check that rejects contradictory
 specifications, per-item verification of every stream and event, and a leak probe that runs on every
-prompt before it is sent. Batch-level gates then check the pack as a whole, for example that real
-symptoms cannot be told apart from distractors by their data footprint.
-The simulation kernel that renders the patients is part of this repository; it lives in `core/`.
+prompt before it is sent. Batch-level gates and the pack audit then check the pack as a whole, for
+example that real symptoms cannot be told apart from distractors by their data footprint.
+The simulation kernel that renders the patients is part of this repository; it lives in `haenv_kernel/`.
+
+- **Packs are plugins.** Each pack is a judge group that registers its gold blocks, its question
+  template and its scoring; the core pipeline does not know which packs exist.
+- **One run, one context.** An evaluation run carries its own state (`RunContext`): two runs in
+  one process do not share tables.
+- **Fingerprints follow definitions.** The scoring code and the generation code each have a
+  fingerprint, stamped on every row and every batch. A refactor that only moves definitions is
+  certified definition by definition, so a fingerprint changes when what is computed changes.
 
 The same patients can be presented in four formats (called geometries in the code): `single`,
 `gated` (tests ordered against a budget), `slices` (independent questions at several time points)
-and `multi` (rounds in which the agent may revise). 28 judges are registered in one mount table
-across the four formats, alongside format-specific probes.
+and `multi` (rounds in which the agent may revise). Each pack poses one decision at `T`; in pack ①
+the agent may buy tests before it answers.
 
 ## Scoring
 
-- The gold standard is derived by code. Hard gates, `dx_listed`, `review_macro` and `quant_ok` are code.
-  `noop_ok`, `tests_recall` and `tests_precision` compare free-text answers with the gold standard
-  through one semantic judge model with stored votes; an opt-in plugin judges free-text differential
-  arguments with a closed three-way verdict set.
-- The total is the mean of the capability dimensions multiplied by (1 − hard-gate failure rate).
-  The formula for each board is in the [data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#scoring).
-- Every score row carries a fingerprint of the judging code. Boards with mixed fingerprints are
-  rejected by the publish gate.
-- Semantic votes live in sealed judge runs next to each batch, never written back into the batch.
-  Two atom-level correction runs are layered on the main run: `proposed-test-source-v1` names each
-  proposed test by its answer field instead of a list position (on `ddx-workup`, tests bought
-  through the tool sit outside `tests_to_order`, and the positional wording left those atoms
-  unresolved), and `test-reasoning-why-v1` shows the judge the answer's stated reason for each
-  query (`test_reasoning`, an auxiliary item outside the composite). Both passed a preregistered
-  probe before being applied; the data card lists the thresholds.
+- **The gold standard is derived by code** from the world that rendered the record. Packs ②, ③
+  and ④ are scored by code alone. Pack ① is scored by code, and one LLM judge (`gpt-6-luna`)
+  matches its free-text diagnoses and tests to the gold, with stored votes.
+- **Guessing scores 0.** A pack's decision is scored as chance-corrected balanced accuracy,
+  `cc = (m · BA − 1) / (m − 1)`, with `m` the answer classes present in the gold: answering at
+  random or always giving the same class scores 0, every item right scores 1.
+- **One composite per pack.**
+
+  | Pack | Composite |
+  |---|---|
+  | ① | mean of the scored dimensions (test F1, diagnosis listed, numerical reading, chance-corrected review), floored at 0, × (1 − hard-gate rate) |
+  | ② | `cc` of the disposition × (1 − hard-gate rate); a negative `cc` is never raised by a gate |
+  | ③ | `cc` of the decision, floored at 0, × (1 − hard-gate rate) |
+  | ④ | mean of `cc` of the change source and the skill on the size of the true change, `1 − MAE / MAE_naive` (no gate multiplier) |
+
+  The packs are separate boards; their composites are not pooled.
+- **Three columns.** Every registered measure is in one of three roles. *Scored* measures enter
+  the composite. *Profile* measures judge correctly but separate models too little, or have no
+  validity reading yet; they are computed, stored and shown, and do not enter the composite.
+  *Retired* measures were found to judge wrongly; they stay in the registry with the reason and
+  are on no board.
+- Every score row carries a fingerprint of the judging code, and each pack adds its own. Boards
+  with mixed fingerprints are rejected by the publish gate.
 - Raw model responses are stored, so a scoring fix is a recompute
   (`tools/restamp_batch.py <batch>`) with no new calls to the models under test.
 - `verifier_core/` holds the fingerprinting, the publish gate, the hard-gate multiplier, score
@@ -337,8 +406,14 @@ models:
     price: {input_per_million_usd: 0, output_per_million_usd: 0}   # USD per million tokens
 ```
 
-A billed run counts every request against `--judge-budget-usd`. On `openrouter`, `relay`, `google`
-and `dashscope` the price comes from the provider; on a backend of your own it is the `price`
+The default models are reached directly: Gemini models through Google's API, Qwen models through
+DashScope, and every other model through OpenRouter, pinned to one upstream with fallbacks off:
+the vendor's own endpoint where the account's zero-data-retention setting allows it, otherwise a
+named host serving the same weights (OpenAI models on Azure, Claude on Google Vertex, MiniMax on
+Novita). No third-party relay sits between the pipeline and a model.
+
+A billed run counts every request against `--judge-budget-usd`. On `openrouter`, `google` and
+`dashscope` the price comes from the provider; on a backend of your own it is the `price`
 declared for each model, applied to the token counts the endpoint returns in `usage` (0 for a
 free local endpoint). A model there without a `price` is refused before any request is sent.
 
@@ -391,38 +466,69 @@ and the failure modes.
 - Generation is cached by model and prompt in `cases/_llm_cache/`; rebuilding a pack from the same job makes no model calls.
 - A run resumes by default and sends only the cells that have no answer yet. Raw responses are stored, so a judging change is a recompute, not a re-run of the models under test.
 - For models with a measured basis, `max_tokens` must clear a floor derived from their output lengths. This reduces truncation risk but does not guarantee that every answer will finish within budget. `batch.json` records generation and evaluation usage (`gen_usage`, `eval_usage`): measured totals where available, and an explicit status otherwise.
-- Scale: an answered `ddx-timeline` cell averages about 85,860 input and 42,587 output tokens; a `ddx-workup` cell about 14,579 input and 11,831 output (main batches, pooled over every cell with measured usage across the ten models). Details and the recompute command are in [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching).
+- Scale: a pack item is one request. At N = 50 one pass costs, estimated from each prompt's token count at fitted provider prices, $0.09–$9.55 per model on pack ② (mean $3.20 over the ten 1.x models), $0.09–$8.19 on pack ③ (mean $2.65) and $0.09–$8.62 on pack ④ (mean $2.82); packs ②–④ have no judge cost. Details and the recompute command are in [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching).
 
 ## Leaderboard
 
-Ten models answer the same 145 synthetic cases (64 conditions) on two packs: `ddx-timeline`
-(questions at several time points) and `ddx-workup` (the agent orders tests step by step against
-a check budget). The two tracks have separate boards.
+The 1.2.0 board ranks 10 models on the four packs, 50 items each, every item answered 3 times.
+The overall score is the equal-weight mean of the four pack scores, each from 0 to 1. The 95%
+intervals come from a case × round bootstrap (4,000 draws that resample items and rounds
+together); ranks follow the unrounded scores. The board packs are drawn with a private seed; jobs
+and batches record only its sha256, `8f90c70f61fe7a53860e9a21576c0393e26515ba7eede0467a534360dfa7f9b9`.
 
-**Preliminary board.** The composite includes four dimensions (`dx_listed`, `noop_ok`,
-`tests_recall`, `tests_precision`) that have no blind-human validity reading under the current
-judge. They are admitted provisionally ([validity rule](https://github.com/thetahealth/mirobody-env/blob/main/docs/anchor/VALIDITY.md)), so the board
-is labelled preliminary.
+### 1.2.0 overall
 
-**Default rule.** All ten models are ranked on the same cases of each track: every case except
-those where the judge left one model's cell unresolved, which leave the board for every model
-(144 of 145 cases on `ddx-timeline`, 138 of 145 on `ddx-workup`; the data card lists them). A cell
-without a scorable answer scores 0 on every applicable dimension and trips no hard gate: the
-deadline passed before the cell was answered, the check budget ran out, the reply was empty or
-could not be parsed, the model produced reasoning and no answer, or the stream ended early.
-Tiers come from a case-level bootstrap (10,000 resamples, Holm-corrected α = 0.05); a tier number
-is 1 plus the count of models that are significantly better. Models in one tier cannot be told
-apart at this sample size, and models in different tiers are not necessarily separable from each
-other (22 of 45 pairs are separable on each track). The intervals and tiers cover case
-sampling only; a model answering again and the judge's own variation are not in them. Inside the
-first tier the composite ranks are ties; [where the first tier separates](#first-result) shows where
-those models do separate.
+| Rank | Model | Overall | 95% CI |
+|---:|---|---:|---:|
+| 1 | gemini-3.1-pro | 0.732 | 0.674–0.788 |
+| 2 | gemini-3.7-flash | 0.677 | 0.602–0.742 |
+| 3 | gpt-6-sol | 0.671 | 0.617–0.729 |
+| 4 | deepseek-v4-pro | 0.560 | 0.484–0.634 |
+| 5 | gpt-6-luna | 0.547 | 0.470–0.616 |
+| 6 | kimi-k3 | 0.547 | 0.470–0.622 |
+| 7 | minimax-m3 | 0.521 | 0.439–0.600 |
+| 8 | glm-5.3-flash | 0.483 | 0.408–0.564 |
+| 9 | deepseek-v4-flash | 0.426 | 0.347–0.500 |
+| 10 | qwen3.7-flash | 0.389 | 0.317–0.465 |
 
-<p align="center">
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_results.svg"><img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_results.png" alt="Composite scores and dimension readings for ten models on the diagnosis track (ddx-timeline) and the budgeted-tool track (ddx-workup). Each panel groups all ten models into tiers on the same cases of its track, with each composite's 95% interval; unanswered cells score 0." width="100%"></a>
-</p>
+### 1.2.0 by pack
 
-### ddx-timeline (preliminary)
+Each cell is the pack score with its 95% interval.
+
+| Model | ① Differential diagnosis | ② Acute triage | ③ Medication adjustment | ④ Follow-up interpretation |
+|---|---:|---:|---:|---:|
+| gemini-3.1-pro | 0.834 (0.746–0.908) | 0.504 (0.364–0.645) | 0.799 (0.684–0.902) | 0.790 (0.691–0.871) |
+| gemini-3.7-flash | 0.755 (0.646–0.854) | 0.532 (0.389–0.673) | 0.667 (0.518–0.801) | 0.754 (0.581–0.890) |
+| gpt-6-sol | 0.607 (0.539–0.697) | 0.408 (0.265–0.554) | 0.785 (0.662–0.894) | 0.886 (0.815–0.944) |
+| deepseek-v4-pro | 0.566 (0.490–0.664) | 0.457 (0.311–0.598) | 0.677 (0.537–0.804) | 0.538 (0.366–0.693) |
+| gpt-6-luna | 0.547 (0.485–0.608) | 0.362 (0.234–0.493) | 0.743 (0.579–0.879) | 0.536 (0.339–0.712) |
+| kimi-k3 | 0.612 (0.517–0.726) | 0.468 (0.319–0.615) | 0.694 (0.556–0.818) | 0.411 (0.205–0.609) |
+| minimax-m3 | 0.552 (0.486–0.632) | 0.421 (0.277–0.569) | 0.806 (0.673–0.919) | 0.305 (0.099–0.491) |
+| glm-5.3-flash | 0.594 (0.489–0.717) | 0.497 (0.356–0.631) | 0.566 (0.421–0.703) | 0.277 (0.068–0.476) |
+| deepseek-v4-flash | 0.406 (0.292–0.523) | 0.306 (0.175–0.441) | 0.589 (0.460–0.710) | 0.403 (0.203–0.581) |
+| qwen3.7-flash | 0.428 (0.341–0.533) | 0.329 (0.187–0.487) | 0.542 (0.413–0.655) | 0.258 (0.050–0.464) |
+
+[Interactive board](https://thetahealth.github.io/mirobody-env/#act3) ·
+[Board data (JSON)](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/board.json)
+
+### 1.x board (historical)
+
+The 1.x board ranks ten models on the two diagnosis tracks, `ddx-timeline` and `ddx-workup`
+(145 cases each). It is kept as published and is **not comparable** with the pack boards: the
+world, the questions and the scoring have changed since. The bridge items are the only link
+between the two.
+
+<details>
+<summary>The two 1.x tables</summary>
+
+On 1.x, the composite was the mean of the scored dimensions multiplied by (1 − hard-gate failure
+rate), from 0 to 1; *95% CI* is the case-level bootstrap interval (10,000 resamples) and a tier
+number is 1 plus the count of models significantly better (Holm-corrected α = 0.05). *Answered*
+counts the cells with a scorable answer out of 145; a cell without one scored 0. Each cell ran
+once. The diagnosis dimensions of that composite had no blind-human validity reading, so the board
+was labelled preliminary.
+
+### ddx-timeline (1.x)
 
 | Rank | Model | Composite | 95% CI | Tier | Answered |
 |---:|---|---:|---:|---:|---:|
@@ -437,7 +543,7 @@ those models do separate.
 | 9 | deepseek-v4-flash | 0.434 | 0.380–0.494 | 9 | 144 / 145 |
 | 10 | glm-5.3-flash | 0.048 | 0.024–0.076 | 10 | 17 / 145 |
 
-### ddx-workup (preliminary)
+### ddx-workup (1.x)
 
 | Rank | Model | Composite | 95% CI | Tier | Answered |
 |---:|---|---:|---:|---:|---:|
@@ -452,102 +558,28 @@ those models do separate.
 | 9 | glm-5.3-flash | 0.375 | 0.303–0.446 | 8 | 116 / 145 |
 | 10 | deepseek-v4-flash | 0.304 | 0.247–0.365 | 9 | 145 / 145 |
 
-*Composite* is the mean of the scored dimensions multiplied by (1 − hard-gate failure rate), from
-0 to 1. *95% CI* is the case-level bootstrap interval. *Answered* counts the cells with a
-scorable answer out of 145; `glm-5.3-flash` ranks low for cells it did not finish in time, not
-for wrong answers ([limitations](#limitations)). Scores equal at three decimals share a rank. Each cell ran once
-(k = 1); a 16-case subset ran three times per cell, which measures repeat noise per dimension
-only ([data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#current-evaluation)). Click the figure
-for the full-resolution vector image.
-
+[Figure](https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_results.svg) ·
 [Source values (CSV)](https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_results.csv) ·
-[Public snapshot (JSON)](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/data.json) ·
-[Rebuild script](https://github.com/thetahealth/mirobody-env/blob/main/docs/scripts/make_readme_results.py)
-
-<details>
-<summary>What the scores and dimensions measure</summary>
-
-| Dimension | Reading |
-|---|---|
-| Composite score | Mean of the scored dimensions times the hard-gate multiplier; ranked separately within each track |
-| Diagnosis listed (`dx_listed`) | Share of gold diagnoses on the differential and not ruled out; a comorbid case scores each gold line; computed by code |
-| Test selection | Per-case F1 of test precision and recall, averaged over applicable cases |
-| Signal availability (`noop_ok`) | Declares data unavailable when the queried signal is absent, and does not claim it missing when present |
-| Clinician review (`review_macro`) | Does not request review when none is warranted (specificity); missed referrals are caught by the two review hard gates |
-| Numerical reading (`quant_ok`) | Correctness of questions about recorded trends, peak days and outlier counts, checked against code-derived gold |
-| Grounded tool targets | Share of tool queries whose target is a signal the patient has; scored on `ddx-workup` only |
-
-Hard-gate failures cannot be offset by high component scores. Every dimension cell has its own
-applicable case count; tool grounding can have a much smaller denominator than the full track.
-The two tracks use different tasks, so their scores are not pooled into one ranking.
-
-```bash
-uv run --with matplotlib python docs/scripts/make_readme_results.py
-```
+[1.x snapshot (JSON, key `history_1x`)](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/data.json)
 
 </details>
 
-### Where the first tier separates
-
-<a id="first-result"></a>**The leading models tie on the composite and differ in clinical behaviour.** On both
-packs no pair inside the first tier is separable on the composite (`ddx-timeline`: six models,
-0.652–0.724; `ddx-workup`: seven models, 0.673–0.697). Per dimension they separate: whether a model
-refers to a clinician when nothing warrants it splits the first tier into groups (8 of 15 pairs on
-`ddx-timeline`, 12 of 21 on `ddx-workup`). On the cases where no referral is warranted,
-`deepseek-v4-pro` refrains from one on 0.000 and 0.148 of them, `gemini-3.1-pro` on 0.786 and
-1.000. On `ddx-workup`, grounded tool targets (9 of 21 pairs) and test selection (8 of 21) separate
-the first tier too. The data card gives the
-measurement ([current evaluation](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#current-evaluation)).
-
-<p align="center">
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_profile_timeline.svg"><img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_profile_timeline.png" alt="ddx-timeline: ten models as columns in composite order, one row per dimension, with the first tier bracketed. On the composite row every first-tier model shares a letter; clinician review splits the first tier into letter groups. Models sharing a letter on a row are not separable (paired case bootstrap, 10,000 resamples, Holm alpha 0.05 over all 45 pairs)." width="100%"></a>
-</p>
-<p align="center">
-  <a href="https://github.com/thetahealth/mirobody-env/blob/main/docs/figures/readme_profile_workup.svg"><img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_profile_workup.png" alt="ddx-workup: ten models as columns in composite order, one row per dimension, with the first tier bracketed. On the composite row every first-tier model shares a letter; clinician review, grounded tool targets and test selection split the first tier into letter groups." width="100%"></a>
-</p>
-
-### Which registry entries enter the composite
-
-| Registry role | Entries | Where the reading appears |
-|---|---|---|
-| Scored dimensions | `tests_recall` and `tests_precision` (one F1 dimension), `dx_listed`, `noop_ok`, `review_macro`, `quant_ok`; `tool_target_grounded_rate` on `ddx-workup` | The composite |
-| Descriptive | `tool_budget_used` (non-monotonic: zero queries also reads 0), `tool_dup_rate`, `tool_budget_thrift` | Demo and batch reports |
-| Held out | `disc_recall`: its judged atom type failed the cross-protocol stability check | Not reported |
-| Diagnostic and report-only | The remaining registry entries, including `dx_hit`, `dx_top1`, the join and review-stability families and the process-track `trace_*` items | Batch reports |
-| Normalization anchor | `scope_anchor_unified` | Normalization only |
-
-Steps 6–9 of the [live demo](https://thetahealth.github.io/mirobody-env/) show recorded answers, a
-tool trace and the score breakdown. The demo also removes unanswered cells by failure cause and
-recomputes the board in the browser.
-
 ## Limitations
 
-- **`glm-5.3-flash` ran out of time, not out of accuracy.** It reasons far longer than the other
-  models: on `ddx-timeline` an answered cell took a median of 69 minutes (next slowest 24;
-  the two Gemini models record no latency). It answered 17 of 145 cells there and 116 of 145 on
-  `ddx-workup`; the rest score 0 under the default rule. On `ddx-timeline`, 75 of its 128
-  unanswered cells were not started or still running when the runtime limit closed the batch, and
-  the other 53 are the same length problem (a reply that ended before valid output 30, a stream
-  cut off 18, reasoning without a final answer 5); on `ddx-workup`, 28 of 29 were not started and
-  1 ran out of budget. On the cells it did answer, it scores 0.556 on `ddx-timeline` (17 cases,
-  below the 20-case minimum, descriptive) and 0.473 on `ddx-workup` (116 cases), close to
-  `qwen3.7-flash` (0.590 and 0.506 on its own answered cells). Answered-only scores rest on
-  different case sets and are not a ranking.
-- **Single judge, also a tested model.** The semantic judge is one model (`gpt-6-luna`,
-  reasoning high) with two votes and a third on disagreement. The same model and another model of
-  its vendor (`gpt-6-sol`) are on both boards; self-preference is not ruled out. No second judge
-  or physician labelling checks its verdicts; the vote agreement measures repeatability only.
-- **One pass, no composite noise floor.** Each cell ran once. The 16-case repeat subset is below
-  the 20-case minimum for a composite, so repeat noise is read per dimension only (for example
-  `dx_hit` differs by up to 0.129 between repeats on `ddx-timeline`). The intervals and tiers cover
-  case sampling only.
-- **Frontier models tie on the composite.** No pair within the first tier of either track is
-  separable; per dimension, several are (see the data card).
-- **Clinical review.** Six rare-disease conditions carry `clinical_review: pending` (13 of 145
-  cases use them), and the medical content as a whole has not been reviewed by a practising
+- **Pack ② does not separate the leading models.** Among the six best models on pack ② no pair
+  differs by more than 1.96 standard errors (0 of 15 pairs); pack ③ separates 3 of 15, pack ①
+  8 and pack ④ 10. On the overall board 9 of the 15 top-six pairs are separable.
+- **Clinical review.** The rules behind packs ② and ③ (which findings send a patient to the
+  emergency department, when a dose change is on target) and several registry entries carry
+  `review: pending`; the medical content as a whole has not been reviewed by a practising
   clinician.
-- **Raw answers stay private.** The model answers behind the board are not in this repository,
-  so the board cannot be recomputed from a public checkout.
+- **Single judge in pack ①.** One model (`gpt-6-luna`, reasoning high) matches free-text
+  diagnoses and tests to the gold, with two votes and a third on disagreement. The same vendor's
+  models are among those tested; self-preference is not ruled out, and no second judge or physician
+  labelling checks its verdicts. Packs ②–④ have no LLM judge.
+- **The diagnosis dimensions await validity.** On the bridge tracks the diagnosis-track scored
+  dimensions are judgement-based and wait for a clinical blind annotation; until then they have
+  no public column.
 - **Synthetic data.** All patients are synthetic and the benchmark is for evaluation only; nothing
   here is medical advice.
 
@@ -590,7 +622,7 @@ All patients are synthetic. Nothing here is medical advice or suitable for clini
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.1.1}
+  version = {1.2.0}
 }
 ```
 

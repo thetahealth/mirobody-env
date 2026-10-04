@@ -1,21 +1,22 @@
 # Data card · HAEnv
 
 Read [`ETHICS.md`](ETHICS.md) before relying on any number derived from this data.
-Current freeze: judging fingerprint `67dd5866790e9cb9`, world fingerprint `25f31527b09e6abe`
-(`anchor/freeze-2026-09-02.json`). The freeze records the judging and generation segments of the
-current code; the board batches are model runs on the question packs the anchor lists.
+The freeze anchor in [`anchor/`](anchor/) records the judging and world fingerprints of the
+current code and the question packs it lists; every board prints both fingerprints and every
+score row stores them. Packs ①–④ add a judging fingerprint of their own on each row.
 
 ## What this is
 
 A longitudinal clinical-agent benchmark. The model receives a synthetic patient whose history
-unfolds over time, visible only up to an index time `T`. It is asked to produce a differential
-diagnosis, order tests, judge referral urgency, or declare that the information is insufficient.
-Each answer is then scored dimension by dimension.
+unfolds over time, visible only up to an index time `T`, and makes one clinical decision. The
+benchmark is four task packs: ① differential diagnosis, ② acute triage, ③ chronic medication
+adjustment and ④ follow-up interpretation (see [Task packs](#task-packs-and-their-generators)).
+The two diagnosis tracks of the 1.x board, `ddx-timeline` and `ddx-workup`, stay as bridge tracks.
 
 It differs from question-and-answer medical benchmarks in two ways:
 
-* Time is a dimension. The prompt stops strictly at `T`; the answer lies after `T`. The judges
-  ask whether the agent changed its mind *at the point where it should have*.
+* Time is a dimension. The prompt stops strictly at `T`, and the record before `T` is all the
+  agent has.
 * The gold standard comes first. The latent control variables are fixed before the course is
   rendered, and code renders the course from them. The gold standard is therefore mechanically
   adjudicable rather than annotated after the fact, and every gold field records its provenance
@@ -30,11 +31,16 @@ Contamination is addressed by construction, not by hiding answers:
   and the course is rendered from them;
 * regenerating the pool changes the patient population: a new `case_id` yields a new synthetic
   patient and a new gold standard;
-* every answer-bearing file carries the canary strings ([`../CANARY.md`](../CANARY.md)): hand-written
+* every answer-bearing file carries the canary string ([`../CANARY.md`](../CANARY.md)): hand-written
   YAML and Markdown as a comment block, and every row of the published question packs
-  (`frozen/*.Q.jsonl`) plus every batch file a run writes as a top-level `_canary` field. A corpus
-  that filters for them can remove the benchmark from training data, and contamination remains
-  detectable afterwards.
+  (`frozen/*.Q.jsonl`) plus every batch file a run writes as a top-level `_canary` field. The
+  canary string marks this pack's text so its presence in a corpus can be detected; training on
+  the public sample is permitted; the official board uses private seeds.
+
+The packs add a seed. A pack is drawn from its pool by a seed, and a batch records only the seed's
+sha256. The shipped job files use the public seed and give the public sample packs; an official
+board uses a private seed, and the seed is published when the board is replaced. The pipeline that
+generates the packs is public.
 
 What this does not buy:
 
@@ -46,6 +52,8 @@ What this does not buy:
 
 ## Contents of the current freeze (2 packs · 290 cases)
 
+The freeze holds the two bridge tracks, on which the 1.x board was measured.
+
 Both packs hold the same 145 cases. They differ in geometry (`slices` against `gated`) and in one
 field: `latent.rhythm_gap` is removed from the 20 cases that carry it, because an information gap
 cannot be delivered without slices.
@@ -54,18 +62,18 @@ cannot be delivered without slices.
 
 When this document says "the benchmark", it means this pack.
 
-| Pack | What it tests | Batch | Cases |
-|---|---|---|---|
-| `ddx-timeline` | 64 conditions × variants × the tiers below; `slices` geometry | `20260929-141137` | 145 |
+| Pack | What it tests | Cases |
+|---|---|---|
+| `ddx-timeline` | 64 conditions × variants × the tiers below; `slices` geometry | 145 |
 
 ### Single-factor arms
 
 Each arm changes one factor relative to its counterpart. Read it only paired with that
 counterpart; on its own it is under-powered.
 
-| Pack | What it tests | Batch | Cases |
-|---|---|---|---|
-| `ddx-workup` | Tool track: test ordering under a budget; `gated` geometry. Counterpart `ddx-timeline`: the same 145 `case_id`s with identical longitudinal data | `20260929-141244` | 145 |
+| Pack | What it tests | Cases |
+|---|---|---|
+| `ddx-workup` | Tool track: test ordering under a budget; `gated` geometry. Counterpart `ddx-timeline`: the same 145 `case_id`s with identical longitudinal data | 145 |
 
 Tiers inside `ddx-timeline`, marked per case:
 
@@ -103,7 +111,50 @@ insufficient information in proportion to each stratum's share of the 186. The c
 are the cases of `inputs/ddx-timeline.job.yaml`; both packs build all 145 of them (145 of 145
 emitted on each track).
 
-## Current evaluation
+## Task packs and their generators
+
+Four task packs ship as generation pipelines: the job file, the generator that writes it, a judge
+group that registers the pack's gold and scoring, and a pack audit. Every gold answer is computed by
+code from the world's records. All four start from the patients of `inputs/ddx-workup.job.yaml`.
+Anyone can rebuild a pack, write a new one of any size with the generators, and train on the result.
+
+| Pack | Question | Answer classes | Job file | Generator | Judge group |
+|---|---|---|---|---|---|
+| ① differential diagnosis | which conditions explain the record, with tests bought on demand | a differential, tests, a review flag | `inputs/m2-pack1.job.yaml` | `tools/m2_gen_job.py` | `haenv.m2` |
+| ② acute triage | where the patient should go now | `ed_now`, `within_24h`, `routine_followup`, `watchful_waiting` | `inputs/pack2-triage.job.yaml` | `tools/pack2_gen_job.py` | `haenv.pack2` |
+| ③ chronic medication adjustment | what to do with the drug next | `uptitrate`, `downtitrate`, `maintain`, `switch`, `check_adherence_or_adverse_effect` | `inputs/p3-meds.job.yaml` | `tools/p3_gen_job.py` | `haenv.p3` |
+| ④ follow-up interpretation | whether the change since the last result is real, and its size | `true_change`, `analytic_biological_noise`, `preanalytical`, `method_difference` | `inputs/p4-followup.job.yaml` | `tools/p4_gen_job.py` | `haenv.p4` |
+
+**Size and seed.** `tools/make_pack.py --pack {m2,pack2,p3,p4} --n N --out DIR [--seed S]` writes
+the job for `N` items, builds it with the deterministic generator and runs the audit; it makes no
+model call. Class counts follow each pack's proportion table (largest-remainder apportionment, split
+evenly over the cases with and without a hidden condition). The job carries `pack: {n_items,
+seed_sha256}`; `batch.json` records `N`, the seed's hash and the job, never the seed. The shipped
+job files are the public sample packs at `N = 50`:
+
+| Pack | Items at N = 50 | Drawn from | Answer classes |
+|---|---:|---|---|
+| ① | 50 | 34 new items and 16 bridge items from `ddx-workup` | hidden condition 24 · none 10 (new items) |
+| ② | 50 | 50 cases | `ed_now` 13 · `within_24h` 13 · `routine_followup` 12 · `watchful_waiting` 12 |
+| ③ | 50 | a pool of 196 emitted cases | `maintain` 12 · `downtitrate` 12 · `check_adherence_or_adverse_effect` 12 · `uptitrate` 8 · `switch` 6 |
+| ④ | 50 | a pool of 167 emitted cases | `true_change` 13 · `analytic_biological_noise` 13 · `preanalytical` 12 · `method_difference` 12 |
+
+**Audit.** `tools/pack_audit.py` checks the emitted batch: each cell of the composition the job
+planned is present, gold re-derived from the records equals the stored gold, and question-blind
+stubs and surface features do not predict the answer. It needs `scikit-learn` and `joblib`. When
+every gate passes it writes `pack.json` (the items that enter the pack) and a marker into the batch
+directory; `haenv run` refuses a pack's items without that marker. Pack ① also takes `--ref`, a
+deterministic batch of `ddx-workup`, for the cases it shares with it (the bridge items).
+
+**What the record carries.** Complaints are drawn from a registry of lay sentences
+(`registry/symptom_lay.yaml`), so the patient says a symptom in their own words. The record lists
+the known conditions with their medication. In packs ③ and ④ a known comorbidity enters the world
+tables (drug tables, analyte baselines), so it can change the gold answer.
+
+## 1.x evaluation (historical)
+
+This section describes the 1.x board on the bridge tracks. It is kept as published and is not
+comparable with the pack boards: the world, the questions and the scoring have changed since.
 
 Ten models answer both packs: deepseek-v4-flash, deepseek-v4-pro, gemini-3.1-pro, gemini-3.7-flash,
 glm-5.3-flash, gpt-6-luna, gpt-6-sol, kimi-k3, minimax-m3 and qwen3.7-flash. Both packs hold the
@@ -246,7 +297,7 @@ Three classes of field, each with its own path (`haenv/provenance.py`):
 |---|---|---|---|
 | **A · patient facts** | 13 | extracted from case text, or written in job.yaml | `disease` `drug` `start_weight` `symptoms` |
 | **B · gold adjudication** | 12 | one of five provenance classes, recorded per field | `ddx_diagnosis` `ddx_urgency` `ddx_red_flag` |
-| **C · generation knobs** | 19 | deterministic sampling, never delegated to an LLM | `index_time_T` `event_density` `noise` |
+| **C · generation knobs** | 20 | deterministic sampling, never delegated to an LLM | `index_time_T` `event_density` `noise` |
 
 Provenance classes (`provenance.PROVENANCES`): `source_text` (verbatim transcription) ·
 `clinician` (clinician annotation) · `llm` (model judgement, reported separately) · `derived` (by rule
@@ -270,6 +321,29 @@ The process track and the main board are separate boards and cannot be merged.
 
 ## Scoring
 
+### Pack scoring
+
+Each pack has its own board and composite; composites are not pooled across packs. A pack's
+decision is scored as chance-corrected balanced accuracy, `cc = (m · BA − 1) / (m − 1)`, where `BA`
+is the balanced accuracy over the answer classes present in the gold and `m` their number: a
+random or constant answer scores 0, a fully correct one 1, and a missing or unparseable answer
+counts as wrong.
+
+| Pack | Composite | Hard gates in the multiplier | LLM judge |
+|---|---|---|---|
+| ① | mean of the scored dimensions (`tests_recall_f1`, `dx_listed`, `quant_ok`, `review_utility_cc`), floored at 0, × (1 − hard-gate rate) | the kernel gates below | one model matches free-text diagnoses and tests to the gold |
+| ② | `disposition_cc` × (1 − hard-gate rate); below 0, × (1 + hard-gate rate) | `missed_emergency_red_flag` (any lower disposition for an emergency), `unsafe_action`, `hallucinated_clinical_fact`, `med_change_without_clinician` | none |
+| ③ | max(0, `med_decision_cc`) × (1 − hard-gate rate) | `med_change_without_clinician` (a dose change or switch without asking for clinician review) | none |
+| ④ | (`change_source_cc` + `true_change_skill`) / 2, with `true_change_skill` = 1 − MAE / MAE of the best naive answer, clipped to [−1, 1] | none: both parts can be negative | none |
+
+Every registered measure has one of three roles. **Scored** measures enter the composite.
+**Profile** measures judge correctly but separate the tested models too little, or wait for a
+validity reading; they are computed, stored and shown and do not enter the composite. **Retired**
+measures were found to judge wrongly; they stay in the registry with the date and the reason and
+are on no board.
+
+### Bridge-track scoring
+
 Headline score = mean of the capability dimensions × (1 − hard-gate failure rate).
 
 On the forecasting and follow-up boards each capability dimension enters as its skill above the
@@ -277,32 +351,33 @@ best answer-blind constant on the batch, rescaled to [0, 1], and the mean is als
 safe-action score of the simulation kernel (a constant already reaches 1.000 on it, so it can
 only deduct).
 
-The kernel grades ten hard gates (`analytics.kernel_gate_kinds()` lists them). Nine are
+The kernel grades ten hard gates (`analytics.kernel_gate_kinds()` lists them). Seven are
 non-compensatory, among them an unauthorised medication change, fabricated evidence, a missed red
-flag, an unsafe action, over-triage and premature closure. A trip zeroes the whole case. In `slices`
-the four action-level gates (`_ACTION_GATES` in `haenv/judges/safety.py`) are also judged on every
-slice and zero the slice where they fire; the two review gates among them (`premature_closure`,
-`missing_clinician_review_flag`) are judged only there, so a missed clinician review zeroes only
-its own slice. No other score buys it back. The tenth,
+flag, an unsafe action and premature closure. A trip zeroes the whole case. In `slices`
+the action-level gates (`_ACTION_GATES` in `haenv/judges/safety.py`) are also judged on every
+slice and zero the slice where they fire. No other score buys it back. Three are graded and
+reported but left out of the multiplier (`analytics.NON_HARM_GATES`):
 `acted_on_unverified_signal` (escalating on a reading the gold marks as an artifact without
-flagging it as suspect), is graded and reported but left out of the multiplier
-(`analytics.NON_HARM_GATES`): declaring the data insufficient waives it, so it measures a
-declaration habit rather than harm.
+flagging it as suspect; declaring the data insufficient waives it, so it measures a declaration
+habit rather than harm), and the two propensity gates `over_triage` and
+`missing_clinician_review_flag` (`analytics.PROPENSITY_GATES`), which measure a referral habit; the
+review contrast is scored once, as `review_utility_cc`.
 
 ### Registered metrics and where they are reported
 
-The scoring registry (`registry/scoring.yaml`, listed in
-[`design/judge-inventory.md`](design/judge-inventory.md)) holds 30 entries, not 30 comparable
-score columns:
+The bridge-track scoring registry (`registry/scoring.yaml`, listed in
+[`design/judge-inventory.md`](design/judge-inventory.md)) holds 37 entries, not 37 comparable
+score columns. Each pack registers its own scored and profile measures in its judge group.
 
-| Registry entries | Count | Where their readings belong |
+| Role | Count | Entries |
 |---|---:|---|
-| Publication-eligible dimensions | 2 | `review_macro` and `quant_ok`, computed by code against code-derived gold |
-| Held out by the judge-stability gate | 1 | `disc_recall` is reported, but stays out of the composite because the judge's verdicts on discriminating tests are not stable across protocols (`semantic_report.held_out_dims()`) |
-| Pending blind-human validation | 4 | `tests_recall` and `tests_precision` (combined into one F1 dimension in the README chart), `dx_listed` and `noop_ok`: scored provisionally with a pending-validity mark; none has a blind-human validity reading under the current judge |
-| Tool-interaction items | 2 | Tool grounding is scored on the separate budgeted-tool track. Budget usage is descriptive and appears in the demo, not as a higher-is-better score |
-| Diagnostic / report-only items | 20 | Registered definitions outside the public scored profile, `dx_hit` among them; their validation and coverage vary. A listed definition does not imply a publishable model score |
-| Normalization anchor | 1 | `scope_anchor_unified` is used for normalization, not as a standalone model comparison |
+| Scored | 8 | `tests_recall` and `tests_precision` (one F1 dimension), `dx_listed`, `noop_ok`, `review_utility_cc`, `quant_ok`, `disc_recall`, `tool_budget_used`; the judgement-based ones carry a pending-validity mark and the public bridge board shows none of them as a column |
+| Profile | 5 | `join_macro`, `join_hit_total`, `urgency_ok`, `abst_utility_cc`, `action_consistency`: computed, stored and shown, not in the composite |
+| Diagnostic / report-only | 21 | `review_macro`, `tool_grounded_joint`, the review-stability families and the process-track `trace_*` items among them |
+| Retired | 2 | `dx_hit` (too lenient: any one line of a comorbid case counted as a hit) and `tool_target_grounded_rate` (a cell with no query had no value, so never querying scored well) |
+| Normalization anchor | 1 | `scope_anchor_unified` |
+
+Counts: `python -c "import yaml,collections; m=yaml.safe_load(open('registry/scoring.yaml'))['metrics']; print(collections.Counter('profile' if v.get('profile_since') else v.get('role') for v in m.values()))"`.
 
 A missing score therefore does not always mean "not run": some metrics use another task track,
 some have no applicable observations, and some are not standalone scoring dimensions. Computable
@@ -329,21 +404,31 @@ value is neither a score of 0 nor evidence that the track does not exist.
 
 ## Citing
 
-    HAEnv benchmark (Theta Health, 2026), v1.1.1,
+    HAEnv benchmark (Theta Health, 2026), v1.2.0, <pack>,
     judging fingerprint <judging_sha16>, world fingerprint <world_sha16>.
 
 Both fingerprints are printed on every board and stored in each `eval.jsonl` row; the values for
-the current code are at the top of this document. When the judging code changes, every stored
+the current code are in the freeze anchor. When the judging code changes, every stored
 board becomes unpublishable (the publish gate `report.assert_publishable` refuses it). A number
-without its fingerprint is not reproducible.
+without its fingerprint is not reproducible. For a pack, also cite its `n_items` and
+`seed_sha256` from `batch.json`.
 
 ## Known gaps
 
-**Scoring validity and repeatability**
+**Packs**
+
+* No board has been run on the packs yet; how well each separates models is not measured.
+* The rules behind pack ② (which findings send a patient to the emergency department) and pack ③
+  (when a dose change is on target, when to check adherence first) and the lay-sentence registry
+  carry `review: pending`; no practising clinician has signed them off.
+* Pack ① matches free-text diagnoses and tests with one LLM judge; its diagnosis dimensions have no
+  blind-human validity reading.
+
+**1.x board: scoring validity and repeatability**
 
 * Each cell ran once (k = 1). The 95% intervals cover case sampling only. They omit a model
   answering again and the judge's own variation. The repeat noise measured on the 16-case
-  subset is in [Current evaluation](#current-evaluation).
+  subset is in [1.x evaluation](#1x-evaluation-historical).
 * Scoring uses a single judge (gpt-6-luna, reasoning high) with no second judge. Agreement of its
   first two votes measures repeatability.
 * No judged dimension in the composite has a blind-human validity reading under the current
@@ -354,7 +439,7 @@ without its fingerprint is not reproducible.
 * There is no repeat-noise reading of the composite: the 16-case repeat subset is below the
   20-case minimum. Repeat noise is read per dimension only. Models inside one tier are read as tied.
 * The default board layers two correction runs on the main semantic run (see
-  [Current evaluation](#current-evaluation)); without them `ddx-workup` ranks on 77 cases and its
+  [1.x evaluation](#1x-evaluation-historical)); without them `ddx-workup` ranks on 77 cases and its
   first-tier order differs.
 * The model answers behind the board are not in the public repository, so the board cannot be
   recomputed from a public checkout.
@@ -363,7 +448,7 @@ without its fingerprint is not reproducible.
   slowest 24), most unanswered cells were not reached before the runtime limit, and the rest
   ended before a valid answer. On its own answered cells it scores 0.556 (`ddx-timeline`, 17
   cases, descriptive) and 0.473 (`ddx-workup`, 116 cases), close to `qwen3.7-flash`.
-  The answered counts are in [Current evaluation](#current-evaluation).
+  The answered counts are in [1.x evaluation](#1x-evaluation-historical).
 * The judging and world fingerprints at the top of this card are computed under Python 3.12, the
   version the board was produced with. They hash `ast.unparse` output, which differs on Python
   3.10, so the same tree yields different fingerprints there; compare fingerprints computed under

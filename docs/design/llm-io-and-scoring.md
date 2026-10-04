@@ -64,7 +64,7 @@ the same payload; otherwise cross-model comparison would not be valid.
 
 > The prompt asks for 17 leaf fields, and scoring uses 12. `confidence`, `drivers[].rank`,
 > `drivers[].evidence_for`, `action.followup_interval` and `forecast.target_event` are not scored,
-> so getting them wrong costs nothing. Scoring them would require changing `core/verifier.py`,
+> so getting them wrong costs nothing. Scoring them would require changing `haenv_kernel/verifier.py`,
 > which is in the judging segment: the change moves the judging fingerprint and requires stored
 > scores to be recomputed.
 
@@ -211,7 +211,7 @@ across all three lines, unaffected by the profile.
    wrong (§1.1). In particular, confidence calibration is not evaluated.
 2. **The artifact gate has no time guard**: `acted_on_unverified_signal` looks only at the
    case-level boolean `is_artifact_window`, without comparing it to the solver's visible window,
-   so correctly escalating at T is judged a failure when the artifact window lies after T. The fix belongs in `core/verifier.py` and is priced by a judging-segment recompute.
+   so correctly escalating at T is judged a failure when the artifact window lies after T. The fix belongs in `haenv_kernel/verifier.py` and is priced by a judging-segment recompute.
 
 `eval.jsonl` stores the extracted fields used for scoring; the model's complete raw response
 (including the `specific_action` text, `what_not_to_do` and `signal_quality`) is stored per cell in

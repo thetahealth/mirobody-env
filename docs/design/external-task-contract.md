@@ -139,8 +139,8 @@ on a plain case's `vp`.
 ### ② External content can only go into two free-form dicts
 
 `LatentPremise` and `SolverPayload` are both kernel dataclasses with fixed fields; any extra
-top-level key is silently dropped at construction time. `LatentPremise` lives in `core/latent.py`
-(generation segment) and `SolverPayload` in `core/schema.py` (judging segment), so changing either
+top-level key is silently dropped at construction time. `LatentPremise` lives in `haenv_kernel/latent.py`
+(generation segment) and `SolverPayload` in `haenv_kernel/schema.py` (judging segment), so changing either
 means regenerated packs or recomputed scores.
 
 ⇒ The only landing spots are `meta` (premise side, `m = p.meta` in `generate`) and

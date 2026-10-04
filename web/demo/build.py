@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Assemble `_template.html` + `data.json` + `gen.mjs` into a self-contained `index.html`.
+"""Assemble `_template.html` + `data.json` + `board.json` + `gen.mjs` into a self-contained `index.html`.
 
 The page must open by double-clicking (`file://`), where `fetch` is blocked, so the data is
 inlined into a `<script type="application/json">` block and the generator into a classic
@@ -20,6 +20,7 @@ SYNTHETIC data, evaluation use only, not medical advice.
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import sys
 
@@ -30,6 +31,8 @@ DATA = HERE / "data.json"
 #: `node web/demo/gen_check.mjs` can load it without a browser.
 GEN = HERE / "gen.mjs"
 OUT = HERE / "index.html"
+#: The board shown in the third act (`export_board.py`, from the board readout).
+BOARD = HERE / "board.json"
 #: English display text for the case's Chinese strings (`translate_en.py`); optional.
 TR = HERE / "translations.en.json"
 
@@ -38,13 +41,15 @@ BANNER = ("<!-- Generated file — do not hand-edit (生成物,勿手改). Edit 
           "`data.json`, then rebuild with `python web/demo/build.py`. -->\n")
 
 
-def main() -> int:
-    for p in (TPL, DATA, GEN):
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    out = pathlib.Path(args[args.index("--out") + 1]) if "--out" in args else OUT
+    for p in (TPL, DATA, GEN, BOARD):
         if not p.is_file():
             print(f"missing {p.relative_to(HERE.parent.parent)}")
             return 2
     tpl = TPL.read_text(encoding="utf-8")
-    for slot in ("__DATA__", "__GEN__", "__TR__"):
+    for slot in ("__DATA__", "__GEN__", "__TR__", "__BOARD__"):
         if slot not in tpl:
             print(f"the template has no `{slot}` placeholder; the page would be an empty shell")
             return 2
@@ -60,11 +65,17 @@ def main() -> int:
     # escape `</` so a `</script>` inside the JSON cannot close the tag early
     tr = TR.read_text(encoding="utf-8") if TR.is_file() else "{}"
     json.loads(tr)
+    board = BOARD.read_text(encoding="utf-8")
+    json.loads(board)
     html = (BANNER + tpl.replace("__GEN__", gen)
             .replace("__TR__", tr.replace("</", "<\\/"))
+            .replace("__BOARD__", board.replace("</", "<\\/"))
             .replace("__DATA__", raw.replace("</", "<\\/")))
-    OUT.write_text(html, encoding="utf-8")
-    print(f"ok: {OUT}  {len(html)/1024:.1f} KB"
+    # write beside the target, then rename: a reader never sees a half-written page
+    tmp = out.with_name(f".{out.name}.{os.getpid()}.tmp")
+    tmp.write_text(html, encoding="utf-8")
+    os.replace(tmp, out)
+    print(f"ok: {out}  {len(html)/1024:.1f} KB"
           f" (data {len(raw)/1024:.1f} KB · generator {len(gen)/1024:.1f} KB)")
     return 0
 
