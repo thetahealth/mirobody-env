@@ -24,7 +24,9 @@ from haenv import data_root as _dr   # resource root: source tree = repo root . 
 
 log = logging.getLogger("haenv.scoring")
 
-ROLES = frozenset({"gate", "dim", "diagnostic", "anchor"})
+#: `retired`: no longer computed into any readout of the board (dead or superseded); the
+#: entry stays so historical readings keep a documented meaning.
+ROLES = frozenset({"gate", "dim", "diagnostic", "anchor", "retired"})
 #: The legal values of `direction`. The composite is a higher-is-better mean, so
 #: every `role: dim` metric must declare its direction.
 DIRECTIONS = frozenset({"higher", "lower", "non_monotone"})
@@ -48,6 +50,19 @@ METRIC_FIELDS = frozenset({
     "effective_set",
     # `applies_to` -- geometries under which this dimension has a value; elsewhere it is not applicable, not zero.
     "applies_to",
+    # `scored_on` -- geometries on which a `role: dim` enters the composite; elsewhere it is
+    # still computed and reported, not scored (undeclared = every geometry).
+    "scored_on",
+    # `not_scored_on_kinds` -- gold kinds on whose cells a scored dimension is not applicable
+    # (neither 0 nor in the denominator); the per-cell value is still recorded and reported.
+    "not_scored_on_kinds",
+    # `retired_on` / `retired_why` -- date and reason of `role: retired`.
+    "retired_on", "retired_why",
+    # `profile_since` / `profile_why` / `profile_flag` -- A4 2026-10-01: a `role: diagnostic` metric
+    # shown as a profile reading, with the reason it is not scored and any validity flag.
+    "profile_since", "profile_why", "profile_flag",
+    # `provisional` -- why a scored dimension is admitted provisionally only.
+    "provisional",
     # `requires_gold` -- gold key the dimension needs (`ddx` / `warranted_two_sided`, see `Profile.gold_present`).
     "requires_gold",
     # `aggregate: per_solver` -- not a row field; computed per solver.
@@ -131,6 +146,32 @@ class Profile:
             if (a, b) not in out:
                 out.append((a, b))
         return out
+
+    def scored_on(self, name: str, geometry: str | None) -> bool:
+        """Whether a scored dimension enters the composite on `geometry`. Undeclared = everywhere."""
+        a = (self.metrics.get(name) or {}).get("scored_on")
+        return True if (not a or geometry is None) else (str(geometry) in [str(x) for x in a])
+
+    def scored_on_kind(self, name: str, gold_kind: str | None) -> bool:
+        """Whether a scored dimension is applicable on a cell of `gold_kind`. Undeclared = every kind."""
+        a = (self.metrics.get(name) or {}).get("not_scored_on_kinds")
+        return True if (not a or gold_kind is None) else (str(gold_kind) not in [str(x) for x in a])
+
+    def retired(self) -> list[str]:
+        return self.by_role("retired")
+
+    def columns(self) -> dict:
+        """A4 (2026-10-01): the three public columns of a board.
+
+        `scored` -- `role: dim` (enters the composite on the geometries it lists);
+        `profile` -- `role: diagnostic`: computed, stored and shown, not scored ({name: flag or None});
+        `retired` -- `role: retired`, only dimensions that judge wrongly ({name: retired_why}).
+        """
+        return {"scored": self.scored_dims,
+                "profile": {k: (m.get("profile_flag") or None) for k, m in self.metrics.items()
+                            if m.get("role") == "diagnostic"},
+                "retired": {k: str(m.get("retired_why") or "") for k, m in self.metrics.items()
+                            if m.get("role") == "retired"}}
 
     def applies_on(self, name: str, geometry: str) -> bool:
         """Whether this dimension can have a value under `geometry`. Undeclared = all geometries."""
@@ -284,7 +325,8 @@ class Profile:
         dimensions would change the conclusion.
         """
         return [k for k, m in self.metrics.items()
-                if str(m.get("metric_type") or "") in self.FULL_TYPES]
+                if str(m.get("metric_type") or "") in self.FULL_TYPES
+                and m.get("role") != "retired"]
 
     def revisit_conditions(self) -> list[dict]:
         """Dimensions with a `revisit_when` condition, with their current role."""

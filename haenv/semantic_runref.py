@@ -18,7 +18,7 @@ SEARCH_DEPTH = 3
 
 
 def _digest(path: Path) -> str:
-    from .semantic_pipeline import digest
+    from .semantic_seal import digest
     return digest(path)
 
 

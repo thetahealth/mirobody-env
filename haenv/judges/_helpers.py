@@ -9,6 +9,8 @@ import re
 from dataclasses import dataclass
 from typing import Callable
 
+from ..wq import _ddx  # noqa: F401
+
 log = logging.getLogger("haenv.judges")
 
 
@@ -37,13 +39,6 @@ def gold_kind(vp) -> str:
     """
     from .. import gold_kinds
     return gold_kinds.derive(vp)
-
-
-def _ddx(vp) -> dict:
-    """Only for data not in the `wq` gold table (e.g. the ddx context `rivals_for` needs); single
-    gold fields go through `_gold`.
-    """
-    return (getattr(vp, "adjudication", None) or {}).get("ddx") or {}
 
 
 def _rivals_of(vp) -> tuple:

@@ -19,6 +19,11 @@ from __future__ import annotations
 
 import logging
 import os
+from ..llm import make_dispatcher
+from ..wq import gold_of
+import haenv.mount_table as mt
+from ..judges import JUDGES
+from ..judges.safety import Judge
 
 log = logging.getLogger("haenv.judges.llm")
 
@@ -110,6 +115,7 @@ def _resolve_dispatch():
     """Return (dispatcher, source label): an injected override, else the environment switch,
     else none. The dispatcher has its own disk cache.
     """
+    from ..config import ROOT, load_cfg          # the existing config entry point; no second one
     if _OVERRIDE is not None:
         return _OVERRIDE, "override"
     key = os.environ.get(ENV_SWITCH, "").strip()
@@ -119,8 +125,6 @@ def _resolve_dispatch():
     if _via_default:
         key = DEFAULT_JUDGE_MODEL
     try:
-        from ..cli import ROOT, load_cfg          # the existing config entry point; no second one
-        from ..llm import make_dispatcher
         return (make_dispatcher(load_cfg(), key, ROOT),
                 f"{'default' if _via_default else 'cfg'}:{key}")
     except (ValueError, KeyError, OSError) as e:
@@ -137,7 +141,6 @@ def rivals_of(vp) -> tuple:
 
 
 def gold_name(vp) -> str:
-    from ..wq import gold_of
     return str(gold_of(vp, "diagnosis", default="") or "")
 
 
@@ -227,7 +230,6 @@ def _ensure_mounted() -> None:
     """Mount on the single-shot and gated geometries (idempotent); slices get a recorded reason,
     multi falls under a wildcard reason.
     """
-    from .. import mount_table as mt
     if NAME in mt.MOUNT:
         return
     mt.mount(NAME, {"single": mt.OUT, "gated": mt.OUT}, why_not={
@@ -247,9 +249,7 @@ def judges():
     Kinds and precondition match the rule judge (the three diagnosis kinds, cases with
     registered look-alikes), so the two denominators line up.
     """
-    from . import JUDGES
     from ._helpers import _rivals_of
-    from .safety import Judge
     _ensure_mounted()
     if any(j.name == NAME for j in JUDGES):
         return []

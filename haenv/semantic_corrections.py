@@ -11,6 +11,9 @@ from .semantic_inputs import anonymous_prompt
 from .semantic_judge import JudgeTask, task_record
 from .semantic_rubric import make_rubric
 from .semantic_visibility import correct_reference, parse_reference
+from .semantic_atom_correction import (  # noqa: F401
+    _source,
+)
 
 KIND = "noop-delivered-window-v1"
 
@@ -22,23 +25,6 @@ def _criteria_objects(criteria):
         text, separator, context = value.partition("\nSpecific reference: ")
         result[key] = [text, json.loads(context) if separator else None]
     return result
-
-
-def _source(run: Path):
-    from .semantic_pipeline import digest
-    manifest = json.loads((run / "manifest.json").read_text())
-    if not manifest.get("sealed") or digest(run / "tasks.jsonl") != manifest["tasks_sha256"]:
-        raise ValueError("Correction requires sealed, unchanged base inputs")
-    if "correction" in manifest:
-        raise ValueError("Nested correction runs are not supported")
-    for source in manifest["sources"]:
-        for name, expected in source["files"].items():
-            if digest(Path(source["batch"]) / name) != expected:
-                raise ValueError("Original correction source changed")
-    rows = [json.loads(line) for line in (run / "tasks.jsonl").read_text().split("\n") if line.strip()]
-    if len({r["key"] for r in rows}) != len(rows):
-        raise ValueError("Duplicate base cell identities")
-    return manifest, rows
 
 
 def _policy(base: dict):
@@ -90,7 +76,7 @@ def corrected_records(rows: list[dict], policy: dict, run_id: str) -> list[dict]
 
 
 def prepare_correction(base: Path, out: Path, *, run_id: str) -> dict:
-    from .semantic_pipeline import digest, code_state, _write_json
+    from .semantic_seal import digest, code_state, _write_json
     base, out = base.resolve(), out.resolve()
     if not run_id or out.exists():
         raise ValueError("A new correction run ID and new output directory are required")
@@ -118,7 +104,7 @@ def prepare_correction(base: Path, out: Path, *, run_id: str) -> dict:
 
 def validate_correction(out: Path):
     """Independently reconstruct every expected correction; no omission permitted."""
-    from .semantic_pipeline import digest
+    from .semantic_seal import digest
     m = json.loads((out / "manifest.json").read_text())
     c = m.get("correction") or {}
     from .semantic_atom_correction import KINDS as ATOM_KINDS, validate_atom_correction

@@ -8,11 +8,11 @@ import json
 from pathlib import Path
 
 from .quantities import row_names
+from .semantic_coverage import (  # noqa: F401
+    PRIMARY,
+    protect_composite,
+)
 
-#: Semantic dimensions a composite needs. The composite's diagnosis dimension is the
-#: code-side dx_listed, so a missing semantic dx_hit does not void it; dx_hit is an
-#: auxiliary reading.
-PRIMARY = ("noop_ok", "tests_recall", "tests_precision")
 AUX_DIMS = ("dx_hit",)
 REPLACED = PRIMARY + AUX_DIMS + ("disc_recall",)
 
@@ -26,6 +26,10 @@ def held_out_dims() -> dict[str, str]:
             for atom, spec in (gate.get("atom_types") or {}).items()
             if spec.get("dim") and not spec.get("passed")}
 AUXILIARY = ("action_consistency", "join_reason_specific", "test_reasoning", "exclusion_reason")
+#: Auxiliary atoms that are profile readings (`role: diagnostic` in the scoring profile): the
+#: view also writes them on the row, so the board record carries the per-model mean (A-block 2).
+#: The rest stay in `row["semantic"]["metrics"]` only.
+ROW_AUXILIARY = ("action_consistency",)
 
 
 def overlay_rows(rows: list[dict], results: dict, *, run_id: str, judging_sha: str) -> list[dict]:
@@ -72,6 +76,9 @@ def overlay_rows(rows: list[dict], results: dict, *, run_id: str, judging_sha: s
                 if key in row:
                     proxies[key] = row.pop(key)
             row[name] = None if name in held else metrics.get(name)
+        for name in ROW_AUXILIARY:
+            value = metrics.get(name)
+            row[name] = value if (name not in held and type(value) in (int, float, bool)) else None
         old_sha = row.get("judging_sha16")
         cell_sha = cell.get("judging_sha16", judging_sha) if cell else judging_sha
         cell_run = cell.get("run_id", run_id) if cell else run_id
@@ -98,27 +105,6 @@ def overlay_rows(rows: list[dict], results: dict, *, run_id: str, judging_sha: s
             row["semantic"]["reference_issue"] = deepcopy(cell["reference_issue"])
         viewed.append(row)
     return viewed
-
-
-def protect_composite(rec: dict, rows: list[dict]) -> None:
-    """A missing measurement is neither an incorrect answer nor a removable dimension."""
-    semantic = [r["semantic"] for r in rows if isinstance(r.get("semantic"), dict)]
-    if not semantic:
-        return
-    missing = sum(any(s.get("metric_states", {}).get(name) not in
-                      ("resolved", "not_applicable") for name in PRIMARY) for s in semantic)
-    missing += len(rows) - len(semantic)
-    held = {name: why for s in semantic for name, why in ((s.get("held_out") or {}).get("why") or {}).items()}
-    if held:
-        rec["held_out_dims"] = held          # reported separately; no slot in the composite
-    rec["semantic_coverage"] = {"cells": len(rows), "primary_missing_cells": missing,
-                                "states": dict(Counter(s["status"] for s in semantic)),
-                                "clinical_review": "not_clinician_reviewed", "final": False}
-    if missing:
-        rec["score"] = None
-        rec["score_full"] = None
-        rec["score_none_reason"] = (f"LLM primary judgments missing or unresolved on {missing} cells; "
-                                    "no proxy substitution, zero fill or reduced denominator")
 
 
 PROPOSAL_FIELDS = ("tests_to_order", "executed_investigations")
@@ -180,6 +166,55 @@ def apply_proposal_cap(task, consensus: dict) -> tuple[dict, list[str]]:
     return verdicts, changed
 
 
+#: A5 (2026-10-01): required-test recall is decided by code first (`judges.recall_match`,
+#: three-valued); only the items code cannot decide keep the judge's existing verdict. D9
+#: provisional (`tracks.D9_PROVISIONAL["executed_counts_as_covered"]`): a gold item found only
+#: among the executed investigations inside the counted cap counts as covered.
+RECALL_CODE_FIRST = True
+
+
+def apply_recall_code_first(task, verdicts: dict) -> tuple[dict, list[str], dict]:
+    """Code-first recall over the judge's (cap-applied) verdicts.
+
+    Returns (verdicts, changed items, counts by source). The code reads the same
+    `counted_proposals` the judge was shown: the `tests_to_order` part as proposals, the rest as
+    executed investigations. Raw votes on disk are not changed.
+    """
+    from .judges.recall_match import NO, UNDECIDED, YES, match_item
+    from .semantic_visibility import parse_reference
+    from .tracks import D9_PROVISIONAL
+    items = [k for k in task.item_ids if k.startswith("required_test_")]
+    counts = {"code_yes": 0, "code_no": 0, "judge": 0}
+    if not RECALL_CODE_FIRST or not items or task.atom_template is not None:
+        return verdicts, [], {}
+    _, criteria = parse_reference(task.prompt)
+    answer = json.loads(task.answer_text)
+    tto = [str(x) for x in (answer.get("tests_to_order") or []) if str(x).strip()]
+    out, changed = dict(verdicts), []
+    for item in items:
+        _text, sep, context = criteria[item].partition("\nSpecific reference: ")
+        if not sep:
+            counts["judge"] += 1
+            continue
+        ref = json.loads(context)
+        gold, props = str(ref.get("required_test") or ""), [str(x) for x in (ref.get("counted_proposals") or [])]
+        ordered, executed = ((props[:len(tto)], props[len(tto):]) if props[:len(tto)] == tto else (props, []))
+        m = match_item(gold, ordered)
+        v = m["verdict"] if m else UNDECIDED
+        if v != YES and executed and D9_PROVISIONAL["executed_counts_as_covered"]:
+            me = match_item(gold, executed)
+            if me and me["verdict"] == YES:
+                v = YES
+        if v in (YES, NO):
+            counts["code_" + v] += 1
+            if out.get(item) != v:
+                out[item] = v
+                changed.append(item)
+        else:
+            counts["judge"] += 1
+    return out, changed, counts
+
+
 #: Files that identify a judged batch by content: the answers, cases and payloads the
 #: judge read, and the tool trace of gated answers. A source is found by these digests,
 #: never by its recorded path, which is only a record (batches are copied and moved).
@@ -191,7 +226,7 @@ _DIGESTS: dict = {}
 
 
 def _file_digest(path: Path) -> str | None:
-    from .semantic_pipeline import digest
+    from .semantic_seal import digest
     if not path.is_file():
         return None
     stat = path.stat()
@@ -326,7 +361,7 @@ def read_run(out: Path, batch: Path) -> tuple[dict, dict]:
     batch elsewhere, or a batch restamped from it. Results are keyed by (case, solver)
     and overlay `batch`'s rows.
     """
-    from .semantic_pipeline import digest
+    from .semantic_seal import digest
     from .semantic_judge import JudgeTask, evaluate_consensus
     from .semantic_rubric import summarize_verdicts
     manifest = json.loads((out / "manifest.json").read_text())
@@ -366,14 +401,17 @@ def read_run(out: Path, batch: Path) -> tuple[dict, dict]:
         if consensus != result["consensus"] or summary != result["summary"]:
             raise ValueError("Persisted semantic result disagrees with its raw votes")
         capped, cap_changed = apply_proposal_cap(task, consensus)
+        capped, code_changed, code_counts = apply_recall_code_first(task, capped)
         status = consensus["status"]
-        if cap_changed:
+        if cap_changed or code_changed:
             summary = summarize_verdicts(capped, record["rubric"])
             status = "unresolved" if any(v is None for v in capped.values()) else "resolved"
         results[key] = {"status": status, "summary": summary,
                         "verdicts": dict(capped),
                         "run_id": manifest["run_id"],
                         "judging_sha16": manifest["code"]["judging_sha16"]}
+        if code_counts:
+            results[key]["recall_code_first"] = {**code_counts, "changed": code_changed}
         if cap_changed:
             results[key]["proposal_cap"] = {"atoms": cap_changed,
                                             "before": {k: consensus["verdicts"][k] for k in cap_changed},
@@ -398,7 +436,7 @@ COMPOSITE_KIND = "semantic-composite-view-v1"
 
 def _subset_chain(tip: Path) -> list[Path]:
     """`tip` followed by every run it was cut from; each cut is re-verified here."""
-    from .semantic_pipeline import digest
+    from .semantic_seal import digest
     runs, seen, current = [], set(), Path(tip).resolve()
     while True:
         if current in seen:
@@ -570,7 +608,7 @@ def enrich_urgency(rows: list[dict], batch: Path) -> None:
     from .payloads import load_payloads
     from .store import load_cases
     from .judges._helpers import _gold, gold_kind
-    from .semantic_pipeline import digest
+    from .semantic_seal import digest
     load_cases(batch / "cases.jsonl")
     payloads = load_payloads(batch / "payloads.jsonl")
     payload_sha = digest(batch / "payloads.jsonl")
@@ -623,9 +661,11 @@ def report_section(rows: list[dict]) -> str:
     lines += ["", "<details>", "<summary>Auxiliary observations — not included in the composite</summary>", "",
               "| Model | Observation | Mean | Measured cells |", "|---|---|---|---|"]
     from .scoring import load_profile
-    observations = tuple(dict.fromkeys((*AUXILIARY,
+    _retired = set(load_profile().retired())
+    observations = tuple(n for n in dict.fromkeys((*AUXILIARY,
         *(name for name, spec in load_profile().metrics.items() if spec["role"] == "diagnostic"),
-        "wk_urgency_ok_last", "wk_urgency_ok_rate", "wk_n_slices_urgency_judged")))
+        "wk_urgency_ok_last", "wk_urgency_ok_rate", "wk_n_slices_urgency_judged"))
+        if n not in _retired and not (n.startswith("wk_urgency") and "urgency_ok" in _retired))
     for model, cells in sorted(by.items()):
         for name in observations:
             values = [r["semantic"]["metrics"].get(name) if name in AUXILIARY else r.get(name) for r in cells]
@@ -716,8 +756,9 @@ def fill_missing(rows: list[dict], value: float) -> tuple[list[dict], Counter]:
 
 def composite_scores(rows: list[dict]) -> dict:
     """The production composite (`analytics.rank_ddx`) per model; None = unscored."""
-    from .analytics import rank_ddx
-    return {r["model"]: r.get("score") for r in rank_ddx(rows)}
+    # A9: unrounded -- the board's point scores and bootstrap resamples; rounding is display only.
+    from .analytics import rank_ddx_exact
+    return {r["model"]: r.get("score") for r in rank_ddx_exact(rows)}
 
 
 _BOOT = {}

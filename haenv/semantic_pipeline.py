@@ -18,48 +18,15 @@ from .semantic_judge import JudgeTask, evaluate_consensus, task_record
 from .semantic_rubric import REGISTRY, load_policy, make_rubric, summarize_verdicts
 from .semantic_transport import PriceSchedule, PricedJudge
 from .semantic_parallel import MAX_JUDGE_LANES
-
-ROOT = Path(__file__).resolve().parents[1]
-
-
-def digest(path: Path) -> str:
-    with path.open("rb") as file:
-        h = hashlib.sha256()
-        for chunk in iter(lambda: file.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
+from .semantic_seal import (  # noqa: F401
+    ROOT,
+    _write_json,
+    code_state,
+    digest,
+)
 
 def _read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").split("\n") if line.strip()]
-
-
-def _write_json(path: Path, value) -> None:
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-
-def code_state() -> dict:
-    """A pilot seals its complete judging segment plus not-yet-mounted semantic modules.
-
-    `files` (raw bytes) and `world_sha` are provenance; `semantic` (comments and
-    docstrings excluded, INFRA files left out) with `judging_sha16` is what
-    `same_judging_code` compares.
-    """
-    from .anchor import infra_files, judging_fingerprint, semantic_bytes, world_fingerprint
-    from tools.make_freeze import JUDGING
-    files = sorted(set(JUDGING) | {
-        "haenv/semantic_judge.py",
-        "haenv/semantic_inputs.py", "haenv/semantic_rubric.py", "haenv/semantic_pipeline.py",
-        "registry/semantic_judging.yaml", "haenv/semantic_lean.py", "registry/semantic_judging_v4.yaml",
-        "haenv/semantic_atom_correction.py", "registry/semantic_judging_second.yaml",
-        "registry/semantic_judging_why.yaml", "registry/semantic_judging_why_lean.yaml",
-        "registry/semantic_judging_source.yaml",
-    })
-    infra = set(infra_files())
-    return {"files": {name: digest(ROOT / name) for name in files},
-            "semantic": {name: hashlib.sha256(semantic_bytes(ROOT / name)).hexdigest()
-                         for name in files if name not in infra},
-            "judging_sha16": judging_fingerprint(), "world_sha": world_fingerprint()}
 
 
 def same_judging_code(recorded: dict, current: dict | None = None) -> bool:
@@ -88,7 +55,7 @@ def _context_for_cell(row: dict, raw_cases: dict, payloads: dict,
     `core.build_instance`. The saved canonical payload is an independent roundtrip
     control; a changed kernel or changed canonical output refuses reconstruction.
     """
-    from build import build_instance
+    from haenv_kernel.build import build_instance
     sp, vp = payloads[row["case"]]
     if row["geometry"] == "slices":
         endpoint = max(part["t"] for part in row["slice_rows"])
@@ -141,7 +108,8 @@ def prepare_batches(batches: list[Path], out: Path, *, run_id: str,
     `include_baselines` names constructed stubs to judge as upper-bound controls.
     """
     from .baselines import BASELINE_NAMES
-    from .evaluate import _extract_json, load_rows
+    from haenv_kernel.solver import _extract_json
+    from .row_store import load_rows
     from .payloads import load_payloads
     from .store import load_cases
     from .batch import kernel_fingerprint
@@ -302,7 +270,8 @@ def validate_run(out: Path) -> dict:
 
 
 def fetch_prices(cfg: dict, policy: dict) -> dict:
-    from .evaluate import BACKENDS, _ensure_backends_registered, load_env_file
+    from .solvers import BACKENDS, _ensure_backends_registered
+    from .solvers import load_env_file
     _ensure_backends_registered(cfg)
     judge = policy["judge"]
     spec = cfg["models"][judge["model_key"]]
@@ -340,7 +309,8 @@ def execute_run(out: Path, cfg: dict, ledger_path: Path, *, limit_usd: str,
 
 def _execute_run(out: Path, cfg: dict, ledger_path: Path, *, limit_usd: str,
                  max_cells: int | None = None, concurrency: int | None = None) -> dict:
-    from .evaluate import load_env_file, solver_for_spec
+    from .solvers import load_env_file
+    from .solvers import solver_for_spec
     from .semantic_parallel import run_cells
     import copy
     if max_cells is not None and max_cells <= 0:
@@ -357,7 +327,8 @@ def _execute_run(out: Path, cfg: dict, ledger_path: Path, *, limit_usd: str,
     _write_json(out / "price-metadata.json", metadata)
     prices = PriceSchedule.from_metadata(metadata, policy["judge"]["model_id"])
     ledger = BudgetLedger(ledger_path, limit_usd=limit_usd)
-    spec = dict(cfg["models"][policy["judge"]["model_key"]])
+    from .transport import judge_spec
+    spec = judge_spec(cfg["models"][policy["judge"]["model_key"]])
     spec.update(max_tokens=policy["judge"]["max_tokens"], reasoning_effort="high", retries=0)
     solver = solver_for_spec(policy["judge"]["model_key"], spec,
                              load_env_file(cfg.get("env_file")), timeout=900, retries=0)

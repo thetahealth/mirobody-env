@@ -16,7 +16,7 @@ from ._helpers import _gold, _names, gold_kind  # noqa: F401
 from .differential import _threads_hit, judge_discriminative_tool, judge_workup  # noqa: F401
 
 def _slice_hit_unified(row, vp) -> bool:
-    from ..events import alias_hit
+    from ..events_text import alias_hit
     cand = row.get("differential") or []
     pool = [str(cand[0])] if cand else [str(row.get("answer_text") or "")]
     return any(alias_hit(x, _names(vp)) for x in pool)
@@ -403,7 +403,7 @@ def judge_slices_abstention(rows, vp, ctx=None) -> dict:
 #: The noop answer contract: `data_quality.signal_quality[<target>]` takes exactly one of
 #: these. `present` = the asked window has readings; `no_data_in_window` = it has none;
 #: `unreliable` = it has readings the model does not trust (the kernel's suspect-flag word,
-#: `core/verifier.py`). Written into the question by `evaluate._noop_suffix`.
+#: `haenv_kernel/verifier.py`). Written into the question by `evaluate._noop_suffix`.
 NOOP_ANSWERS: tuple[str, ...] = ("present", "no_data_in_window", "unreliable")
 
 #: Version of the noop answer contract, recorded on the probe and on the row;
@@ -465,7 +465,44 @@ def _judge_noop_markers_v0(out, probe: dict) -> dict:
                                      == "insufficient_data" else "none"))}
 
 
-def judge_noop_probe(out, probe: dict | None) -> dict:
+def delivered_series(sp, purchased=None, gated: bool = False) -> dict | None:
+    """The series actually delivered to the solver.
+
+    Single/slices: the payload's `longitudinal_data`. Gated: the always-visible series
+    (`gated.withhold_signals`) plus the purchased signal targets, the same set the semantic
+    judge reads (`semantic_inputs.gated_observations`; purchases whose result arrived only
+    with the final answer are counted as delivered here).
+    """
+    ld = getattr(sp, "longitudinal_data", None) if sp is not None else None
+    if not isinstance(ld, dict):
+        return None
+    if not gated:
+        return ld
+    from ..gated import withhold_signals
+    lean, _ = withhold_signals(sp)
+    out = dict(lean.longitudinal_data or {})
+    for t in (purchased or ()):
+        if t in ld:
+            out[t] = ld[t]
+    return out
+
+
+def delivered_truth_present(probe: dict | None, delivered) -> bool | None:
+    """Whether the delivered series (`sp.longitudinal_data`, what the solver was actually
+    shown) has a point inside the probe's window; None when it cannot be told."""
+    if not probe or not isinstance(delivered, dict):
+        return None
+    tgt, win = probe.get("target"), probe.get("window")
+    if not tgt or not isinstance(win, (list, tuple)) or len(win) != 2:
+        return None
+    pts = delivered.get(tgt) or []
+    if not isinstance(pts, list):
+        return None
+    return any(isinstance(p, dict) and isinstance(p.get("ts"), (int, float))
+               and win[0] <= p["ts"] <= win[1] for p in pts)
+
+
+def judge_noop_probe(out, probe: dict | None, delivered=None) -> dict:
     """NoOp probe: asked about one window of a signal the model has seen, does it report
     availability correctly?
 
@@ -488,7 +525,13 @@ def judge_noop_probe(out, probe: dict | None) -> dict:
     _v = str(_raw_v or "").strip() if _raw_v is not None else ""
     ans = noop_answer_of(_raw_v)
     declared = ans == "no_data_in_window"
-    present = bool(probe.get("truth_present"))
+    # M1 (design 2026-09-30 §3, §5.3): truth is the window actually delivered to the solver
+    # (`delivered` = its `longitudinal_data`), not the world series the probe was built from;
+    # the two differ where the delivered payload drops points. Without `delivered` the world
+    # truth is used and the basis says so.
+    _world = bool(probe.get("truth_present"))
+    _dlv = delivered_truth_present(probe, delivered)
+    present = _world if _dlv is None else _dlv
     ok = (ans in ("present", "unreliable")) if present else declared
     return {"noop_polarity": probe.get("polarity"), "noop_target": tgt,
             "noop_declared": bool(declared),
@@ -498,7 +541,9 @@ def judge_noop_probe(out, probe: dict | None) -> dict:
             "noop_contract": probe.get("contract"),
             "noop_window": probe.get("window"),
             "noop_n_pts_in_window": probe.get("n_pts_in_window"),
-            "noop_truth_present": present,
+            "noop_truth_present": _world,
+            "noop_truth_delivered": _dlv,
+            "noop_truth_basis": "world" if _dlv is None else "delivered_window",
             # the global flag used instead of the specific answer
             "noop_used_global_flag": float(
                 str(dq.get("data_sufficiency") or "") == "insufficient_data" and not _v),
@@ -884,7 +929,7 @@ def judge_slices(rows, vp, ctx) -> dict:
                 "late_convergence": bool(hit is not None and n > 1 and hit == n)}
     if kind == "unified":
         hit = next((i for i, r in enumerate(rows, 1) if _slice_hit_unified(r, vp)), None)
-        from ..events import alias_hit
+        from ..events_text import alias_hit
         ment = next((i for i, r in enumerate(rows, 1)
                      if alias_hit(" ".join([str(x) for x in (r.get("differential") or [])]
                                            + [str(r.get("answer_text") or "")]), _names(vp))), None)

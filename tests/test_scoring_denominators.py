@@ -103,7 +103,7 @@ def _generation_fork_driver() -> str:
 def _kernel_allowed_drivers() -> list[str]:
     """The kernel's vocabulary of drivers the solver may answer with — a gold
     label must be in it to be **answerable** at all."""
-    from solver import ALLOWED_DRIVERS               # kernel (vendored)
+    from haenv_kernel.solver import ALLOWED_DRIVERS               # kernel (vendored)
     return list(ALLOWED_DRIVERS)
 
 
@@ -371,8 +371,13 @@ _MODELS = ("gemini-3.1-pro", "gemini-3.8-flash", "glm-5.3", "kimi-k3",
            "minimax-m3", "qwen3.8-max", "deepseek-v4-pro")
 
 
+#: The scored dimension that is made constant here. `tool_grounded_joint` was used until the
+#: M1 amendment (2026-10-01) made it a reported dimension; any scored gated dimension works.
+_FLAT = "tool_budget_used"
+
+
 def _flat_dim_rows(*, flat_value=0.0, break_one_cell: bool = False) -> list[dict]:
-    """Builds the shape `tool_target_grounded_rate` has when it is a constant:
+    """Builds the shape `tool_budget_used` has when it is a constant:
     **many populated cells, few fully-paired items, one value**. A check on
     `n_items < 10` alone would skip it.
 
@@ -383,7 +388,7 @@ def _flat_dim_rows(*, flat_value=0.0, break_one_cell: bool = False) -> list[dict
 
     Here, 7 models × 30 cases reproduce the same shape: the last model only
     has a value on 2 cases. Every other scoring dimension is given plenty of
-    variance on purpose, so "only `tool_target_grounded_rate` gets excluded"
+    variance on purpose, so "only `tool_budget_used` gets excluded"
     is itself the negative control — otherwise "everything got excluded" and
     "exactly the right one got excluded" would look the same.
     """
@@ -396,17 +401,16 @@ def _flat_dim_rows(*, flat_value=0.0, break_one_cell: bool = False) -> list[dict
                  "tests_precision": round(0.4 + 0.04 * j + 0.01 * (i % 7), 3),
                  "disc_recall": round(0.2 + 0.06 * j + 0.01 * (i % 3), 3),
                  "dx_hit": bool((i + 3 * j) % 2),
-                 "tool_budget_used": round(0.2 + 0.03 * j + 0.02 * (i % 6), 3),
                  "noop_ok": bool((i + j) % 3),
                  "quant_ok": bool((i + 2 * j) % 2)}
-            # The last model only produces tool_target_grounded_rate on 2 cases,
+            # The last model only produces the flat dimension on 2 cases,
             # so its count of fully-paired items drops to 2
             if m != _MODELS[-1] or i < 2:
-                r["tool_target_grounded_rate"] = flat_value
+                r[_FLAT] = flat_value
             rows.append(r)
     if break_one_cell:
-        nz = [r for r in rows if "tool_target_grounded_rate" in r]
-        nz[0]["tool_target_grounded_rate"] = flat_value + 0.5      # one differing cell => no longer zero-variance
+        nz = [r for r in rows if _FLAT in r]
+        nz[0][_FLAT] = flat_value + 0.5      # one differing cell => no longer zero-variance
     return rows
 
 
@@ -415,15 +419,15 @@ def test_zero_variance_is_judged_on_cells_not_on_paired_items():
     and excluded from the denominator."""
     rows = _flat_dim_rows()
     real = [r for r in rows if r["solver"] in _MODELS]
-    h = RP.dimension_health(real, "tool_target_grounded_rate")
+    h = RP.dimension_health(real, _FLAT)
     # First confirm the data has few paired items but many cells — otherwise
     # this test does not guard the per-cell rule.
     assert h["n_items"] < RP.MIN_ITEMS_FOR_EXERCISE <= h["n_cells"], h
     assert h["zero_variance"] == "all", h
     assert h["usable_as_capability"] is False
     unex = RP.unexercised_dims(rows)
-    assert "tool_target_grounded_rate" in unex, f"零方差维没有被剔出分母:{sorted(unex)}"
-    assert "value-bearing cells" in unex["tool_target_grounded_rate"], unex["tool_target_grounded_rate"]
+    assert _FLAT in unex, f"零方差维没有被剔出分母:{sorted(unex)}"
+    assert "value-bearing cells" in unex[_FLAT], unex[_FLAT]
     # The other half of the negative control: other dimensions must not be
     # excluded along with it (otherwise "excluded correctly" and "excluded
     # everything" would look the same).
@@ -435,9 +439,9 @@ def test_one_differing_cell_makes_it_not_zero_variance():
     must flip."""
     rows = _flat_dim_rows(break_one_cell=True)
     real = [r for r in rows if r["solver"] in _MODELS]
-    h = RP.dimension_health(real, "tool_target_grounded_rate")
+    h = RP.dimension_health(real, _FLAT)
     assert h.get("zero_variance") != "all", h
-    assert "tool_target_grounded_rate" not in RP.unexercised_dims(rows)
+    assert _FLAT not in RP.unexercised_dims(rows)
 
 
 def test_the_two_thresholds_are_not_the_same_object():
@@ -454,7 +458,7 @@ def test_the_two_thresholds_are_not_the_same_object():
     # `dimension_health` must report both denominators — reporting only one
     # would leave downstream code no choice but to treat that one as the judge.
     h = RP.dimension_health([r for r in _flat_dim_rows() if r["solver"] in _MODELS],
-                            "tool_target_grounded_rate")
+                            _FLAT)
     assert "n_items" in h and "n_cells" in h and h["n_items"] != h["n_cells"]
 
 
@@ -471,9 +475,9 @@ def test_zero_variance_survives_zero_paired_items():
         for j, m in enumerate(_MODELS):
             r = {"case": f"C{i}", "solver": m, "gold_kind": "ddx:unified"}
             if (i + j) % 7:                       # every case is missing one model, so no case is complete
-                r["tool_target_grounded_rate"] = 0.0
+                r[_FLAT] = 0.0
             rows.append(r)
-    h = RP.dimension_health([r for r in rows if r["solver"] in _MODELS], "tool_target_grounded_rate")
+    h = RP.dimension_health([r for r in rows if r["solver"] in _MODELS], _FLAT)
     assert h["n_items"] == 0 and h["n_cells"] > 10, h
     assert h["zero_variance"] == "all", h
 

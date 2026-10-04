@@ -18,7 +18,7 @@ class Gold:
 
 
 def case(monkeypatch):
-    import build
+    import haenv_kernel.build as build
     calls = []
     def builder(raw, time):
         calls.append(time)

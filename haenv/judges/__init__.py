@@ -181,7 +181,12 @@ def load_judge_plugins(group: str = "haenv.judges") -> list[str]:
     except ImportError:                      # pragma: no cover - only on very old Pythons
         return []
     added: list[str] = []
+    seen: set[str] = set()
     for ep in entry_points(group=group):
+        # an installed haenv and a checkout's `plugins/` shim can declare the same target
+        if ep.value in seen:
+            continue
+        seen.add(ep.value)
         factory = ep.load()
         for j in factory() or ():
             register_judge(j, source=f"{group}:{ep.name}")

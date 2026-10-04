@@ -14,13 +14,21 @@ from typing import Callable
 log = logging.getLogger("haenv.judges")
 
 from ._helpers import _ddx, _gold, _names, _rank_of, log  # noqa: F401
+from ..tracks import D9_PROVISIONAL  # noqa: F401  暂定，待临床复核 (docs/spec, design §5.0 D9); defined in tracks.py, re-exported here
+
+#: Hedged certainty labels ("possible"/"probable"/"suspected"); they count as listed under
+#: `D9_PROVISIONAL["possible_counts_as_listed"]` (default), and are dropped from the differential otherwise.
+_HEDGED_CERTAINTY = ("possible", "probable", "suspected", "likely")
 
 #: `dx_listed` counts a gold line only when it is among the first `n + DX_LIST_CAP_MARGIN`
 #: live (not ruled-out) candidates, `n` being the number of gold threads (1 on a unified case).
 #: Same margin as the test-order cap (`TESTS_CAP_MARGIN`). Without it, listing every diagnosis in
 #: the catalogue would score 1 on every case; a differential of a handful of candidates is not
 #: affected. Ruled-out candidates do not use up the cap.
-DX_LIST_CAP_MARGIN = 3
+#: A6 (2026-10-01): margin 3 -> 1. A question-blind fixed list reaches 0.506 under n+3, 0.315 under
+#: n+1 and 0.213 under n+0 (`blind_ceilings.dx_listed_ceiling`); n+1 is the most conservative cap
+#: that keeps one slot for a hedge. The n+0 reading is recorded as the profile atom `dx_listed_n0`.
+DX_LIST_CAP_MARGIN = 1
 
 
 def judge_dx_unified(out, vp, ctx) -> dict:
@@ -60,16 +68,27 @@ def _listed(out, alias_sets) -> dict:
     the 1-based position of its first match among the live candidates in rank order. The atom
     is the share of lines found within the cap. Only the structured differential counts: a
     diagnosis named elsewhere in the answer is not on the differential.
+
+    D9 (暂定，待临床复核): a "possible"/"probable"/"suspected" entry is listed; a `rule_out` (待排)
+    entry is listed even with `ruled_out_by` filled in (`tracks.entry_excluded`); a comorbidity
+    case needs per-thread coverage, not both components asserted together. With
+    `possible_counts_as_listed` off, hedged entries drop out and a multi-thread case scores only
+    when every thread is found (the strict reading).
     """
-    from ..quantities import dx_listed_of
-    from ..tracks import _differential, alias_hit_asserted, rank_key
+    from ..quantities import dx_listed_n0_of, dx_listed_of
+    from ..tracks import _certainty, _differential, alias_hit_asserted, entry_excluded, rank_key
+    _hedged_ok = D9_PROVISIONAL["possible_counts_as_listed"]
     live = [str(x.get("diagnosis") or "") for x in sorted(_differential(out), key=rank_key)
-            if not str(x.get("ruled_out_by") or "").strip()]
+            if not entry_excluded(x)
+            and (_hedged_ok or _certainty(x) not in _HEDGED_CERTAINTY)]
     pos = [next((i for i, e in enumerate(live, 1) if alias_hit_asserted(e, s)), None)
            for s in alias_sets]
+    if not _hedged_ok and len(pos) > 1 and any(p is None for p in pos):
+        pos = [None] * len(pos)
     res = {"dx_listed_positions": pos, "dx_listed_cap": len(alias_sets) + DX_LIST_CAP_MARGIN,
            "dx_n_live": len(live)}
     res["dx_listed"] = dx_listed_of(res)
+    res["dx_listed_n0"] = dx_listed_n0_of(res)
     return res
 
 
@@ -159,6 +178,16 @@ def _gold_test_optional(t: str) -> bool:
 TESTS_CAP_MARGIN = 3
 
 
+def _executed_tests(raw, ctx) -> list[str]:
+    """Tests already executed through the tool: the answer's `executed_investigations`, else the
+    same key on `ctx`. Empty when the run has none (non-gated geometries).
+    """
+    src = raw.get("executed_investigations")
+    if not src and isinstance(ctx, dict):
+        src = ctx.get("executed_investigations")
+    return [str(t) for t in (src or []) if str(t).strip()]
+
+
 def judge_workup(out, vp, ctx) -> dict:
     """Disposition: what to test, which specialty to refer to, how urgent. Tests are judged in both
     directions.
@@ -223,7 +252,22 @@ def judge_workup(out, vp, ctx) -> dict:
                 continue
             _taken_gold.add(max(_cand)[1])        # the gold item with the longest matching segment
             _taken_said.add(_si)
+        named_ordered = [t for t in scoreable if t in _taken_gold]
+        # D9.1 (暂定，待临床复核): a test already executed through the tool (`executed_investigations`,
+        # result already in the case) covers a still-unmatched required item, same one-to-one rule.
+        # It fills the cap slots the ordered list leaves free (ordered first, then executed, as the
+        # semantic judge reads them), and touches recall only: precision keeps the ordered tests as
+        # its denominator, so reading the chart is neither penalised nor rewarded twice.
+        executed_all = _executed_tests(raw, ctx)
+        executed = (executed_all[:max(0, _cap - len(said_tests))]
+                    if D9_PROVISIONAL["executed_counts_as_covered"] else [])
+        for _one in sorted((t.lower() for t in executed), key=lambda t: -len(t)):
+            _cand = [(len(f), t) for t in scoreable if t not in _taken_gold
+                     for f in _forms[t] if f in _one]
+            if _cand:
+                _taken_gold.add(max(_cand)[1])
         named = [t for t in scoreable if t in _taken_gold]
+        via_executed = [t for t in named if t not in named_ordered]
         gold_forms = [f for t in scoreable + optional
                       for s in _gold_test_segs(t) for f in _seg_forms(s)]
         on_target = [t for t in said_tests if any(f in t.lower() for f in gold_forms)]
@@ -231,6 +275,10 @@ def judge_workup(out, vp, ctx) -> dict:
                     "tests_optional": len(optional) or None,
                     "tests_recall": (round(len(named) / len(scoreable), 3)
                                      if scoreable else None),
+                    "tests_recall_ordered_only": (round(len(named_ordered) / len(scoreable), 3)
+                                                  if scoreable else None),
+                    "tests_recall_via_executed": len(via_executed) if executed_all else None,
+                    "tests_executed": len(executed_all) or None,
                     "tests_unscoreable": len(unscoreable) or None,
                     "tests_proposed": len(said_tests_all),
                     "tests_cap": _cap,
@@ -345,7 +393,7 @@ def judge_discriminative_tool(out, vp, ctx=None) -> dict:
     `allow_suffix`. Returns `disc_n_rivals`, `disc_covered`/`disc_recall`, `disc_missed` and
     `disc_n_tests_proposed` (context for reading coverage). No structured rival => not applicable.
     """
-    from ..events import alias_hit
+    from ..events_text import alias_hit
     from ..overlay import rivals_for
     from ..registry import load_findings
 

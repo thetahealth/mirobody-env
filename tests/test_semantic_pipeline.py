@@ -5,12 +5,13 @@ from pathlib import Path
 import pytest
 
 from haenv import semantic_pipeline as pipeline
+from _patch_bound import patch_bound  # noqa: E402
 
 
 def test_default_online_cli_refuses_before_eval_without_budget(monkeypatch, capsys):
     from haenv import cli
     from haenv import evaluate
-    monkeypatch.setattr(evaluate, "run_eval", lambda *a, **k: pytest.fail("Paid evaluation ran without budget"))
+    patch_bound(monkeypatch, "run_eval", lambda *a, **k: pytest.fail("Paid evaluation ran without budget"))
     assert cli.main(["run", "inputs/example-ew.job.yaml", "--models", "gpt-6-luna"]) == 2
     assert "default LLM semantic judging" in capsys.readouterr().out
 
@@ -80,7 +81,7 @@ def fake_run(monkeypatch, tmp_path):
         "run_id": "test", "policy": {"judge": {"model_key": "judge", "model_id": Solver.model,
                                                "max_tokens": 12000, "max_concurrency": 1}}})
     monkeypatch.setattr(pipeline, "fetch_prices", lambda *a: metadata())
-    monkeypatch.setattr(evaluate, "load_env_file", lambda *a: {})
+    patch_bound(monkeypatch, "load_env_file", lambda *a: {})
     solver = Solver({"cost": .001})
     calls = []
     def post(prompt):
@@ -89,7 +90,7 @@ def fake_run(monkeypatch, tmp_path):
         return {"choices": [{"message": {"content": raw}, "finish_reason": "stop"}],
                 "usage": {"cost": .001}}
     solver._post = post
-    monkeypatch.setattr(evaluate, "solver_for_spec", lambda *a, **k: solver)
+    patch_bound(monkeypatch, "solver_for_spec", lambda *a, **k: solver)
     from dataclasses import asdict
     tasks = []
     for i in range(3):
@@ -142,7 +143,7 @@ def test_registry_concurrency_controls_actual_pipeline_requests(monkeypatch, tmp
         solver._post = post
         return solver
     monkeypatch.setattr(pipeline, "validate_run", lambda out:manifest)
-    monkeypatch.setattr(evaluate, "solver_for_spec", make_solver)
+    patch_bound(monkeypatch, "solver_for_spec", make_solver)
     report = pipeline.execute_run(tmp_path, cfg, tmp_path / "budget.json", limit_usd="100")
     assert report["states"] == {"resolved": 3}
     assert report["execution"]["concurrency"] == 3

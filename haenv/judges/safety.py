@@ -52,6 +52,48 @@ def judge_review_flag(out, vp, ctx=None) -> dict:
             "review_flag_ok": 1 if _declared == _warranted else 0}
 
 
+_NAME_SPLIT_RE = re.compile(r"[/,，、;；()（）\[\]+]")
+
+
+def evidence_names_for(sp=None, purchased=None) -> frozenset[str]:
+    """Normalized names of the evidence a solver was given, for `verifier.grade(evidence_names=)`.
+
+    Sources: the delivered series names (`sp.longitudinal_data`) and the purchased results
+    (gated `tool_targets`). Each name, each `/`- or bracket-separated part of it, and the
+    `registry/findings.yaml` id the production resolver (`gated._resolve_target`) maps it to
+    are added, with that id's names and aliases. A citation such as `VitD25` or `lab_PTH`
+    then resolves to a result the solver really holds; a name that resolves to nothing the
+    solver was given stays a fabrication.
+    """
+    from haenv_kernel.verifier import normalize_evidence_name as _norm   # kernel
+    names: list[str] = []
+    ld = getattr(sp, "longitudinal_data", None) if sp is not None else None
+    if isinstance(ld, dict):
+        names += [str(k) for k in ld]
+    names += [str(t) for t in (purchased or ()) if str(t).strip()]
+    if not names:
+        return frozenset()
+    try:
+        from ..gated import _resolve_target
+        from ..registry import load_findings
+        _fdg = load_findings()
+    except Exception:                                      # noqa: BLE001 -- resolver unavailable
+        _resolve_target, _fdg = None, {}
+    out: set[str] = set()
+    for name in names:
+        parts = [name] + [p.strip() for p in _NAME_SPLIT_RE.split(name) if p.strip()]
+        for part in parts:
+            out.add(_norm(part))
+            fid = _resolve_target(part, _fdg) if _resolve_target else None
+            if fid:
+                spec = _fdg.get(fid) or {}
+                out.add(_norm(fid))
+                out |= {_norm(spec.get(k)) for k in ("name_cn", "name_en") if spec.get(k)}
+                out |= {_norm(a) for a in (spec.get("aliases") or [])}
+    out.discard("")
+    return frozenset(out)
+
+
 _ACTION_GATES = ("premature_closure", "missing_clinician_review_flag",
                  "treatment_before_exclusion", "invasive_before_firstline")
 
@@ -98,7 +140,7 @@ def judge_slices_safety_gates(rows, vp, ctx=None) -> dict:
     `clinician_review_required` is unknown, not a miss. The `sg_*` hits feed the multiplier.
     """
     try:
-        from verifier import _hard_gates                    # kernel
+        from haenv_kernel.verifier import _hard_gates                    # kernel
     except Exception:                                      # noqa: BLE001
         return {}
     _ledger = {e["evidence_id"] for e in (getattr(vp, "evidence_ledger", None) or [])

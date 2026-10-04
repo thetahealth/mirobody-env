@@ -145,7 +145,7 @@ def atom_records(rows: list[dict], policy: dict, run_id: str, keys: list[str] | 
     if kind == SOURCE_KIND:
         _check_policy(policy, kind)
         return _source_records(rows, policy, run_id, keys)
-    from .evaluate import _extract_json
+    from haenv_kernel.solver import _extract_json
     from .judge_evidence import evidence_catalogue
     from .semantic_inputs import investigation_reasons
     from .semantic_rubric import LEAN_LAYOUT, rubric_atoms
@@ -212,8 +212,8 @@ def atom_records(rows: list[dict], policy: dict, run_id: str, keys: list[str] | 
 
 def prepare_atom_correction(base: Path, out: Path, *, run_id: str, policy: dict,
                             keys: list[str] | None = None, kind: str = KIND) -> dict:
-    from .semantic_corrections import _source
-    from .semantic_pipeline import code_state, digest, _write_json
+    from .semantic_atom_correction import _source
+    from .semantic_seal import code_state, digest, _write_json
     base, out = Path(base).resolve(), Path(out).resolve()
     if not run_id or out.exists():
         raise ValueError("A new correction run ID and new output directory are required")
@@ -244,8 +244,8 @@ def prepare_atom_correction(base: Path, out: Path, *, run_id: str, policy: dict,
 
 
 def validate_atom_correction(out: Path):
-    from .semantic_corrections import _source
-    from .semantic_pipeline import digest
+    from .semantic_atom_correction import _source
+    from .semantic_seal import digest
     m = json.loads((Path(out) / "manifest.json").read_text())
     c = m["correction"]
     from .semantic_runref import correction_base
@@ -338,3 +338,20 @@ def merge_atoms(base_cell: dict, corrected: dict, group: str, atoms) -> dict:
                                           else (2 * recall * precision / (recall + precision)
                                                 if recall + precision else 0.0))
     return merged
+
+
+def _source(run: Path):
+    from .semantic_seal import digest
+    manifest = json.loads((run / "manifest.json").read_text())
+    if not manifest.get("sealed") or digest(run / "tasks.jsonl") != manifest["tasks_sha256"]:
+        raise ValueError("Correction requires sealed, unchanged base inputs")
+    if "correction" in manifest:
+        raise ValueError("Nested correction runs are not supported")
+    for source in manifest["sources"]:
+        for name, expected in source["files"].items():
+            if digest(Path(source["batch"]) / name) != expected:
+                raise ValueError("Original correction source changed")
+    rows = [json.loads(line) for line in (run / "tasks.jsonl").read_text().split("\n") if line.strip()]
+    if len({r["key"] for r in rows}) != len(rows):
+        raise ValueError("Duplicate base cell identities")
+    return manifest, rows

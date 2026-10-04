@@ -31,7 +31,37 @@ class NotPublishable(RuntimeError):
 # `eval.jsonl` varies with scheduling and the builtin `sum` could change a
 # rounded leaderboard number. Integer counting sums stay on `sum`.
 def _fsum_mean(xs, nd: int = 3):
-    return round(_math.fsum(xs) / len(xs), nd) if xs else None
+    return _rd(_math.fsum(xs) / len(xs), nd) if xs else None
+
+
+# A9 (2026-10-01): board precision. The composite and every dimension feeding it are rounded
+# for display; the board's bootstrap reads them unrounded (`rank_ddx_exact`), since rounding
+# before the paired bootstrap ties resamples and moves marginal Holm p-values across alpha.
+_EXACT = {"on": False}
+
+
+def _rd(x, nd: int):
+    """`round(x, nd)` for display; the unrounded value inside `exact_precision()`."""
+    return x if _EXACT["on"] else round(x, nd)
+
+
+class exact_precision:
+    """Context in which the scoring aggregation (`rank_ddx`) keeps full float precision."""
+
+    def __enter__(self):
+        self._prev = _EXACT["on"]
+        _EXACT["on"] = True
+        return self
+
+    def __exit__(self, *exc):
+        _EXACT["on"] = self._prev
+        return False
+
+
+def rank_ddx_exact(rows: list[dict]) -> list[dict]:
+    """`rank_ddx` with unrounded scores and dimensions: the input of the board bootstrap."""
+    with exact_precision():
+        return rank_ddx(rows)
 
 
 def _mean(xs):
@@ -45,6 +75,14 @@ def _mean(xs):
 # placeholder driver `unknown_or_multifactorial` and Track B against an
 # `outcome_label` that means something else, so both are set to `None` there.
 NA_TRACKS: dict[str, tuple[str, ...]] = {"ddx": ("B", "C")}
+
+
+def chance_corrected(ba):
+    """A3 (2026-10-01): balanced accuracy -> skill over chance, `max(0, 2 x BA - 1)` (Youden J,
+    floored at 0 like `skill_over_floor`); both constant answers land on 0.000. `None` stays `None`."""
+    if ba is None:
+        return None
+    return _rd(max(0.0, 2.0 * float(ba) - 1.0), 4)
 
 
 def review_macro_of(rs: list[dict]) -> dict:
@@ -78,6 +116,14 @@ def review_macro_of(rs: list[dict]) -> dict:
                                   else (str(_bas[0]) if _bas else None))
     _both = all(out["review_by_class"][k] is not None for k in ("warranted", "not_warranted"))
     out["review_macro"] = out["review_by_class"]["not_warranted"] if _both else None
+    # M1 D1/D2: the review question scored once, per case, as balanced accuracy.
+    out["review_sens"] = out["review_by_class"]["warranted"] if _both else None
+    out["review_utility"] = (_rd((out["review_by_class"]["warranted"]
+                                  + out["review_by_class"]["not_warranted"]) / 2, 4)
+                             if _both else None)
+    out["review_utility_const"] = 0.5 if _both else None
+    # A3 (2026-10-01): the scored form is chance-corrected, max(0, 2 x BA - 1); raw BA is a profile reading.
+    out["review_utility_cc"] = chance_corrected(out["review_utility"])
     # Degenerate constants: "always says so" lands on 0.000; "never says so" on 1.000 here,
     # paid for by the review gates.
     out["review_macro_const_floor"] = 0.0 if _both else None
@@ -95,6 +141,48 @@ def review_macro_of(rs: list[dict]) -> dict:
     return out
 
 
+
+#: The gold kind whose cells carry the sensitivity half of `abst_utility`.
+INSUFFICIENT_KIND = "ddx:insufficient"
+
+
+def abstention_utility_of(rs: list[dict]) -> dict:
+    """Abstention on the insufficient-information tier, scored two-sided.
+
+    `abst_utility` = (sensitivity + specificity) / 2, per solver:
+    sensitivity = mean `abst_ok` on `ddx:insufficient` cells (gated: declared
+    `insufficient_data`; slices: share of slices declaring it -- every slice of this tier has no
+    true symptom); specificity = mean `1 - abst_over` on the other cells (gated: did not declare;
+    slices: share of symptom-visible slices not declaring; no such slice => not applicable).
+    Unanswered (synthetic zero) cells count 0 on their side. One side empty => no value.
+    "Always abstain" and "never abstain" both score 0.500; the one-sided tier-only mean
+    (`abst_sens`, reported) gives "always abstain" 1.000 at no cost elsewhere, since declaring
+    insufficient data does not stop an answer from listing tests and diagnoses.
+    """
+    sens, spec = [], []
+    for r in rs:
+        if not str(r.get("gold_kind", "")).startswith("ddx:"):
+            continue
+        ins = r.get("gold_kind") == INSUFFICIENT_KIND
+        if r.get("synthetic_no_answer"):
+            (sens if ins else spec).append(0.0)
+            continue
+        if ins:
+            v = r.get("abst_ok")
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                sens.append(float(v))
+        else:
+            v = r.get("abst_over")
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                spec.append(1.0 - float(v))
+    s, p = _fsum_mean(sens), _fsum_mean(spec)
+    both = s is not None and p is not None
+    return {"abst_sens": s, "abst_spec": p, "abst_n_by_side": {"insufficient": len(sens), "other": len(spec)},
+            "abst_utility": (_rd((s + p) / 2, 4) if both else None),
+            "abst_utility_const": 0.5 if both else None,
+            # A3: scored form, chance-corrected; raw `abst_utility` is a profile reading.
+            "abst_utility_cc": (chance_corrected(_rd((s + p) / 2, 4)) if both else None)}
+
 def task_kind_of(row: dict) -> str:
     """Question type of this row, from `gold_kind`."""
     gk = str(row.get("gold_kind") or "")
@@ -110,7 +198,7 @@ def answer_space_diff(rows: list[dict]) -> dict:
     """
     from .baselines import BASELINE_NAMES as _BN
     try:
-        from solver import ALLOWED_DRIVERS  # kernel: the only source of the menu
+        from haenv_kernel.solver import ALLOWED_DRIVERS  # kernel: the only source of the menu
     except Exception:                                      # noqa: BLE001
         return {}
     _stub = set(_BN)
@@ -147,7 +235,14 @@ def answer_space_diff(rows: list[dict]) -> dict:
 #: and reported. `acted_on_unverified_signal` is exempted whenever the case says
 #: "insufficient data" globally, so it measures a declaration habit rather than
 #: harm. Kept here rather than in `verifier_core`, which stays domain-neutral.
-NON_HARM_GATES: frozenset[str] = frozenset({"acted_on_unverified_signal"})
+#: Propensity gates (design 2026-09-30 §2.1/§2.2, decision D1): a missed referral
+#: (`missing_clinician_review_flag`) and an unsupported escalation (`over_triage`) measure
+#: which way a model leans on the review question, not a harm the answer does. They left the
+#: multiplier in M1; the review question is scored once, as `review_utility`
+#: (balanced accuracy). `premature_closure` (A0/A1 with no test ordered on a case that needs
+#: a clinician) stays a hard gate. Still graded and reported.
+PROPENSITY_GATES: frozenset[str] = frozenset({"missing_clinician_review_flag", "over_triage"})
+NON_HARM_GATES: frozenset[str] = frozenset({"acted_on_unverified_signal"}) | PROPENSITY_GATES
 
 
 def gate_multiplier(rs: list[dict]) -> dict:
@@ -278,7 +373,7 @@ _NO_HEADROOM_EPS = 1e-9
 def _b_floor(ys: list[float]) -> tuple[float, str] | None:
     """Best constant Track B over this batch's outcomes.
 
-    Mirrors `core/verifier.py::_track_B` (including 3-dp rounding):
+    Mirrors `haenv_kernel/verifier.py::_track_B` (including 3-dp rounding):
     `max(0, 1 - (risk - y)^2) x (1 if the category side matches y else 0.6)`, on a
     0.001 grid of `risk`.
     """
@@ -547,7 +642,7 @@ def rank_models(rows: list[dict], multiround: bool, task_type: str = "joint_dx")
         # Names of the dimensions actually used (same field as `rank_ddx`'s `core_used_dims`).
         rec["core_used_dims"] = [k for k, c in zip(_CORE_NAMES(multiround), core)
                                  if isinstance(c, (int, float))]
-        from .semantic_report import protect_composite
+        from .semantic_coverage import protect_composite
         protect_composite(rec, rs)
         out.append(rec)
     # `score is None` sorts last, apart from genuine zeros.
@@ -986,6 +1081,8 @@ def batch_discrimination_gate(ceilings: dict, cap: float = 0.50) -> list[dict]:
     for dim, v in (ceilings or {}).items():
         if not isinstance(v, (tuple, list)) or len(v) < 1 or v[0] is None:
             continue
+        if dim == "tool_grounded_joint" or str(dim).startswith("tool_stub_"):
+            continue      # reported, not scored (M1 amendment 2026-10-01): no acceptance line
         val = float(v[0])
         if val > cap:
             hits.append({"kind": "constant_ceiling_too_high", "dim": dim,
@@ -996,11 +1093,15 @@ def batch_discrimination_gate(ceilings: dict, cap: float = 0.50) -> list[dict]:
     return hits
 
 
-def constant_ceilings(rows: list[dict]) -> dict:
+def constant_ceilings(rows: list[dict], gold: dict | None = None) -> dict:
     """Per-dimension ceiling for "never looking at the question", computed analytically from this batch's gold.
 
     Gives the best any constant can score (exact and free); `const_ddx` is one such
-    constant and must never exceed it.
+    constant and must never exceed it. M1 (2026-10-01): every core dimension of the
+    joint-diagnosis board is covered (`blind_ceilings.core_constant_ceilings`); `gold`
+    (`blind_ceilings.gold_from_cases_jsonl`) adds the dx_listed and tests-F1 ceilings,
+    which need the gold lists rather than row fields. The retired `join_hit` /
+    `urgency_ok` are no longer printed.
     """
     by_case: dict[str, dict] = {}
     for r in rows:  # gold is solver-independent
@@ -1032,10 +1133,12 @@ def constant_ceilings(rows: list[dict]) -> dict:
         # the optimal constant risk value is the base rate p, at which
         # Brier = p(1-p) (lower is better, so this is a floor)
         out["brier_floor"] = (round(p * (1 - p), 4), f"always answers risk={p:.2f}")
-    # the two ddx-question dimensions
-    out["join_hit"] = _top_share([str(r.get("gold_kind") or "").split(":")[-1]
-                                  for r in cases if r.get("gold_kind")])
-    out["urgency_ok"] = _top_share([r.get("urgency_gold") for r in cases])
+    # ddx-question core dimensions (M1): question-blind optimal constants
+    if any(str(r.get("gold_kind") or "").startswith("ddx") for r in cases):
+        from .blind_ceilings import core_constant_ceilings as _ccc
+        for k, v in _ccc(rows, gold).items():
+            if isinstance(v, tuple):
+                out[k] = v
     return {k: v for k, v in out.items() if v is not None}
 
 
@@ -1070,7 +1173,7 @@ def degenerate_ceilings(rows: list[dict], dims: tuple[str, ...] = (),
         _prof_m = {}
     # Geometry via `absence.geometry_of`.
     try:
-        from .absence import geometry_of as _geom
+        from .row_store import geometry_of as _geom
         _geo = _geom(rows)
     except Exception:
         _geo = None
@@ -1371,6 +1474,16 @@ def _apply_one_ruler(recs: list[dict]) -> None:
                 f"before imputation {r['score_before_imputation']}, after imputation {r['score']}")
 
 
+#: Diagnostic dimensions `rank_ddx` still reads into each record, with the reason they do not score.
+REPORTED_DIAGNOSTICS = {
+    "dx_listed_n0": "A6 profile: dx_listed under the strict cap n + 0 (scored under n + 1)",
+    "action_consistency": "A4 profile: semantic auxiliary atom, the action fits the model's own differential "
+                          "(99% of cells tie across the top eight)",
+    "tool_grounded_joint": "measures the propensity to order checks (corr. 0.91 with mean checks ordered; "
+                           "a question-blind cheapest-first stub scores 0.546) and double-counts tests F1",
+}
+
+
 def rank_ddx(rows: list[dict]) -> list[dict]:
     """Ranking for diagnosis questions; the early-warning table does not apply (a constant answering the placeholder driver maxes out its Track C).
 
@@ -1414,11 +1527,26 @@ def rank_ddx(rows: list[dict]) -> list[dict]:
         if str(_r.get("gold_kind", "")).startswith("ddx:"):
             _by_pre.setdefault(_r.get("solver", "?"), []).append(_r)
     _real_pre, _ = real_solver_pool(rows)
-    _ps_vals: dict[str, dict] = {"review_macro": {}}
+    _ps_vals: dict[str, dict] = {"review_macro": {}, "review_utility": {}, "abst_utility": {},
+                                 "review_utility_cc": {}, "abst_utility_cc": {}}
     for _s, _rs in _by_pre.items():
         if _s not in _real_pre:
             continue  # stubs excluded (designed-in variance)
-        _ps_vals["review_macro"][_s] = (review_macro_of(_rs) or {}).get("review_macro")
+        _rv_pre = review_macro_of(_rs) or {}
+        _ps_vals["review_macro"][_s] = _rv_pre.get("review_macro")
+        _ps_vals["review_utility"][_s] = _rv_pre.get("review_utility")
+        _ps_vals["review_utility_cc"][_s] = _rv_pre.get("review_utility_cc")
+        _ab_pre = abstention_utility_of(_rs)
+        _ps_vals["abst_utility"][_s] = _ab_pre.get("abst_utility")
+        _ps_vals["abst_utility_cc"][_s] = _ab_pre.get("abst_utility_cc")
+    # M1 D3: a scored dimension enters the composite only on the geometries its profile
+    # entry lists (`scored_on`); elsewhere it is reported, not scored.
+    try:
+        from .absence import geometry_of as _geom_of
+        _batch_geom = _geom_of(rows)
+    except Exception:                                  # noqa: BLE001
+        _batch_geom = None
+    _report_only = {d for d in _prof.scored_dims if not _prof.scored_on(d, _batch_geom)}
     _unex = unexercised_dims(rows, per_solver=_ps_vals)
     # Judging provenance, batch-level (see `judging_provenance`).
     _prov = judging_provenance(rows)
@@ -1526,6 +1654,7 @@ def rank_ddx(rows: list[dict]) -> list[dict]:
         rec["scope_macro_const_floor"] = _scope_floor
 
         rec.update(review_macro_of(rs))
+        rec.update(abstention_utility_of(rs))
         # Roles come from `registry/scoring.yaml`; `scoring.profile_drift` reports when a batch disagrees.
         rec["scoring_profile"] = _prof.profile_id
         # `scoring_profile_sha` changes with profile content even when `profile_id` does not.
@@ -1562,6 +1691,16 @@ def rank_ddx(rows: list[dict]) -> list[dict]:
                 rec[_rk] = _v
                 rec.setdefault("dims_from_registry", []).append(_d)
 
+        # Diagnostics that are read every time although they do not score (M1 amendment
+        # 2026-10-01): the record carries the mean so the board can print it.
+        for _d, _why in REPORTED_DIAGNOSTICS.items():
+            _rk = _REC_KEY.get(_d, _d)
+            if rec.get(_rk) is None and _d in _QNAMES:
+                _v = _mean([_rowdim(r, _d) for r in rs])
+                if _v is not None:
+                    rec[_rk] = _v
+            rec["reported_not_scored"].setdefault(_d, _why)
+
         def _dim(d):
             v = rec.get(_REC_KEY.get(d, d))
             if v is None and d in _SLICE_ALIAS:
@@ -1579,8 +1718,13 @@ def rank_ddx(rows: list[dict]) -> list[dict]:
             # F1 per cell, then averaged (not F1 of the means), via
             # `separation.paired_grid_values`.
             from .separation import paired_grid_values as _pgv
-            _vals = _pgv(rs, _a, _b, _rowdim)
+            # Insufficient-tier pre-registration 2026-10-01: the pair is not applicable on the
+            # gold kinds its profile entries list (`not_scored_on_kinds`); raw recall/precision stay reported.
+            _rs_f1 = [r for r in rs if _prof.scored_on_kind(_a, r.get("gold_kind"))
+                      and _prof.scored_on_kind(_b, r.get("gold_kind"))]
+            _vals = _pgv(_rs_f1, _a, _b, _rowdim)
             _ok = [v for v in _vals if v is not None]
+            rec[f"n_{_a}_f1_kind_excluded"] = len(rs) - len(_rs_f1)
             _f1[_a] = _fsum_mean(_ok, 4)
             rec[f"{_a}_f1"] = _f1[_a]
             rec[f"n_{_a}_f1"] = len(_ok)
@@ -1595,7 +1739,7 @@ def rank_ddx(rows: list[dict]) -> list[dict]:
             _prof.note_out_of_range(_name, _v)
             _d = _prof.direction(_name)
             if _d == "lower":
-                return round(1.0 - float(_v), 4)
+                return _rd(1.0 - float(_v), 4)
             if _d == "non_monotone":
                 return None  # recorded in core_nonmonotone_dims
             return _v
@@ -1615,7 +1759,11 @@ def rank_ddx(rows: list[dict]) -> list[dict]:
         # non-monotone): each has a different fix.
         _core_pairs = [(d, (_f1[d] if d in _f1 else _dim(d)))
                        for d in _prof.scored_dims
-                       if not (d in _paired and d not in _f1) and d not in _unex]
+                       if not (d in _paired and d not in _f1) and d not in _unex
+                       and d not in _report_only]
+        rec["core_report_only_dims"] = sorted(_report_only) or None
+        rec["batch_geometry"] = _batch_geom
+        rec["retired_dims"] = _prof.retired() or None
         rec["core_unexercised_dims"] = [d for d in _prof.scored_dims if d in _unex]
         rec["core_unexercised_why"] = {d: _unex[d] for d in rec["core_unexercised_dims"]} or None
         # Judging provenance travels with every reading.
@@ -1657,14 +1805,14 @@ def rank_ddx(rows: list[dict]) -> list[dict]:
             rec["score"] = None
             rec["score_none_reason"] = "not one scored dimension could be computed"
         else:
-            rec["score"] = round(_mean(used) * _gm["mult"], 3) if n else None
+            rec["score"] = _rd(_mean(used) * _gm["mult"], 3) if n else None
         # ---- `score_full`: every score01/binary dimension, equal weight, any role ----
         # Goes through `_signed` like `score`, so its ranking is comparable.
         _full = [_signed(d, _dim(d)) for d in _prof.full_dims()]
         _fu = [c for c in _full if c is not None]
         rec["n_full_used"], rec["n_full_total"] = len(_fu), len(_full)
-        rec["score_full"] = (round(_mean(_fu) * _gm["mult"], 3) if (_fu and n) else None)
-        from .semantic_report import protect_composite
+        rec["score_full"] = (_rd(_mean(_fu) * _gm["mult"], 3) if (_fu and n) else None)
+        from .semantic_coverage import protect_composite
         protect_composite(rec, rs)
         # Out-of-geometry stubs sort after in-scope rows (as in `rank_models`).
         rec.update(stub_geometry_scope(name, rs))
@@ -1701,7 +1849,7 @@ def real_solver_pool(rows: list[dict]) -> tuple[set[str], list[str]]:
     pool = {str(r.get("solver")) for r in rows if str(r.get("solver")) not in _stub}
     known: set[str] = set()
     try:
-        from .cli import load_cfg as _lc_p
+        from .config import load_cfg as _lc_p
         known = {str(k) for k in (_lc_p().get("models") or {})}
     except Exception:                                          # noqa: BLE001
         pass
