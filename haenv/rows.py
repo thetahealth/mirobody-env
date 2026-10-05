@@ -509,6 +509,7 @@ def _row_slices(cid, sname, raw, slices, solver, *, ctx: RunContext) -> dict:
         save_response(ctx.resp_path, cid, sname, o, slice_t=_t, ctx=ctx)
         save_simple_trace(ctx.resp_path.with_name("trace.jsonl"),
                           cid, sname, "slices", o, slice_t=_t)
+    _slice_attempts: list = []                # failed attempts across the slices (the cause of an all-empty abort)
     for t in slices:
         sp, vp = build_instance(raw, int(t))
         n_sym = sum(1 for ev in (sp.evidence_ledger or [])      # count of genuine symptoms visible in this slice
@@ -520,6 +521,7 @@ def _row_slices(cid, sname, raw, slices, solver, *, ctx: RunContext) -> dict:
             precheck=iron_law_precheck(raw, sp, vp, solver),
             on_output=(lambda o, _t=int(t): _persist(o, _t)) if ctx.resp_path else None,
             tag=f"{cid}|{sname}@t{int(t)}")
+        _slice_attempts += list(getattr(facts, "failed_attempts", None) or [])
         if facts.leak:
             rows.append({"t": int(t), "n_symptoms": n_sym, "leak": facts.leak, "all_drivers": []})
             continue
@@ -603,6 +605,7 @@ def _row_slices(cid, sname, raw, slices, solver, *, ctx: RunContext) -> dict:
         return {"case": cid, "solver": sname, "slices": list(map(int, slices)),
                 "overall": "ABORT(no_response)", "n_slices": len(rows),
                 "answered_slices": 0, "slices_missing": len(_rw),
+                "failed_attempts": _slice_attempts or None,
                 "no_response_reason": "all_slices_empty"}
     # All slices leaked => `ABORT(leak)`, as in the other geometries (a partial leak voids only
     # those slices). Checked after `ABORT(no_response)`.

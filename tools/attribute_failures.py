@@ -11,7 +11,7 @@ attempts in `responses.jsonl` and classifies each error text:
 
 | class | criterion | blame |
 |---|---|---|
-| `infra` | 5xx, gateway timeout, connection error, broken stream | provider |
+| `infra` | 5xx, 429, gateway timeout, connection error, broken stream | provider |
 | `auth` | 401, invalid token, quota exhausted | the operator's key pool |
 | `budget` | truncated by `max_tokens`; reasoning used up the budget | the run's configuration |
 | `no_answer` | reasoning but no answer, with the budget not used up | the model |
@@ -69,7 +69,8 @@ _RULES: list[tuple[str, re.Pattern]] = [
     # A missing terminating frame is a transport break (`infra`); `budget` is told apart by
     # its "reasoning N chars, answer 0 chars" wording, not by the character count.
     ("infra",  re.compile(r"未收到终止帧|finish_reason\s*缺失|流被截断"
-                          r"|\b50[0234]\b|gateway\s*time-?out|bad\s*gateway"
+                          r"|\b50[0234]\b|\b429\b|too\s*many\s*requests|rate[ _-]?limit"
+                          r"|gateway\s*time-?out|bad\s*gateway"
                           r"|service\s*unavailable|connection|timed?\s*out|timeout"
                           r"|URLError|RemoteDisconnected|IncompleteRead", re.I)),
     ("format", re.compile(r"JSONDecode|Expecting\s|Unterminated|Extra data"
