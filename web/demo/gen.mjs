@@ -45,6 +45,9 @@
  * | `abnormalSide` | `haenv/indicators.py:abnormal_side` |
  * | `kineticFraction` | `haenv/drug_effects.py:_kinetic_fraction` |
  * | `responseOf` | `haenv/drug_effects.py:response_for` (per-person draw looked up from `PER.response`) |
+ * | `doseCourse` · `doseAt` | `haenv/med_course.py:dose_course` · `dose_at` (draws looked up from `PER.med`) |
+ * | `indication` | `registry/drug_indications.yaml` as `haenv/gates_case.py:check_drug_indication` reads it |
+ * | `emissionGate` | the emission gate in `haenv/build.py`: `haenv_kernel/synth.py:premise_conflicts` (weight range, weekly slope) on the course · `gates.check_observed_in_domain` · `check_anchors_honored` (GEN22) · `check_outcome_derivable` (GEN13) · `check_drug_indication` (GEN27) |
  * | `weightObserved` | `haenv/physio/apply.py:apply_physio` (weight stream: AR(1) over the weigh-in days, scaled to the first reading) · `haenv/physio/noise.py:weight_noise_shaped` · `haenv/physio/bounds.py:project` · `haenv/events_pools.py:_round_to_declared_digits` · `haenv/physio/noise.py:weight_on_scale_grid` (draws looked up from `WN.per`) |
  *
  * The skeleton's uniforms (`build._skeleton_draws`) depend on `case_id` only and are looked
@@ -1133,11 +1136,132 @@
     });
   }
 
+  /* ── Primary dose record (med_course.dose_course): titration up the ladder at irregular
+       intervals, at most one dose-down episode, repeat records. `[day, mg]`. The draws are
+       production's, per case id, in `PER.med`; the literals of that function are in
+       `K.med_course`. ── */
+  function doseAt(pts, day) {
+    let cur = 0; for (const q of pts.slice().sort((a, b) => a[0] - b[0])) { if (q[0] > day) break; cur = q[1]; }
+    return cur;
+  }
+  function endRecordDay(u, lastTs, ce, MC) {
+    const lo = Math.max(lastTs + 1, ce - MC.end_record_window + 1);
+    if (lo > ce) return lastTs;
+    return lo + Math.floor(u * (ce - lo + 1));
+  }
+  function doseCourse(R, stepsIn, T, ce, mtIn, MC) {
+    const mt = Math.max(1, Math.trunc(mtIn));
+    const steps = stepsIn && stepsIn.length ? stepsIn.map(Number) : [0];
+    const pts = [[0, steps[0]]];
+    let t = 0;
+    for (let i = 1; i < steps.length; i++) {
+      t += mt + Math.floor(R.titr[i - 1] * MC.titr_jitter * mt);
+      if (t > ce) break;
+      pts.push([t, steps[i]]);
+    }
+    const top = pts[pts.length - 1][1], ti = steps.indexOf(top);
+    const lower = ti >= 0 ? steps[Math.max(0, ti - 1)] : top;
+    const start = t + mt, end = ce - mt;
+    let nEp = 0, acc = 0;
+    for (nEp = 0; nEp < MC.episode_weights.length - 1; nEp++) { acc += MC.episode_weights[nEp]; if (R.n_ep < acc) break; }
+    nEp = Math.min(MC.max_down_episodes, nEp);
+    nEp = Math.min(nEp, Math.max(0, Math.floor((end - start + mt) / (2 * mt))));
+    if (nEp) {
+      const slack = Math.max(0, Math.floor((end - start - nEp * 2 * mt) / nEp));
+      let cur = start;
+      for (let j = 0; j < nEp; j++) {
+        const tDn = cur + Math.floor(R.dn[j] * slack);
+        const tUp = tDn + mt + Math.floor(R.up[j] * slack);
+        if (tDn > end) break;
+        const hold = R.hold[j] < MC.hold_share || lower === top;
+        pts.push([tDn, hold ? 0 : lower]);
+        const stay = j === nEp - 1 && !hold && R.stay[j] < MC.stay_down_share;
+        if (stay || tUp > end) break;
+        pts.push([tUp, top]);
+        cur = tUp + mt;
+      }
+    }
+    pts.sort((a, b) => a[0] - b[0]);
+    const canRepeat = d => {
+      let nxt = null; for (const q of pts) if (q[0] > d && (nxt === null || q[0] < nxt[0])) nxt = q;
+      return nxt === null || nxt[1] === doseAt(pts, d) || nxt[0] - d >= mt;
+    };
+    const used = new Set(pts.map(q => q[0]));
+    const need = MC.min_visible_points - pts.filter(q => q[0] <= T).length;
+    for (let j = 0; j < need; j++) {
+      let best = null;
+      for (const d of R.confirm_order[j]) {
+        if (d > T || used.has(d)) continue;
+        let far = true; for (const u of used) if (Math.abs(d - u) < MC.confirm_gap) { far = false; break; }
+        if (far && canRepeat(d)) { best = d; break; }
+      }
+      if (best === null) break;
+      pts.push([best, doseAt(pts, best)]); used.add(best);
+      pts.sort((a, b) => a[0] - b[0]);
+    }
+    const lastTs = pts[pts.length - 1][0], lastV = pts[pts.length - 1][1];
+    const endRec = endRecordDay(R.end_rec, lastTs, ce, MC);
+    if (endRec > lastTs) {
+      const mid = lastTs + Math.floor((endRec - lastTs) * (MC.mid_lo + MC.mid_span * R.mid_at));
+      if (lastTs < mid && mid < endRec && R.mid < MC.mid_share) pts.push([mid, lastV]);
+      pts.push([endRec, lastV]);
+    }
+    return pts;
+  }
+
+  /** The indication registry's entry for this condition and drug (GEN27): status and the
+   *  ladder the page titrates along. */
+  function indication(P, K) {
+    const e = ((K.indications || {})[P.disease] || {})[P.drug];
+    return { status: e ? e.status : "unregistered", dose_steps: e ? e.dose_steps.slice() : [] };
+  }
+
+  /** The emission gate production applies to this case, re-applied to the page's course:
+   *  value range and weekly slope on the course (`premise_conflicts`), value range on the
+   *  recorded readings (`check_observed_in_domain`), declared anchors (GEN22) and outcome
+   *  (GEN13) on the course, and the indication (GEN27). Returns one entry per refusal with
+   *  the first offending values; an empty list means production would emit the case. */
+  function emissionGate(P, w, obs, K, steps) {
+    const out = [], seen = new Set();
+    const add = (kind, d) => { if (!seen.has(kind)) { seen.add(kind); out.push(Object.assign({ kind: kind }, d || {})); } };
+    const dom = ((K.domain || {})[P.disease] || {}).weight, G = K.gate || {};
+    if (!dom) add("signal_not_in_disease_domain", {});
+    else {
+      const lo = dom.range[0], hi = dom.range[1], lim = dom.max_weekly_delta;
+      w.forEach(p => { if (!(lo <= p[1] && p[1] <= hi)) add("value_out_of_physio_range", { day: p[0], v: p[1], lo: lo, hi: hi }); });
+      for (let i = 1; i < w.length; i++) {
+        const a = w[i - 1], b = w[i], wk = Math.max(1e-6, (b[0] - a[0]) / 7);
+        const rate = Math.abs(b[1] - a[1]) / wk;
+        if (rate > lim * G.slope_tol) add("weekly_delta_exceeds_physio", { d0: a[0], d1: b[0], v0: a[1], v1: b[1], rate: rate, limit: lim });
+      }
+      (obs || []).forEach(p => { if (!(lo <= p[1] && p[1] <= hi)) add("observed_value_out_of_physio_range", { day: p[0], v: p[1], lo: lo, hi: hi }); });
+    }
+    const tol = G.anchor_tol_kg;
+    if (P.nadir > P.start + tol) add("anchor_infeasible", { start: P.start, nadir: P.nadir });
+    else if (!w.length) add("anchor_not_honored", {});
+    else {
+      const first = w[0][1], low = Math.min(...w.map(p => p[1]));
+      if (Math.abs(first - P.start) > tol) add("anchor_not_honored", { name: "start", want: P.start, got: first, tol: tol });
+      if (Math.abs(low - P.nadir) > tol) add("anchor_not_honored", { name: "nadir", want: P.nadir, got: low, tol: tol });
+    }
+    const [verdict, det] = deriveOutcome(w, labelRule(K));
+    const declared = P.outcome === "regain" ? "event_occurred" : "event_not_occurred";
+    if (verdict === null) add("outcome_not_derivable", { reason: det.reason });
+    else if (!(Number(det.lost || 0) <= 0 && Number(det.floor_kg || 0) <= 0) && verdict !== declared)
+      add("outcome_declared_not_derived", { declared: declared, derived: verdict, threshold: det.threshold, lost: det.lost, nadir: det.nadir });
+    const ind = indication(P, K);
+    if (ind.status === "mismatch") add("drug_not_indicated", {});
+    else if (ind.status === "unregistered") add("drug_indication_unregistered", {});
+    else if (steps && steps.length && ind.dose_steps.length
+             && Math.max(...steps) > Math.max(...ind.dose_steps) + 1e-9) add("drug_dose_above_indication", { top: Math.max(...ind.dose_steps) });
+    return out;
+  }
+
   /* ── Self-check: recompute the golden vector with this file, compare point-by-point ───── */
   function selfCheck(D) {
     const G = D.golden, K = D.kernel, PS = D.personas;
     if (!G || !K || !PS) return { ok: false, reason: "data.json has no golden / kernel / personas section" };
-    let worstW = 0, worstC = 0, worstB = 0, worstO = 0, n = 0, nO = 0, nCf = 0, bad = [];
+    let worstW = 0, worstC = 0, worstB = 0, worstO = 0, n = 0, nO = 0, nCf = 0, nDose = 0, nGate = 0, nRefused = 0, bad = [];
     G.cases.forEach(g => {
       const P = Object.assign({}, g.params, { devices: g.params.devices });
       const PER = PS[P.case_id];
@@ -1160,6 +1284,22 @@
           worstO = Math.max(worstO, Math.abs(o[i][1] - g.observed[i][1])); nO++;
         }
       } else bad.push(g.label + ": no observed readings in the golden vector");
+      // The dose record along the indication ladder, and the emission gate's verdict.
+      if (g.dose) {
+        const ind = indication(P, K);
+        const got = doseCourse(PER.med, ind.dose_steps, P.T, P.course_end_day,
+                               (K.min_titration_days || {})[P.drug] || 28, K.med_course);
+        if (JSON.stringify(got) !== JSON.stringify(g.dose))
+          bad.push(g.label + ": dose record " + JSON.stringify(got) + " ≠ " + JSON.stringify(g.dose));
+        else nDose += got.length;
+      } else bad.push(g.label + ": no dose record in the golden vector");
+      if (g.gate) {
+        const obs = weightObserved(w, (D.wnoise || {}).per ? D.wnoise.per[P.case_id] : null, (D.wnoise || {}).consts);
+        const got = emissionGate(P, w, obs, K, indication(P, K).dose_steps).map(x => x.kind).sort();
+        if (JSON.stringify(got) !== JSON.stringify(g.gate))
+          bad.push(g.label + ": emission gate " + JSON.stringify(got) + " ≠ " + JSON.stringify(g.gate));
+        else { nGate++; if (got.length) nRefused++; }
+      } else bad.push(g.label + ": no emission-gate verdict in the golden vector");
       if (g.rule_readout) {
         const [verdict, det] = deriveOutcome(w, labelRule(K));
         const got = Object.assign({ verdict: verdict }, ...Object.keys(g.rule_readout)
@@ -1212,7 +1352,7 @@
     const tol = G.tol == null ? 0.005 : G.tol, tolBase = 1e-4;
     return { ok: !bad.length && worstW <= tol && worstC <= tol && worstB <= tolBase && worstO <= tol,
              worstWeight: worstW, worstClinical: worstC, worstBase: worstB, worstObserved: worstO,
-             nObserved: nO, nPoints: n,
+             nObserved: nO, nPoints: n, nDose: nDose, nGate: nGate, nRefused: nRefused,
              nCopies: nCf, nCases: G.cases.length + (G.overlay || []).length, tol: tol, bad: bad };
   }
 
@@ -1231,5 +1371,6 @@
     clinicalSeries, effectAt, responseOf, kineticFraction, effectMilestones, quantizeWithinSlope,
     signalsFor, specFor, gold, carryForward, abnormalSide, future, weightObserved,
     toJobYaml, parseJobYaml, fromCaseText, selfCheck, YAML_FIELDS, LEX,
+    doseCourse, doseAt, indication, emissionGate, totalEffect,
   };
 })();

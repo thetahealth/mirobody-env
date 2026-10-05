@@ -79,7 +79,7 @@ def main() -> int:
         return 2
     x = _page_data()
     want = {"golden": x._golden(), "kernel": x._kernel(), "personas": x._personas(),
-            "fan_personas": x._fan_personas(), "wnoise": x._wnoise()}
+            "fan_personas": x._fan_personas(), "wnoise": x._wnoise(), "release": x._release()}
     bad = []
     for name, have in (("data.json", json.loads(DATA.read_text(encoding="utf-8"))),
                        ("index.html", inlined)):
@@ -92,6 +92,9 @@ def main() -> int:
         diff = sorted(c for c in set(want["kernel"]) | set(k) if want["kernel"].get(c) != k.get(c))
         if diff:
             bad.append(f"{name}: kernel constants differ: {diff}")
+        rel = (have.get("provenance") or {}).get("release")
+        if rel != want["release"]:
+            bad.append(f"{name}: provenance.release {rel} is not the current anchor {want['release']}")
         if have.get("wnoise") != want["wnoise"]:
             bad.append(f"{name}: the weight observation layer (wnoise) differs")
         for sec in ("personas", "fan_personas"):
@@ -105,7 +108,8 @@ def main() -> int:
         return 1
     n = len(want["golden"]["cases"])
     print(f"ok: {n} golden case(s), {len(want['kernel'])} kernel constant(s) and "
-          f"{len(want['personas']) + len(want['fan_personas'])} random-layer table(s) and the scale-noise layer match "
+          f"{len(want['personas']) + len(want['fan_personas'])} random-layer table(s), the scale-noise layer and the "
+          f"release (rev {want['release']['freeze_revision']}) match "
           f"production in data.json and index.html")
     return 0
 

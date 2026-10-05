@@ -84,6 +84,25 @@ check("every_knob_changes_output", knobs.length >= 10 && dead.length === 0, { n:
   cut.checked = false; fire(cut, "change");
   check("cut_layer_withholds_after_today", hatched && c1 < c0 && after() > 0, { c0, c1, hatched });
 }
+/* The emission gate: a patient production refuses is not drawn, and the reasons are named */
+{
+  const set = kv => Object.entries(kv).forEach(([k, v]) => { const e = $("#" + k); e.value = String(v); fire(e, e.tagName === "SELECT" ? "change" : "input"); });
+  const keep = Object.fromEntries(["k-person", "k-dis", "k-drug", "k-start", "k-nadir", "k-T", "k-week", "k-slope", "k-mpw"].map(k => [k, $("#" + k).value]));
+  const doseOf = () => ($$("#c1 svg path").map(p => p.getAttribute("d")).find(d => d && d.split("L").length > 3) || "");
+  set({ "k-drug": "semaglutide" }); const dSema = $("#act1 .chartcard").innerHTML;
+  set({ "k-drug": "metformin" }); const dMet = $("#act1 .chartcard").innerHTML;
+  check("drug_changes_the_dose_record", dSema !== dMet && W.eval("W1").dose.some(q => q[1] === 2000) && !$("#c1 .refuse"));
+  set({ "k-person": "DEMO-04", "k-dis": "obesity", "k-drug": "semaglutide", "k-start": 136, "k-nadir": 91, "k-T": 313, "k-week": 17, "k-slope": 0.8, "k-mpw": 7 });
+  const kinds = W.eval("W1").gate.map(g => g.kind).sort().join();
+  // the card names both reasons; the chart is only the refused course, greyed, with the breach marked
+  check("refused_patient_is_not_drawn", !!$("#c1 .refuse") && kinds === "outcome_declared_not_derived,weekly_delta_exceeds_physio"
+    && $$("#c1 .refuse li").length === 2 && $$('#c1 circle[data-copied]').length === 0 && !$("#c1 .layers")
+    && $$('#c1r line[stroke="var(--c2)"]').length >= 2 && $$('#c1r path[stroke="var(--accent)"]').length === 0, { kinds });
+  set({ "k-person": "DEMO-02", "k-start": 92, "k-nadir": 80, "k-T": 84, "k-week": 16, "k-slope": 0.35, "k-drug": "dulaglutide" });
+  check("drug_without_indication_is_refused", W.eval("W1").gate.map(g => g.kind).join() === "drug_not_indicated" && /drug_not_indicated/.test($("#c1 .refuse").textContent));
+  set(keep);
+  check("restored_patient_is_drawn_again", !$("#c1 .refuse") && $$("#c1 svg circle").length > 50 && !!doseOf());
+}
 check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
 
 /* Act 2: four packs, each switch repaints the record, the chart and the gold */
@@ -95,6 +114,11 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
     const sig = $("#pack").innerHTML;
     if (!sel || sel.dataset.p !== t.dataset.p || seen.has(sig) || !$$("#c2 svg circle").length || !$("#pack .goldrow").textContent.trim()) bad.push(t.dataset.p);
     seen.add(sig); });
+  const recBad = [];
+  tabs.forEach(t => { click($('#tabs .tab[data-p="' + t.dataset.p + '"]'));
+    const R = data.packs[t.dataset.p].viz.record, lanes = $$("#rec2 .axlab.lane").length;
+    if (!R || !lanes || lanes > Object.keys(R.streams).length || !$$("#rec2 svg path, #rec2 svg circle").length) recBad.push(t.dataset.p); });
+  check("each_pack_shows_more_of_its_record", recBad.length === 0, recBad);
   click($('#tabs .tab[data-p="m2"]'));
   check("four_pack_tabs_each_draw_their_item", tabs.length === 4 && bad.length === 0, { n: tabs.length, bad });
   // the pack-1 chart colours the diary entries the build attributes, and only those
@@ -117,15 +141,28 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
   const leaked = pend.filter(k => $$("#act3 td.cell[data-k='" + k + "']").length > 0);
   check("a_pending_pack_shows_no_numbers", leaked.length === 0 && (!pend.length || $$("#act3 td.upd").length === ov.length), { pend, leaked });
   check("interim_overall_is_labelled", board.overall.status !== "interim" || !!$("#act3 .tagi"));
-  const fills = $$("#act3 .fill"), badFill = fills.filter(f => { const m = f.closest("tr").dataset.m, k = f.closest("td").dataset.k;
+  const fills = $$("#act3 .b2 .fill"), badFill = fills.filter(f => { const m = f.closest("tr").dataset.m, k = f.closest("td").dataset.k;
     return Math.abs(parseFloat(f.style.width) - board.packs[k].stability[m] * 100) > 0.06; });
   check("disagreement_bars_are_the_board_shares", fills.length > 0 && badFill.length === 0, { n: fills.length, bad: badFill.length });
+  // the pairwise matrix: every ordered pair, coloured by separability and direction, valued in points
+  const PA = board.overall.pairs, pmBad = [];
+  $$("#act3 table.pm td[data-a]").forEach(td => { const a = td.dataset.a, b = td.dataset.b;
+    const p = PA.pairs.find(q => q.a === a && q.b === b) || PA.pairs.find(q => q.a === b && q.b === a), d = p.a === a ? p.diff : -p.diff;
+    const want = p.separable ? (d > 0 ? "hi" : "lo") : "", v = Math.round(d * 100);
+    if (td.className !== want || td.textContent !== (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v)) pmBad.push(a + "/" + b); });
+  check("pair_matrix_is_the_readout", $$("#act3 table.pm td[data-a]").length === ov.length * (ov.length - 1) && pmBad.length === 0
+    && $$("#act3 table.pm td.hi, #act3 table.pm td.lo").length === 2 * PA.n_separable, { bad: pmBad.slice(0, 3) });
   const p0 = $("#mpanel").innerHTML, sel = $("#mp-model"), other = sel.options[3].value;
   sel.value = other; fire(sel, "change");
   check("model_switch_repaints_the_panel", $("#mpanel").innerHTML !== p0 && $("#act3 tr.sel").dataset.m === other);
   const cf = board.decisions.pack2, cells = cf.models[other], tot = cells.reduce((a, c) => a + c[2], 0);
   check("decision_counts_cover_every_item_and_round", tot === cf.n_items * cf.n_rounds && $$("#cf-pack2 td[data-g]").length === cf.classes.length * (cf.classes.length + 1),
     { tot, want: cf.n_items * cf.n_rounds });
+  const rv = board.decisions.m2.models[other], rvTot = rv.review.reduce((a, c) => a + c[2], 0);
+  const shown = $$("#cf-m2 td[data-w]").reduce((a, td) => a + (+td.textContent || 0), 0);
+  const bars = $$("#cf-m2 .rvbar .fill").map(f => parseFloat(f.style.width));
+  check("pack1_review_and_bars_are_the_rows", shown === rvTot && rvTot > 0 && Math.abs(bars[0] - rv.dx_listed * 100) < 0.06 && Math.abs(bars[1] - rv.tests_f1 * 100) < 0.06,
+    { shown, rvTot, bars });
 }
 
 /* Theme and chrome */

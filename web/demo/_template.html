@@ -121,6 +121,23 @@ details code{font-family:var(--mono);font-size:12px;background:var(--muted);padd
 .grp:first-child{margin-top:0}
 .knob{display:grid;grid-template-columns:104px minmax(0,1fr) 54px;align-items:center;gap:10px;font-size:13px;color:var(--muted-fg);margin:0 0 6px;min-height:30px}
 .knob.sel{grid-template-columns:104px minmax(0,1fr)}
+.ctl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:2px 10px;font-size:12.5px;color:var(--muted-fg);margin:0 0 10px}
+.ctl dt{color:var(--faint)} .ctl dd{margin:0}
+.refuse{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);margin:6px 0 0;overflow:hidden}
+.refuse .rh{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;color:var(--foreground);margin:0;padding:10px 14px;border-bottom:1px solid var(--grid)}
+.refuse .rh i{flex:0 0 auto;width:18px;height:18px;border-radius:50%;background:var(--c2);color:var(--on-accent);font-style:normal;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.refuse ul{list-style:none;margin:0;padding:4px 14px}
+.refuse li{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:2px 12px;align-items:baseline;padding:7px 0;font-size:13px;color:var(--muted-fg)}
+.refuse li + li{border-top:1px solid var(--grid)}
+.refuse li .k{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.refuse li b{font-weight:600;color:var(--c2)}
+.refuse li code{display:block;grid-column:2;font-family:var(--mono);font-size:10.5px;color:var(--faint);opacity:.8;overflow-wrap:anywhere}
+.refuse .near{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:9px 14px;border-top:1px solid var(--grid);background:var(--wash);font-size:13px;color:var(--muted-fg);min-height:52px}
+.refuse .near .k{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.refuse .near b{color:var(--foreground);font-weight:600}
+.refuse .near .pill{margin-left:auto}
+.refchart{margin-top:12px}
+@media(max-width:560px){.refuse li{grid-template-columns:minmax(0,1fr)} .refuse li code{grid-column:1}}
 .knob b{font-weight:500;color:var(--foreground);text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;white-space:nowrap}
 .knob select{appearance:none;-webkit-appearance:none;font:inherit;font-size:13px;color:var(--foreground);width:100%;min-width:0;padding:4px 22px 4px 8px;border:1px solid transparent;border-radius:6px;cursor:pointer;
   background-color:var(--muted);background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);
@@ -188,13 +205,32 @@ details code{font-family:var(--mono);font-size:12px;background:var(--muted);padd
 .rec li.on{font-weight:500}
 .rec .diary{max-height:360px;overflow-y:auto;padding-right:4px}
 .viz2{padding:20px 20px 10px;min-width:0}
+.rec2{margin-top:14px;border-top:1px solid var(--grid);padding-top:12px}
+.rec2 h4{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 4px}
 .goldrow{grid-column:1/-1;border-top:1px solid var(--grid);padding:16px 20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 28px;font-size:13.5px}
 @media(max-width:900px){.goldrow{grid-template-columns:minmax(0,1fr)}}
 .goldrow h4{margin:0 0 3px;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:600}
 .goldrow p{margin:0;color:var(--muted-fg)} .goldrow p b{color:var(--foreground)}
 /* ── act 3 ── */
-.a3{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) minmax(0,.85fr);gap:0 12px;padding:20px 16px 8px}
-@media(max-width:900px){.a3{grid-template-columns:minmax(0,1fr);gap:22px}}
+.a3top{padding:20px 18px 6px}
+.a3{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.75fr) minmax(0,1.25fr);gap:0 22px;padding:14px 18px 8px;border-top:1px solid var(--grid)}
+.a3 > .h1{order:1} .a3 > .h2{order:2} .a3 > .h3{order:3} .a3 > .b1{order:4} .a3 > .b2{order:5} .a3 > .b3{order:6}
+@media(max-width:900px){.a3{grid-template-columns:minmax(0,1fr);gap:0}
+  .a3 > .h1{order:1} .a3 > .b1{order:2} .a3 > .h2{order:3} .a3 > .b2{order:4} .a3 > .h3{order:5} .a3 > .b3{order:6}
+  .a3 > .b1,.a3 > .b2{margin-bottom:22px}}
+table.pm{border-collapse:separate;border-spacing:3px;font-size:10.5px;table-layout:fixed;width:100%}
+table.pm th{font-weight:500;color:var(--faint);font-size:11px;height:18px;padding:0;text-align:center}
+table.pm th.r{text-align:right;padding-right:6px;width:2.4em;white-space:nowrap}
+table.pm th.rn{text-align:left;width:9.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted-fg)}
+table.pm td{height:calc(var(--rh,30px) - 3px);padding:0;text-align:center;border-radius:4px;border:1px solid var(--grid);color:var(--faint);font-variant-numeric:tabular-nums;cursor:default}
+table.pm td.hi{background:color-mix(in oklab, var(--accent) 78%, var(--card));border-color:transparent;color:var(--on-accent)}
+table.pm td.lo{background:color-mix(in oklab, var(--c2) 70%, var(--card));border-color:transparent;color:var(--on-accent)}
+table.pm td.d{border:0;background:var(--muted)}
+table.pm tr.sel th{color:var(--foreground);font-weight:600}
+.pmleg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--faint);margin:6px 0 0}
+.pmleg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:1px solid var(--grid)}
+.pmleg i.hi{background:color-mix(in oklab, var(--accent) 78%, var(--card));border-color:transparent}
+.pmleg i.lo{background:color-mix(in oklab, var(--c2) 70%, var(--card));border-color:transparent}
 .colhead{font-size:13px;font-weight:600;padding:0 0 4px;min-height:46px}
 .colhead span{display:block;font-weight:400;font-size:12px;color:var(--faint)}
 .tagi{display:inline-block;font-size:11.5px;font-weight:500;color:var(--muted-fg);background:var(--muted);border-radius:6px;padding:0 7px;margin-left:4px}
@@ -203,31 +239,29 @@ table.bt th{font-weight:500;color:var(--faint);font-size:11.5px;text-align:cente
 table.bt td{height:var(--rh,30px);padding:0 2px;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
 table.bt tr.sel td{background:var(--muted)}
 table.bt tr[data-m]{cursor:pointer}
-table.bt td.mname{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:9.5em}
+table.bt td.mname{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 table.bt td.cell{text-align:center;font-weight:600;border-radius:4px;border:2px solid var(--card)}
 table.bt td.upd{background:repeating-linear-gradient(45deg,var(--hatch) 0 2px,transparent 2px 6px);text-align:center;font-weight:400;color:var(--faint)}
 .track{display:block;position:relative;height:6px;border-radius:3px;background:var(--track);margin:0 4px}
 .fill{display:block;position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--fill)}
-.sepm{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;align-items:start;margin-top:14px;font-size:12px;color:var(--muted-fg)}
-.sepm table{border-collapse:separate;border-spacing:3px}
-.sepm td{width:14px;height:14px;padding:0;border-radius:3px;border:1px solid var(--axis)}
-.sepm td.y{background:var(--muted-fg);border-color:var(--muted-fg)}
-.sepm td.n{background:var(--card)}
-.sepm td.e{border:0}
-.sepm th{font-weight:400;color:var(--faint);font-size:11px;text-align:left;padding-left:6px;white-space:nowrap}
 .mp{margin-top:16px;padding:20px 22px}
 .mp .top{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between}
 .mp select{font:inherit;font-size:14px;font-weight:600;color:var(--foreground);background:var(--muted);border:1px solid transparent;border-radius:8px;padding:5px 10px;max-width:100%}
-.mpg{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px 28px;margin-top:14px}
+.mps{margin-top:16px}
+.mps .sub{font-size:12px;color:var(--faint);margin:0 0 2px;max-width:none}
+.mpg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px 36px;margin-top:22px;padding-top:18px;border-top:1px solid var(--grid)}
 @media(max-width:900px){.mpg{grid-template-columns:minmax(0,1fr)}}
-.mpg h4{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:0 0 6px;font-weight:600}
-table.sc{border-collapse:collapse;font-size:13px;width:100%}
-table.sc td,table.sc th{padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--grid);white-space:nowrap}
-table.sc th{font-weight:500;color:var(--faint);font-size:12px}
-table.sc td:first-child,table.sc th:first-child{text-align:left;white-space:normal}
-table.cf{border-collapse:separate;border-spacing:2px;font-size:11.5px;width:100%;table-layout:fixed}
+.mpg > div{min-width:0}
+.rvbar{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 3em;align-items:center;gap:4px 8px;font-size:12.5px;color:var(--muted-fg);margin:10px 0 0}
+.rvbar b{font-weight:600;color:var(--foreground);text-align:right;font-variant-numeric:tabular-nums}
+.rvbar small{grid-column:2/4;margin-top:-4px}
+.mpg h4,.mps h4{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:0 0 6px;font-weight:600}
+table.cf{border-collapse:separate;border-spacing:2px;font-size:11.5px;table-layout:fixed;width:auto}
+table.cf col.c{width:62px} table.cf col.h{width:6.6em}
+@media(max-width:560px){table.cf col.c{width:42px} table.cf col.h{width:6em} .mpg h4,.mps h4{white-space:normal}}
 table.cf th{font-weight:400;color:var(--faint);padding:2px;line-height:1.2;vertical-align:bottom}
-table.cf th.r{text-align:right;color:var(--muted-fg);width:4.6em}
+table.cf th.ah{text-align:left;white-space:nowrap;overflow:visible}
+table.cf th.r{text-align:right;color:var(--muted-fg);padding-right:6px}
 table.cf td{text-align:center;height:26px;border-radius:3px;font-variant-numeric:tabular-nums}
 table.cf td.ok{box-shadow:inset 0 0 0 1.5px var(--foreground)}
 /* ── touch-sized screens: every control at least 40 px tall ── */
@@ -353,6 +387,25 @@ en: {
     + ", plus a weekly rhythm) on a 0.1 kg display. " + nRec + " of " + nDays + " scheduled weigh-ins are recorded; " + nCopy
     + " repeat the previous value, at the " + rate + "% copy rate measured on real outpatient charts (" + ev + " events, SE " + se + " pts).",
   n1Truth: "The true course: one value per scheduled weigh-in, before scale noise, missed days and copied values.",
+  laneDose: u => "Dose (" + u + ")", unitWeek: "mg/week", unitDay: "mg/day", tipDose: "Dose", hold: "paused",
+  ctlCond: "Condition", ctlDrug: "Medication", ctlWeight: "Weight course",
+  ctlCondTxt: (labs, applies, cohorts) => "labs recorded: " + labs + " · " + (applies ? "drug effects on labs apply" : "no drug effect on labs (registered for " + cohorts + ")"),
+  ctlDrugTxt: (ladder, mt, eff) => "dose ladder " + ladder + ", at least " + mt + " days per step" + (eff ? " · registered HbA1c effect " + eff + " pp" : ""),
+  ctlDrugNone: dis => "no registered indication for " + dis,
+  ctlWeightTxt: lim => "set by the weight, today, regain and weigh-in settings only; the weekly limit is " + lim + " kg for both conditions",
+  refH: "Production would not emit this patient",
+  refL_weekly: "Weekly limit", refL_start: "Start weight", refL_nadir: "Lowest weight", refL_outcome: "Outcome", refL_drug: "Indication", refL_range: "Weight range",
+  refT_weekly: (v0, v1, d0, d1, r, lim) => "day " + d0 + "→" + d1 + ": <b>" + v0 + " → " + v1 + " kg</b>, <b>" + r + " kg/wk</b> · limit " + lim,
+  refT_anchor: (want, got, tol) => "declared " + want + " kg · course <b>" + got + " kg</b> · ±" + tol,
+  refT_infeasible: "lowest weight above the start weight",
+  refT_outcome: (decl, thr) => decl ? "declared regain · label rule reads <b>no regain</b> (needs &gt; " + thr + " kg for 8 wk)" : "declared no regain · label rule reads <b>a regain</b>",
+  refT_underivable: "the label rule reads no outcome on this course",
+  refT_drug: (drug, dis) => "<b>" + drug + "</b> is not registered for " + dis,
+  refT_range: (v, d, lo, hi) => "day " + d + ": <b>" + v + " kg</b> · range " + lo + "–" + hi,
+  refNearH: "Nearest accepted", refSearching: "searching…", refUse: "Use it",
+  refNone: k => "no single value of " + k + " passes", refDrugs: (dis, list) => "registered for " + dis + ": " + list,
+  refChart: "The course production computed, then refused", refDeclared: v => "declared " + v + " kg", refThr: v => "label rule needs > " + v + " kg",
+  goldNone: "none: not emitted",
   tipDay: d => "Day " + d, tipRecorded: "Recorded", tipCopied: " (copied)", tipNoWeigh: "no weigh-in", tipTruth: "True course",
   tipWithheld: "Withheld from the model", tipNone: "No reading",
   techSummary: "Technical details",
@@ -394,6 +447,8 @@ en: {
   p4Event: "ACE inhibitor started",
   lgDraws: "previous draw and today", lgEarlier: "earlier draws", lgRcv: "reference change value band", lgMed: "medication event",
   hGold: "Ground truth", hJudged: "How it is judged",
+  recTitle: (n, m) => "More of the record up to today · " + n + " of its " + m + " streams", recLast: v => "today " + v,
+  recPts: n => n + " readings",
   g_m2: (dx, n, tests, med) => "<b>" + dx + "</b>: two lines of illness, both new. Confirming tests (" + n + "): " + tests + "." + (med ? " Medication direction: " + med + "." : ""),
   med_investigate_first: "investigate first", med_uptitrate: "increase", med_maintain: "maintain", med_downtitrate: "decrease",
   j_m2: "Scored: is each gold line listed, how well the proposed tests match the gold tests (F1), and whether the case is flagged for clinician review. Diagnosis and test names are read by one LLM judge; everything else is computed by code.",
@@ -412,7 +467,8 @@ en: {
   colPacks: "By pack", colPacksSub: "Score; darker is higher",
   colDis: "Round-to-round disagreement", colDisSub: "Share of items with differing answers · profile, not scored",
   updating: "updating", updatingShort: "—",
-  sepTitle: "Top six: which pairs separate", sepText: (k, a) => k + " of 15 pairs differ by more than 2 paired SE; " + a + " of 5 neighbouring pairs do.",
+  colPairs: "Which pairs separate", colPairsSub: (k, n) => k + " of " + n + " pairs differ by more than 2 paired SE",
+  pairHi: "row model higher, separates", pairLo: "row model lower, separates", pairNs: "does not separate", pairVal: "number: score difference × 100",
   sepTip: (a, b) => a + " vs " + b, tipDiff: "Difference", tipSE: "Paired SE", tipSep: "Separate", yes: "yes", no: "no",
   tipOverall: pk => "Overall (" + pk + ")", tipCI: "95% interval", tipRank: "Rank",
   shadeNote: (lo, hi) => "Shading: " + lo + " light → " + hi + " dark", barNote: "Bar length: 0–100% per column",
@@ -420,8 +476,13 @@ en: {
   n3final: "Ranks follow the overall score.",
   mpModel: "Model", mpOverall: (s, lo, hi, r, n) => "Overall " + s + " (95% interval " + lo + "–" + hi + ") · #" + r + " of " + n,
   mpScores: "Scores", thPack: "Pack", thScore: "Score", th95: "95%", thRank: "Rank", thRounds: "By round",
+  mpScoresSub: "Dot: score · bar: 95% interval · rings: each round · #: rank among the models", tipRound: i => "Round " + i,
   mpNote: "The public sample items in Act 2 are not part of the board, so no answers to them are recorded.",
-  mpCf: p => p + ": answers vs truth", cfNote: (n, r) => n + " items × " + r + " rounds; rows are the truth, outlined cells are correct.",
+  mpCf: p => p + ": answers vs truth", mpReview: p => p + ": what is scored",
+  rvFlag: "Flagged", rvNo: "Not flagged", rvNone: "None", rvYes: "Review warranted", rvNot: "Not warranted", rvAnswer: "model's review flag →",
+  rvNote: n => "Review decision over " + n + " item-rounds (the items that carry one); rows are the truth, outlined cells are correct. Bars: means over every item and round.",
+  rvTip: (g, s, n, t) => g + ": " + s + " " + n + " of " + t,
+  barDx: "Gold lines listed", barTests: "Tests match (F1)", barRecall: v => "recall " + v, cfNote: (n, r) => n + " items × " + r + " rounds; rows are the truth, outlined cells are correct.",
   cfAnswer: "model's answer →", cfNone: "None", cfTip: (g, s, n, t) => "Truth " + g + ": answered " + s + " " + n + " of " + t,
   short_ed_now: "ED now", short_within_24h: "≤ 24 h", short_routine_followup: "Routine", short_watchful_waiting: "Watch",
   short_uptitrate: "Raise", short_downtitrate: "Lower", short_maintain: "Keep", short_switch: "Switch", short_check_adherence_or_adverse_effect: "Check",
@@ -463,6 +524,25 @@ zh: {
   n1Noise: (sd, phi, nRec, nDays, nCopy, rate, ev, se) => "每个读数带秤的日间噪声（标准差为体重的 " + sd + "%，日间持续性 φ = " + phi + "，另有一周的节律），显示精度 0.1 kg。"
     + nDays + " 次计划称重里记下了 " + nRec + " 次，其中 " + nCopy + " 次照抄了上一次的数，照抄比例 " + rate + "% 取自真实门诊病历（" + ev + " 个事件，标准误 " + se + " 个百分点）。",
   n1Truth: "真实病程：每次计划称重一个值，尚未加秤噪声、漏称和照抄。",
+  laneDose: u => "剂量 (" + u + ")", unitWeek: "mg/周", unitDay: "mg/日", tipDose: "剂量", hold: "暂停",
+  ctlCond: "疾病", ctlDrug: "用药", ctlWeight: "体重病程",
+  ctlCondTxt: (labs, applies, cohorts) => "记录的化验：" + labs + " · " + (applies ? "药物对化验的效应生效" : "化验上没有药物效应（只登记给" + cohorts + "）"),
+  ctlDrugTxt: (ladder, mt, eff) => "剂量阶梯 " + ladder + "，每级至少 " + mt + " 天" + (eff ? " · 登记的糖化血红蛋白效应 " + eff + " 个百分点" : ""),
+  ctlDrugNone: dis => "没有登记用于" + dis + "的适应证",
+  ctlWeightTxt: lim => "只由体重、今天、反弹和称重设置决定；两种疾病的每周上限都是 " + lim + " kg",
+  refH: "生产不会产出这个病人",
+  refL_weekly: "每周上限", refL_start: "起始体重", refL_nadir: "最低体重", refL_outcome: "结局", refL_drug: "适应证", refL_range: "体重范围",
+  refT_weekly: (v0, v1, d0, d1, r, lim) => "第 " + d0 + "→" + d1 + " 天：<b>" + v0 + " → " + v1 + " kg</b>，<b>每周 " + r + " kg</b> · 上限 " + lim,
+  refT_anchor: (want, got, tol) => "声明 " + want + " kg · 病程 <b>" + got + " kg</b> · ±" + tol,
+  refT_infeasible: "最低体重高于起始体重",
+  refT_outcome: (decl, thr) => decl ? "声明反弹 · 标签规则读出<b>不反弹</b>（需 &gt; " + thr + " kg 持续 8 周）" : "声明不反弹 · 标签规则读出<b>反弹</b>",
+  refT_underivable: "标签规则在这条病程上读不出结局",
+  refT_drug: (drug, dis) => "<b>" + drug + "</b>没有登记用于" + dis,
+  refT_range: (v, d, lo, hi) => "第 " + d + " 天：<b>" + v + " kg</b> · 范围 " + lo + "–" + hi,
+  refNearH: "最近可接受", refSearching: "查找中……", refUse: "用这个",
+  refNone: k => "只改" + k + "过不了", refDrugs: (dis, list) => "登记用于" + dis + "：" + list,
+  refChart: "生产算出、随后拒收的病程", refDeclared: v => "声明 " + v + " kg", refThr: v => "标签规则需 > " + v + " kg",
+  goldNone: "无：不产出",
   tipDay: d => "第 " + d + " 天", tipRecorded: "记录", tipCopied: "（照抄）", tipNoWeigh: "没称", tipTruth: "真实病程",
   tipWithheld: "不给模型看", tipNone: "没有读数",
   techSummary: "技术细节",
@@ -504,6 +584,8 @@ zh: {
   p4Event: "开始用 ACE 抑制剂",
   lgDraws: "上次与今天", lgEarlier: "更早的抽血", lgRcv: "参考变化值区间", lgMed: "用药事件",
   hGold: "金标", hJudged: "怎么判",
+  recTitle: (n, m) => "病历里截至今天的更多内容 · 共 " + m + " 条数据流，这里画 " + n + " 条", recLast: v => "今天 " + v,
+  recPts: n => n + " 个读数",
   g_m2: (dx, n, tests, med) => "<b>" + dx + "</b>：两条疾病线，都是新发。确诊检查（" + n + " 项）：" + tests + "。" + (med ? "调药方向：" + med + "。" : ""),
   med_investigate_first: "先查因", med_uptitrate: "加量", med_maintain: "维持", med_downtitrate: "减量",
   j_m2: "计分项：每条金标线是否列出、所开检查与金标检查的吻合度（F1），以及该不该请医生复核。诊断与检查名称由一个 LLM 裁判读；其余全部由代码计算。",
@@ -522,7 +604,8 @@ zh: {
   colPacks: "分包", colPacksSub: "分数；越深越高",
   colDis: "三轮不一致", colDisSub: "三次回答不一致的题目占比 · 画像，不计分",
   updating: "更新中", updatingShort: "—",
-  sepTitle: "前六名：哪些两两分得开", sepText: (k, a) => "15 对里 " + k + " 对的差超过 2 倍配对标准误；相邻 5 对里 " + a + " 对。",
+  colPairs: "哪些两两分得开", colPairsSub: (k, n) => n + " 对里 " + k + " 对的差超过 2 倍配对标准误",
+  pairHi: "行模型更高，分得开", pairLo: "行模型更低，分得开", pairNs: "分不开", pairVal: "数字：分差 × 100",
   sepTip: (a, b) => a + " 对 " + b, tipDiff: "差", tipSE: "配对标准误", tipSep: "分得开", yes: "是", no: "否",
   tipOverall: pk => "总分（" + pk + "）", tipCI: "95% 区间", tipRank: "名次",
   shadeNote: (lo, hi) => "色深：" + lo + " 浅 → " + hi + " 深", barNote: "条长：每列 0–100%",
@@ -530,8 +613,13 @@ zh: {
   n3final: "名次按总分排。",
   mpModel: "模型", mpOverall: (s, lo, hi, r, n) => "总分 " + s + "（95% 区间 " + lo + "–" + hi + "）· 第 " + r + " / " + n,
   mpScores: "分数", thPack: "题包", thScore: "分数", th95: "95%", thRank: "名次", thRounds: "各轮",
+  mpScoresSub: "圆点：分数 · 横条：95% 区间 · 小圈：各轮 · #：在全部模型中的名次", tipRound: i => "第 " + i + " 轮",
   mpNote: "第 2 幕的公开样题不在榜单里，所以没有模型对它们的回答。",
-  mpCf: p => p + "：回答对金标", cfNote: (n, r) => n + " 题 × " + r + " 轮；行是金标，加框的格子是答对的。",
+  mpCf: p => p + "：回答对金标", mpReview: p => p + "：计分的部分",
+  rvFlag: "标记", rvNo: "未标记", rvNone: "无", rvYes: "应复核", rvNot: "不必复核", rvAnswer: "模型的复核标记 →",
+  rvNote: n => "复核决定共 " + n + " 个题次（带复核决定的题 × 轮次）；行是金标，加框的格子是答对的。条形：全部题目与轮次的均值。",
+  rvTip: (g, s, n, t) => g + "：" + s + " " + n + " / " + t,
+  barDx: "列出的金标线", barTests: "检查匹配 (F1)", barRecall: v => "召回 " + v, cfNote: (n, r) => n + " 题 × " + r + " 轮；行是金标，加框的格子是答对的。",
   cfAnswer: "模型的回答 →", cfNone: "无", cfTip: (g, s, n, t) => "金标 " + g + "：答成 " + s + " " + n + " / " + t,
   short_ed_now: "急诊", short_within_24h: "≤24h", short_routine_followup: "常规", short_watchful_waiting: "观察",
   short_uptitrate: "加量", short_downtitrate: "减量", short_maintain: "维持", short_switch: "换药", short_check_adherence_or_adverse_effect: "先查",
@@ -545,8 +633,9 @@ zh: {
 //: The "Technical details" folds: field names, commands and file names live only here.
 const TECH = {
 en: {
-  tech1: (n, pts, w, tol, ok, no, wo) => "<p>The page runs a port of the production generator. On load it recomputes " + n + " reference patients and compares them point by point with values exported from production: "
-    + pts + " points, largest weight deviation " + w + " kg (tolerance " + tol + "), and " + no + " recorded readings with scale noise, largest deviation " + wo + " kg — " + (ok ? "the check passes" : "<b>the check fails</b>") + ".</p>"
+  tech1: (n, pts, w, tol, ok, no, wo, ng, nr) => "<p>The page runs a port of the production generator. On load it recomputes " + n + " reference patients and compares them point by point with values exported from production: "
+    + pts + " points, largest weight deviation " + w + " kg (tolerance " + tol + "), " + no + " recorded readings with scale noise, largest deviation " + wo + " kg, the dose records, and the emission gate's verdict on " + ng + " patients (" + nr + " refused) — " + (ok ? "the check passes" : "<b>the check fails</b>") + ".</p>"
+    + "<p>A patient production would refuse is not drawn. The page re-applies the gate's checks to the course it computed: the weight range and the weekly limit (<code>max_weekly_delta</code> × 1.05) on the course, the declared start and lowest weights (±0.5 kg), the outcome the label rule reads, and the condition × drug pair in <code>registry/drug_indications.yaml</code>. The dose follows that pair's ladder with <code>med_course.dose_course</code>.</p>"
     + "<p>Missed weigh-ins, scale noise and copied readings use each patient's fixed random layer, so the same seed always produces the same record. They change the record only; the course and the ground truth stay as generated. The regain rule reads a 7-reading centred median and needs a rise of at least 5% of the weight lost (at least 0.75 kg) that lasts 8 weeks.</p>"
     + "<p>Build the same patient from the command line with <code>haenv build &lt;job.yaml&gt; --gen deterministic</code>.</p>",
   tech2: (ids) => "<p>Build a pack: <code>python tools/make_pack.py --pack {m2|pack2|p3|p4} --n 50 --out &lt;dir&gt;</code>. The command is deterministic and runs the shared audit before it finishes. Without <code>--seed</code> it builds the public sample pack; the board uses a private seed, and its batch records only the seed's sha256.</p>"
@@ -558,7 +647,8 @@ en: {
     + "<p>The board data is exported from the board readout by <code>web/demo/export_board.py</code>.</p>",
 },
 zh: {
-  tech1: (n, pts, w, tol, ok, no, wo) => "<p>页面跑的是生产生成器的移植版。加载时重算 " + n + " 个参照病人，与生产导出的值逐点比对：" + pts + " 个点，体重最大偏差 " + w + " kg（容差 " + tol + "）；带秤噪声的记录读数 " + no + " 个，最大偏差 " + wo + " kg —— " + (ok ? "通过" : "<b>未通过</b>") + "。</p>"
+  tech1: (n, pts, w, tol, ok, no, wo, ng, nr) => "<p>页面跑的是生产生成器的移植版。加载时重算 " + n + " 个参照病人，与生产导出的值逐点比对：" + pts + " 个点，体重最大偏差 " + w + " kg（容差 " + tol + "）；带秤噪声的记录读数 " + no + " 个，最大偏差 " + wo + " kg；剂量记录；以及出厂闸门对 " + ng + " 个病人的判定（其中 " + nr + " 个拒收）—— " + (ok ? "通过" : "<b>未通过</b>") + "。</p>"
+    + "<p>生产会拒收的病人不画。页面对自己算出的病程重做闸门的检查：病程上的体重范围与每周上限（<code>max_weekly_delta</code> × 1.05）、声明的起始与最低体重（±0.5 kg）、标签规则读出的结局，以及疾病 × 药物在 <code>registry/drug_indications.yaml</code> 里的登记。剂量沿该登记的阶梯，由 <code>med_course.dose_course</code> 生成。</p>"
     + "<p>漏称、秤噪声和照抄都用每个病人固定的随机层，同一个种子永远产出同一份病历。它们只改病历；病程和金标保持生成时的样子。反弹判据读 7 个读数的居中中位数，要求回升至少达到减重量的 5%（至少 0.75 kg）并持续 8 周。</p>"
     + "<p>在命令行造同一个病人：<code>haenv build &lt;job.yaml&gt; --gen deterministic</code>。</p>",
   tech2: (ids) => "<p>生成一个题包：<code>python tools/make_pack.py --pack {m2|pack2|p3|p4} --n 50 --out &lt;dir&gt;</code>。命令是确定性的，结束前跑共享审计。不加 <code>--seed</code> 生成公开样包；榜单用私有种子，批次里只记种子的 sha256。</p>"
@@ -584,8 +674,14 @@ const NAMES = {
           zh: { semaglutide: "司美格鲁肽", tirzepatide: "替尔泊肽", liraglutide: "利拉鲁肽", dulaglutide: "度拉糖肽", metformin: "二甲双胍", atorvastatin: "阿托伐他汀", amlodipine: "氨氯地平" } },
   dev: { en: { smart_scale: "scale", bp_cuff: "BP cuff", lab_panel: "lab panel", wearable: "wearable", cgm: "CGM" },
          zh: { smart_scale: "体重秤", bp_cuff: "血压计", lab_panel: "抽血化验", wearable: "手环", cgm: "动态血糖仪" } },
-  sig: { en: { HbA1c: "HbA1c", fasting_glucose: "Fasting glucose", CGM_TIR: "Time in range", LDL: "LDL-C", creatinine: "Creatinine" },
-         zh: { HbA1c: "糖化血红蛋白", fasting_glucose: "空腹血糖", CGM_TIR: "血糖达标时间", LDL: "LDL-C", creatinine: "肌酐" } },
+  sig: { en: { HbA1c: "HbA1c", fasting_glucose: "Fasting glucose", CGM_TIR: "Time in range", LDL: "LDL-C", creatinine: "Creatinine",
+               weight: "Weight", resting_hr: "Resting heart rate", systolic_bp: "Systolic BP", diastolic_bp: "Diastolic BP", ALT: "ALT", AST: "AST", FIB4: "FIB-4",
+               hrv: "Heart-rate variability", sleep_hours: "Sleep", steps: "Steps", spo2: "SpO₂", body_temp: "Body temperature", stress_score: "Stress score",
+               gi_symptom_score: "GI symptom score", vo2_max: "VO₂ max", skin_temp: "Skin temperature change" },
+         zh: { HbA1c: "糖化血红蛋白", fasting_glucose: "空腹血糖", CGM_TIR: "血糖达标时间", LDL: "LDL-C", creatinine: "肌酐",
+               weight: "体重", resting_hr: "静息心率", systolic_bp: "收缩压", diastolic_bp: "舒张压", ALT: "ALT", AST: "AST", FIB4: "FIB-4",
+               hrv: "心率变异性", sleep_hours: "睡眠", steps: "步数", spo2: "血氧", body_temp: "体温", stress_score: "压力评分",
+               gi_symptom_score: "胃肠症状评分", vo2_max: "最大摄氧量", skin_temp: "皮温变化" } },
 };
 const N = (g, k) => ((NAMES[g] || {})[LANG] || {})[k] || ((NAMES[g] || {}).en || {})[k] || k;
 //: A Chinese string from the data: the original on the Chinese page, its translation on the English one.
@@ -655,20 +751,29 @@ const P = { case_id: "DEMO-01", disease: "T2D", sex: "F", age_range: "45-49", de
   outcome: "regain", driver: "poor_medication_adherence", reversal_week: 16, regain_slope: 0.35, adherence_low: 0.55,
   measure_per_week: 7, hba1c_base: null, cf_rate: null };
 const L1 = { noise: true, cut: false };
-function baseFor(sig){
-  const C = (D.golden || {}).cases || [];
-  const g = C.find(c => c.params.case_id === P.case_id && (c.clinical || {})[sig]) || C.find(c => c.params.disease === P.disease && (c.clinical || {})[sig]);
-  return g ? g.clinical[sig].spec.base : null;
+//: Each lab's baseline as production samples it for this patient and condition (`clinical_plan`).
+const baseFor = sig => ((((D.personas[P.case_id] || {}).lab_base || {})[P.disease]) || {})[sig];
+const mtOf = drug => (K.min_titration_days || {})[drug] || 28;
+const doseUnit = drug => T((K.doses_per_week || {})[drug] === 7 ? "unitDay" : "unitWeek");
+/** The weight course and the emission gate's verdict for a parameter set. */
+function courseOf(Q){
+  const w = G.weightSeries(Q, K, D.personas[Q.case_id]);
+  const obs = G.weightObserved(w, D.wnoise.per[Q.case_id], D.wnoise.consts);
+  return { w, obs, gate: G.emissionGate(Q, w, obs, K, G.indication(Q, K).dose_steps) };
 }
 /** Every stream of this person, computed live. */
 function world(){
   const PER = D.personas[P.case_id];
-  const w = G.weightSeries(P, K, PER), clin = {};
+  const ind = G.indication(P, K);
+  // The dose ladder is the indication ladder; the lab effect reads the dose at the last record.
+  P.dose_steps = ind.dose_steps;
+  const dose = G.doseCourse(PER.med, ind.dose_steps, P.T, P.course_end_day, mtOf(P.drug), K.med_course);
+  P.dose_mg = dose.length ? dose[dose.length - 1][1] : null;
+  const { w, obs, gate } = courseOf(P), clin = {};
   G.signalsFor(P, K).forEach(s => { const b = baseFor(s); if (b == null) return;
     const spec = G.specFor(s, P, K, b); clin[s] = { spec, pts: G.clinicalSeries(s, spec, w, P.course_end_day, P, K, PER) }; });
-  const obs = G.weightObserved(w, D.wnoise.per[P.case_id], D.wnoise.consts);
   const rate = D.realism.rate_declared || 0;
-  return { w, obs, clin, adh: G.adherencePts(P), dirty: G.carryForward(obs, rate, PER), gold: G.gold(P), rate };
+  return { w, obs, clin, dose, ind, gate, adh: G.adherencePts(P), dirty: G.carryForward(obs, rate, PER), gold: G.gold(P), rate };
 }
 let W1 = null;
 function knobs(host){
@@ -691,8 +796,6 @@ function knobs(host){
   const sync = () => {
     P.case_id = $("#k-person").value; P.sex = $("#k-sex").value; P.age_range = $("#k-age").value;
     P.disease = $("#k-dis").value; P.drug = $("#k-drug").value;
-    // tirzepatide's effect is looked up per trial dose; the other drugs have one effect size
-    P.dose_mg = P.drug === "tirzepatide" ? 10.0 : 1.0;
     P.start = +$("#k-start").value; P.nadir = +$("#k-nadir").value;
     if (P.nadir > P.start - 1){ P.nadir = P.start - 1; $("#k-nadir").value = P.nadir; }
     P.T = +$("#k-T").value; P.reversal_week = +$("#k-week").value; P.regain_slope = +$("#k-slope").value;
@@ -707,25 +810,123 @@ function knobs(host){
     $$("input[type=range]", host).forEach(r => r.style.setProperty("--p", ((r.value - r.min) / (r.max - r.min) * 100) + "%"));
     drawPatient();
   };
-  host.addEventListener("input", sync);
-  host.addEventListener("change", sync);
+  const touch = e => { if (e && e.target && WEIGHT_KNOBS.includes(e.target.id)) LAST_KNOB = e.target.id; sync(); };
+  host.addEventListener("input", touch);
+  host.addEventListener("change", touch);
   $("#k-outcome").addEventListener("click", e => { const b = e.target.closest("button[data-o]"); if (b){ P.outcome = b.dataset.o; sync(); } });
   sync();
 }
+//: The sliders that move the weight course; the refusal panel searches one of them.
+const WEIGHT_KNOBS = ["k-nadir", "k-start", "k-T", "k-week", "k-slope", "k-mpw"];
+let LAST_KNOB = null, NEAR_TOKEN = 0;
+//: A value to at most two decimals, trailing zeros dropped (doses, kg).
+const g2 = v => String(Math.round(v * 100) / 100);
+function ladderText(steps, drug){ return steps.map(g2).join(" → ") + " " + doseUnit(drug); }
+/** One line per setting: what the condition and the drug change on this page, from the registries. */
+function controls(){
+  const ind = W1.ind, cohorts = K.drug_cohorts || [], applies = cohorts.includes(P.disease);
+  const labs = G.signalsFor(P, K).map(s => N("sig", s)).join(", ");
+  const spec = (K.drugs || {})[P.drug] || {}, tot = applies ? G.totalEffect(spec, P.dose_mg, (K.effect_fields || {}).HbA1c) : null;
+  const lims = [...new Set(DIS.map(d => (((K.domain || {})[d] || {}).weight || {}).max_weekly_delta))];
+  const drugTxt = ind.dose_steps.length ? T("ctlDrugTxt", ladderText(ind.dose_steps, P.drug), mtOf(P.drug), tot ? g2(tot[0]) : null) : T("ctlDrugNone", N("dis", P.disease));
+  return '<dl class="ctl"><dt>' + esc(T("ctlCond")) + "</dt><dd>" + esc(T("ctlCondTxt", labs, applies, cohorts.map(c => N("dis", c)).join(", "))) + "</dd>"
+    + "<dt>" + esc(T("ctlDrug")) + "</dt><dd>" + esc(drugTxt) + "</dd>"
+    + "<dt>" + esc(T("ctlWeight")) + "</dt><dd>" + esc(T("ctlWeightTxt", lims.length === 1 ? lims[0] : lims.join("/"))) + "</dd></dl>";
+}
+function refusalItem(g){
+  const dis = esc(N("dis", P.disease)), drug = esc(N("drug", P.drug));
+  switch (g.kind){
+    case "weekly_delta_exceeds_physio": return [T("refL_weekly"), T("refT_weekly", g2(g.v0), g2(g.v1), g.d0, g.d1, g2(g.rate), g.limit)];
+    case "anchor_not_honored": return g.name ? [T(g.name === "start" ? "refL_start" : "refL_nadir"), T("refT_anchor", g.want, g2(g.got), g.tol)] : [T("refL_outcome"), T("refT_underivable")];
+    case "anchor_infeasible": return [T("refL_nadir"), T("refT_infeasible")];
+    case "outcome_declared_not_derived": return [T("refL_outcome"), T("refT_outcome", g.declared === "event_occurred", g2(g.threshold))];
+    case "outcome_not_derivable": return [T("refL_outcome"), T("refT_underivable")];
+    case "drug_not_indicated": case "drug_indication_unregistered": return [T("refL_drug"), T("refT_drug", drug, dis)];
+    default: return [T("refL_range"), T("refT_range", g.v, g.day, g.lo, g.hi)];
+  }
+}
 function drawPatient(){
   W1 = world();
-  const reg = P.outcome === "regain";
+  const reg = P.outcome === "regain", refused = W1.gate.length > 0;
   $("#who").innerHTML = "<p>" + T("who", P.age_range.replace("-", "–"), P.sex === "F" ? T("whoWoman") : T("whoMan"), esc(N("dis", P.disease)),
     esc(N("drug", P.drug)), P.start, P.nadir, reg, P.reversal_week, P.measure_per_week, P.T) + "</p>"
-    + '<span class="gold">' + esc(T("goldLabel")) + " <b>" + esc(reg ? T("goldRegain", P.reversal_week) : T("goldMaintain")) + "</b></span>";
+    + '<span class="gold">' + esc(T("goldLabel")) + " <b>" + esc(refused ? T("goldNone") : reg ? T("goldRegain", P.reversal_week) : T("goldMaintain")) + "</b></span>"
+    + controls();
+  [".layers", "#lg1", "#n1"].forEach(q => { $(q).style.display = refused ? "none" : ""; });
+  if (refused){ plotRefusal(); return; }
+  NEAR_TOKEN++;
   plotPatient();
 }
+/** The emission gate refuses this patient: a short card with its reasons, the course production
+ *  computed before refusing it (greyed, the breach marked), and a search of the last moved
+ *  slider for the nearest value production accepts. */
+function plotRefusal(){
+  const host = $("#c1"), token = ++NEAR_TOKEN, drugOnly = W1.gate.every(g => g.kind.startsWith("drug_"));
+  host.classList.remove("fig"); host.style.height = "";
+  host.innerHTML = '<div class="refuse" role="alert"><p class="rh"><i aria-hidden="true">!</i>' + esc(T("refH")) + "</p><ul>"
+    + W1.gate.map(g => { const [k, t] = refusalItem(g); return '<li title="' + esc(g.kind) + '"><span class="k">' + esc(k) + "</span><span>" + t + "</span><code>" + esc(g.kind) + "</code></li>"; }).join("")
+    + '</ul><div class="near" id="near1"></div></div><div class="refchart" id="c1r"></div>';
+  refusalChart($("#c1r", host));
+  const near = $("#near1", host), head = '<span class="k">' + esc(T("refNearH")) + "</span>";
+  const drugs = DRUGS.filter(d => { const e = ((K.indications || {})[P.disease] || {})[d]; return e && e.status !== "mismatch"; });
+  const drugLine = W1.gate.some(g => g.kind.startsWith("drug_")) ? "<span>" + esc(T("refDrugs", N("dis", P.disease), drugs.map(d => N("drug", d)).join(", "))) + "</span>" : "";
+  if (drugOnly){ near.innerHTML = head + drugLine; return; }
+  near.innerHTML = head + drugLine + '<span class="faint">' + esc(T("refSearching")) + "</span>";
+  const reg = P.outcome === "regain";
+  const knobsTry = (LAST_KNOB ? [LAST_KNOB] : []).concat(WEIGHT_KNOBS.filter(k => k !== LAST_KNOB))
+    .filter(k => reg || (k !== "k-week" && k !== "k-slope"));
+  const field = { "k-nadir": "nadir", "k-start": "start", "k-T": "T", "k-week": "reversal_week", "k-slope": "regain_slope", "k-mpw": "measure_per_week" };
+  const label = { "k-nadir": "kNadir", "k-start": "kStart", "k-T": "kT", "k-week": "kWeek", "k-slope": "kSlope", "k-mpw": "kMpw" };
+  const cands = [];
+  knobsTry.forEach(id => { const r = $("#" + id), st = +r.step, lo = +r.min, hi = +r.max, cur = +r.value;
+    for (let k = 1; k <= Math.round((hi - lo) / st); k++) [cur - k * st, cur + k * st].forEach(v => { if (v >= lo - 1e-9 && v <= hi + 1e-9) cands.push([id, Math.round(v / st) * st]); }); });
+  let i = 0;
+  const step = () => {
+    if (token !== NEAR_TOKEN) return;
+    const t0 = performance.now();
+    while (i < cands.length && performance.now() - t0 < 30){
+      const [id, v] = cands[i++], Q = Object.assign({}, P, { [field[id]]: +v.toFixed(2) });
+      if (Q.nadir > Q.start - 1) continue;
+      if (courseOf(Q).gate.every(g => g.kind.startsWith("drug_"))){
+        const shown = id === "k-slope" ? (+v).toFixed(2) : id === "k-T" ? T("vDay", v) : id === "k-week" ? T("vWeek", v) : id === "k-mpw" ? T("vPerWeek", v) : T("vKg", v);
+        near.innerHTML = head + drugLine + "<span>" + esc(T(label[id])) + " <b>" + esc(shown) + '</b></span><button type="button" class="pill" id="near-use">' + esc(T("refUse")) + "</button>";
+        $("#near-use", near).addEventListener("click", () => { const r = $("#" + id); r.value = v; LAST_KNOB = id; r.dispatchEvent(new Event("input", { bubbles: true })); });
+        return;
+      }
+    }
+    if (i < cands.length) setTimeout(step, 0);
+    else near.innerHTML = head + drugLine + '<span class="faint">' + esc(T("refNone", T(label[knobsTry[0]]))) + "</span>";
+  };
+  setTimeout(step, 0);
+}
+/** The weight course production computed for these settings before its gate refused them:
+ *  greyed, with the breach in the accent of the refusal (a weekly-limit segment, a declared
+ *  anchor the course misses, the level the label rule needs). */
+function refusalChart(host){
+  const w = W1.w, end = P.course_end_day, H = 150;
+  const F = fig(host, H, T("refChart")), svg = F.svg, ml = F.narrow ? 34 : 42, mr = 8, x = lin(0, end, ml, F.W - mr);
+  const marks = [];
+  W1.gate.forEach(g => { if (g.kind === "anchor_not_honored" && g.name) marks.push({ v: g.want, t: T("refDeclared", g.want) });
+    if (g.kind === "outcome_declared_not_derived" && g.threshold != null && g.declared === "event_occurred") marks.push({ v: g.threshold, t: T("refThr", g2(g.threshold)) }); });
+  const vs = w.map(p => p[1]).concat(marks.map(m => m.v)), lo = Math.floor(Math.min(...vs) - 1), hi = Math.ceil(Math.max(...vs) + 1), y = lin(lo, hi, H - 26, 22);
+  F.lab(0, 8, T("refChart"), { cls: "lane" });
+  ticks(lo, hi, 3).forEach(v => { hline(svg, ml, F.W - mr, y(v)); F.lab(ml - 5, y(v), String(v), { anchor: "end" }); });
+  S("path", { d: pathOf(w, x, y), fill: "none", stroke: "var(--axis)", "stroke-width": 1.5, "stroke-linejoin": "round" }, svg);
+  W1.gate.filter(g => g.kind === "weekly_delta_exceeds_physio").forEach(g => {
+    S("line", { x1: x(g.d0), x2: x(g.d1), y1: y(g.v0), y2: y(g.v1), stroke: "var(--c2)", "stroke-width": 3, "stroke-linecap": "round" }, svg);
+    dot(svg, x(g.d1), y(g.v1), "var(--c2)", 4); });
+  marks.forEach(m => { S("line", { x1: ml, x2: F.W - mr, y1: y(m.v), y2: y(m.v), stroke: "var(--c2)", "stroke-width": 1, "stroke-dasharray": "4 3" }, svg);
+    F.lab(F.W - mr, y(m.v) - 9, m.t, { cls: "ann", anchor: "end" }); });
+  vline(svg, x(P.T), 16, H - 26, "var(--muted-fg)", 1);
+  xAxis(F, x, H - 22, end, 7);
+}
 function plotPatient(){
+  if (W1.gate.length) return;
   const host = $("#c1"), noise = L1.noise, cut = L1.cut;
   const sigs = Object.keys(W1.clin), end = P.course_end_day, T0 = P.T, truth = W1.w.meta.truth;
   const narrow = (host.clientWidth || 720) < 560;
   const BAND = 20, GAP = 14;
-  const lanes = [{ id: "w", h: narrow ? 190 : 230 }].concat(sigs.map(s => ({ id: s, h: 60 }))).concat([{ id: "adh", h: 50 }]);
+  const lanes = [{ id: "w", h: narrow ? 190 : 230 }].concat(sigs.map(s => ({ id: s, h: 60 }))).concat([{ id: "dose", h: 50 }, { id: "adh", h: 50 }]);
   let y0 = 0; lanes.forEach(l => { l.top = y0; l.y = y0 + BAND; y0 = l.y + l.h + GAP; });
   const H = y0 + 10;
   const F = fig(host, H, T("laneWeight"));
@@ -745,13 +946,14 @@ function plotPatient(){
     let lo, hi, fmt, title;
     if (l.id === "w"){ const vs = truth.map(p => p[1]).concat(W1.obs.map(p => p[1])); lo = Math.floor(Math.min(...vs) - .5); hi = Math.ceil(Math.max(...vs) + .5); fmt = v => String(v); title = T("laneWeight"); }
     else if (l.id === "adh"){ lo = 0; hi = 1; fmt = v => Math.round(v * 100) + "%"; title = T("laneAdh"); }
+    else if (l.id === "dose"){ lo = 0; hi = Math.max(...W1.ind.dose_steps, ...W1.dose.map(q => q[1]), 1e-9) * 1.15; fmt = g2; title = T("laneDose", doseUnit(P.drug)); }
     else { const c = W1.clin[l.id], ref = (K.clinical_ref || {})[l.id] || {}, dg = (ref.diagnostic || {})[P.disease];
       const vs = c.pts.map(p => p[1]).concat([ref.high, dg].filter(v => v != null)); lo = Math.min(...vs); hi = Math.max(...vs);
       const pad = (hi - lo) * .2 || .5; lo -= pad; hi += pad; fmt = v => (hi - lo < 6 ? v.toFixed(1) : String(Math.round(v)));
       title = T("laneLab", N("sig", l.id), c.spec.unit); l.ref = ref; l.dg = dg; }
     l.yv = lin(lo, hi, l.y + l.h, l.y);
     F.lab(0, l.top + 9, title, { cls: "lane" });
-    ticks(lo, hi, l.id === "w" ? 4 : 2).forEach(v => { hline(svg, ml, F.W - mr, l.yv(v)); F.lab(ml - 5, l.yv(v), fmt(v), { anchor: "end" }); });
+    (l.id === "dose" ? [0, Math.max(...W1.dose.map(q => q[1]))] : ticks(lo, hi, l.id === "w" ? 4 : 2)).forEach(v => { hline(svg, ml, F.W - mr, l.yv(v)); F.lab(ml - 5, l.yv(v), fmt(v), { anchor: "end" }); });
     if (l.ref){
       const r = l.ref;
       if (r.direction === "higher_abnormal" && r.high != null && r.high < hi){
@@ -778,6 +980,18 @@ function plotPatient(){
     S("path", { d: `M${xr - 4} ${lw.y + 12} L${xr + 4} ${lw.y + 12} L${xr} ${lw.y + 18} Z`, fill: "var(--foreground)" }, svg); }
   sigs.forEach(s => { const l = lanes.find(q => q.id === s);
     W1.clin[s].pts.filter(p => show(p[0])).forEach(p => dot(svg, x(p[0]), l.yv(p[1]), "var(--accent)", 4)); });
+  // The dose record: a step line, a dot on every record, the dose named where it changes.
+  const ld = lanes.find(q => q.id === "dose"), dz = W1.dose.filter(q => show(q[0]));
+  if (dz.length){
+    const stop = cut ? Math.min(T0, end) : end;
+    let dpath = "", prev = null;
+    dz.forEach(q => { dpath += (prev === null ? "M" : "L" + x(q[0]).toFixed(1) + " " + ld.yv(prev).toFixed(1) + "L") + x(q[0]).toFixed(1) + " " + ld.yv(q[1]).toFixed(1); prev = q[1]; });
+    dpath += "L" + x(stop).toFixed(1) + " " + ld.yv(prev).toFixed(1);
+    S("path", { d: dpath, fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+    let last = null;
+    dz.forEach(q => { dot(svg, x(q[0]), ld.yv(q[1]), "var(--accent)", 3.2);
+      if (q[1] !== last) F.lab(x(q[0]) + 3, ld.yv(q[1]) - 9, q[1] ? g2(q[1]) : T("hold"), { cls: "ann" }); last = q[1]; });
+  }
   const la = lanes[lanes.length - 1], ap = W1.adh.filter(p => p[0] <= end && show(p[0]));
   S("path", { d: pathOf(ap, x, la.yv), fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-linejoin": "round" }, svg);
   ap.forEach(p => dot(svg, x(p[0]), la.yv(p[1]), "var(--accent)", 4));
@@ -794,6 +1008,7 @@ function plotPatient(){
     if (noise) rows.push({ k: T("tipRecorded"), v: q ? f1(q[1]) + " kg" + (q[2] ? T("tipCopied") : "") : T("tipNoWeigh") });
     if (tr.get(d) != null) rows.push({ k: T("tipTruth"), v: f1(tr.get(d)) + " kg" });
     sigs.forEach(s => { const c = W1.clin[s].pts.find(p => Math.abs(p[0] - d) <= 2); if (c) rows.push({ k: N("sig", s), v: c[1] + " " + W1.clin[s].spec.unit }); });
+    if (W1.dose.length) rows.push({ k: T("tipDose"), v: g2(G.doseAt(W1.dose, d)) + " " + doseUnit(P.drug) });
     showTip(ev, T("tipDay", d), rows.length ? rows : [{ k: T("tipNone"), v: "" }]);
   });
   hit.addEventListener("pointerleave", () => { ch.setAttribute("opacity", 0); hideTip(); });
@@ -817,7 +1032,7 @@ function sAct1(s){
   $("#L-cut", s).addEventListener("change", e => { L1.cut = e.target.checked; plotPatient(); });
   knobs($("#knobs", s));
   const sc = selfcheck;
-  $("#tech1", s).innerHTML = ttech("tech1", sc.nCases, sc.nPoints.toLocaleString(), sc.worstWeight.toFixed(4), sc.tol, sc.ok, sc.nObserved.toLocaleString(), sc.worstObserved.toFixed(2));
+  $("#tech1", s).innerHTML = ttech("tech1", sc.nCases, sc.nPoints.toLocaleString(), sc.worstWeight.toFixed(4), sc.tol, sc.ok, sc.nObserved.toLocaleString(), sc.worstObserved.toFixed(2), sc.nGate, sc.nRefused);
 }
 
 /* ══ ACT 2: the four packs ══ */
@@ -877,9 +1092,10 @@ function sAct2(s){
     tabs.innerHTML = PACK_KEYS.map(k => '<button class="tab" type="button" role="tab" data-p="' + k + '" aria-selected="' + (k === CUR_PACK) + '">'
       + PACK_NUM[k] + " " + esc(T("pk_" + k)) + "<small>" + esc(T("pq_" + k)) + "</small></button>").join("");
     const gd = GOLD[CUR_PACK]();
-    $("#pack", s).innerHTML = '<div class="rec">' + REC[CUR_PACK]() + '</div><div class="viz2"><div id="c2"></div><div class="legend" id="lg2"></div></div>'
+    $("#pack", s).innerHTML = '<div class="rec">' + REC[CUR_PACK]() + '</div><div class="viz2"><div id="c2"></div><div class="legend" id="lg2"></div><div class="rec2" id="rec2"></div></div>'
       + '<div class="goldrow"><div><h4>' + esc(T("hGold")) + "</h4><p>" + gd.g + "</p></div><div><h4>" + esc(T("hJudged")) + "</h4><p>" + esc(gd.j) + "</p></div></div>";
     VIZ[CUR_PACK]();
+    recordPanel();
   };
   tabs.addEventListener("click", e => { const b = e.target.closest(".tab"); if (!b) return; CUR_PACK = b.dataset.p; paint(); });
   s._paint = paint;
@@ -889,7 +1105,7 @@ const VIZ = {
   m2: () => {
     const host = $("#c2"), v = V("m2"), att = v.attribution || {};
     const comps = v.pair || [], C1 = comps[0], col = cp => cp === C1 ? "var(--accent)" : "var(--c2)";
-    const ly = { a: 34, b: 112, e: 188, bp: 250 }, bph = 100, H = ly.bp + bph + 34;
+    const ly = { a: 34, b: 112, e: 188, bp: 250 }, bph = 140, H = ly.bp + bph + 34;
     const F = fig(host, H, T("pk_m2")); const svg = F.svg, ml = 32, mr = 10, x = lin(0, v.T, ml, F.W - mr);
     const threads = v.threads || [];
     F.lab(x(v.T) - 4, 6, T("annTodayShort"), { cls: "annb", anchor: "end" });
@@ -1012,6 +1228,43 @@ const VIZ = {
   },
 };
 
+/** More of the sample item's record, as the model sees it up to today: one small lane per
+ *  stream on the pack chart's day axis. On a two-column layout it fills the height of the
+ *  record column; stacked, it shows four lanes. */
+function recordPanel(){
+  const host = $("#rec2"), v = V(CUR_PACK), R = v.record || {}, names = Object.keys(R.streams || {});
+  if (!names.length){ host.style.display = "none"; return; }
+  const day = v.T || v.visit_day || v.t1, two = !(typeof matchMedia === "function" && matchMedia("(max-width:900px)").matches);
+  const LH = 44, left = $("#pack .rec"), right = $("#pack .viz2");
+  let n = Math.min(4, names.length);
+  // The grid stretches the chart column to the record column, so measure what it holds.
+  if (two && left && right){ const used = $("#c2").offsetHeight + $("#lg2").offsetHeight + 30 + 70;
+    n = Math.max(3, Math.min(names.length, Math.floor((left.offsetHeight - used) / LH))); }
+  const show = names.slice(0, n);
+  host.innerHTML = "<h4>" + esc(T("recTitle", show.length, R.n_streams)) + '</h4><div id="c2r"></div>';
+  const F = fig($("#c2r", host), show.length * LH + 26, T("recTitle", show.length, R.n_streams));
+  const svg = F.svg, ml = 38, mr = 10, x = lin(0, day, ml, F.W - mr);
+  const unitOf = u => ({ C: "°C", delta_C: "Δ°C", index: "", "0-10": "0–10", "0-100": "0–100" }[u] ?? u);
+  show.forEach((nm, i) => {
+    const st = R.streams[nm], pts = st.pts.filter(q => q[0] <= day), top = i * LH + 14, bot = top + LH - 18;
+    const vs = pts.map(q => q[1]), lo = Math.min(...vs), hi = Math.max(...vs), pad = (hi - lo) * .1 || Math.abs(hi) * .02 || 1;
+    const y = lin(lo - pad, hi + pad, bot, top);
+    const u = unitOf(st.unit), last = pts[pts.length - 1];
+    F.lab(0, top - 6, N("sig", nm) + (u ? " (" + u + ")" : ""), { cls: "lane" });
+    F.lab(F.W - mr, top - 6, T("recLast", last[1]), { anchor: "end" });
+    hline(svg, ml, F.W - mr, bot);
+    if (pts.length > 30) S("path", { d: pathOf(pts, x, y), fill: "none", stroke: "var(--fill)", "stroke-width": 1.1, "stroke-linejoin": "round", opacity: .85 }, svg);
+    else pts.forEach(q => dot(svg, x(q[0]), y(q[1]), "var(--fill)", 3.2));
+    const hit = S("rect", { x: ml, y: top, width: F.W - mr - ml, height: LH - 18, fill: "transparent" }, svg);
+    hit.addEventListener("pointermove", ev => { const r = svg.getBoundingClientRect(), d = x.inv(ev.clientX - r.left);
+      let best = pts[0]; pts.forEach(q => { if (Math.abs(q[0] - d) < Math.abs(best[0] - d)) best = q; });
+      showTip(ev, T("tipDay", best[0]), [{ k: N("sig", nm), v: best[1] + (u ? " " + u : "") }, { k: "", v: T("recPts", pts.length) }]); });
+    hit.addEventListener("pointerleave", hideTip);
+  });
+  vline(svg, x(day), 8, show.length * LH, "var(--muted-fg)", 1);
+  xAxis(F, x, show.length * LH + 4, day, 7);
+}
+
 /* ══ ACT 3: the board (from board.json) ══ */
 const ORDER = (BD.overall || {}).board ? BD.overall.board.map(r => r.model) : [];
 let CUR_MODEL = ORDER[0];
@@ -1023,25 +1276,22 @@ function selectModel(m){ CUR_MODEL = m; boardPaint(); modelPanel(); }
 function sAct3(s){
   const p0 = BD.packs[finalPacks()[0]] || {};
   s.innerHTML = '<div class="wrap"><p class="actnum">' + esc(T("act", 3)) + "</p><h2>" + esc(T("a3H")) + '</h2><p class="sub">' + esc(T("a3Sub", ORDER.length, p0.n_cases, p0.n_rounds)) + "</p>"
-    + '<div class="card"><div class="a3" id="board"></div><p class="note" style="padding:0 18px 14px" id="n3"></p></div>'
+    + '<div class="card"><div class="a3top" id="board0"></div><div class="a3" id="board"></div><p class="note" style="padding:0 18px 14px" id="n3"></p></div>'
     + '<div class="card mp" id="mpanel"></div>'
     + '<details><summary>' + esc(T("techSummary")) + '</summary><div class="body">' + ttech("tech3", (BD.source || {}).boot) + "</div></details></div>";
   boardPaint(); modelPanel();
 }
 function boardPaint(){
-  const host = $("#board"); if (!host) return;
-  host.innerHTML = "";
-  const RH = rowH(), stacked = (host.clientWidth || 1000) < 860, HEAD = 24;
+  const top = $("#board0"), host = $("#board"); if (!host || !top) return;
+  top.innerHTML = ""; host.innerHTML = "";
+  const RH = rowH(), HEAD = 24, stacked = (host.clientWidth || 1000) < 860;
   const ov = BD.overall, fin = finalPacks(), pend = pendingPacks();
-  const c0 = el("div"), c1 = el("div"), c2 = el("div"); host.append(c0, c1, c2);
-  c0.innerHTML = '<div class="colhead">' + esc(T("colOverall")) + (ov.status === "interim" ? '<i class="tagi">' + esc(T("interim", pkList(ov.packs))) + "</i>" : "") + "<span>" + esc(T("colOverallSub")) + "</span></div>";
-  c1.innerHTML = '<div class="colhead">' + esc(T("colPacks")) + "<span>" + esc(T("colPacksSub")) + "</span></div>";
-  c2.innerHTML = '<div class="colhead">' + esc(T("colDis")) + "<span>" + esc(T("colDisSub")) + "</span></div>";
-  // overall dot plot
-  const fh = el("div"); c0.appendChild(fh);
+  // Row 1: the overall board, full width
+  top.innerHTML = '<div class="colhead">' + esc(T("colOverall")) + (ov.status === "interim" ? '<i class="tagi">' + esc(T("interim", pkList(ov.packs))) + "</i>" : "") + "<span>" + esc(T("colOverallSub")) + "</span></div>";
+  const fh = el("div"); top.appendChild(fh);
   const F = fig(fh, HEAD + ORDER.length * RH + 6, T("colOverall"));
-  const lw = Math.min(170, Math.max(120, F.W * .36)), xs = ov.board.flatMap(r => r.ci95), x = lin(Math.floor(Math.min(...xs) * 10) / 10, Math.ceil(Math.max(...xs) * 10) / 10, lw, F.W - 44);
-  ticks(x.inv(lw), x.inv(F.W - 44), 5).forEach(v => { vline(F.svg, x(v), HEAD - 4, HEAD + ORDER.length * RH, "var(--grid)"); F.lab(x(v), HEAD - 12, v.toFixed(1), { anchor: "middle" }); });
+  const lw = Math.min(230, Math.max(130, F.W * .26)), xs = ov.board.flatMap(r => r.ci95), x = lin(Math.floor(Math.min(...xs) * 10) / 10, Math.ceil(Math.max(...xs) * 10) / 10, lw, F.W - 48);
+  ticks(x.inv(lw), x.inv(F.W - 48), F.narrow ? 4 : 7).forEach(v => { vline(F.svg, x(v), HEAD - 4, HEAD + ORDER.length * RH, "var(--grid)"); F.lab(x(v), HEAD - 12, v.toFixed(F.narrow ? 1 : 2), { anchor: "middle" }); });
   ov.board.forEach((r, i) => { const y = HEAD + i * RH, ym = y + RH / 2;
     if (r.model === CUR_MODEL) S("rect", { x: 0, y: y + 1, width: F.W, height: RH - 2, rx: 5, fill: "var(--muted)" }, F.svg);
     hline(F.svg, 0, F.W, y + RH, "var(--grid)", 1, .7);
@@ -1053,42 +1303,47 @@ function boardPaint(){
     hit.style.cursor = "pointer"; hit.addEventListener("click", () => selectModel(r.model));
     hover(hit, r.model, [{ k: T("tipOverall", pkList(ov.packs)), v: f3(r.score) }, { k: T("tipCI"), v: f3(r.ci95[0]) + "–" + f3(r.ci95[1]) }, { k: T("tipRank"), v: "#" + (i + 1) }]);
   });
-  // top-six separability: a small matrix, ink only
-  const t6 = ov.top6, sm = el("div", { class: "sepm" });
-  let tb = "<table><tr><td class='e'></td>" + t6.top6.slice(1).map((_, j) => "<th>" + (j + 2) + "</th>").join("") + "<td class='e'></td></tr>";
-  t6.top6.slice(0, 5).forEach((m, i) => { tb += "<tr><td class='e'></td>"; t6.top6.slice(1).forEach((n, j) => {
-    if (j + 1 <= i){ tb += "<td class='e'></td>"; return; }
-    const p = t6.pairs.find(q => q.a === m && q.b === n); tb += '<td class="' + (p.separable ? "y" : "n") + '" data-a="' + esc(m) + '" data-b="' + esc(n) + '"></td>'; });
-    tb += "<th>" + (i + 1) + " " + esc(m) + "</th></tr>"; });
-  tb += "<tr><td class='e'></td>" + t6.top6.slice(1).map(() => "<td class='e'></td>").join("") + "<th>6 " + esc(t6.top6[5]) + "</th></tr></table>";
-  sm.innerHTML = "<div><b>" + esc(T("sepTitle")) + "</b><br>" + esc(T("sepText", t6.n_separable, t6.adjacent_separable)) + "</div><div class='scroll'>" + tb + "</div>";
-  $$("td[data-a]", sm).forEach(td => { const p = t6.pairs.find(q => q.a === td.dataset.a && q.b === td.dataset.b);
-    hover(td, T("sepTip", p.a, p.b), [{ k: T("tipDiff"), v: f3(p.diff) }, { k: T("tipSE"), v: f3(p.se) }, { k: T("tipSep"), v: p.separable ? T("yes") : T("no") }]); });
-  c0.appendChild(sm);
-  // heat map: one HTML table, model x pack
+  // Row 2: three panels on the same rows (the heat map names them), stacked on a narrow screen
+  const PA = ov.pairs || { pairs: [], n_separable: 0 }, nPairs = ORDER.length * (ORDER.length - 1) / 2;
+  host.innerHTML = '<div class="colhead h1">' + esc(T("colPacks")) + "<span>" + esc(T("colPacksSub")) + "</span></div>"
+    + '<div class="colhead h2">' + esc(T("colDis")) + "<span>" + esc(T("colDisSub")) + "</span></div>"
+    + '<div class="colhead h3">' + esc(T("colPairs")) + "<span>" + esc(T("colPairsSub", PA.n_separable, nPairs)) + "</span></div>"
+    + '<div class="b1"></div><div class="b2"></div><div class="b3"></div>';
+  const c1 = $(".b1", host), c2 = $(".b2", host), c3 = $(".b3", host);
+  const sel = m => m === CUR_MODEL ? ' class="sel"' : "";
+  // heat map: model x pack
   const lo = 0.25, hi = 0.9;
-  const shade = s => Math.round(12 + Math.max(0, Math.min(1, (s - lo) / (hi - lo))) * 88);
-  const hw = host.clientWidth || 1000, narrowCells = (stacked ? hw - 150 : hw / 3.4) / 4 < 84;
-  let h = '<div class="tablewrap"><table class="bt" style="--rh:' + RH + 'px"><tr>' + (stacked ? "<th style='width:9.5em'></th>" : "")
-    + PACK_KEYS.map(k => "<th>" + PACK_NUM[k] + "</th>").join("") + "</tr>";
-  ORDER.forEach((m, i) => { h += '<tr data-m="' + esc(m) + '"' + (m === CUR_MODEL ? ' class="sel"' : "") + ">" + (stacked ? '<td class="mname" title="' + esc(m) + '">' + (i + 1) + "  " + esc(m) + "</td>" : "");
+  const shade = v => Math.round(12 + Math.max(0, Math.min(1, (v - lo) / (hi - lo))) * 88);
+  let h = '<div class="tablewrap"><table class="bt" style="--rh:' + RH + 'px"><tr><th style="width:10.5em"></th>' + PACK_KEYS.map(k => "<th>" + PACK_NUM[k] + "</th>").join("") + "</tr>";
+  ORDER.forEach((m, i) => { h += '<tr data-m="' + esc(m) + '"' + sel(m) + '><td class="mname" title="' + esc(m) + '">' + (i + 1) + "  " + esc(m) + "</td>";
     PACK_KEYS.forEach(k => { const P = BD.packs[k];
-      if (P.status !== "final"){ h += '<td class="cell upd">' + (i === 0 ? esc(narrowCells ? T("updatingShort") : T("updating")) : "") + "</td>"; return; }
+      if (P.status !== "final"){ h += '<td class="cell upd">' + (i === 0 ? esc(T("updatingShort")) : "") + "</td>"; return; }
       const r = P.board.find(q => q.model === m), pc = shade(r.score);
       h += '<td class="cell" data-k="' + k + '" style="background:color-mix(in oklab, var(--seq-hi) ' + pc + '%, var(--card));color:' + (pc > 55 ? "var(--on-accent)" : "var(--foreground)") + '">' + f2(r.score) + "</td>"; });
     h += "</tr>"; });
-  h += "</table></div><p class='note'>" + esc(T("shadeNote", lo.toFixed(2), hi.toFixed(2))) + "</p>";
-  c1.insertAdjacentHTML("beforeend", h);
+  c1.innerHTML = h + "</table></div><p class='note'>" + esc(T("shadeNote", lo.toFixed(2), hi.toFixed(2))) + "</p>";
   $$("td.cell[data-k]", c1).forEach(td => { const m = td.parentElement.dataset.m, P = BD.packs[td.dataset.k], r = P.board.find(q => q.model === m);
     hover(td, m + " · " + PACK_NUM[td.dataset.k] + " " + T("pk_" + td.dataset.k), [{ k: T("thScore"), v: f3(r.score) }, { k: T("tipCI"), v: f2(r.ci95[0]) + "–" + f2(r.ci95[1]) }, { k: T("tipRank"), v: "#" + r.rank }]); });
-  // round-to-round disagreement: HTML bars
+  // round-to-round disagreement
   let d = '<div class="tablewrap"><table class="bt" style="--rh:' + RH + 'px"><tr>' + (stacked ? "<th style='width:9.5em'></th>" : "") + fin.map(k => "<th>" + PACK_NUM[k] + "</th>").join("") + "</tr>";
-  ORDER.forEach((m, i) => { d += '<tr data-m="' + esc(m) + '"' + (m === CUR_MODEL ? ' class="sel"' : "") + ">" + (stacked ? '<td class="mname" title="' + esc(m) + '">' + (i + 1) + "  " + esc(m) + "</td>" : "");
+  ORDER.forEach((m, i) => { d += '<tr data-m="' + esc(m) + '"' + sel(m) + ">" + (stacked ? '<td class="mname" title="' + esc(m) + '">' + (i + 1) + "  " + esc(m) + "</td>" : "");
     fin.forEach(k => { const v = BD.packs[k].stability[m]; d += '<td data-k="' + k + '"><span class="track"><span class="fill" style="width:' + (v * 100).toFixed(1) + '%"></span></span></td>'; }); d += "</tr>"; });
-  d += "</table></div><p class='note'>" + esc(T("barNote")) + "</p>";
-  c2.insertAdjacentHTML("beforeend", d);
+  c2.innerHTML = d + "</table></div><p class='note'>" + esc(T("barNote")) + "</p>";
   $$("td[data-k]", c2).forEach(td => { const m = td.parentElement.dataset.m, k = td.dataset.k;
     hover(td, m + " · " + PACK_NUM[k], [{ k: T("colDis"), v: Math.round(BD.packs[k].stability[m] * 100) + "%" }]); });
+  // pairwise separability: row model vs column model, ordered by rank
+  const pair = (a, b) => { const p = PA.pairs.find(q => (q.a === a && q.b === b) || (q.a === b && q.b === a)); if (!p) return null;
+    return p.a === a ? p : { a: a, b: b, diff: -p.diff, se: p.se, separable: p.separable }; };
+  let t = '<div class="tablewrap"><table class="pm" style="--rh:' + RH + "px;min-width:" + (ORDER.length * 32 + (stacked ? 150 : 40)) + 'px"><tr>' + (stacked ? '<th class="rn"></th>' : '<th class="r"></th>') + ORDER.map((_, j) => "<th>" + (j + 1) + "</th>").join("") + "</tr>";
+  ORDER.forEach((m, i) => { t += '<tr data-m="' + esc(m) + '"' + sel(m) + ">" + (stacked ? '<th class="rn" title="' + esc(m) + '">' + (i + 1) + "  " + esc(m) + "</th>" : '<th class="r">' + (i + 1) + "</th>");
+    ORDER.forEach((n, j) => { if (i === j){ t += '<td class="d"></td>'; return; }
+      const p = pair(m, n); if (!p){ t += "<td></td>"; return; }
+      const v = Math.round(p.diff * 100);
+      t += '<td class="' + (p.separable ? (p.diff > 0 ? "hi" : "lo") : "") + '" data-a="' + esc(m) + '" data-b="' + esc(n) + '">' + (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + "</td>"; });
+    t += "</tr>"; });
+  c3.innerHTML = t + '</table></div><div class="pmleg"><span><i class="hi"></i>' + esc(T("pairHi")) + '</span><span><i class="lo"></i>' + esc(T("pairLo")) + '</span><span><i></i>' + esc(T("pairNs")) + "</span><span>" + esc(T("pairVal")) + "</span></div>";
+  $$("td[data-a]", c3).forEach(td => { const p = pair(td.dataset.a, td.dataset.b);
+    hover(td, T("sepTip", p.a, p.b), [{ k: T("tipDiff"), v: (p.diff > 0 ? "+" : "") + f3(p.diff) }, { k: T("tipSE"), v: f3(p.se) }, { k: T("tipSep"), v: p.separable ? T("yes") : T("no") }]); });
   $$("tr[data-m]", host).forEach(tr => tr.addEventListener("click", () => selectModel(tr.dataset.m)));
   $("#n3").textContent = pend.length ? T("n3", pkList(pend), pkList(ov.packs)) : T("n3final");
 }
@@ -1096,7 +1351,7 @@ function confusion(host, pk, m){
   const C = BD.decisions[pk], cols = C.classes.concat(["none"]), cells = C.models[m] || [];
   const get = (g, s) => (cells.find(c => c[0] === g && c[1] === s) || [0, 0, 0])[2];
   const nm = c => c === "none" ? T("cfNone") : T("short_" + c);
-  let h = "<div class='tablewrap'><table class='cf'><tr><th class='r'></th><th colspan='" + cols.length + "' style='text-align:left'>" + esc(T("cfAnswer")) + "</th></tr><tr><th class='r'></th>"
+  let h = "<div class='tablewrap'><table class='cf'><colgroup><col class='h'>" + cols.map(() => "<col class='c'>").join("") + "</colgroup><tr><th class='r'></th><th class='ah' colspan='" + cols.length + "'>" + esc(T("cfAnswer")) + "</th></tr><tr><th class='r'></th>"
     + cols.map(c => "<th>" + esc(nm(c)) + "</th>").join("") + "</tr>";
   C.classes.forEach(g => { const tot = cols.reduce((a, s) => a + get(g, s), 0);
     h += "<tr><th class='r'>" + esc(nm(g)) + "</th>" + cols.map(s => { const n = get(g, s), sh = tot ? n / tot : 0;
@@ -1106,19 +1361,63 @@ function confusion(host, pk, m){
   $$("td[data-g]", host).forEach(td => { const g = td.dataset.g, s = td.dataset.s, tot = cols.reduce((a, q) => a + get(g, q), 0);
     hover(td, "", [{ k: T("cfTip", nm(g), nm(s), get(g, s), tot), v: "" }]); });
 }
+/** Pack 1 as scored: the review decision (truth x flag) and the two per-item atoms as bars. */
+function reviewBlock(host, m){
+  const R = BD.decisions.m2.models[m] || {}, cells = R.review || [];
+  const get = (w, s) => (cells.find(c => c[0] === w && c[1] === s) || [0, 0, 0])[2];
+  const cols = ["flagged", "not_flagged"].concat(cells.some(c => c[1] === "none") ? ["none"] : []);
+  const cn = { flagged: T("rvFlag"), not_flagged: T("rvNo"), none: T("rvNone") }, rn = w => w ? T("rvYes") : T("rvNot");
+  const total = cells.reduce((a, c) => a + c[2], 0);
+  let h = "<div class='tablewrap'><table class='cf'><colgroup><col class='h'>" + cols.map(() => "<col class='c'>").join("") + "</colgroup><tr><th class='r'></th><th class='ah' colspan='" + cols.length + "'>" + esc(T("rvAnswer")) + "</th></tr><tr><th class='r'></th>"
+    + cols.map(c => "<th>" + esc(cn[c]) + "</th>").join("") + "</tr>";
+  [true, false].forEach(w => { const tot = cols.reduce((a, c) => a + get(w, c), 0);
+    h += "<tr><th class='r'>" + esc(rn(w)) + "</th>" + cols.map(c => { const n = get(w, c), sh = tot ? n / tot : 0, ok = (c === "flagged") === w && c !== "none";
+      return '<td class="' + (ok ? "ok" : "") + '" data-w="' + w + '" data-s="' + c + '" style="background:color-mix(in oklab, var(--seq-hi) ' + Math.round(sh * 100) + '%, var(--card));color:'
+        + (sh > .55 ? "var(--on-accent)" : "var(--foreground)") + '">' + (n || "") + "</td>"; }).join("") + "</tr>"; });
+  h += "</table></div>";
+  const bar = (lab, v, extra) => '<div class="rvbar"><span>' + esc(lab) + '</span><span class="track"><span class="fill" style="width:' + ((v || 0) * 100).toFixed(1) + '%"></span></span><b>'
+    + (v == null ? "–" : Math.round(v * 100) + "%") + "</b>" + (extra ? '<small class="faint">' + esc(extra) + "</small>" : "") + "</div>";
+  h += bar(T("barDx"), R.dx_listed) + bar(T("barTests"), R.tests_f1, R.tests_recall == null ? "" : T("barRecall", Math.round(R.tests_recall * 100) + "%"));
+  host.innerHTML = h;
+  $$("td[data-w]", host).forEach(td => { const w = td.dataset.w === "true", c = td.dataset.s, tot = cols.reduce((a, q) => a + get(w, q), 0);
+    hover(td, "", [{ k: T("rvTip", rn(w), cn[c], get(w, c), tot), v: "" }]); });
+  return total;
+}
+/** The model's per-pack scores in the overall board's form: one row per pack, the point and its
+ *  95% interval on a shared 0–1 axis, each round as a small ring, the value and the rank. */
+function scoreRows(host, m){
+  // A narrow chart puts each pack's name above its bar, so the axis keeps the full width.
+  const narrow = (host.clientWidth || 720) < 560, RH = narrow ? 50 : rowH() + 6, HEAD = 22, ks = PACK_KEYS;
+  const F = fig(host, HEAD + ks.length * RH + 4, T("mpScores")), svg = F.svg;
+  const lw = narrow ? 8 : Math.min(250, Math.max(118, F.W * .3)), rw = 36, x = lin(0, 1, lw, F.W - rw - 48);
+  [0, .25, .5, .75, 1].forEach(v => { vline(svg, x(v), HEAD - 4, HEAD + ks.length * RH, "var(--grid)"); F.lab(x(v), HEAD - 12, v.toFixed(2), { anchor: "middle" }); });
+  ks.forEach((k, i) => { const y = HEAD + i * RH, ym = narrow ? y + RH - 15 : y + RH / 2, P = BD.packs[k];
+    hline(svg, 0, F.W, y + RH, "var(--grid)", 1, .7);
+    F.lab(2, narrow ? y + 11 : ym, PACK_NUM[k] + " " + T("pk_" + k), { cls: "ann" });
+    if (P.status !== "final"){ F.lab(x(.5), ym, T("updating"), { anchor: "middle" }); return; }
+    const r = P.board.find(q => q.model === m), pr = P.per_round[m] || [];
+    S("line", { x1: x(r.ci95[0]), x2: x(r.ci95[1]), y1: ym, y2: ym, stroke: "var(--accent)", "stroke-width": 2, "stroke-linecap": "round", opacity: .55 }, svg);
+    pr.forEach(v => S("circle", { cx: x(v), cy: ym, r: 3, fill: "none", stroke: "var(--faint)", "stroke-width": 1.2 }, svg));
+    dot(svg, x(r.score), ym, "var(--accent)", 5);
+    F.lab(x(r.ci95[1]) + 6, ym, f3(r.score), {});
+    F.lab(F.W - 4, ym, "#" + r.rank, { cls: "annb", anchor: "end" });
+    hover(S("rect", { x: 0, y, width: F.W, height: RH, fill: "transparent" }, svg), PACK_NUM[k] + " " + T("pk_" + k),
+      [{ k: T("thScore"), v: f3(r.score) }, { k: T("tipCI"), v: f3(r.ci95[0]) + "–" + f3(r.ci95[1]) }, { k: T("thRank"), v: "#" + r.rank + " / " + P.board.length }]
+        .concat(pr.map((v, j) => ({ k: T("tipRound", j + 1), v: f3(v) }))));
+  });
+}
 function modelPanel(){
   const h = $("#mpanel"); if (!h) return;
-  const m = CUR_MODEL, ov = BD.overall.board.find(r => r.model === m), fin = finalPacks(), pend = pendingPacks();
-  const row = k => { const P = BD.packs[k], r = P.board.find(q => q.model === m);
-    return "<tr><td>" + PACK_NUM[k] + " " + esc(T("pk_" + k)) + '<small class="faint" style="display:block">' + esc(T("thRounds")) + " " + P.per_round[m].map(f2).join(" · ") + "</small></td><td>"
-      + f3(r.score) + '<small class="faint" style="display:block">' + f2(r.ci95[0]) + "–" + f2(r.ci95[1]) + "</small></td><td>#" + r.rank + "</td></tr>"; };
-  const cfs = Object.keys(BD.decisions || {});
+  const m = CUR_MODEL, ov = BD.overall.board.find(r => r.model === m);
+  const cfs = PACK_KEYS.filter(k => (BD.decisions || {})[k] && k !== "m2"), hasRv = !!((BD.decisions || {}).m2 || {}).models;
   h.innerHTML = '<div class="top"><label>' + esc(T("mpModel")) + ' <select id="mp-model">' + ORDER.map(q => "<option" + (q === m ? " selected" : "") + ">" + esc(q) + "</option>").join("") + "</select></label>"
     + '<span class="muted" style="font-size:13px">' + esc(T("mpOverall", f3(ov.score), f3(ov.ci95[0]), f3(ov.ci95[1]), ORDER.indexOf(m) + 1, ORDER.length)) + "</span></div>"
-    + '<div class="mpg"><div><h4>' + esc(T("mpScores")) + '</h4><div class="tablewrap"><table class="sc"><tr><th>' + esc(T("thPack")) + "</th><th>" + esc(T("thScore")) + " · " + esc(T("th95")) + "</th><th>" + esc(T("thRank")) + "</th></tr>"
-    + fin.map(row).join("") + pend.map(k => "<tr><td>" + PACK_NUM[k] + " " + esc(T("pk_" + k)) + '</td><td colspan="2" class="faint">' + esc(T("updating")) + "</td></tr>").join("") + "</table></div>"
-    + '<p class="note">' + esc(T("mpNote")) + "</p></div>"
+    + '<div class="mps"><h4>' + esc(T("mpScores")) + '</h4><p class="sub">' + esc(T("mpScoresSub")) + '</p><div id="mp-scores"></div><p class="note">' + esc(T("mpNote")) + "</p></div>"
+    + '<div class="mpg">'
+    + (hasRv ? "<div><h4>" + esc(T("mpReview", PACK_NUM.m2 + " " + T("pk_m2"))) + '</h4><div id="cf-m2"></div><p class="note" id="rv-note"></p></div>' : "")
     + cfs.map(k => "<div><h4>" + esc(T("mpCf", PACK_NUM[k] + " " + T("pk_" + k))) + '</h4><div id="cf-' + k + '"></div><p class="note">' + esc(T("cfNote", BD.decisions[k].n_items, BD.decisions[k].n_rounds)) + "</p></div>").join("") + "</div>";
+  scoreRows($("#mp-scores", h), m);
+  if (hasRv) $("#rv-note").textContent = T("rvNote", reviewBlock($("#cf-m2"), m));
   cfs.forEach(k => confusion($("#cf-" + k), k, m));
   $("#mp-model").addEventListener("change", e => selectModel(e.target.value));
 }

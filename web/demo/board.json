@@ -7,7 +7,7 @@
   "pack_seed_sha256": "8f90c70f61fe7a53860e9a21576c0393e26515ba7eede0467a534360dfa7f9b9"
  },
  "provenance": {
-  "readout_sha16": "cb897ff36b9f8d12",
+  "readout_sha16": "4b6747ecb484db51",
   "interim_readout_sha16": null,
   "batches": {
    "m2": "m2-pack1/20261004-083715",
@@ -1643,9 +1643,583 @@
    ],
    "n_separable": 9,
    "adjacent_separable": 1
+  },
+  "pairs": {
+   "models": [
+    "gemini-3.1-pro",
+    "gemini-3.7-flash",
+    "gpt-6-sol",
+    "deepseek-v4-pro",
+    "gpt-6-luna",
+    "kimi-k3",
+    "minimax-m3",
+    "glm-5.3-flash",
+    "deepseek-v4-flash",
+    "qwen3.7-flash"
+   ],
+   "pairs": [
+    {
+     "a": "gemini-3.1-pro",
+     "b": "gemini-3.7-flash",
+     "diff": 0.05479294295198556,
+     "se": 0.03764009721065278,
+     "separable": false
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "gpt-6-sol",
+     "diff": 0.060274868154092,
+     "se": 0.03687861940893265,
+     "separable": false
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "deepseek-v4-pro",
+     "diff": 0.17214534834817596,
+     "se": 0.03680298170857296,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "gpt-6-luna",
+     "diff": 0.1846950702656197,
+     "se": 0.03940453521501692,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "kimi-k3",
+     "diff": 0.18517824713458186,
+     "se": 0.04028840898616282,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "minimax-m3",
+     "diff": 0.21079903350539153,
+     "se": 0.039512467821674994,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "glm-5.3-flash",
+     "diff": 0.24826600604443327,
+     "se": 0.0355950463417763,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "deepseek-v4-flash",
+     "diff": 0.3058634847448886,
+     "se": 0.039147231357901977,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.1-pro",
+     "b": "qwen3.7-flash",
+     "diff": 0.34243622452663836,
+     "se": 0.036525891108228785,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "gpt-6-sol",
+     "diff": 0.005481925202106441,
+     "se": 0.030955615828840606,
+     "separable": false
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "deepseek-v4-pro",
+     "diff": 0.1173524053961904,
+     "se": 0.037562482652396235,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "gpt-6-luna",
+     "diff": 0.12990212731363415,
+     "se": 0.030552351440193654,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "kimi-k3",
+     "diff": 0.1303853041825963,
+     "se": 0.03131604486120587,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "minimax-m3",
+     "diff": 0.15600609055340597,
+     "se": 0.04126917117794896,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "glm-5.3-flash",
+     "diff": 0.19347306309244772,
+     "se": 0.03516296328268445,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "deepseek-v4-flash",
+     "diff": 0.25107054179290306,
+     "se": 0.033052302563233646,
+     "separable": true
+    },
+    {
+     "a": "gemini-3.7-flash",
+     "b": "qwen3.7-flash",
+     "diff": 0.2876432815746528,
+     "se": 0.03963730360568482,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "deepseek-v4-pro",
+     "diff": 0.11187048019408397,
+     "se": 0.03769171609789999,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "gpt-6-luna",
+     "diff": 0.12442020211152771,
+     "se": 0.03498583151823372,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "kimi-k3",
+     "diff": 0.12490337898048987,
+     "se": 0.03792320911096478,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "minimax-m3",
+     "diff": 0.15052416535129953,
+     "se": 0.04187146192554823,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "glm-5.3-flash",
+     "diff": 0.18799113789034128,
+     "se": 0.03820339871150769,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "deepseek-v4-flash",
+     "diff": 0.24558861659079662,
+     "se": 0.0385527328844221,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-sol",
+     "b": "qwen3.7-flash",
+     "diff": 0.28216135637254636,
+     "se": 0.04006413670053856,
+     "separable": true
+    },
+    {
+     "a": "deepseek-v4-pro",
+     "b": "gpt-6-luna",
+     "diff": 0.012549721917443746,
+     "se": 0.043231845955773,
+     "separable": false
+    },
+    {
+     "a": "deepseek-v4-pro",
+     "b": "kimi-k3",
+     "diff": 0.0130328987864059,
+     "se": 0.03761632690016585,
+     "separable": false
+    },
+    {
+     "a": "deepseek-v4-pro",
+     "b": "minimax-m3",
+     "diff": 0.03865368515721557,
+     "se": 0.044067453279408884,
+     "separable": false
+    },
+    {
+     "a": "deepseek-v4-pro",
+     "b": "glm-5.3-flash",
+     "diff": 0.07612065769625731,
+     "se": 0.04064871593811067,
+     "separable": false
+    },
+    {
+     "a": "deepseek-v4-pro",
+     "b": "deepseek-v4-flash",
+     "diff": 0.13371813639671265,
+     "se": 0.03819992434828188,
+     "separable": true
+    },
+    {
+     "a": "deepseek-v4-pro",
+     "b": "qwen3.7-flash",
+     "diff": 0.1702908761784624,
+     "se": 0.039061271386249964,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-luna",
+     "b": "kimi-k3",
+     "diff": 0.00048317686896215406,
+     "se": 0.03134759367961041,
+     "separable": false
+    },
+    {
+     "a": "gpt-6-luna",
+     "b": "minimax-m3",
+     "diff": 0.02610396323977182,
+     "se": 0.04347203649236076,
+     "separable": false
+    },
+    {
+     "a": "gpt-6-luna",
+     "b": "glm-5.3-flash",
+     "diff": 0.06357093577881356,
+     "se": 0.033221464665403454,
+     "separable": false
+    },
+    {
+     "a": "gpt-6-luna",
+     "b": "deepseek-v4-flash",
+     "diff": 0.1211684144792689,
+     "se": 0.027572347738948927,
+     "separable": true
+    },
+    {
+     "a": "gpt-6-luna",
+     "b": "qwen3.7-flash",
+     "diff": 0.15774115426101865,
+     "se": 0.039918723412970834,
+     "separable": true
+    },
+    {
+     "a": "kimi-k3",
+     "b": "minimax-m3",
+     "diff": 0.025620786370809667,
+     "se": 0.03984773463244214,
+     "separable": false
+    },
+    {
+     "a": "kimi-k3",
+     "b": "glm-5.3-flash",
+     "diff": 0.06308775890985141,
+     "se": 0.03409350930038645,
+     "separable": false
+    },
+    {
+     "a": "kimi-k3",
+     "b": "deepseek-v4-flash",
+     "diff": 0.12068523761030675,
+     "se": 0.03052121004398366,
+     "separable": true
+    },
+    {
+     "a": "kimi-k3",
+     "b": "qwen3.7-flash",
+     "diff": 0.1572579773920565,
+     "se": 0.03802689542875598,
+     "separable": true
+    },
+    {
+     "a": "minimax-m3",
+     "b": "glm-5.3-flash",
+     "diff": 0.03746697253904174,
+     "se": 0.03935328534364869,
+     "separable": false
+    },
+    {
+     "a": "minimax-m3",
+     "b": "deepseek-v4-flash",
+     "diff": 0.09506445123949708,
+     "se": 0.04326159730047313,
+     "separable": true
+    },
+    {
+     "a": "minimax-m3",
+     "b": "qwen3.7-flash",
+     "diff": 0.13163719102124682,
+     "se": 0.04423729523041794,
+     "separable": true
+    },
+    {
+     "a": "glm-5.3-flash",
+     "b": "deepseek-v4-flash",
+     "diff": 0.05759747870045534,
+     "se": 0.03210719165026616,
+     "separable": false
+    },
+    {
+     "a": "glm-5.3-flash",
+     "b": "qwen3.7-flash",
+     "diff": 0.09417021848220508,
+     "se": 0.03741122575502087,
+     "separable": true
+    },
+    {
+     "a": "deepseek-v4-flash",
+     "b": "qwen3.7-flash",
+     "diff": 0.03657273978174974,
+     "se": 0.036189128400141296,
+     "separable": false
+    }
+   ],
+   "n_separable": 30
   }
  },
  "decisions": {
+  "m2": {
+   "kind": "review",
+   "n_items": 50,
+   "n_rounds": 3,
+   "models": {
+    "gemini-3.1-pro": {
+     "review": [
+      [
+       false,
+       "flagged",
+       5
+      ],
+      [
+       false,
+       "not_flagged",
+       25
+      ],
+      [
+       true,
+       "flagged",
+       72
+      ]
+     ],
+     "dx_listed": 0.9,
+     "tests_f1": 0.7206642380191227,
+     "tests_recall": 0.7733134920634921,
+     "review_cc": 0.8333333333333335
+    },
+    "gemini-3.7-flash": {
+     "review": [
+      [
+       false,
+       "flagged",
+       10
+      ],
+      [
+       false,
+       "not_flagged",
+       20
+      ],
+      [
+       true,
+       "flagged",
+       72
+      ]
+     ],
+     "dx_listed": 0.9083333333333333,
+     "tests_f1": 0.5782386853056031,
+     "tests_recall": 0.8206845238095238,
+     "review_cc": 0.6666666666666665
+    },
+    "gpt-6-sol": {
+     "review": [
+      [
+       false,
+       "flagged",
+       25
+      ],
+      [
+       false,
+       "not_flagged",
+       5
+      ],
+      [
+       true,
+       "flagged",
+       71
+      ]
+     ],
+     "dx_listed": 0.9666666666666667,
+     "tests_f1": 0.6518164195812862,
+     "tests_recall": 0.7946428571428572,
+     "review_cc": 0.16666666666666674
+    },
+    "deepseek-v4-pro": {
+     "review": [
+      [
+       false,
+       "flagged",
+       25
+      ],
+      [
+       false,
+       "not_flagged",
+       5
+      ],
+      [
+       true,
+       "flagged",
+       72
+      ]
+     ],
+     "dx_listed": 0.9208333333333333,
+     "tests_f1": 0.6323798039359668,
+     "tests_recall": 0.8012400793650793,
+     "review_cc": 0.16666666666666674
+    },
+    "gpt-6-luna": {
+     "review": [
+      [
+       false,
+       "flagged",
+       29
+      ],
+      [
+       false,
+       "not_flagged",
+       1
+      ],
+      [
+       true,
+       "flagged",
+       71
+      ]
+     ],
+     "dx_listed": 0.9,
+     "tests_f1": 0.6960185637161699,
+     "tests_recall": 0.8020337301587301,
+     "review_cc": 0.03333333333333344
+    },
+    "kimi-k3": {
+     "review": [
+      [
+       false,
+       "flagged",
+       20
+      ],
+      [
+       false,
+       "not_flagged",
+       10
+      ],
+      [
+       true,
+       "flagged",
+       72
+      ]
+     ],
+     "dx_listed": 0.9291666666666667,
+     "tests_f1": 0.5671854954331169,
+     "tests_recall": 0.7904265873015873,
+     "review_cc": 0.33333333333333326
+    },
+    "minimax-m3": {
+     "review": [
+      [
+       false,
+       "flagged",
+       25
+      ],
+      [
+       false,
+       "not_flagged",
+       5
+      ],
+      [
+       true,
+       "flagged",
+       72
+      ]
+     ],
+     "dx_listed": 0.8916666666666667,
+     "tests_f1": 0.5522236764174315,
+     "tests_recall": 0.7564980158730158,
+     "review_cc": 0.16666666666666674
+    },
+    "glm-5.3-flash": {
+     "review": [
+      [
+       false,
+       "flagged",
+       21
+      ],
+      [
+       false,
+       "not_flagged",
+       9
+      ],
+      [
+       true,
+       "flagged",
+       72
+      ]
+     ],
+     "dx_listed": 0.9041666666666667,
+     "tests_f1": 0.6081470044452535,
+     "tests_recall": 0.7996031746031745,
+     "review_cc": 0.30000000000000004
+    },
+    "deepseek-v4-flash": {
+     "review": [
+      [
+       false,
+       "flagged",
+       15
+      ],
+      [
+       false,
+       "not_flagged",
+       15
+      ],
+      [
+       true,
+       "flagged",
+       42
+      ],
+      [
+       true,
+       "not_flagged",
+       30
+      ]
+     ],
+     "dx_listed": 0.8708333333333333,
+     "tests_f1": 0.5870836035040263,
+     "tests_recall": 0.678125,
+     "review_cc": 0.08333333333333348
+    },
+    "qwen3.7-flash": {
+     "review": [
+      [
+       false,
+       "flagged",
+       23
+      ],
+      [
+       false,
+       "not_flagged",
+       7
+      ],
+      [
+       true,
+       "flagged",
+       72
+      ]
+     ],
+     "dx_listed": 0.7625,
+     "tests_f1": 0.5883502653954823,
+     "tests_recall": 0.6394345238095238,
+     "review_cc": 0.2333333333333334
+    }
+   }
+  },
   "pack2": {
    "classes": [
     "ed_now",

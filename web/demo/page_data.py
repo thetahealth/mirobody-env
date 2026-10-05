@@ -162,11 +162,152 @@ def _kernel() -> dict:
             "reversal_slope_gain": B.SKEL_REVERSAL_SLOPE_GAIN,
             "anchor_margin_kg": B.SKEL_ANCHOR_MARGIN_KG,
         },
+        # Indication registry (`gates_case.check_drug_indication`, GEN27): per condition and
+        # drug, the status and the dose ladder. The page's dose ladder is this ladder.
+        "indications": _indications(),
+        # Minimum days between two dose changes (`build_clinical._world_medication`)
+        "min_titration_days": {n: _min_titration(n) for n in DE.drugs()},
+        # Administrations per week (1 = weekly injection, 7 = daily), for the dose unit
+        "doses_per_week": _doses_per_week(),
+        # The primary dose record (`med_course.dose_course`)
+        "med_course": _med_consts(),
+        # The emission-gate limits the page re-applies (`synth.premise_conflicts`,
+        # `gates_case.check_anchors_honored`)
+        "gate": {"slope_tol": _slope_tol(), "anchor_tol_kg": _anchor_tol()},
         # The label rule the build writes into every case (`latent_rules`)
         "label_rule": {"min_change_frac": LR.MIN_CHANGE_FRAC, "min_change_kg": LR.MIN_CHANGE_KG,
                        "smoothing": LR.LABEL_SMOOTHING,
                        "min_persist_days": LR.MIN_PERSIST_DAYS},
     }
+
+
+def _indications() -> dict:
+    """`registry/drug_indications.yaml` pairs, status and dose ladder only."""
+    from haenv.gates_case import _judging_registry
+    pairs = _judging_registry("drug_indications.yaml").get("pairs") or {}
+    return {dis: {drug: {"status": str(sp.get("status") or "unregistered"),
+                         "dose_steps": [float(x) for x in (sp.get("dose_steps") or [])]}
+                  for drug, sp in sorted(drugs.items())}
+            for dis, drugs in sorted(pairs.items())}
+
+
+def _doses_per_week() -> dict:
+    from haenv.gate_tables import DRUG_DOSES_PER_WEEK
+    return {k: int(v) for k, v in sorted(DRUG_DOSES_PER_WEEK.items())}
+
+
+def _min_titration(drug: str) -> int:
+    """`_world_medication`'s `min_titration_days` for `drug`, default included."""
+    from haenv_kernel.latent import drug_pkpd
+    return int((drug_pkpd(drug) or {}).get("min_titration_days", 28))
+
+
+def _med_draws(cid: str) -> dict:
+    """The `rng.unit` draws `med_course.dose_course` reads for one case id, exact. The repeat
+    records pick, per slot `j`, the first eligible day in the order of their draw, so that order
+    (days 1..END) is exported instead of the draws."""
+    from haenv import build as B
+    from haenv import med_course as M
+    from haenv.rng import unit
+    n_rungs = max(len(sp["dose_steps"]) for drugs in _indications().values() for sp in drugs.values())
+    ep = range(M.MAX_DOSE_DOWN_EPISODES)
+    return {"titr": [unit(cid, "med", "titr", i) for i in range(1, n_rungs)],
+            "n_ep": unit(cid, "med", "n_ep"),
+            **{k: [unit(cid, "med", k, j) for j in ep] for k in ("dn", "up", "hold", "stay")},
+            "mid_at": unit(cid, "med", "mid_at"), "mid": unit(cid, "med", "mid"),
+            "end_rec": unit(cid, "med", "end_rec", "primary"),
+            "confirm_order": [sorted(range(1, B.END + 1), key=lambda d: unit(cid, "med", "confirm", j, d))
+                              for j in range(M.MIN_VISIBLE_DOSE_POINTS)]}
+
+
+def _med_literals() -> dict:
+    """Literals inside `dose_course` the page needs, read from its source; a changed form raises."""
+    from haenv import med_course as M
+    src = inspect.getsource(M.dose_course)
+    pats = {"titr_jitter": r'"titr", i\) \* ([0-9.]+) \* mt',
+            "confirm_gap": r"abs\(d - u\) >= ([0-9]+)",
+            "mid_lo": r"\(([0-9.]+) \+ [0-9.]+ \* unit\(case_id, \"med\", \"mid_at\"\)",
+            "mid_span": r"[0-9.]+ \+ ([0-9.]+) \* unit\(case_id, \"med\", \"mid_at\"\)",
+            "mid_share": r'unit\(case_id, "med", "mid"\) < ([0-9.]+)'}
+    out = {}
+    for k, pat in pats.items():
+        m = re.search(pat, src)
+        if not m:
+            raise ValueError(f"med_course.dose_course no longer has the `{k}` literal in the expected form")
+        out[k] = float(m.group(1))
+    return out
+
+
+def _med_consts() -> dict:
+    from haenv import med_course as M
+    return {**_med_literals(), "min_visible_points": M.MIN_VISIBLE_DOSE_POINTS,
+            "episode_weights": list(M.DOSE_EPISODE_WEIGHTS),
+            "max_down_episodes": M.MAX_DOSE_DOWN_EPISODES, "hold_share": M.HOLD_SHARE,
+            "stay_down_share": M.STAY_DOWN_SHARE, "end_record_window": M.END_RECORD_WINDOW}
+
+
+def _slope_tol() -> float:
+    """The tolerance `premise_conflicts` puts on `max_weekly_delta`. It is a literal in that
+    function, so it is read from the source; a changed form raises instead of drifting."""
+    from haenv_kernel import synth
+    m = re.search(r'dom\["max_weekly_delta"\] \* ([0-9.]+)', inspect.getsource(synth.premise_conflicts))
+    if not m:
+        raise ValueError("premise_conflicts no longer writes the slope limit as "
+                         "max_weekly_delta * <tolerance>")
+    return float(m.group(1))
+
+
+def _anchor_tol() -> float:
+    from haenv import gates_case
+    return float(gates_case.ANCHOR_TOL_KG)
+
+
+def _release() -> dict:
+    """The current release: freeze revision from `docs/anchor`, and the world and judging
+    fingerprints of the code as it is now."""
+    sys.path.insert(0, str(ROOT))
+    from haenv import anchor
+    snap = anchor.load_freeze()
+    return {"freeze_revision": snap.get("revision"), "world_sha": anchor.world_fingerprint(),
+            "judging_sha16": anchor.judging_fingerprint()}
+
+
+#: The page's Act 1 devices; the lab baseline is sampled for this inventory.
+PAGE_DEVICES = ("smart_scale", "lab_panel")
+
+#: The conditions the page's builder offers.
+PAGE_DISEASES = ("T2D", "obesity")
+
+
+def _gate(cid: str, dis: str, drug: str, steps: list, start: float, nadir: float, T: int,
+          outcome: str, w: list[dict], observed: list) -> list[str]:
+    """The emission-gate kinds production returns for this weight course: the kernel's
+    premise check on the course (value range, weekly slope), the value range on the recorded
+    readings, GEN22 anchors and GEN13 outcome on the course, and GEN27 indication. Sorted,
+    one entry per kind."""
+    from types import SimpleNamespace
+    from haenv import gates as G
+    from haenv.gates_case import check_drug_indication
+    from haenv_kernel.latent import LatentPremise
+    from haenv_kernel.schema import RawCase
+    from haenv_kernel.synth import premise_conflicts
+    p = LatentPremise(patient_basics={"disease": dis, "regimen": {"drug": drug, "dose_steps": list(steps)}},
+                      event_density={}, device_signals={"devices": list(PAGE_DEVICES), "signals": {"weight": {}}},
+                      adherence={"baseline": 0.95, "trajectory": []})
+
+    def raw(series):
+        return RawCase(case_id=cid, user_profile={}, prediction_context={"prediction_time_T": T},
+                       longitudinal_data={"weight": series}, evidence_ledger=[],
+                       outcome_label="event_occurred" if outcome == "regain" else "event_not_occurred",
+                       label_rule=_rule(), gold_drivers=["weight_trend"], adjudication={})
+    cs = SimpleNamespace(raw={"start_weight": start, "nadir_weight": nadir}, noise=[], latent={})
+    truth, obs = raw(w), raw([{"ts": d, "value": v} for d, v in observed])
+    kinds = [c["kind"] for c in premise_conflicts(truth, p)]
+    kinds += [h["kind"] for h in G.check_observed_in_domain(obs, p) if h["severity"] == "gate"]
+    for hits in (G.check_anchors_honored(truth, cs), G.check_outcome_derivable(truth, cs),
+                 check_drug_indication(p)):
+        kinds += [h["kind"] for h in hits if h["severity"] == "gate"]
+    return sorted(set(kinds))
 
 
 def _clinical_ref(sig: str) -> dict:
@@ -237,6 +378,11 @@ def _personas() -> dict:
                 "low": DE.response_for(cid, DE.LOW_RESPONSE_DRIVER, ""),
                 "by_drug": {n: DE.response_for(cid, None, n) for n in DE.drugs()},
             },
+            # The dose record's draws (`med_course.dose_course`)
+            "med": _med_draws(cid),
+            # Each lab's baseline as `clinical_plan` samples it for this case, per condition
+            "lab_base": {dis: {s: v["base"] for s, v in B.clinical_plan(dis, list(PAGE_DEVICES), [], cid).items()}
+                         for dis in PAGE_DISEASES},
         }
     return out
 
@@ -340,11 +486,28 @@ _GOLDEN_CASES = (
      0.6, 3, 0.55, "poor_medication_adherence", ("smart_scale", "lab_panel")),
     ("twice a week, maintain, late today", "DEMO-10", "T2D", 82.0, 74.0, 300, "maintain", 16, 0.35,
      2, 0.9, "unknown_or_multifactorial", ("smart_scale", "lab_panel")),
+    # Refused at the emission gate. The guard finds no course inside the weekly limit and
+    # falls back to one with a one-day jump; production refuses it.
+    ("refused: one-day jump above the weekly limit", "DEMO-04", "obesity", 136.0, 91.0, 313,
+     "regain", 17, 0.8, 7, 0.6, "poor_medication_adherence", ("smart_scale", "lab_panel")),
+    ("refused: the course cannot reach the declared lowest weight", "DEMO-06", "T2D", 96.0, 60.0,
+     28, "regain", 19, 0.45, 6, 0.6, "poor_medication_adherence", ("smart_scale", "lab_panel")),
+    ("refused: declared regain, the label rule reads no regain", "DEMO-03", "T2D", 138.0, 107.0,
+     122, "regain", 45, 0.6, 7, 0.6, "poor_medication_adherence", ("smart_scale", "lab_panel")),
+    ("refused: drug without an indication for the condition", "DEMO-02", "obesity", 92.0, 80.0, 84,
+     "maintain", 16, 0.35, 7, 0.95, "unknown_or_multifactorial", ("smart_scale", "lab_panel")),
+    ("weight-loss ladder: obesity on semaglutide, titrated to the top rung", "DEMO-07", "obesity",
+     104.0, 88.0, 200, "maintain", 16, 0.35, 7, 0.9, "unknown_or_multifactorial",
+     ("smart_scale", "lab_panel")),
+    ("daily oral drug: metformin, short titration interval", "DEMO-08", "T2D", 99.0, 90.0, 30,
+     "maintain", 16, 0.35, 7, 0.9, "unknown_or_multifactorial", ("smart_scale", "lab_panel")),
 )
 
 #: Drug and dose per golden case (default semaglutide 1.0 mg). A dose-ladder drug exercises
 #: the per-rung HbA1c and fasting-glucose fields of `drug_effects.total_effect`.
-_GOLDEN_DRUG = {"DEMO-11": ("tirzepatide", 15.0)}
+_GOLDEN_DRUG = {"very large loss with drug effect: clamp and drug together": ("tirzepatide", 15.0),
+                "refused: drug without an indication for the condition": ("dulaglutide", 1.0),
+                "daily oral drug: metformin, short titration interval": ("metformin", 1.0)}
 
 
 def _adh_traj(T: int, ce: int, adh_low: float, outcome: str, driver: str) -> list[dict]:
@@ -369,11 +532,12 @@ def _golden() -> dict:
     from haenv import gates as G
     from haenv import indicators as IND
     from haenv import post_inject as PI
+    from haenv import med_course as MC
 
     out = []
     for (label, cid, dis, start, nadir, T, outcome, rw, slope, mpw, adh_low, driver,
          devs) in _GOLDEN_CASES:
-        drug, dose = _GOLDEN_DRUG.get(cid, ("semaglutide", 1.0))
+        drug, dose = _GOLDEN_DRUG.get(label, ("semaglutide", 1.0))
         # Same call as `build._drug_response_of`
         resp = DE.response_for(cid, driver, drug)
         ce = B.END
@@ -382,6 +546,9 @@ def _golden() -> dict:
                                     case_id=cid, step=step, disease=dis, end_day=ce)
         B._SKELETON_AUDIT.pop(cid, None)
         verdict, det = G.derive_outcome({"weight": w}, _rule())
+        steps = _indications().get(dis, {}).get(drug, {}).get("dose_steps") or []
+        dose_rec = MC.dose_course(cid, steps, T, ce, _min_titration(drug))
+        observed = _observed(cid, w)
         adh = _adh_traj(T, ce, adh_low, outcome, driver)
         plan = B.clinical_plan(dis, list(devs), [], cid)
         clin = {}
@@ -403,7 +570,11 @@ def _golden() -> dict:
                        "devices": list(devs)},
             "weight": [[p["ts"], p["value"]] for p in w],
             # The recorded readings after the scale's observation layer (`_observed`).
-            "observed": _observed(cid, w),
+            "observed": observed,
+            # The primary dose record along the indication ladder (`med_course.dose_course`)
+            "dose": [[q["ts"], q["value"]] for q in dose_rec],
+            # Emission-gate refusals production returns for this course (`_gate`)
+            "gate": _gate(cid, dis, drug, steps, start, nadir, T, outcome, w, observed),
             "skeleton": {"level": wmeta["level"], "guard_ok": wmeta["guard_ok"],
                          "pre": wmeta["pre"], "regain": wmeta["regain"]},
             "rule_readout": {"verdict": verdict,
