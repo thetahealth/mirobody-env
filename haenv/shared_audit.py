@@ -14,10 +14,13 @@ its realism rules); the checks themselves are written once, here.
   SA-5 `univariate`        one content-free variable at a time, binned lookup stub  -> red if the
                            largest leave-one-out chance-corrected score reaches SHORTCUT_CC and the
                            NULL_Q quantile of that largest score under label shuffles inside
-                           `strata`; permutation p (strata, Holm) is reported, not gated
+                           `strata`; the shuffled null is drawn only when the largest score reaches the
+                           line. The permutation p (strata, Holm) is a profile reading, computed only
+                           when `profile` is set
   SA-6 `surface_classifier` one GBM over the union of the content-free features, 6 group orders x 5
                            seeds, mean balanced accuracy -> red if its chance-corrected score reaches
-                           SHORTCUT_CC and, when permutations ran, their NULL_Q quantile; the p is reported;
+                           SHORTCUT_CC and their NULL_Q quantile (permutations are drawn only when the
+                           score reaches the line); the p is a profile reading, computed only with `profile`;
                            a feature declared decisive evidence leaves the union only if the gold
                            reads the record it counts (`decisive_evidence`), else SA-6 is red
 
@@ -275,7 +278,7 @@ def holm(ps: list[float]) -> list[float]:
 
 
 def univariate(rows: list[dict], variables, targets=("class",), strata: str | None = None,
-               n_perm: int = N_PERM_UNIVARIATE, seed: int = SEED, gate_targets=None,
+               n_perm: int = 0, seed: int = SEED, gate_targets=None,
                n_null: int = N_NULL_UNIVARIATE) -> dict:
     """SA-5: for every (variable, target) a stub that knows only that variable (each level or
     quantile bin answers its most frequent class), scored leave-one-out (`_lookup_ba_loo`: a table
@@ -283,7 +286,8 @@ def univariate(rows: list[dict], variables, targets=("class",), strata: str | No
     chance-corrected score over the gated variables reaches both SHORTCUT_CC and the NULL_Q quantile
     of the same largest score under `n_null` label shuffles inside `strata` (many variables on a
     small batch reach the line on noise alone). The permutation p inside `strata` (Holm over all)
-    is a profile reading. A row whose value is None is outside that variable (e.g. a vital where it
+    is a profile reading: `n_perm` > 0 computes it, 0 leaves it null. The shuffled null runs only when the
+    largest score reaches the line (below it the batch passes either way). A row whose value is None is outside that variable (e.g. a vital where it
     is the focal one)."""
     import numpy as np
     res = {}
@@ -302,7 +306,7 @@ def univariate(rows: list[dict], variables, targets=("class",), strata: str | No
             ge = sum(_lookup_ba(cats, list(_permute(y, st, rng))) >= obs - 1e-12 for _ in range(n_perm))
             res[(v, t)] = (obs, (ge + 1) / (n_perm + 1), chance_corrected(_lookup_ba_loo(cats, list(y)), k))
     keys = list(res)
-    # n_perm = 0 skips the permutation profile: p is reported as null (the gate reads cc only)
+    # n_perm = 0: the permutation profile is not computed and p is null (the gate reads cc and the shuffled null)
     adj = holm([res[k][1] for k in keys]) if n_perm else [None] * len(keys)
     by = {f"{v}" if len(targets) == 1 else f"{v}->{t}":
           {"ba": None if res[(v, t)][0] is None else round(res[(v, t)][0], 4),
@@ -314,15 +318,17 @@ def univariate(rows: list[dict], variables, targets=("class",), strata: str | No
     scored = [k for k in by if by[k]["cc"] is not None and tgt[k] in gt]
     worst = max(scored, key=lambda k: by[k]["cc"]) if scored else None
     max_cc = by[worst]["cc"] if worst else 0.0
-    floor = _null_max_q(rows, variables, [t for t in targets if t in gt], strata, n_null, seed) if scored else 0.0
+    floor = (_null_max_q(rows, variables, [t for t in targets if t in gt], strata, n_null, seed)
+             if scored and max_cc >= SHORTCUT_CC else None)
     return {"id": "SA-5", "n": len(rows), "n_perm": n_perm, "strata": strata, "by_variable": by,
             "worst": worst, "max_cc": max_cc, "line": SHORTCUT_CC, "n_null": n_null,
-            "null_quantile": NULL_Q, "null_floor_max_cc": round(floor, 4), "gate_targets": sorted(gt),
+            "null_quantile": NULL_Q, "null_floor_max_cc": None if floor is None else round(floor, 4),
+            "p_values": "computed" if n_perm else "not computed", "gate_targets": sorted(gt),
             "profile": {k: by[k]["cc"] for k in by if tgt[k] not in gt and by[k]["cc"] is not None},
             "report": [f"{k} cc {by[k]['cc']} p_holm {by[k]['p_holm']} (below the line, reported)"
                        for k in scored if by[k]["p_holm"] is not None and by[k]["p_holm"] < ALPHA
                        and by[k]["cc"] < SHORTCUT_CC],
-            "pass": not (max_cc >= SHORTCUT_CC and max_cc >= floor)}
+            "pass": max_cc < SHORTCUT_CC or (floor is not None and max_cc < floor)}
 
 
 def _null_max_q(rows, variables, targets, strata, n_null, seed) -> float:
@@ -356,11 +362,13 @@ def _null_max_q(rows, variables, targets, strata, n_null, seed) -> float:
 
 def surface_classifier(rows: list[dict], features, label: str = "class", groups: str = "spec",
                        strata: str | None = None, n_perm: int = N_PERM_SURFACE, jobs: int = 32,
-                       seed: int = SEED, n_orders: int = 6, n_seeds: int = 5) -> dict:
+                       seed: int = SEED, n_orders: int = 6, n_seeds: int = 5, profile: bool = False) -> dict:
     """SA-6: GBM (60 trees, depth 2) over the union of the declared content-free features;
     GroupKFold(5) under `n_orders` group orders x `n_seeds` seeds; the mean balanced accuracy against
     the same mean on `n_perm` label permutations inside `strata`. Red when the chance-corrected
-    score of the mean reaches SHORTCUT_CC; the permutation p is a profile reading."""
+    score of the mean reaches SHORTCUT_CC and the NULL_Q quantile of the permuted means. The permutations
+    are drawn only when the score reaches the line (below it the batch passes either way) or `profile`
+    asks for the p; the p and the 0.95 quantile are profile readings and stay null without `profile`."""
     import numpy as np
     from joblib import Parallel, delayed
     from sklearn.ensemble import GradientBoostingClassifier
@@ -387,21 +395,22 @@ def surface_classifier(rows: list[dict], features, label: str = "class", groups:
         return float(np.mean(v)), v
 
     obs, per = mean_ba(y)
+    cc = chance_corrected(obs, len(set(y.tolist())))
     rng = np.random.default_rng(seed)
     st = np.asarray([r[strata] for r in rows]) if strata else None
-    perms = [_permute(y, st, rng) for _ in range(n_perm)]
+    perms = [_permute(y, st, rng) for _ in range(n_perm)] if profile or cc >= SHORTCUT_CC else []
     null = [m for m, _ in Parallel(n_jobs=jobs)(delayed(mean_ba)(pp) for pp in perms)] if perms else []
-    q95 = float(np.quantile(null, 0.95)) if null else None
     floor = float(np.quantile(null, NULL_Q)) if null else None
-    p = (1 + sum(m >= obs for m in null)) / (n_perm + 1) if null else None
-    cc = chance_corrected(obs, len(set(y.tolist())))
+    q95 = float(np.quantile(null, 0.95)) if null and profile else None
+    p = (1 + sum(m >= obs for m in null)) / (n_perm + 1) if null and profile else None
     return {"id": "SA-6", "n": len(rows), "features": list(features), "strata": strata, "n_perm": n_perm,
             "mean_ba": round(obs, 4), "cc": round(cc, 4), "line": SHORTCUT_CC,
+            "p_values": "computed" if profile and n_perm else "not computed",
             "perm_q95_mean_ba": None if q95 is None else round(q95, 4), "p": None if p is None else round(p, 4),
             "combos_over_q95": None if q95 is None else sum(x > q95 for x in per),
             "report": ([f"cc {cc:.4f} p {p:.4f} (below the line, reported)"]
                        if p is not None and p <= ALPHA and cc < SHORTCUT_CC else []),
-            # with a permutation null, the line blocks only above its NULL_Q quantile (as SA-5)
+            # where the permutation null was drawn, the line blocks only above its NULL_Q quantile (as SA-5)
             "perm_floor_mean_ba": None if floor is None else round(floor, 4),
             "pass": bool(cc < SHORTCUT_CC or (floor is not None and obs < floor))}
 
@@ -550,11 +559,11 @@ class PackAudit:
 
 
 def run_audit(A: PackAudit, batch: pathlib.Path, job_path=None, ref=None, *,
-              n_perm_univariate: int = N_PERM_UNIVARIATE, n_perm_surface: int = N_PERM_SURFACE,
-              jobs: int = 32) -> dict:
+              profile: bool = False, jobs: int = 32) -> dict:
     """SA-3 ... SA-8 and the pack gates on one emitted batch. SA-3/SA-4/SA-7/SA-8 read the published
     subset; SA-5/SA-6 and the pack gates read every emitted item (the pool: three times the n of a
-    50-item pack, same generator)."""
+    50-item pack, same generator). The gates read the observed labels (chance-corrected score at the
+    line, against the shuffled null); `profile` also computes the permutation p readings of SA-5 and SA-6."""
     ctx = A.context(batch, job_path, ref) if A.context else {}
     pool = load_items(batch, A.block, A.class_of)
     if A.prepare:
@@ -565,9 +574,10 @@ def run_audit(A: PackAudit, batch: pathlib.Path, job_path=None, ref=None, *,
     G["SA-3"] = composition([A.cell_of(it, ctx) for it in pack], A.planned_cells(pack, ctx))
     if A.cc is not None:
         G["SA-4"] = stub_floor([it["class"] for it in pack], A.classes, A.cc, A.prior(pack, ctx) if A.prior else None)
-    G["SA-5"] = univariate(rows_pool, A.univariate, A.targets, A.strata, n_perm_univariate, gate_targets=A.gate_targets)
+    G["SA-5"] = univariate(rows_pool, A.univariate, A.targets, A.strata, N_PERM_UNIVARIATE if profile else 0,
+                      gate_targets=A.gate_targets)
     surface = tuple(f for f in A.surface if f not in A.decisive)
-    per = {t: surface_classifier(rows_pool, surface, label=t, strata=A.strata, n_perm=n_perm_surface, jobs=jobs)
+    per = {t: surface_classifier(rows_pool, surface, label=t, strata=A.strata, profile=profile, jobs=jobs)
            for t in A.surface_targets}
     G["SA-6"] = dict(next(iter(per.values()))) if len(per) == 1 else {"id": "SA-6", "by_target": per}
     gt = set(A.surface_targets if A.gate_targets is None else A.gate_targets)
@@ -583,6 +593,6 @@ def run_audit(A: PackAudit, batch: pathlib.Path, job_path=None, ref=None, *,
     G["SA-8"] = sex_consistency(pack)
     for name, fn in A.pack_gates.items():
         G[name] = fn(pool, rows_pool, ctx)
-    return {"pack": A.name, "batch": str(batch), "n_emitted": len(pool), "n_pack": len(pack),
+    return {"pack": A.name, "batch": str(batch), "profile": profile, "n_emitted": len(pool), "n_pack": len(pack),
             "pack_ids": sorted(it["case_id"] for it in pack), "gates": G,
             "pass": all(v.get("pass") for v in G.values())}

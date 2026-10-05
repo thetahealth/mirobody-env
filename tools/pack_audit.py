@@ -9,6 +9,10 @@ Exit 0 = passed, 1 = a gate is red (not published).
   OMP_NUM_THREADS=1 PYTHONPATH=<repo> python tools/pack_audit.py \\
       --pack p4 --batch <results/joint_dx/p4-followup/<stamp>> --out <dir> [--job inputs/<job>.yaml] [--ref <batch>]
 
+The gates read the observed labels only (chance-corrected score against the 0.20 line and the shuffled
+null's 0.99 quantile). A permutation p is a profile reading: it is not computed by default and stays null
+in `audit.json` ("not computed"); `--profile` computes it.
+
 The published subset follows the job's `pack` header (N and the seed's hash); a job that records only
 the hash needs its seed (`--seed`, or the environment variable HAENV_PACK_SEED).
 
@@ -41,8 +45,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--job", default=None, help="job yaml the batch was built from (packs ② and ①)")
     ap.add_argument("--ref", default=None, help="v1.0.1 deterministic workup batch (pack ①'s BRIDGE)")
-    ap.add_argument("--n-perm-univariate", type=int, default=SA.N_PERM_UNIVARIATE)
-    ap.add_argument("--n-perm-surface", type=int, default=SA.N_PERM_SURFACE)
+    ap.add_argument("--profile", action="store_true",
+                    help="also compute the permutation p readings of SA-5 and SA-6 (a profile, not a gate)")
     ap.add_argument("--jobs", type=int, default=32)
     ap.add_argument("--seed", default=None, help="the pack's seed when the job records only its hash")
     ap.add_argument("--no-marker", action="store_true", help="do not write the audit marker into the batch")
@@ -54,8 +58,7 @@ def main(argv=None) -> int:
     n_items = int(head.get("n_items") or PS.DEFAULT_N)
     seed = PS.resolve_seed(a.job, a.seed if a.seed is not None else os.environ.get("HAENV_PACK_SEED")) if head else PS.PUBLIC_SEED
     A = importlib.import_module(PACKS[a.pack]).audit(n_items=n_items, seed=seed)
-    rep = SA.run_audit(A, batch, a.job and pathlib.Path(a.job), a.ref and pathlib.Path(a.ref), n_perm_univariate=a.n_perm_univariate, n_perm_surface=a.n_perm_surface,
-                       jobs=a.jobs)
+    rep = SA.run_audit(A, batch, a.job and pathlib.Path(a.job), a.ref and pathlib.Path(a.ref), profile=a.profile, jobs=a.jobs)
     (out / "audit.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     if rep["pass"]:
         sha = hashlib.sha256((batch / "cases.jsonl").read_bytes()).hexdigest()

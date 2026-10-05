@@ -58,8 +58,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--ref", default=None, help="an existing deterministic build of the workup job (else built here)")
     ap.add_argument("--py-audit", default=sys.executable, help="python for the audit (needs scikit-learn, joblib)")
-    ap.add_argument("--n-perm-univariate", type=int, default=None)
-    ap.add_argument("--n-perm-surface", type=int, default=None)
+    ap.add_argument("--profile", action="store_true", help="the audit also computes its permutation p readings")
     ap.add_argument("--jobs", type=int, default=None, help="audit worker processes")
     a = ap.parse_args(argv)
     seed = PS.cli_seed(a.seed)
@@ -91,10 +90,10 @@ def main(argv=None) -> int:
     batch = _batch(out, job_id)
     cmd = [a.py_audit, "tools/pack_audit.py", "--pack", a.pack, "--batch", str(batch), "--out", str(out / "audit"),
            "--job", str(job)] + (["--ref", str(ref)] if ref else [])
-    for flag, v in (("--n-perm-univariate", a.n_perm_univariate), ("--n-perm-surface", a.n_perm_surface),
-                    ("--jobs", a.jobs)):
-        if v is not None:
-            cmd += [flag, str(v)]
+    if a.profile:
+        cmd.append("--profile")
+    if a.jobs is not None:
+        cmd += ["--jobs", str(a.jobs)]
     rc = _run(cmd, {**env, "OMP_NUM_THREADS": "1"}, out / "audit.log")
     rec["steps"]["audit"] = rc
     rec.update({"job": str(job), "batch": str(batch), "ref": str(ref) if ref else None})
