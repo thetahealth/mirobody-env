@@ -6,494 +6,494 @@
   {
    "cmd": "uv run haenv build  inputs/example-ew.job.yaml --gen deterministic --fresh",
    "exit": 0,
-   "seconds": 6.858,
+   "seconds": 6.853,
    "lines": [
     [
-     0.038,
+     0.028,
      "Using CPython 3.12.11 interpreter at: <python>"
     ],
     [
-     0.038,
+     0.028,
      "Creating virtual environment at: .venv"
     ],
     [
-     0.972,
-     "⠋ Preparing packages... (0/0)                                                                                           \r\u001b[2K⠋ Preparing packages... (0/1)                                                                                           \r\u001b[2K⠙ Preparing packages... (0/1)                                                                                           \r\u001b[2K   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠙ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠹ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠸ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠼ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠴ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A      \u001b[32m\u001b[1mBuilt\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠴ Preparing packages... (0/1)                                                                                           \r\u001b[2K⠴  (1/1)                                                                                                                \r\u001b[2K░░░░░░░░░░░░░░░░░░░░ [0/0] Installing wheels...                                                                         \r\u001b[2K░░░░░░░░░░░░░░░░░░░░ [0/7] Installing wheels...                                                                         \r\u001b[2K░░░░░░░░░░░░░░░░░░░░ [0/7] pydantic-core==2.46.5                                                                        \r\u001b[2K██░░░░░░░░░░░░░░░░░░ [1/7] pydantic-core==2.46.5                                                                        \r\u001b[2K██░░░░░░░░░░░░░░░░░░ [1/7] annotated-types==0.8.0                                                                       \r\u001b[2K█████░░░░░░░░░░░░░░░ [2/7] annotated-types==0.8.0                                                                       \r\u001b[2K█████░░░░░░░░░░░░░░░ [2/7] typing-extensions==4.16.0                                                                    \r\u001b[2K████████░░░░░░░░░░░░ [3/7] typing-extensions==4.16.0                                                                    \r\u001b[2K████████░░░░░░░░░░░░ [3/7] typing-inspection==0.4.4                                                                     \r\u001b[2K███████████░░░░░░░░░ [4/7] typing-inspection==0.4.4                                                                     \r\u001b[2K███████████░░░░░░░░░ [4/7] pyyaml==6.0.3                                                                                \r\u001b[2K██████████████░░░░░░ [5/7] pyyaml==6.0.3                                                                                \r\u001b[2K██████████████░░░░░░ [5/7] pydantic==2.13.5                                                                             \r\u001b[2K█████████████████░░░ [6/7] pydantic==2.13.5                                                                             \r\u001b[2K█████████████████░░░ [6/7] haenv==1.2.0 (from file://~/mirobody-env)              \r\u001b[2K████████████████████ [7/7] haenv==1.2.0 (from file://~/mirobody-env)              \r\u001b[2KInstalled 7 packages in 14ms"
+     1.659,
+     "⠋ Preparing packages... (0/0)                                                                                           \r\u001b[2K⠋ Preparing packages... (0/1)                                                                                           \r\u001b[2K⠙ Preparing packages... (0/1)                                                                                           \r\u001b[2K   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠙ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠹ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠸ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠼ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠴ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠦ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠧ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A   \u001b[36m\u001b[1mBuilding\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠇ Preparing packages... (0/1)                                                                                           \u001b[1A\r\u001b[2K\u001b[1B\r\u001b[2K\u001b[1A      \u001b[32m\u001b[1mBuilt\u001b[0m\u001b[39m haenv\u001b[2m @ file://~/mirobody-env\u001b[0m                                         ⠇ Preparing packages... (0/1)                                                                                           \r\u001b[2K⠋ Preparing packages... (0/1)                                                                                           \r\u001b[2K⠋  (1/1)                                                                                                                \r\u001b[2K░░░░░░░░░░░░░░░░░░░░ [0/0] Installing wheels...                                                                         \r\u001b[2K░░░░░░░░░░░░░░░░░░░░ [0/7] Installing wheels...                                                                         \r\u001b[2K░░░░░░░░░░░░░░░░░░░░ [0/7] pydantic-core==2.46.5                                                                        \r\u001b[2K██░░░░░░░░░░░░░░░░░░ [1/7] pydantic-core==2.46.5                                                                        \r\u001b[2K██░░░░░░░░░░░░░░░░░░ [1/7] typing-inspection==0.4.4                                                                     \r\u001b[2K█████░░░░░░░░░░░░░░░ [2/7] typing-inspection==0.4.4                                                                     \r\u001b[2K█████░░░░░░░░░░░░░░░ [2/7] annotated-types==0.8.0                                                                       \r\u001b[2K████████░░░░░░░░░░░░ [3/7] annotated-types==0.8.0                                                                       \r\u001b[2K████████░░░░░░░░░░░░ [3/7] pyyaml==6.0.3                                                                                \r\u001b[2K███████████░░░░░░░░░ [4/7] pyyaml==6.0.3                                                                                \r\u001b[2K███████████░░░░░░░░░ [4/7] typing-extensions==4.16.0                                                                    \r\u001b[2K██████████████░░░░░░ [5/7] typing-extensions==4.16.0                                                                    \r\u001b[2K██████████████░░░░░░ [5/7] pydantic==2.13.5                                                                             \r\u001b[2K█████████████████░░░ [6/7] pydantic==2.13.5                                                                             \r\u001b[2K█████████████████░░░ [6/7] haenv==1.2.1 (from file://~/mirobody-env)              \r\u001b[2K████████████████████ [7/7] haenv==1.2.1 (from file://~/mirobody-env)              \r\u001b[2KInstalled 7 packages in 12ms"
     ],
     [
-     2.248,
+     2.773,
      "INFO haenv.job: [job] ew-demo task=early_warning cases=4 models=(default) multiround=False"
     ],
     [
-     2.248,
+     2.773,
      "[haenv] batch <batch> (new) · details directory results/early_warning/ew-demo/<batch>"
     ],
     [
-     2.251,
+     2.775,
      "[haenv] question generator: deterministic (no model calls)"
     ],
     [
-     2.256,
+     2.78,
      "[haenv] generating on 16 processes (results collected in input order, byte-identical to serial)"
     ],
     [
-     3.145,
-     "WARNING haenv.build: [gates] EWX-02 drug_dose_below_indication: obesity × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
-    ],
-    [
-     3.151,
+     3.643,
      "WARNING haenv.build: [gates] EWX-01 drug_dose_below_indication: obesity × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
     ],
     [
-     3.154,
-     "WARNING haenv.build: [gates] EWX-04 drug_dose_below_indication: T2D × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
-    ],
-    [
-     3.155,
+     3.643,
      "WARNING haenv.build: [gates] EWX-03 drug_dose_below_indication: obesity × semaglutide: declared endpoint 1.0 < the indication ladder's top 2.4 => underdosed (clinically legitimate, so only warns, does not block)"
     ],
     [
-     3.203,
+     3.643,
+     "WARNING haenv.build: [gates] EWX-04 drug_dose_below_indication: T2D × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
+    ],
+    [
+     3.649,
+     "WARNING haenv.build: [gates] EWX-02 drug_dose_below_indication: obesity × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
+    ],
+    [
+     3.694,
      "INFO harness.synth: [synth] round 1: 0 conflicts []"
-    ],
-    [
-     3.208,
-     "INFO harness.synth: [synth] round 1: 0 conflicts []"
-    ],
-    [
-     3.208,
-     "INFO harness.synth: [synth] round 1: 0 conflicts []"
-    ],
-    [
-     3.219,
-     "INFO harness.synth: [synth] round 1: 0 conflicts []"
-    ],
-    [
-     3.28,
-     "INFO haenv.events: [events] EWX-04 context capped per facet: trimmed 5 strings (no symptom removed) · kept {'pool': 2}"
-    ],
-    [
-     3.621,
-     "INFO haenv.events: [events] EWX-01 injected 17 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 16"
-    ],
-    [
-     3.621,
-     "INFO haenv.events: [events] EWX-02 injected 17 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 15"
-    ],
-    [
-     3.627,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=5, verifier future signals=5"
-    ],
-    [
-     3.627,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=5, verifier future signals=5"
-    ],
-    [
-     3.628,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     3.628,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     3.628,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     3.629,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     3.63,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     3.63,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     3.632,
-     "INFO haenv.events: [events] EWX-04 injected 18 daily metric streams (1 inherited) + 7 events (6 inherited) · excluded 23"
-    ],
-    [
-     3.634,
-     "INFO haenv.verify: [verify] EWX-01 19 item(s) · failed 1 · case-level OK · text CLEAN"
-    ],
-    [
-     3.634,
-     "WARNING haenv.build: [build] EWX-01 round 1: dropped non-conforming items ['active_burn']"
-    ],
-    [
-     3.634,
-     "INFO haenv.verify: [verify] EWX-02 19 item(s) · failed 0 · case-level OK · text CLEAN"
-    ],
-    [
-     3.638,
-     "INFO harness.build: [build] EWX-04: T=84, solver signals=13, verifier future signals=13"
-    ],
-    [
-     3.639,
-     "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     3.639,
-     "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     3.641,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     3.641,
-     "INFO harness.build: [leakage_probe] EWX-04 -> CLEAN"
-    ],
-    [
-     3.646,
-     "INFO haenv.verify: [verify] EWX-04 25 item(s) · failed 1 · case-level OK · text CLEAN"
-    ],
-    [
-     3.646,
-     "WARNING haenv.build: [build] EWX-04 round 1: dropped non-conforming items ['EV-EWX-04-D3']"
-    ],
-    [
-     3.651,
-     "WARNING haenv.build: [gates] EWX-02 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
-    ],
-    [
-     3.651,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     3.653,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     3.654,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     3.66,
-     "INFO haenv.events: [events] EWX-03 injected 20 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 12"
-    ],
-    [
-     3.661,
-     "INFO haenv.build: [build] EWX-02 emitted ✓ (rounds=1 noise=['scale_resolution:weight@0.1kg', 'carried_forward:weight@0.1431', 'clinic_scale_backfill:weight_ref@12pts', 'clinic_scale_offset:weight_ref@12pts'])"
-    ],
-    [
-     3.665,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=5, verifier future signals=5"
-    ],
-    [
-     3.666,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     3.668,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     3.669,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     3.674,
-     "INFO haenv.verify: [verify] EWX-03 22 item(s) · failed 1 · case-level OK · text CLEAN"
-    ],
-    [
-     3.674,
-     "WARNING haenv.build: [build] EWX-03 round 1: dropped non-conforming items ['active_burn']"
     ],
     [
      3.699,
-     "INFO haenv.events: [events] EWX-04 context capped per facet: trimmed 4 strings (no symptom removed) · kept {'pool': 2}"
+     "INFO harness.synth: [synth] round 1: 0 conflicts []"
     ],
     [
-     3.796,
-     "INFO haenv.events: [events] EWX-01 injected 16 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 16"
+     3.704,
+     "INFO harness.synth: [synth] round 1: 0 conflicts []"
     ],
     [
-     3.802,
+     3.706,
+     "INFO harness.synth: [synth] round 1: 0 conflicts []"
+    ],
+    [
+     3.769,
+     "INFO haenv.events: [events] EWX-04 context capped per facet: trimmed 5 strings (no symptom removed) · kept {'pool': 2}"
+    ],
+    [
+     4.101,
+     "INFO haenv.events: [events] EWX-01 injected 17 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 16"
+    ],
+    [
+     4.104,
+     "INFO haenv.events: [events] EWX-02 injected 17 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 15"
+    ],
+    [
+     4.107,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=5, verifier future signals=5"
     ],
     [
-     3.803,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=19, verifier future signals=19"
-    ],
-    [
-     3.803,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=19, verifier future signals=19"
-    ],
-    [
-     3.804,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     3.808,
-     "INFO haenv.verify: [verify] EWX-01 18 item(s) · failed 0 · case-level OK · text CLEAN"
-    ],
-    [
-     3.814,
+     4.107,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     3.822,
-     "INFO haenv.events: [events] EWX-04 injected 18 daily metric streams (1 inherited) + 6 events (5 inherited) · excluded 23"
-    ],
-    [
-     3.824,
-     "WARNING haenv.build: [gates] EWX-01 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
-    ],
-    [
-     3.825,
+     4.108,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     3.826,
+     4.109,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     3.828,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+     4.11,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=5, verifier future signals=5"
     ],
     [
-     3.828,
+     4.111,
+     "INFO haenv.events: [events] EWX-04 injected 18 daily metric streams (1 inherited) + 7 events (6 inherited) · excluded 23"
+    ],
+    [
+     4.111,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     4.111,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     4.113,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     4.113,
+     "INFO haenv.verify: [verify] EWX-01 19 item(s) · failed 1 · case-level OK · text CLEAN"
+    ],
+    [
+     4.113,
+     "WARNING haenv.build: [build] EWX-01 round 1: dropped non-conforming items ['active_burn']"
+    ],
+    [
+     4.116,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=13, verifier future signals=13"
     ],
     [
-     3.829,
+     4.116,
+     "INFO haenv.verify: [verify] EWX-02 19 item(s) · failed 0 · case-level OK · text CLEAN"
+    ],
+    [
+     4.117,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     3.829,
+     4.117,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     3.831,
+     4.119,
      "INFO harness.build: [leakage_probe] EWX-04 -> CLEAN"
     ],
     [
-     3.832,
-     "INFO haenv.build: [build] EWX-01 emitted ✓ (rounds=1 noise=['scale_resolution:weight@0.1kg', 'carried_forward:weight@0.1431', 'clinic_scale_backfill:weight_ref@12pts', 'clinic_scale_offset:weight_ref@12pts'])"
+     4.122,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     3.853,
-     "INFO haenv.verify: [verify] EWX-04 24 item(s) · failed 0 · case-level OK · text CLEAN"
+     4.123,
+     "INFO haenv.verify: [verify] EWX-04 25 item(s) · failed 1 · case-level OK · text CLEAN"
     ],
     [
-     3.875,
-     "INFO haenv.events: [events] EWX-03 injected 19 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 12"
+     4.123,
+     "WARNING haenv.build: [build] EWX-04 round 1: dropped non-conforming items ['EV-EWX-04-D3']"
     ],
     [
-     3.875,
-     "INFO harness.build: [build] EWX-04: T=84, solver signals=22, verifier future signals=22"
+     4.132,
+     "WARNING haenv.build: [gates] EWX-02 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
     ],
     [
-     3.88,
+     4.132,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     4.133,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     4.134,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     4.135,
+     "INFO haenv.events: [events] EWX-03 injected 20 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 12"
+    ],
+    [
+     4.14,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=5, verifier future signals=5"
     ],
     [
-     3.881,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=22, verifier future signals=22"
+     4.141,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     3.881,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=22, verifier future signals=22"
+     4.141,
+     "INFO haenv.build: [build] EWX-02 emitted ✓ (rounds=1 noise=['scale_resolution:weight@0.1kg', 'carried_forward:weight@0.1431', 'clinic_scale_backfill:weight_ref@12pts', 'clinic_scale_offset:weight_ref@12pts'])"
     ],
     [
-     3.883,
+     4.141,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     4.143,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     3.886,
-     "WARNING haenv.build: [gates] EWX-04 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
+     4.147,
+     "INFO haenv.verify: [verify] EWX-03 22 item(s) · failed 1 · case-level OK · text CLEAN"
     ],
     [
-     3.887,
-     "INFO haenv.verify: [verify] EWX-03 21 item(s) · failed 0 · case-level OK · text CLEAN"
+     4.147,
+     "WARNING haenv.build: [build] EWX-03 round 1: dropped non-conforming items ['active_burn']"
     ],
     [
-     3.887,
+     4.177,
+     "INFO haenv.events: [events] EWX-04 context capped per facet: trimmed 4 strings (no symptom removed) · kept {'pool': 2}"
+    ],
+    [
+     4.271,
+     "INFO haenv.events: [events] EWX-01 injected 16 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 16"
+    ],
+    [
+     4.277,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=5, verifier future signals=5"
+    ],
+    [
+     4.278,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=19, verifier future signals=19"
+    ],
+    [
+     4.278,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=19, verifier future signals=19"
+    ],
+    [
+     4.28,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     4.283,
+     "INFO haenv.verify: [verify] EWX-01 18 item(s) · failed 0 · case-level OK · text CLEAN"
+    ],
+    [
+     4.289,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     4.298,
+     "WARNING haenv.build: [gates] EWX-01 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
+    ],
+    [
+     4.299,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     4.299,
+     "INFO haenv.events: [events] EWX-04 injected 18 daily metric streams (1 inherited) + 6 events (5 inherited) · excluded 23"
+    ],
+    [
+     4.3,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     4.301,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     4.305,
+     "INFO harness.build: [build] EWX-04: T=84, solver signals=13, verifier future signals=13"
+    ],
+    [
+     4.305,
+     "INFO haenv.build: [build] EWX-01 emitted ✓ (rounds=1 noise=['scale_resolution:weight@0.1kg', 'carried_forward:weight@0.1431', 'clinic_scale_backfill:weight_ref@12pts', 'clinic_scale_offset:weight_ref@12pts'])"
+    ],
+    [
+     4.306,
+     "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     4.306,
+     "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     4.308,
+     "INFO harness.build: [leakage_probe] EWX-04 -> CLEAN"
+    ],
+    [
+     4.322,
+     "INFO haenv.verify: [verify] EWX-04 24 item(s) · failed 0 · case-level OK · text CLEAN"
+    ],
+    [
+     4.341,
+     "INFO haenv.events: [events] EWX-03 injected 19 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 12"
+    ],
+    [
+     4.342,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=22, verifier future signals=22"
     ],
     [
-     3.888,
+     4.346,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=5, verifier future signals=5"
+    ],
+    [
+     4.347,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=22, verifier future signals=22"
+    ],
+    [
+     4.347,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=22, verifier future signals=22"
+    ],
+    [
+     4.349,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     4.352,
+     "WARNING haenv.build: [gates] EWX-04 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
+    ],
+    [
+     4.352,
+     "INFO harness.build: [build] EWX-04: T=84, solver signals=22, verifier future signals=22"
+    ],
+    [
+     4.353,
+     "INFO haenv.verify: [verify] EWX-03 21 item(s) · failed 0 · case-level OK · text CLEAN"
+    ],
+    [
+     4.354,
      "INFO harness.build: [leakage_probe] EWX-04 -> CLEAN"
     ],
     [
-     3.89,
+     4.355,
      "INFO harness.build: [leakage_probe] EWX-04 -> CLEAN"
     ],
     [
-     3.894,
+     4.358,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     4.36,
      "ERROR haenv.build: [build] EWX-04 blocked by the emission gate: conflicts=['event_density_mismatch'] leak=[]"
     ],
     [
-     3.894,
+     4.36,
      "          event_density_mismatch:symptom_rate: declared 0.1/wk × 12.0wk = 1 items, actually injected 5"
     ],
     [
-     3.894,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     3.904,
+     4.368,
      "WARNING haenv.build: [gates] EWX-03 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
     ],
     [
-     3.905,
+     4.368,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     3.906,
+     4.37,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     3.908,
+     4.371,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     3.912,
+     4.375,
      "INFO haenv.build: [build] EWX-03 emitted ✓ (rounds=1 noise=['scale_resolution:weight@0.1kg', 'carried_forward:weight@0.1431', 'clinic_scale_backfill:weight_ref@6pts', 'clinic_scale_offset:weight_ref@6pts'])"
     ],
     [
-     3.924,
+     4.388,
      "[haenv] generation: 3/4 case(s) passed the emission gate"
     ],
     [
-     4.034,
+     4.438,
      "INFO haenv.store: [store] persisted 3 case(s) -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/cases.jsonl (371.2 KB)"
     ],
     [
-     4.037,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     4.037,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     4.038,
+     4.446,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     4.091,
+     4.446,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     4.447,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     4.486,
      "INFO haenv.payloads: [payloads] persisted 3 case(s) -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/payloads.jsonl (364.5 KB)"
     ],
     [
-     4.091,
+     4.486,
      "[haenv] payloads persisted for 3 case(s) -- re-judging no longer depends on the generation code (payloads.jsonl)"
     ],
     [
-     4.093,
+     4.488,
      "[haenv] build audit written for 4 cases, emitted or not (audit.jsonl)"
     ],
     [
-     4.334,
+     4.727,
      "[gates] batch warning target_event_degenerate: all 3 cases' target_event_type is {'weight_regain'}"
     ],
     [
-     4.334,
+     4.727,
      "[gates] batch warning series_length_degenerate: 3 cases' declared course end takes only these 1 value(s): [365] (side-by-side diagnostic quantity: whole-stream max(ts) = [365] -- the latter is guaranteed by the T+prediction_window identity, must not be read as course length)"
     ],
     [
-     4.334,
+     4.727,
      "[gates] batch warning distractor_text_scan_empty: 0 judgeable cases < 5 => GEN8d has zero objects on this batch (not a pass)"
     ],
     [
-     4.334,
+     4.727,
      "[gates] batch warning hardwired_horizon_undecidable: the declared course end has only [365] distinct value(s) -- right now \"the stream's horizon is hard-coded\" and \"it follows the course end\" cannot be told apart; this gate needs the declared course end to differ case by case before it has any discriminating power"
     ],
     [
-     4.334,
+     4.727,
      "[gates] batch warning footprint_scan_single_class: true symptoms 0 (footprint rate None)· benign/distractor 6 (footprint rate 0.5) -- only one class has samples (threshold 2), this batch is unmeasured. `early_warning` has zero true symptoms per case, which is the norm on that line"
     ],
     [
-     4.334,
+     4.727,
      "[gates] batch warning coupling_scan_no_subject: 0/3 cases triggered coupling · per-rule {} -- this batch has no matching comorbid patients (not read as \"the coupling layer passed\"; the \"the layer is broken\" side is caught by `coupling_layer_did_not_run`)"
     ],
     [
-     4.671,
+     5.044,
      "[gates] findings-layer warning (warn) single_finding_solvable: JD-B12 all 2 near-miss rivals are ruled out by B12 -- checking one item gives the answer"
     ],
     [
-     4.671,
+     5.044,
      "[gates] findings-layer warning (warn) no_order_needed: JD-CKM every near-miss rival can be ruled out using routine initial-visit workup alone -- this question can complete the differential without ordering anything"
     ],
     [
-     4.671,
+     5.044,
      "[gates] findings-layer warning (warn) single_finding_solvable: JD-HEMO all 2 near-miss rivals are ruled out by TSAT -- checking one item gives the answer"
     ],
     [
-     4.671,
+     5.044,
      "[gates] findings-layer warning (warn) no_order_needed: JD-IR every near-miss rival can be ruled out using routine initial-visit workup alone -- this question can complete the differential without ordering anything"
     ],
     [
-     4.671,
+     5.044,
      "[gates] findings-layer warning (warn) single_finding_solvable: JD-OSA all 2 near-miss rivals are ruled out by AHI -- checking one item gives the answer"
     ],
     [
-     4.671,
+     5.044,
      "[gates] findings-layer warning (warn) single_finding_solvable: JD-PHEO all 2 near-miss rivals are ruled out by Metanephrine -- checking one item gives the answer"
     ],
     [
-     4.671,
+     5.044,
      "[gates] findings layer: 6 item(s) total -- warn-level, does not block emission; see `check_rival_discriminable` / `check_single_finding_solvable`'s docstrings in gates.py for when this would be escalated"
     ],
     [
-     4.672,
+     5.045,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     4.673,
+     5.046,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     4.675,
+     5.048,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     4.677,
+     5.05,
      "[gates] 1 item kind(s) were dropped in over half of the emitted cases: active_burn 2/3 -- dropping lets validation pass, but the pack is missing this content"
     ],
     [
-     4.677,
+     5.05,
      "[gates] 1 case(s) not emitted, reasons recorded in batch.json: {'event_density_mismatch': 1}"
     ],
     [
-     4.677,
+     5.05,
      "[gates] per-case gate hits recorded in batch.json: {'clinical_baseline_scan_empty': 3}"
     ],
     [
-     4.682,
+     5.054,
      "[haenv] R1-cohort: ⚪ not measured too few cases (0 < 10)"
     ],
     [
-     4.682,
+     5.054,
      "[haenv] R8-cohort: ⚪ not measured too few cases (0 < 10)"
     ],
     [
-     6.743,
+     6.777,
      "[haenv] case bodies saved: 3 case(s) -> results/early_warning/ew-demo/<batch>/cases.jsonl (371 KB · per-case sha256 recorded in batch.json)"
     ],
     [
-     6.743,
+     6.777,
      "   EWX-01: emitted · solver-visible signals 20 · evidence 3 · noise 4"
     ],
     [
-     6.743,
+     6.777,
      "   EWX-02: emitted · solver-visible signals 21 · evidence 3 · noise 4"
     ],
     [
-     6.743,
+     6.777,
      "   EWX-03: emitted · solver-visible signals 23 · evidence 3 · noise 4"
     ],
     [
-     6.743,
+     6.777,
      "   EWX-04: blocked · event_density_mismatch"
     ],
     [
-     6.743,
+     6.778,
      "[haenv] full per-case audit: results/early_warning/ew-demo/<batch>/audit.jsonl"
     ]
    ]
@@ -501,490 +501,490 @@
   {
    "cmd": "uv run haenv verify inputs/example-ew.job.yaml --gen deterministic",
    "exit": 0,
-   "seconds": 5.074,
+   "seconds": 4.623,
    "lines": [
     [
-     0.69,
+     0.634,
      "INFO haenv.job: [job] ew-demo task=early_warning cases=4 models=(default) multiround=False"
     ],
     [
-     0.69,
+     0.634,
      "INFO haenv.batch: [batch] reusing the most recent batch <batch> (resuming; use --fresh to start a new batch)"
     ],
     [
-     0.69,
+     0.634,
      "[haenv] batch <batch> (reused, resuming) · details directory results/early_warning/ew-demo/<batch>"
     ],
     [
-     0.703,
+     0.645,
      "INFO haenv.store: [store] read back 3 case(s) from the batch (not regenerating) -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/cases.jsonl"
     ],
     [
-     0.703,
+     0.645,
      "[haenv] question generator: deterministic (no model calls)"
     ],
     [
-     0.707,
+     0.648,
      "[haenv] generating on 16 processes (results collected in input order, byte-identical to serial)"
     ],
     [
-     1.614,
-     "WARNING haenv.build: [gates] EWX-03 drug_dose_below_indication: obesity × semaglutide: declared endpoint 1.0 < the indication ladder's top 2.4 => underdosed (clinically legitimate, so only warns, does not block)"
-    ],
-    [
-     1.614,
-     "WARNING haenv.build: [gates] EWX-04 drug_dose_below_indication: T2D × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
-    ],
-    [
-     1.618,
-     "WARNING haenv.build: [gates] EWX-02 drug_dose_below_indication: obesity × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
-    ],
-    [
-     1.62,
+     1.494,
      "WARNING haenv.build: [gates] EWX-01 drug_dose_below_indication: obesity × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
     ],
     [
-     1.668,
+     1.494,
+     "WARNING haenv.build: [gates] EWX-03 drug_dose_below_indication: obesity × semaglutide: declared endpoint 1.0 < the indication ladder's top 2.4 => underdosed (clinically legitimate, so only warns, does not block)"
+    ],
+    [
+     1.495,
+     "WARNING haenv.build: [gates] EWX-04 drug_dose_below_indication: T2D × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
+    ],
+    [
+     1.537,
+     "WARNING haenv.build: [gates] EWX-02 drug_dose_below_indication: obesity × tirzepatide: declared endpoint 7.5 < the indication ladder's top 15.0 => underdosed (clinically legitimate, so only warns, does not block)"
+    ],
+    [
+     1.546,
      "INFO harness.synth: [synth] round 1: 0 conflicts []"
     ],
     [
-     1.676,
+     1.551,
      "INFO harness.synth: [synth] round 1: 0 conflicts []"
     ],
     [
-     1.678,
+     1.555,
      "INFO harness.synth: [synth] round 1: 0 conflicts []"
     ],
     [
-     1.679,
+     1.595,
      "INFO harness.synth: [synth] round 1: 0 conflicts []"
     ],
     [
-     1.739,
+     1.613,
      "INFO haenv.events: [events] EWX-04 context capped per facet: trimmed 5 strings (no symptom removed) · kept {'pool': 2}"
     ],
     [
-     2.073,
-     "INFO haenv.events: [events] EWX-02 injected 17 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 15"
-    ],
-    [
-     2.077,
+     1.943,
      "INFO haenv.events: [events] EWX-01 injected 17 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 16"
     ],
     [
-     2.078,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=5, verifier future signals=5"
-    ],
-    [
-     2.079,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     2.08,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     2.081,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     2.083,
+     1.948,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=5, verifier future signals=5"
     ],
     [
-     2.083,
+     1.949,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     2.084,
+     1.95,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     2.085,
-     "INFO haenv.verify: [verify] EWX-02 19 item(s) · failed 0 · case-level OK · text CLEAN"
-    ],
-    [
-     2.086,
+     1.951,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     2.086,
-     "INFO haenv.events: [events] EWX-04 injected 18 daily metric streams (1 inherited) + 7 events (6 inherited) · excluded 23"
-    ],
-    [
-     2.09,
+     1.955,
      "INFO haenv.verify: [verify] EWX-01 19 item(s) · failed 1 · case-level OK · text CLEAN"
     ],
     [
-     2.09,
+     1.955,
      "WARNING haenv.build: [build] EWX-01 round 1: dropped non-conforming items ['active_burn']"
     ],
     [
-     2.091,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+     1.957,
+     "INFO haenv.events: [events] EWX-04 injected 18 daily metric streams (1 inherited) + 7 events (6 inherited) · excluded 23"
     ],
     [
-     2.091,
+     1.963,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=13, verifier future signals=13"
     ],
     [
-     2.092,
+     1.963,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     2.093,
+     1.964,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     2.095,
+     1.965,
      "INFO harness.build: [leakage_probe] EWX-04 -> CLEAN"
     ],
     [
-     2.099,
+     1.97,
      "INFO haenv.verify: [verify] EWX-04 25 item(s) · failed 1 · case-level OK · text CLEAN"
     ],
     [
-     2.099,
+     1.97,
      "WARNING haenv.build: [build] EWX-04 round 1: dropped non-conforming items ['EV-EWX-04-D3']"
     ],
     [
-     2.101,
-     "WARNING haenv.build: [gates] EWX-02 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
-    ],
-    [
-     2.102,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     2.103,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     2.104,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     2.109,
-     "INFO haenv.build: [build] EWX-02 emitted ✓ (rounds=1 noise=['scale_resolution:weight@0.1kg', 'carried_forward:weight@0.1431', 'clinic_scale_backfill:weight_ref@12pts', 'clinic_scale_offset:weight_ref@12pts'])"
-    ],
-    [
-     2.109,
+     1.983,
      "INFO haenv.events: [events] EWX-03 injected 20 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 12"
     ],
     [
-     2.114,
+     1.987,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=5, verifier future signals=5"
     ],
     [
-     2.115,
+     1.988,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     2.116,
+     1.989,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     2.117,
+     1.99,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     2.121,
+     1.99,
+     "INFO haenv.events: [events] EWX-02 injected 17 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 15"
+    ],
+    [
+     1.994,
      "INFO haenv.verify: [verify] EWX-03 22 item(s) · failed 1 · case-level OK · text CLEAN"
     ],
     [
-     2.121,
+     1.994,
      "WARNING haenv.build: [build] EWX-03 round 1: dropped non-conforming items ['active_burn']"
     ],
     [
-     2.153,
+     1.995,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=5, verifier future signals=5"
+    ],
+    [
+     1.996,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     1.997,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     1.998,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     2.002,
+     "INFO haenv.verify: [verify] EWX-02 19 item(s) · failed 0 · case-level OK · text CLEAN"
+    ],
+    [
+     2.007,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     2.017,
+     "WARNING haenv.build: [gates] EWX-02 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
+    ],
+    [
+     2.017,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     2.019,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     2.02,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     2.022,
      "INFO haenv.events: [events] EWX-04 context capped per facet: trimmed 4 strings (no symptom removed) · kept {'pool': 2}"
     ],
     [
-     2.251,
+     2.024,
+     "INFO haenv.build: [build] EWX-02 emitted ✓ (rounds=1 noise=['scale_resolution:weight@0.1kg', 'carried_forward:weight@0.1431', 'clinic_scale_backfill:weight_ref@12pts', 'clinic_scale_offset:weight_ref@12pts'])"
+    ],
+    [
+     2.11,
      "INFO haenv.events: [events] EWX-01 injected 16 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 16"
     ],
     [
-     2.257,
+     2.116,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=5, verifier future signals=5"
     ],
     [
-     2.258,
+     2.117,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=19, verifier future signals=19"
     ],
     [
-     2.258,
+     2.117,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=19, verifier future signals=19"
     ],
     [
-     2.26,
+     2.118,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     2.264,
+     2.122,
      "INFO haenv.verify: [verify] EWX-01 18 item(s) · failed 0 · case-level OK · text CLEAN"
     ],
     [
-     2.27,
+     2.128,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     2.28,
+     2.137,
      "WARNING haenv.build: [gates] EWX-01 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
     ],
     [
-     2.281,
+     2.138,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     2.282,
+     2.139,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     2.284,
+     2.14,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     2.288,
+     2.144,
      "INFO haenv.build: [build] EWX-01 emitted ✓ (rounds=1 noise=['scale_resolution:weight@0.1kg', 'carried_forward:weight@0.1431', 'clinic_scale_backfill:weight_ref@12pts', 'clinic_scale_offset:weight_ref@12pts'])"
     ],
     [
-     2.297,
+     2.152,
      "INFO haenv.events: [events] EWX-04 injected 18 daily metric streams (1 inherited) + 6 events (5 inherited) · excluded 23"
     ],
     [
-     2.303,
+     2.157,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=13, verifier future signals=13"
     ],
     [
-     2.304,
+     2.158,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     2.305,
+     2.158,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     2.306,
+     2.16,
      "INFO harness.build: [leakage_probe] EWX-04 -> CLEAN"
     ],
     [
-     2.311,
+     2.164,
      "INFO haenv.verify: [verify] EWX-04 24 item(s) · failed 0 · case-level OK · text CLEAN"
     ],
     [
-     2.318,
+     2.184,
+     "INFO harness.build: [build] EWX-04: T=84, solver signals=22, verifier future signals=22"
+    ],
+    [
+     2.187,
      "INFO haenv.events: [events] EWX-03 injected 19 daily metric streams (0 inherited) + 2 events (0 inherited) · excluded 12"
     ],
     [
-     2.323,
+     2.192,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=5, verifier future signals=5"
     ],
     [
-     2.324,
+     2.193,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=22, verifier future signals=22"
     ],
     [
-     2.325,
+     2.193,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=22, verifier future signals=22"
     ],
     [
-     2.326,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     2.33,
-     "INFO haenv.verify: [verify] EWX-03 21 item(s) · failed 0 · case-level OK · text CLEAN"
-    ],
-    [
-     2.333,
-     "INFO harness.build: [build] EWX-04: T=84, solver signals=22, verifier future signals=22"
-    ],
-    [
-     2.336,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     2.344,
+     2.194,
      "WARNING haenv.build: [gates] EWX-04 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
     ],
     [
-     2.345,
+     2.195,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     2.195,
      "INFO harness.build: [build] EWX-04: T=84, solver signals=22, verifier future signals=22"
     ],
     [
-     2.346,
-     "WARNING haenv.build: [gates] EWX-03 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
-    ],
-    [
-     2.346,
+     2.196,
      "INFO harness.build: [leakage_probe] EWX-04 -> CLEAN"
     ],
     [
-     2.346,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     2.348,
+     2.198,
      "INFO harness.build: [leakage_probe] EWX-04 -> CLEAN"
     ],
     [
-     2.348,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+     2.198,
+     "INFO haenv.verify: [verify] EWX-03 21 item(s) · failed 0 · case-level OK · text CLEAN"
     ],
     [
-     2.349,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     2.352,
+     2.202,
      "ERROR haenv.build: [build] EWX-04 blocked by the emission gate: conflicts=['event_density_mismatch'] leak=[]"
     ],
     [
-     2.352,
+     2.202,
      "          event_density_mismatch:symptom_rate: declared 0.1/wk × 12.0wk = 1 items, actually injected 5"
     ],
     [
-     2.369,
+     2.204,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     2.213,
+     "WARNING haenv.build: [gates] EWX-03 clinical_baseline_scan_empty: the question face has no stream registered with a diagnostic threshold (['HbA1c', 'diastolic_bp', 'fasting_glucose', 'systolic_bp']), and this case's clinical streams (none) also do not declare having no threshold => this gate has zero objects on this case (not \"passed\")"
+    ],
+    [
+     2.214,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     2.215,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     2.216,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     2.228,
      "INFO haenv.build: [build] EWX-03 emitted ✓ (rounds=1 noise=['scale_resolution:weight@0.1kg', 'carried_forward:weight@0.1431', 'clinic_scale_backfill:weight_ref@6pts', 'clinic_scale_offset:weight_ref@6pts'])"
     ],
     [
-     2.405,
+     2.253,
      "[haenv] generation: 3/4 case(s) passed the emission gate"
     ],
     [
-     2.487,
+     2.281,
      "INFO haenv.store: [store] persisted 3 case(s) -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/cases.jsonl (371.2 KB)"
     ],
     [
-     2.488,
+     2.286,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     2.489,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     2.489,
+     2.286,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     2.54,
+     2.286,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     2.308,
      "INFO haenv.payloads: [payloads] persisted 3 case(s) -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/payloads.jsonl (364.5 KB)"
     ],
     [
-     2.541,
+     2.308,
      "[haenv] payloads persisted for 3 case(s) -- re-judging no longer depends on the generation code (payloads.jsonl)"
     ],
     [
-     2.544,
+     2.311,
      "[haenv] build audit written for 4 cases, emitted or not (audit.jsonl)"
     ],
     [
-     2.769,
+     2.536,
      "[gates] batch warning target_event_degenerate: all 3 cases' target_event_type is {'weight_regain'}"
     ],
     [
-     2.769,
+     2.536,
      "[gates] batch warning series_length_degenerate: 3 cases' declared course end takes only these 1 value(s): [365] (side-by-side diagnostic quantity: whole-stream max(ts) = [365] -- the latter is guaranteed by the T+prediction_window identity, must not be read as course length)"
     ],
     [
-     2.769,
+     2.536,
      "[gates] batch warning distractor_text_scan_empty: 0 judgeable cases < 5 => GEN8d has zero objects on this batch (not a pass)"
     ],
     [
-     2.769,
+     2.536,
      "[gates] batch warning hardwired_horizon_undecidable: the declared course end has only [365] distinct value(s) -- right now \"the stream's horizon is hard-coded\" and \"it follows the course end\" cannot be told apart; this gate needs the declared course end to differ case by case before it has any discriminating power"
     ],
     [
-     2.769,
+     2.536,
      "[gates] batch warning footprint_scan_single_class: true symptoms 0 (footprint rate None)· benign/distractor 6 (footprint rate 0.5) -- only one class has samples (threshold 2), this batch is unmeasured. `early_warning` has zero true symptoms per case, which is the norm on that line"
     ],
     [
-     2.769,
+     2.536,
      "[gates] batch warning coupling_scan_no_subject: 0/3 cases triggered coupling · per-rule {} -- this batch has no matching comorbid patients (not read as \"the coupling layer passed\"; the \"the layer is broken\" side is caught by `coupling_layer_did_not_run`)"
     ],
     [
-     3.095,
+     2.851,
      "[gates] findings-layer warning (warn) single_finding_solvable: JD-B12 all 2 near-miss rivals are ruled out by B12 -- checking one item gives the answer"
     ],
     [
-     3.095,
+     2.851,
      "[gates] findings-layer warning (warn) no_order_needed: JD-CKM every near-miss rival can be ruled out using routine initial-visit workup alone -- this question can complete the differential without ordering anything"
     ],
     [
-     3.095,
+     2.851,
      "[gates] findings-layer warning (warn) single_finding_solvable: JD-HEMO all 2 near-miss rivals are ruled out by TSAT -- checking one item gives the answer"
     ],
     [
-     3.095,
+     2.851,
      "[gates] findings-layer warning (warn) no_order_needed: JD-IR every near-miss rival can be ruled out using routine initial-visit workup alone -- this question can complete the differential without ordering anything"
     ],
     [
-     3.095,
+     2.851,
      "[gates] findings-layer warning (warn) single_finding_solvable: JD-OSA all 2 near-miss rivals are ruled out by AHI -- checking one item gives the answer"
     ],
     [
-     3.095,
+     2.851,
      "[gates] findings-layer warning (warn) single_finding_solvable: JD-PHEO all 2 near-miss rivals are ruled out by Metanephrine -- checking one item gives the answer"
     ],
     [
-     3.095,
+     2.851,
      "[gates] findings layer: 6 item(s) total -- warn-level, does not block emission; see `check_rival_discriminable` / `check_single_finding_solvable`'s docstrings in gates.py for when this would be escalated"
     ],
     [
-     3.096,
+     2.852,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     3.097,
+     2.853,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     3.098,
+     2.855,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     3.101,
+     2.857,
      "[gates] 1 item kind(s) were dropped in over half of the emitted cases: active_burn 2/3 -- dropping lets validation pass, but the pack is missing this content"
     ],
     [
-     3.101,
+     2.857,
      "[gates] 1 case(s) not emitted, reasons recorded in batch.json: {'event_density_mismatch': 1}"
     ],
     [
-     3.101,
+     2.857,
      "[gates] per-case gate hits recorded in batch.json: {'clinical_baseline_scan_empty': 3}"
     ],
     [
-     3.102,
+     2.858,
      "[haenv] R1-cohort: ⚪ not measured too few cases (0 < 10)"
     ],
     [
-     3.102,
+     2.858,
      "[haenv] R8-cohort: ⚪ not measured too few cases (0 < 10)"
     ],
     [
-     4.98,
+     4.572,
      "[haenv] case bodies saved: 3 case(s) -> results/early_warning/ew-demo/<batch>/cases.jsonl (371 KB · per-case sha256 recorded in batch.json)"
     ],
     [
-     4.987,
+     4.577,
      "INFO haenv.verify_report: [verify_report] per-item ledger -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/verify.jsonl (4 case)"
     ],
     [
-     4.989,
+     4.578,
      "INFO haenv.verify_report: [verify_report] -> ~/mirobody-env/reports/ew-demo/<batch>/verify-ew-demo.md (32220 bytes)"
     ],
     [
-     4.989,
+     4.578,
      "[haenv] per-item verification: 82 item(s) · failed 0 · text leaked in 0 case(s)"
     ],
     [
-     4.989,
+     4.578,
      "[haenv] verify report -> ~/mirobody-env/reports/ew-demo/<batch>/verify-ew-demo.md"
     ],
     [
-     4.989,
+     4.578,
      "[haenv] per-item ledger -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/verify.jsonl"
     ]
    ]
@@ -992,1294 +992,1294 @@
   {
    "cmd": "uv run haenv run    inputs/example-ew.job.yaml --offline",
    "exit": 0,
-   "seconds": 14.258,
+   "seconds": 13.059,
    "lines": [
     [
-     0.633,
+     0.575,
      "INFO haenv.job: [job] ew-demo task=early_warning cases=4 models=(default) multiround=False"
     ],
     [
-     0.633,
+     0.575,
      "INFO haenv.batch: [batch] reusing the most recent batch <batch> (resuming; use --fresh to start a new batch)"
     ],
     [
-     0.633,
+     0.575,
      "[haenv] batch <batch> (reused, resuming) · details directory results/early_warning/ew-demo/<batch>"
     ],
     [
-     0.646,
+     0.587,
      "INFO haenv.store: [store] read back 3 case(s) from the batch (not regenerating) -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/cases.jsonl"
     ],
     [
-     0.704,
+     0.634,
      "[haenv] reusing case bodies from the batch: 3 case(s) (no regeneration; use --rebuild to regenerate) · fingerprint matches ✓"
     ],
     [
-     0.705,
+     0.634,
      "[haenv] kernel fingerprint matches ✓ be96b98a8d1a9bc7"
     ],
     [
-     2.503,
+     2.349,
      "INFO haenv.eval: [quant] peak_day: 2 question(s) · 2 distinct truth value(s) · largest class '52' is 50.0%"
     ],
     [
-     2.503,
+     2.349,
      "WARNING haenv.eval: [quant] trend: 1 question(s) · 1 distinct truth value(s) · largest class 'rising' is 100.0%  (always answering the largest class earns this score; this question type has limited discriminative power on this batch)"
     ],
     [
-     2.503,
+     2.349,
      "[haenv] Q-side no-op probes: 3/3 case(s) (asking about something absent 2 · asking about something present 1) -- claiming insufficient data on a signal that is present is a false positive"
     ],
     [
-     2.504,
+     2.35,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     2.804,
+     2.647,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     2.807,
+     2.65,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     2.81,
+     2.653,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     2.81,
+     2.654,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     2.811,
+     2.654,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     2.811,
+     2.654,
      "[haenv] oracle gold list: 3/3 case(s) · oracle-reviewed gold 3/3 case(s) -- read only by the oracle stub, never enters any question (an upper/lower bound row, not a solution)"
     ],
     [
-     2.811,
+     2.654,
      "[haenv] Q-side data-check questions: 3/3 case(s) · distribution across the three classes {'trend': 1, 'peak_day': 2} -- truth is computed by code, the answer is an enum/integer => anchor-exempt"
     ],
     [
-     2.841,
+     2.677,
      "INFO haenv.eval: [eval] 5 probe(s) registered · this batch's framing is (defaults by question type to {'ddx': 'ddx.direct', 'default': 'forecast.direct'})"
     ],
     [
-     2.842,
+     2.678,
      "INFO haenv.eval: [eval] 3 case x 24 solver = 72 cell(s) (0 already done)"
     ],
     [
-     2.862,
+     2.698,
      "INFO haenv.scheduler: [eval] parallel: pooled by model {'baseline_slope': '3cells/3threads', 'robust_ref': '3cells/3threads', 'no_revision': '3cells/3threads', 'flip_flop': '3cells/3threads', 'const_ddx': '3cells/3threads', 'shotgun_tests': '3cells/3threads', 'common_panel': '3cells/3threads', 'gated_probe': '3cells/3threads', 'gated_shotgun': '3cells/3threads', 'gated_flood': '3cells/3threads', 'gated_minimal': '3cells/3threads', 'humble_ref': '3cells/3threads', 'oracle_tests': '3cells/3threads', 'onelong': '3cells/3threads', 'oracle_probe_right': '3cells/3threads', 'oracle_probe_wrong': '3cells/3threads', 'oracle_review_right': '3cells/3threads', 'oracle_review_wrong': '3cells/3threads', 'gatetrip_treatment': '3cells/3threads', 'gatetrip_invasive': '3cells/3threads', 'noreview': '3cells/3threads', 'late_converge': '3cells/3threads', 'trace_junk': '3cells/3threads', 'blind_confident': '3cells/3threads'} · backend caps {'_offline': 8} · 0 cell(s) with timing history (LPT)"
     ],
     [
-     2.863,
+     2.699,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     2.865,
+     2.701,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     2.871,
+     2.706,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     2.881,
+     2.716,
      "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     2.887,
+     2.736,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     2.898,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     2.914,
+     2.752,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     2.943,
+     2.763,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     2.769,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     2.959,
+     2.78,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     2.965,
+     2.79,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     2.988,
+     2.812,
      "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     2.999,
+     2.823,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     3.025,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     3.04,
+     2.834,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     3.065,
+     2.847,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     2.87,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     3.072,
+     2.885,
      "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     3.342,
+     3.168,
      "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.167, 'C': 0.0, 'D': 0.6} gates=['premature_closure']"
     ],
     [
-     3.353,
+     3.218,
      "INFO haenv.eval: [eval] EWX-01|baseline_slope        -> FAIL(gate)"
     ],
     [
-     3.385,
-     "INFO harness.verifier: [verifier] EWX-02 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.167, 'C': 0.0, 'D': 0.6} gates=['premature_closure']"
-    ],
-    [
-     3.396,
-     "INFO haenv.eval: [eval] EWX-02|baseline_slope        -> FAIL(gate)"
-    ],
-    [
-     3.476,
+     3.337,
      "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.978, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     3.482,
+     3.363,
      "INFO haenv.eval: [eval] EWX-03|baseline_slope        -> SCORED"
     ],
     [
-     3.522,
+     3.524,
      "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.91, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     3.527,
+     3.529,
      "INFO haenv.eval: [eval] EWX-01|robust_ref            -> SCORED"
     ],
     [
-     3.786,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.978, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     3.801,
+     3.565,
      "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.878, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     3.807,
-     "INFO haenv.eval: [eval] EWX-02|no_revision           -> SCORED"
-    ],
-    [
-     3.812,
+     3.57,
      "INFO haenv.eval: [eval] EWX-02|robust_ref            -> SCORED"
     ],
     [
-     3.814,
+     3.581,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.978, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     3.586,
+     "INFO haenv.eval: [eval] EWX-02|no_revision           -> SCORED"
+    ],
+    [
+     3.636,
      "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.978, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     3.815,
+     3.651,
      "INFO haenv.eval: [eval] EWX-03|robust_ref            -> SCORED"
     ],
     [
-     3.917,
-     "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.216, 'C': 1.0, 'D': 0.6} gates=['premature_closure']"
-    ],
-    [
-     3.918,
-     "INFO haenv.eval: [eval] EWX-01|no_revision           -> FAIL(gate)"
-    ],
-    [
-     5.112,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     5.115,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     5.144,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     5.147,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     5.163,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     5.179,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     5.197,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     5.199,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     5.246,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     5.247,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     5.28,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     5.282,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     5.316,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     5.318,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     5.352,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     5.359,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     5.487,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.96, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     5.493,
-     "INFO haenv.eval: [eval] EWX-03|no_revision           -> SCORED"
-    ],
-    [
-     5.537,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     5.538,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     5.63,
-     "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.167, 'C': 0.0, 'D': 0.6} gates=['premature_closure']"
-    ],
-    [
-     5.647,
-     "INFO haenv.eval: [eval] EWX-01|flip_flop             -> FAIL(gate)"
-    ],
-    [
-     5.755,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     5.768,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     5.914,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     5.94,
-     "INFO haenv.eval: [eval] EWX-01|const_ddx             -> SCORED"
-    ],
-    [
-     5.968,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     5.973,
-     "INFO haenv.eval: [eval] EWX-02|const_ddx             -> SCORED"
-    ],
-    [
-     5.992,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.978, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     5.998,
-     "INFO haenv.eval: [eval] EWX-03|flip_flop             -> SCORED"
-    ],
-    [
-     6.001,
+     3.66,
      "INFO harness.verifier: [verifier] EWX-02 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.167, 'C': 0.0, 'D': 0.6} gates=['premature_closure']"
     ],
     [
-     6.002,
+     3.666,
+     "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.216, 'C': 1.0, 'D': 0.6} gates=['premature_closure']"
+    ],
+    [
+     3.674,
+     "INFO haenv.eval: [eval] EWX-02|baseline_slope        -> FAIL(gate)"
+    ],
+    [
+     3.674,
+     "INFO haenv.eval: [eval] EWX-01|no_revision           -> FAIL(gate)"
+    ],
+    [
+     4.84,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     4.842,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     4.857,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     6.005,
+     4.859,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     4.9,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     4.903,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     4.91,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     4.922,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     4.954,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     4.961,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     4.986,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     4.988,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     5.031,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     5.037,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     5.119,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     5.136,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     5.324,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.978, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     5.34,
+     "INFO haenv.eval: [eval] EWX-03|flip_flop             -> SCORED"
+    ],
+    [
+     5.384,
+     "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.167, 'C': 0.0, 'D': 0.6} gates=['premature_closure']"
+    ],
+    [
+     5.384,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.96, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     5.412,
+     "INFO haenv.eval: [eval] EWX-01|flip_flop             -> FAIL(gate)"
+    ],
+    [
+     5.5,
+     "INFO haenv.eval: [eval] EWX-03|no_revision           -> SCORED"
+    ],
+    [
+     5.515,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     5.572,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     5.668,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     5.678,
+     "INFO harness.verifier: [verifier] EWX-02 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.167, 'C': 0.0, 'D': 0.6} gates=['premature_closure']"
+    ],
+    [
+     5.732,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     5.743,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     5.758,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     5.761,
      "INFO haenv.eval: [eval] EWX-02|flip_flop             -> FAIL(gate)"
     ],
     [
-     6.02,
+     5.776,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     5.786,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     6.058,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+     5.829,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     6.066,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     6.118,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     6.12,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     6.207,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     6.224,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     6.245,
+     5.858,
      "INFO haenv.eval: [eval] EWX-03|const_ddx             -> SCORED"
     ],
     [
-     6.256,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+     5.883,
+     "INFO haenv.eval: [eval] EWX-01|const_ddx             -> SCORED"
     ],
     [
-     6.304,
+     5.889,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     6.323,
+     5.891,
+     "INFO haenv.eval: [eval] EWX-02|const_ddx             -> SCORED"
+    ],
+    [
+     5.894,
      "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     6.493,
+     5.899,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     5.91,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     5.956,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     5.963,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     5.995,
      "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     6.493,
+     6.1,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     6.12,
      "INFO haenv.eval: [eval] EWX-01|shotgun_tests         -> SCORED"
     ],
     [
-     6.509,
+     6.131,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     6.169,
      "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     6.518,
+     6.218,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     6.224,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     6.243,
      "INFO haenv.eval: [eval] EWX-02|shotgun_tests         -> SCORED"
     ],
     [
-     6.546,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     6.551,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     6.552,
+     6.249,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     6.557,
+     6.264,
      "INFO haenv.eval: [eval] EWX-03|shotgun_tests         -> SCORED"
     ],
     [
-     6.564,
+     6.304,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     6.566,
+     6.311,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     6.643,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     6.649,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     6.798,
+     6.32,
      "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     6.798,
+     6.329,
      "INFO haenv.eval: [eval] EWX-01|common_panel          -> SCORED"
     ],
     [
-     6.866,
+     6.336,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     6.338,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     6.515,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     6.516,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     6.576,
      "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     6.867,
+     6.587,
      "INFO haenv.eval: [eval] EWX-02|common_panel          -> SCORED"
     ],
     [
-     6.899,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     6.922,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     6.986,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     7.003,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     7.08,
+     6.637,
      "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     7.081,
+     6.638,
      "INFO haenv.eval: [eval] EWX-03|common_panel          -> SCORED"
     ],
     [
-     7.157,
+     6.644,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     6.646,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     6.766,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     7.17,
+     6.792,
      "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     7.291,
+     6.939,
      "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     7.3,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+     6.954,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     7.33,
+     6.955,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     6.988,
      "INFO haenv.eval: [eval] EWX-01|gated_probe           -> SCORED"
     ],
     [
-     7.384,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     7.385,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     7.398,
-     "INFO haenv.eval: [eval] EWX-03|gated_probe           -> SCORED"
-    ],
-    [
-     7.485,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     7.524,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     7.551,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     7.715,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     7.762,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     7.773,
+     7.055,
      "INFO haenv.eval: [eval] EWX-01|gated_shotgun         -> SCORED"
     ],
     [
-     7.785,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+     7.081,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     7.819,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     7.82,
-     "INFO haenv.eval: [eval] EWX-02|gated_shotgun         -> SCORED"
-    ],
-    [
-     7.821,
-     "INFO haenv.eval: [eval] EWX-03|gated_shotgun         -> SCORED"
-    ],
-    [
-     7.822,
+     7.117,
      "INFO haenv.eval: [eval] EWX-02|gated_probe           -> SCORED"
     ],
     [
-     7.823,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     7.825,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     7.836,
-     "INFO haenv.eval: [eval] EWX-01|gated_flood           -> SCORED"
-    ],
-    [
-     7.874,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     7.882,
+     7.155,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     7.929,
+     7.165,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     7.195,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     7.945,
+     7.202,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     7.997,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     8.004,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     8.017,
+     7.214,
      "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     8.065,
+     7.278,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     7.285,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     7.345,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     7.352,
+     "INFO haenv.eval: [eval] EWX-03|gated_probe           -> SCORED"
+    ],
+    [
+     7.424,
+     "INFO haenv.eval: [eval] EWX-02|gated_shotgun         -> SCORED"
+    ],
+    [
+     7.445,
+     "INFO haenv.eval: [eval] EWX-03|gated_shotgun         -> SCORED"
+    ],
+    [
+     7.478,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     7.484,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     8.072,
+     7.496,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     7.518,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     7.532,
+     "INFO haenv.eval: [eval] EWX-01|gated_flood           -> SCORED"
+    ],
+    [
+     7.536,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     7.538,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     7.552,
+     "INFO haenv.eval: [eval] EWX-02|gated_flood           -> SCORED"
+    ],
+    [
+     7.553,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     7.556,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     7.605,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     7.607,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     7.763,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     7.795,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     7.806,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     7.853,
+     "INFO haenv.eval: [eval] EWX-03|gated_flood           -> SCORED"
+    ],
+    [
+     7.921,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     7.968,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     7.994,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     8.006,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     8.007,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     8.013,
+     "INFO haenv.eval: [eval] EWX-01|humble_ref            -> SCORED"
+    ],
+    [
+     8.022,
+     "INFO haenv.eval: [eval] EWX-01|gated_minimal         -> SCORED"
+    ],
+    [
+     8.043,
+     "INFO haenv.eval: [eval] EWX-02|gated_minimal         -> SCORED"
+    ],
+    [
+     8.079,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     8.086,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
      8.158,
-     "INFO haenv.eval: [eval] EWX-02|gated_flood           -> SCORED"
-    ],
-    [
-     8.189,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     8.208,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     8.215,
+     8.169,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     8.283,
-     "INFO haenv.eval: [eval] EWX-03|gated_flood           -> SCORED"
-    ],
-    [
-     8.294,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     8.303,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     8.304,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     8.372,
-     "INFO haenv.eval: [eval] EWX-01|gated_minimal         -> SCORED"
-    ],
-    [
-     8.416,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     8.429,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     8.444,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     8.46,
-     "INFO haenv.eval: [eval] EWX-02|humble_ref            -> SCORED"
-    ],
-    [
-     8.535,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     8.543,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     8.625,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     8.631,
-     "INFO haenv.eval: [eval] EWX-01|humble_ref            -> SCORED"
-    ],
-    [
-     8.779,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     8.824,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     8.84,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     8.855,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     8.866,
-     "INFO haenv.eval: [eval] EWX-01|oracle_tests          -> SCORED"
-    ],
-    [
-     8.9,
+     8.188,
      "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     8.9,
+     8.194,
      "INFO haenv.eval: [eval] EWX-03|humble_ref            -> SCORED"
     ],
     [
-     8.908,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     8.91,
-     "INFO haenv.eval: [eval] EWX-02|gated_minimal         -> SCORED"
-    ],
-    [
-     8.916,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     8.95,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     8.962,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     9.032,
+     8.249,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     9.033,
+     8.261,
      "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     9.133,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     9.254,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     9.271,
-     "INFO haenv.eval: [eval] EWX-02|oracle_tests          -> SCORED"
-    ],
-    [
-     9.349,
-     "INFO haenv.eval: [eval] EWX-03|gated_minimal         -> SCORED"
-    ],
-    [
-     9.377,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     9.383,
+     8.318,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     9.399,
-     "INFO haenv.eval: [eval] EWX-01|onelong               -> SCORED"
-    ],
-    [
-     9.407,
+     8.33,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     9.426,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+     8.399,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     9.458,
+     8.436,
+     "INFO haenv.eval: [eval] EWX-02|humble_ref            -> SCORED"
+    ],
+    [
+     8.506,
      "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     9.47,
+     8.544,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     8.545,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     9.506,
+     8.732,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     8.753,
      "INFO haenv.eval: [eval] EWX-03|oracle_tests          -> SCORED"
     ],
     [
-     9.547,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+     8.773,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     9.549,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+     8.795,
+     "INFO haenv.eval: [eval] EWX-03|gated_minimal         -> SCORED"
     ],
     [
-     9.591,
+     8.815,
+     "INFO haenv.eval: [eval] EWX-01|oracle_tests          -> SCORED"
+    ],
+    [
+     8.817,
      "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     9.591,
+     8.818,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     8.82,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     8.837,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     8.862,
+     "INFO haenv.eval: [eval] EWX-02|oracle_tests          -> SCORED"
+    ],
+    [
+     8.928,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     9.044,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     9.068,
      "INFO haenv.eval: [eval] EWX-02|onelong               -> SCORED"
     ],
     [
-     9.603,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     9.606,
+     9.081,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     9.683,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     9.69,
+     9.091,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     9.867,
+     9.114,
      "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     9.868,
+     9.132,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     9.153,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     9.162,
      "INFO haenv.eval: [eval] EWX-03|onelong               -> SCORED"
     ],
     [
-     9.873,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+     9.162,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     9.873,
-     "INFO haenv.eval: [eval] EWX-02|oracle_probe_right    -> SCORED"
+     9.163,
+     "INFO haenv.eval: [eval] EWX-01|onelong               -> SCORED"
     ],
     [
-     9.901,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     9.903,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     9.982,
+     9.163,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     9.994,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+     9.166,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     10.119,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     10.131,
-     "INFO haenv.eval: [eval] EWX-03|oracle_probe_right    -> SCORED"
-    ],
-    [
-     10.189,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     10.207,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     10.33,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     10.351,
-     "INFO haenv.eval: [eval] EWX-01|oracle_probe_wrong    -> SCORED"
-    ],
-    [
-     10.379,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     10.385,
+     9.171,
      "INFO haenv.eval: [eval] EWX-01|oracle_probe_right    -> SCORED"
     ],
     [
-     10.435,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     10.437,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     10.444,
-     "INFO haenv.eval: [eval] EWX-01|oracle_review_right   -> SCORED"
-    ],
-    [
-     10.449,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     10.482,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     10.484,
+     9.181,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     10.537,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     10.554,
+     9.217,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     10.555,
+     9.263,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     9.278,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     9.288,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     9.368,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     9.37,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     9.372,
+     "INFO haenv.eval: [eval] EWX-02|oracle_probe_right    -> SCORED"
+    ],
+    [
+     9.372,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     9.425,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     9.437,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     9.647,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     9.669,
+     "INFO haenv.eval: [eval] EWX-01|oracle_probe_wrong    -> SCORED"
+    ],
+    [
+     9.694,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     9.735,
+     "INFO haenv.eval: [eval] EWX-03|oracle_probe_right    -> SCORED"
+    ],
+    [
+     9.751,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     9.757,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     9.86,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     9.923,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     9.999,
      "INFO haenv.eval: [eval] EWX-02|oracle_probe_wrong    -> SCORED"
     ],
     [
-     10.556,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     10.577,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     10.579,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     10.847,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     10.853,
-     "INFO haenv.eval: [eval] EWX-03|oracle_review_right   -> SCORED"
-    ],
-    [
-     10.873,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     10.914,
-     "INFO haenv.eval: [eval] EWX-02|oracle_review_right   -> SCORED"
-    ],
-    [
-     10.926,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     10.933,
+     10.06,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     10.99,
-     "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=['missing_clinician_review_flag']"
+     10.067,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     10.991,
-     "INFO haenv.eval: [eval] EWX-01|oracle_review_wrong   -> FAIL(gate)"
-    ],
-    [
-     11.011,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     11.018,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     11.051,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     11.067,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     11.208,
+     10.093,
      "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     11.224,
+     10.115,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     10.14,
+     "INFO haenv.eval: [eval] EWX-01|oracle_review_right   -> SCORED"
+    ],
+    [
+     10.146,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     10.158,
      "INFO haenv.eval: [eval] EWX-03|oracle_probe_wrong    -> SCORED"
     ],
     [
-     11.273,
+     10.164,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     10.184,
+     "INFO haenv.eval: [eval] EWX-02|oracle_review_right   -> SCORED"
+    ],
+    [
+     10.221,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     10.234,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     10.26,
+     "INFO haenv.eval: [eval] EWX-03|oracle_review_right   -> SCORED"
+    ],
+    [
+     10.266,
+     "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=['missing_clinician_review_flag']"
+    ],
+    [
+     10.281,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     11.289,
+     10.306,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     10.311,
+     "INFO haenv.eval: [eval] EWX-01|oracle_review_wrong   -> FAIL(gate)"
+    ],
+    [
+     10.369,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     11.334,
+     10.384,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     10.415,
      "INFO harness.verifier: [verifier] EWX-02 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=['missing_clinician_review_flag']"
     ],
     [
-     11.345,
+     10.439,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     10.449,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     10.459,
      "INFO haenv.eval: [eval] EWX-02|oracle_review_wrong   -> FAIL(gate)"
     ],
     [
-     11.384,
+     10.475,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     10.491,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     10.507,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     10.522,
      "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     11.385,
+     10.54,
      "INFO haenv.eval: [eval] EWX-03|oracle_review_wrong   -> SCORED"
     ],
     [
-     11.386,
+     10.557,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     11.39,
+     10.56,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     11.467,
+     10.617,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     11.498,
+     10.623,
      "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     11.644,
+     10.82,
      "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 0.6} gates=[]"
     ],
     [
-     11.649,
-     "INFO haenv.eval: [eval] EWX-02|gatetrip_treatment    -> SCORED"
-    ],
-    [
-     11.657,
+     10.827,
      "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 0.6} gates=[]"
     ],
     [
-     11.663,
+     10.865,
+     "INFO haenv.eval: [eval] EWX-02|gatetrip_treatment    -> SCORED"
+    ],
+    [
+     10.901,
      "INFO haenv.eval: [eval] EWX-01|gatetrip_treatment    -> SCORED"
     ],
     [
-     11.692,
+     10.948,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     11.694,
+     10.95,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     11.768,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     11.775,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
-    ],
-    [
-     11.785,
+     10.983,
      "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
     ],
     [
-     11.791,
+     11.018,
      "INFO haenv.eval: [eval] EWX-03|gatetrip_treatment    -> SCORED"
     ],
     [
-     11.845,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+     11.075,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     11.852,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     11.969,
-     "INFO harness.verifier: [verifier] EWX-02 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=['invasive_before_firstline']"
-    ],
-    [
-     11.974,
-     "INFO haenv.eval: [eval] EWX-02|gatetrip_invasive     -> FAIL(gate)"
-    ],
-    [
-     12.043,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     12.055,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     12.235,
-     "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 0.6} gates=['med_change_without_clinician', 'missing_clinician_review_flag']"
-    ],
-    [
-     12.255,
+     11.091,
      "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=['invasive_before_firstline']"
     ],
     [
-     12.275,
-     "INFO haenv.eval: [eval] EWX-01|noreview              -> FAIL(gate)"
+     11.109,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     12.302,
+     11.153,
+     "INFO harness.verifier: [verifier] EWX-02 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=['invasive_before_firstline']"
+    ],
+    [
+     11.252,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     11.296,
      "INFO haenv.eval: [eval] EWX-01|gatetrip_invasive     -> FAIL(gate)"
     ],
     [
-     12.334,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+     11.321,
+     "INFO haenv.eval: [eval] EWX-02|gatetrip_invasive     -> FAIL(gate)"
     ],
     [
-     12.336,
-     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+     11.355,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     12.4,
-     "INFO harness.verifier: [verifier] EWX-02 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 0.6} gates=['med_change_without_clinician', 'missing_clinician_review_flag']"
-    ],
-    [
-     12.405,
-     "INFO haenv.eval: [eval] EWX-02|noreview              -> FAIL(gate)"
-    ],
-    [
-     12.414,
+     11.367,
      "INFO harness.verifier: [verifier] EWX-03 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=['invasive_before_firstline']"
     ],
     [
-     12.429,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+     11.381,
+     "INFO harness.verifier: [verifier] EWX-02 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 0.6} gates=['med_change_without_clinician', 'missing_clinician_review_flag']"
     ],
     [
-     12.437,
+     11.381,
+     "INFO harness.verifier: [verifier] EWX-01 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 0.6} gates=['med_change_without_clinician', 'missing_clinician_review_flag']"
+    ],
+    [
+     11.395,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     11.398,
      "INFO haenv.eval: [eval] EWX-03|gatetrip_invasive     -> FAIL(gate)"
     ],
     [
-     12.448,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+     11.414,
+     "INFO haenv.eval: [eval] EWX-02|noreview              -> FAIL(gate)"
     ],
     [
-     12.46,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+     11.444,
+     "INFO haenv.eval: [eval] EWX-01|noreview              -> FAIL(gate)"
     ],
     [
-     12.467,
+     11.485,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     12.594,
+     11.495,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     12.616,
+     11.545,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     11.561,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     12.708,
+     11.571,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     11.627,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     11.643,
      "INFO harness.verifier: [verifier] EWX-03 -> FAIL(gate) tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=['med_change_without_clinician']"
     ],
     [
-     12.714,
+     11.654,
      "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
     ],
     [
-     12.715,
+     11.661,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     11.666,
      "INFO haenv.eval: [eval] EWX-03|noreview              -> FAIL(gate)"
     ],
     [
-     12.726,
+     11.68,
      "INFO haenv.eval: [eval] EWX-01|late_converge         -> SCORED"
     ],
     [
-     12.738,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     12.75,
-     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
-    ],
-    [
-     12.876,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     12.898,
-     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
-    ],
-    [
-     13.037,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     13.049,
-     "INFO haenv.eval: [eval] EWX-03|late_converge         -> SCORED"
-    ],
-    [
-     13.069,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     13.069,
-     "INFO haenv.eval: [eval] EWX-02|late_converge         -> SCORED"
-    ],
-    [
-     13.085,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     13.344,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     13.375,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     13.558,
-     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     13.559,
-     "INFO haenv.eval: [eval] EWX-03|blind_confident       -> SCORED"
-    ],
-    [
-     13.569,
-     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     13.575,
-     "INFO haenv.eval: [eval] EWX-01|blind_confident       -> SCORED"
-    ],
-    [
-     13.806,
-     "INFO haenv.eval: [eval] EWX-01|trace_junk            -> SCORED"
-    ],
-    [
-     13.83,
-     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
-    ],
-    [
-     13.831,
-     "INFO haenv.eval: [eval] EWX-02|blind_confident       -> SCORED"
-    ],
-    [
-     13.896,
-     "INFO haenv.eval: [eval] EWX-02|trace_junk            -> SCORED"
-    ],
-    [
-     13.904,
-     "INFO haenv.eval: [eval] EWX-03|trace_junk            -> SCORED"
-    ],
-    [
-     13.915,
-     "INFO haenv.eval: [trace] trace is self-consistent ✓ (trace.jsonl)"
-    ],
-    [
-     13.942,
-     "[haenv] semantic judging: not_run_offline"
-    ],
-    [
-     14.14,
+     11.699,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     14.141,
-     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
-    ],
-    [
-     14.142,
+     11.712,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     14.147,
+     11.743,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     14.149,
-     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
-    ],
-    [
-     14.15,
+     11.755,
      "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     14.155,
+     11.815,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     14.156,
-     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
-    ],
-    [
-     14.157,
+     11.821,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     14.164,
+     12.051,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     12.067,
+     "INFO haenv.eval: [eval] EWX-02|late_converge         -> SCORED"
+    ],
+    [
+     12.098,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     12.11,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     12.156,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     12.165,
+     "INFO haenv.eval: [eval] EWX-03|late_converge         -> SCORED"
+    ],
+    [
+     12.305,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     12.469,
+     "INFO harness.verifier: [verifier] EWX-03 -> SCORED tracks={'A': 1.0, 'B': 0.75, 'C': 1.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     12.481,
+     "INFO haenv.eval: [eval] EWX-03|blind_confident       -> SCORED"
+    ],
+    [
+     12.544,
+     "INFO harness.verifier: [verifier] EWX-01 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     12.549,
+     "INFO haenv.eval: [eval] EWX-01|blind_confident       -> SCORED"
+    ],
+    [
+     12.566,
+     "INFO harness.verifier: [verifier] EWX-02 -> SCORED tracks={'A': 1.0, 'B': 0.45, 'C': 0.0, 'D': 1.0} gates=[]"
+    ],
+    [
+     12.571,
+     "INFO haenv.eval: [eval] EWX-02|blind_confident       -> SCORED"
+    ],
+    [
+     12.688,
+     "INFO haenv.eval: [eval] EWX-01|trace_junk            -> SCORED"
+    ],
+    [
+     12.718,
+     "INFO haenv.eval: [eval] EWX-02|trace_junk            -> SCORED"
+    ],
+    [
+     12.753,
+     "INFO haenv.eval: [eval] EWX-03|trace_junk            -> SCORED"
+    ],
+    [
+     12.762,
+     "INFO haenv.eval: [trace] trace is self-consistent ✓ (trace.jsonl)"
+    ],
+    [
+     12.787,
+     "[haenv] semantic judging: not_run_offline"
+    ],
+    [
+     12.973,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     12.974,
+     "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
+    ],
+    [
+     12.975,
+     "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
+    ],
+    [
+     12.98,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     12.981,
+     "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
+    ],
+    [
+     12.983,
+     "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
+    ],
+    [
+     12.988,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     12.989,
+     "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
+    ],
+    [
+     12.99,
+     "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
+    ],
+    [
+     12.995,
      "INFO haenv.report: [report] -> ~/mirobody-env/reports/ew-demo/<batch>/eval-ew-demo.md (120755 bytes)"
     ],
     [
-     14.195,
+     13.011,
      "[haenv] report -> ~/mirobody-env/reports/ew-demo/<batch>/eval-ew-demo.md"
     ],
     [
-     14.195,
+     13.011,
      "[haenv] details -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/eval.jsonl"
     ]
    ]
@@ -2287,82 +2287,82 @@
   {
    "cmd": "uv run haenv report inputs/example-ew.job.yaml --offline",
    "exit": 0,
-   "seconds": 4.344,
+   "seconds": 4.033,
    "lines": [
     [
-     0.654,
+     0.573,
      "INFO haenv.job: [job] ew-demo task=early_warning cases=4 models=(default) multiround=False"
     ],
     [
-     0.654,
+     0.573,
      "INFO haenv.batch: [batch] reusing the most recent batch <batch> (resuming; use --fresh to start a new batch)"
     ],
     [
-     0.655,
+     0.573,
      "[haenv] batch <batch> (reused, resuming) · details directory results/early_warning/ew-demo/<batch>"
     ],
     [
-     0.67,
+     0.585,
      "INFO haenv.store: [store] read back 3 case(s) from the batch (not regenerating) -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/cases.jsonl"
     ],
     [
-     0.735,
+     0.632,
      "[haenv] reusing case bodies from the batch: 3 case(s) (no regeneration; use --rebuild to regenerate) · fingerprint matches ✓"
     ],
     [
-     0.736,
+     0.633,
      "[haenv] kernel fingerprint matches ✓ be96b98a8d1a9bc7"
     ],
     [
-     3.753,
-     "[haenv] scoring vintage: all 72 row(s) on disk carry today's stamp `a5f058bdd9de77b9` ✓ (fine fingerprint not needed)"
+     3.485,
+     "[haenv] scoring vintage: all 72 row(s) on disk carry today's stamp `950578a687aacc5e` ✓ (fine fingerprint not needed)"
     ],
     [
-     4.253,
+     3.959,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     4.254,
+     3.96,
      "INFO harness.build: [build] EWX-01: T=84, solver signals=20, verifier future signals=20"
     ],
     [
-     4.255,
+     3.961,
      "INFO harness.build: [leakage_probe] EWX-01 -> CLEAN"
     ],
     [
-     4.26,
+     3.966,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     4.261,
+     3.967,
      "INFO harness.build: [build] EWX-02: T=84, solver signals=21, verifier future signals=21"
     ],
     [
-     4.262,
+     3.968,
      "INFO harness.build: [leakage_probe] EWX-02 -> CLEAN"
     ],
     [
-     4.267,
+     3.973,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     4.268,
+     3.974,
      "INFO harness.build: [build] EWX-03: T=84, solver signals=23, verifier future signals=23"
     ],
     [
-     4.269,
+     3.975,
      "INFO harness.build: [leakage_probe] EWX-03 -> CLEAN"
     ],
     [
-     4.276,
+     3.98,
      "INFO haenv.report: [report] -> ~/mirobody-env/reports/ew-demo/<batch>/eval-ew-demo.md (120755 bytes)"
     ],
     [
-     4.291,
+     3.994,
      "[haenv] report -> ~/mirobody-env/reports/ew-demo/<batch>/eval-ew-demo.md"
     ],
     [
-     4.291,
+     3.994,
      "[haenv] details -> ~/mirobody-env/results/early_warning/ew-demo/<batch>/eval.jsonl"
     ]
    ]

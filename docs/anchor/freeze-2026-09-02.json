@@ -1,6 +1,6 @@
 {
  "frozen_at": "2026-09-02",
- "revision": 92,
+ "revision": 93,
  "generated_by": "tools/make_freeze.py --segments-only (generated, do not edit)",
  "generation": {
   "haenv_kernel/build.py": "81b98fbcbf07db48",
@@ -113,7 +113,7 @@
   "haenv/gates.py": "8069d7773a86f8a2",
   "haenv/gates_case.py": "79ae526600a00ffd",
   "haenv/gates_outcome.py": "01feecd7c3082f1d",
-  "haenv/gates_shortcut.py": "cfdcde74b44baaa6",
+  "haenv/gates_shortcut.py": "a4b3cec67e25fb24",
   "haenv/scoring.py": "75524a152cb2a277",
   "haenv/process.py": "a184f32cc258688e",
   "haenv/wq.py": "96c049521410dfb4",
@@ -123,15 +123,15 @@
   "haenv/run_state.py": "196b5a160487b1fc",
   "haenv/qside.py": "bee5c7626a41b09f",
   "haenv/run_ledger.py": "3e386e3b6d9a8823",
-  "haenv/solvers.py": "41e3dce6117564d3",
-  "haenv/rows.py": "a213bef7b408d314",
+  "haenv/solvers.py": "a69709bf85d20da7",
+  "haenv/rows.py": "56b472d4e17d0198",
   "haenv/alias_match.py": "aa826d9c8c789d3d",
   "haenv/mount_coverage.py": "3716ea7ca5d8fffc",
   "haenv/row_store.py": "4792775729207c7e",
   "haenv/semantic_seal.py": "c4afa61ba0ac3bbe",
   "haenv/semantic_coverage.py": "19a743aff727e4ba",
   "haenv/rhythm.py": "096b3928050a3481",
-  "haenv/resume.py": "3ba25456bc562705",
+  "haenv/resume.py": "236d7e2750415a7d",
   "haenv/gate_tables.py": "87f5baa072077e1b",
   "haenv/gold_kinds.py": "6bf86a33ba926219",
   "haenv/separation.py": "7e63a9ecf1aa0a12",
@@ -277,7 +277,7 @@
   "haenv/gates.py": "ace59ff2a82d8abf",
   "haenv/gates_case.py": "8685448c3995b7c9",
   "haenv/gates_outcome.py": "07d8408a361d1d82",
-  "haenv/gates_shortcut.py": "ac27dff0bcd18824",
+  "haenv/gates_shortcut.py": "d395bd8807da564f",
   "haenv/scoring.py": "ae5177601f48d9a5",
   "haenv/process.py": "918805d90a5ed4df",
   "haenv/wq.py": "6d8961a111205f7d",
@@ -287,15 +287,15 @@
   "haenv/run_state.py": "1e7834d436ad58c9",
   "haenv/qside.py": "bb0674b123d157fe",
   "haenv/run_ledger.py": "1cbce8d9a403f354",
-  "haenv/solvers.py": "f89e5276aa433d84",
-  "haenv/rows.py": "c4b92f14d03b2c50",
+  "haenv/solvers.py": "d4fad214e172717d",
+  "haenv/rows.py": "392f3666dedc34d4",
   "haenv/alias_match.py": "6eca573b1a5dd86b",
   "haenv/mount_coverage.py": "adee0ddd63fe65c6",
   "haenv/row_store.py": "a67bf0db0ecc5bef",
   "haenv/semantic_seal.py": "e711106180e81453",
   "haenv/semantic_coverage.py": "9b72c25e00984c9f",
   "haenv/rhythm.py": "da0bc8846cac9581",
-  "haenv/resume.py": "ecb589707fc938c4",
+  "haenv/resume.py": "b95a0217b432d1d5",
   "haenv/gate_tables.py": "d2679e70fe35b836",
   "haenv/gold_kinds.py": "bea0b9716924bef6",
   "haenv/separation.py": "59bcb46b0a234c10",
@@ -334,12 +334,12 @@
  },
  "infra": {
   "haenv/solver_accounting.py": "d17d235cf07c0952",
-  "haenv/paid_completion.py": "42f1b3c1e2eafb90",
+  "haenv/paid_completion.py": "77b406ffbd24ecac",
   "haenv/relay_accounting.py": "54ba6274f15f4ecd",
   "haenv/native_accounting.py": "c02c705563be8ae7",
-  "haenv/paid_slots.py": "59476ef8efe29afc",
-  "haenv/semantic_budget.py": "3bad7072744faee7",
-  "haenv/semantic_transport.py": "05617bfdb424a943",
+  "haenv/paid_slots.py": "e90798a9db53e663",
+  "haenv/semantic_budget.py": "4ff229da07bf0db0",
+  "haenv/semantic_transport.py": "c2c931fc21057e03",
   "haenv/run_scheduler.py": "3efb52495a90bd1d",
   "haenv/transport.py": "28a2eafe8420df63",
   "haenv/judge_scheduler.py": "06f4b33bbc70d001",
@@ -380,9 +380,7 @@
     "haenv/solver_accounting.py"
    ],
    "kept_n": 76
-  }
- ],
- "judging_sha_equivalence_pending": [
+  },
   {
    "old": "67dd5866790e9cb9",
    "rev": "b55d2e85",
@@ -602,6 +600,32 @@
     "_measured_tokens_per_grid",
     "billed_tokens"
    ],
+   "kind": "move"
+  }
+ ],
+ "judging_sha_equivalence_pending": [
+  {
+   "old": "a5f058bdd9de77b9",
+   "rev": "55783fa8",
+   "new": "950578a687aacc5e",
+   "new_rev": "1e6972bc",
+   "changed": {
+    "haenv/gates_shortcut.py:_SPLIT_BASE": "the shortcut check computes its split p-values in parallel, with the same values in the same order",
+    "haenv/gates_shortcut.py:_split_order": "the shortcut check computes its split p-values in parallel, with the same values in the same order",
+    "haenv/gates_shortcut.py:_split_p_of": "the shortcut check computes its split p-values in parallel, with the same values in the same order",
+    "haenv/gates_shortcut.py:check_shortcut": "the shortcut check computes its split p-values in parallel, with the same values in the same order",
+    "haenv/resume.py:OUR_SIDE_CLASSES": "resume re-sends only cells whose abort the harness side caused; a model's own result is kept",
+    "haenv/resume.py:_base": "resume re-sends only cells whose abort the harness side caused; a model's own result is kept",
+    "haenv/resume.py:_done_keys": "resume re-sends only cells whose abort the harness side caused; a model's own result is kept",
+    "haenv/resume.py:is_retryable": "resume re-sends only cells whose abort the harness side caused; a model's own result is kept",
+    "haenv/resume.py:resend_cause": "resume re-sends only cells whose abort the harness side caused; a model's own result is kept",
+    "haenv/rows.py:_row_slices": "an all-empty slices abort records the failed attempts, so resume can tell its cause",
+    "haenv/solvers.py:OpenAICompatSolver": "records the provider's generation id from the response headers, so an interrupted paid request settles by that id"
+   },
+   "move_digest": "83d78485b1ada97b",
+   "statements_old": 1143,
+   "statements_new": 1148,
+   "infra_dropped": [],
    "kind": "move"
   }
  ],

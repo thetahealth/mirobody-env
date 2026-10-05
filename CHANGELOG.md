@@ -6,6 +6,39 @@ The package version (`pyproject.toml`) versions the code. Scores are versioned s
 score row carries the judging fingerprint of the code that produced it, and boards produced under
 different fingerprints are not comparable (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [1.2.1] - 2026-10-05
+
+Boards of 1.2.0 and 1.2.1 are comparable: the 1.2.0 board, re-scored from its stored responses
+with this release, gives the same scores, intervals and pair results. The judging fingerprint
+moves (`a5f058bdd9de77b9` -> `950578a687aacc5e`) because the files it covers changed in how a run
+resumes, how a paid request settles and how the shortcut check is computed; the world
+fingerprint is unchanged.
+
+### Changed
+
+- A paid OpenRouter request records its generation id from the response headers as soon as they
+  arrive. A request cut off before its answer is saved settles at the provider's recorded cost,
+  on resume and through `haenv spend reconcile`; only a request with no id stays at its reserved
+  bound. `haenv spend reconcile` also reads in-flight markers and failed judge receipts. The cost
+  line names tariff-priced charges (Google, DashScope) as estimates.
+- The generation-time audit reads the observed labels only. Its gates compare a chance-corrected
+  score with the 0.20 line and the 0.99 quantile of label shuffles, and draw those shuffles only
+  when the score reaches the line. The permutation p readings are a profile: not computed by
+  default (`null` in the audit record, marked "not computed"), computed with `--profile` on
+  `tools/pack_audit.py` and `tools/make_pack.py`.
+- A resumed run resends only the aborts that originate on our side: harness errors, and
+  `ABORT(no_response)` / `ABORT(unparseable)` whose final failed attempt is a network, timeout,
+  5xx, 429 or key-pool failure. An empty body, broken JSON, a reply cut at `max_tokens` and an
+  exhausted tool budget count as the model's result. A cause that cannot be told from the row
+  stands as the model's result and is listed in the resume log.
+- Deterministic builds write `cases.jsonl` and `payloads.jsonl` on the generation processes, and
+  the shortcut check computes its permutation p-values in parallel; files, digests and every
+  p-value are byte-identical to a serial run.
+- The demo page: the patient builder applies the production emission gate and lists the reasons
+  when it refuses a patient, with the nearest accepted setting; the dose record is drawn; act 2
+  shows the record streams under each chart; act 3 has the overall board on its own row, a pair
+  matrix of all models, and pack ① in the model panel.
+
 ## [1.2.0] - 2026-10-04
 
 The benchmark is four task packs, each asking one clinical decision at `T`. Boards produced under

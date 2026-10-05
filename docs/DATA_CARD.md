@@ -141,7 +141,7 @@ job files are the public sample packs at `N = 50`:
 
 **Audit.** `tools/pack_audit.py` checks the emitted batch: each cell of the composition the job
 planned is present, gold re-derived from the records equals the stored gold, and question-blind
-stubs and surface features do not predict the answer. It needs `scikit-learn` and `joblib`. When
+stubs and surface features do not predict the answer. It needs `scikit-learn` and `joblib`. Permutation p readings are a profile (`--profile`), not a gate. When
 every gate passes it writes `pack.json` (the items that enter the pack) and a marker into the batch
 directory; `haenv run` refuses a pack's items without that marker. Pack ① also takes `--ref`, a
 deterministic batch of `ddx-workup`, for the cases it shares with it (the bridge items).
@@ -404,7 +404,7 @@ value is neither a score of 0 nor evidence that the track does not exist.
 
 ## Citing
 
-    HAEnv benchmark (Theta Health, 2026), v1.2.0, <pack>,
+    HAEnv benchmark (Theta Health, 2026), v1.2.1, <pack>,
     judging fingerprint <judging_sha16>, world fingerprint <world_sha16>.
 
 Both fingerprints are printed on every board and stored in each `eval.jsonl` row; the values for

@@ -358,7 +358,7 @@ uv run haenv run inputs/example-ew.job.yaml --models my-agent --limit 1 \
 ## 成本与缓存
 
 - 出题的模型输出按「模型 + 提示词」缓存在 `cases/_llm_cache/`；用同一份 job 重出题包不调用模型。
-- 评测默认断点续跑，只补发还没有回答的格子。原始回答全部落盘，判分代码改了只需重算，不必重跑被测模型。
+- 评测默认断点续跑，只补发还没有回答的格子。模型自己给出的空回答、非法 JSON、用完的工具预算都算作答，只有网络、超时、服务商 5xx/429、密钥池造成的中止才补发。原始回答全部落盘，判分代码改了只需重算，不必重跑被测模型。
 - 对已有实测依据的模型，`max_tokens` 不得低于按输出长度推出的下限。这能降低截断风险，但不能保证每次回答都在预算内完成。`batch.json` 记录出题与评测用量（`gen_usage`、`eval_usage`）：有实测值时记总量，否则显式记录状态（缺失、不适用或错误）。
 - 量级：题包的一道题是一次请求。N = 50 时跑一遍的费用（按每条题面的 token 数与拟合的服务商单价估算）：题包 ② 每个模型 $0.09–$9.55（十个 1.x 模型平均 $3.20），题包 ③ $0.09–$8.19（平均 $2.65），题包 ④ $0.09–$8.62（平均 $2.82）；题包 ②–④ 没有裁判费用。 细节与重算命令见 [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching)。
 
@@ -490,7 +490,7 @@ HAEnv 同时具备纵向病历、在 `T` 处截断的题面、先于数据确定
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.2.0}
+  version = {1.2.1}
 }
 ```
 

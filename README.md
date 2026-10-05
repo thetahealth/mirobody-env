@@ -464,7 +464,7 @@ and the failure modes.
 ## Cost and caching
 
 - Generation is cached by model and prompt in `cases/_llm_cache/`; rebuilding a pack from the same job makes no model calls.
-- A run resumes by default and sends only the cells that have no answer yet. Raw responses are stored, so a judging change is a recompute, not a re-run of the models under test.
+- A run resumes by default and sends only the cells that have no answer yet. A cell the model answered with an empty body, broken JSON or a spent tool budget counts as answered; only aborts caused by the network, a timeout, a provider 5xx or 429, or the key pool are resent. Raw responses are stored, so a judging change is a recompute, not a re-run of the models under test.
 - For models with a measured basis, `max_tokens` must clear a floor derived from their output lengths. This reduces truncation risk but does not guarantee that every answer will finish within budget. `batch.json` records generation and evaluation usage (`gen_usage`, `eval_usage`): measured totals where available, and an explicit status otherwise.
 - Scale: a pack item is one request. At N = 50 one pass costs, estimated from each prompt's token count at fitted provider prices, $0.09–$9.55 per model on pack ② (mean $3.20 over the ten 1.x models), $0.09–$8.19 on pack ③ (mean $2.65) and $0.09–$8.62 on pack ④ (mean $2.82); packs ②–④ have no judge cost. Details and the recompute command are in [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#tokens-and-caching).
 
@@ -622,7 +622,7 @@ All patients are synthetic. Nothing here is medical advice or suitable for clini
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.2.0}
+  version = {1.2.1}
 }
 ```
 

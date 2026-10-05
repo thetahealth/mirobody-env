@@ -612,6 +612,50 @@ JUDGING_SHA_MOVES: tuple[dict, ...] = (
          "registry/scoring.yaml": "content: judging v2 scoring roles; three "
                                   "`decided` values carry no document references",
      }},
+    # 1.2.0 -> the next tree: parallel shortcut p-values, resume by abort cause, settlement by
+    # generation id. No definition only moved; every change is declared.
+    {"old": "a5f058bdd9de77b9", "rev": "55783fa8", "new": "950578a687aacc5e", "new_rev": "1e6972bc",
+     "changed": {
+         # content (11)
+         "haenv/gates_shortcut.py:_SPLIT_BASE": "the shortcut check computes its "
+                                                "split p-values in parallel, with"
+                                                " the same values in the same "
+                                                "order",
+         "haenv/gates_shortcut.py:_split_order": "the shortcut check computes its"
+                                                 " split p-values in parallel, "
+                                                 "with the same values in the "
+                                                 "same order",
+         "haenv/gates_shortcut.py:_split_p_of": "the shortcut check computes its "
+                                                "split p-values in parallel, with"
+                                                " the same values in the same "
+                                                "order",
+         "haenv/gates_shortcut.py:check_shortcut": "the shortcut check computes "
+                                                   "its split p-values in "
+                                                   "parallel, with the same "
+                                                   "values in the same order",
+         "haenv/resume.py:OUR_SIDE_CLASSES": "resume re-sends only cells whose "
+                                             "abort the harness side caused; a "
+                                             "model's own result is kept",
+         "haenv/resume.py:_base": "resume re-sends only cells whose abort the "
+                                  "harness side caused; a model's own result is "
+                                  "kept",
+         "haenv/resume.py:_done_keys": "resume re-sends only cells whose abort "
+                                       "the harness side caused; a model's own "
+                                       "result is kept",
+         "haenv/resume.py:is_retryable": "resume re-sends only cells whose abort "
+                                         "the harness side caused; a model's own "
+                                         "result is kept",
+         "haenv/resume.py:resend_cause": "resume re-sends only cells whose abort "
+                                         "the harness side caused; a model's own "
+                                         "result is kept",
+         "haenv/rows.py:_row_slices": "an all-empty slices abort records the "
+                                      "failed attempts, so resume can tell its "
+                                      "cause",
+         "haenv/solvers.py:OpenAICompatSolver": "records the provider's "
+                                                "generation id from the response "
+                                                "headers, so an interrupted paid "
+                                                "request settles by that id",
+     }},
 )
 
 #: Registry yaml in neither segment, with the reason the judging segment cannot reach it.
