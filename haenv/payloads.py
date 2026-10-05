@@ -33,25 +33,34 @@ def build_pairs(built: dict) -> dict[str, tuple]:
     return out
 
 
-def save_payloads(path: Path, built: dict) -> tuple[Path, dict]:
+def _payload_line(item) -> tuple[str, str]:
+    """`(payload digest, stamped JSON Lines row)` for one `(case_id, RawCase)`."""
+    from haenv_kernel.build import build_instance                      # kernel
+    from . import canary
+    cid, raw = item
+    T = canonical_T(raw)
+    sp, vp = build_instance(raw, T)
+    rec = {"case_id": cid, "T": T, "sp": asdict(sp), "vp": asdict(vp)}
+    blob = json.dumps(rec, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(blob.encode()).hexdigest()[:16], canary.stamp_line(rec)
+
+
+def save_payloads(path: Path, built: dict, workers: int = 1) -> tuple[Path, dict]:
     """Persist `(sp, vp)` and compute a per-case fingerprint.
 
     The fingerprint covers `{case_id, T, sp, vp}` (unlike `store.digest_of`, which covers `raw`
-    only). The canary field is added after hashing, so it moves no digest.
+    only). The canary field is added after hashing, so it moves no digest. Rows are built on
+    `workers` processes and written in `built` order.
     """
-    from . import canary
+    from .build_pool import map_ordered
     path.parent.mkdir(parents=True, exist_ok=True)
     digests: dict[str, str] = {}
-    n = 0
+    lines = map_ordered(_payload_line, built.items(), workers)
     with open(path, "w", encoding="utf-8") as f:
-        for cid, (sp, vp) in build_pairs(built).items():
-            rec = {"case_id": cid, "T": canonical_T(built[cid]),
-                   "sp": asdict(sp), "vp": asdict(vp)}
-            blob = json.dumps(rec, ensure_ascii=False, separators=(",", ":"))
-            digests[cid] = hashlib.sha256(blob.encode()).hexdigest()[:16]
-            f.write(canary.stamp_line(rec) + "\n")
-            n += 1
-    log.info("[payloads] persisted %d case(s) -> %s (%.1f KB)", n, path,
+        for cid, (digest, line) in zip(built, lines):
+            digests[cid] = digest
+            f.write(line + "\n")
+    log.info("[payloads] persisted %d case(s) -> %s (%.1f KB)", len(lines), path,
              path.stat().st_size / 1024)
     return path, digests
 

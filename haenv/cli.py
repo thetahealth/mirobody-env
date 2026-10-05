@@ -661,11 +661,14 @@ def _main(argv=None) -> int:
         from . import wq as _wq
         for _m in _wq.check_injection_coverage(built):
             print(f"[haenv] iron law two: {_m}")
-        _, digests = save_cases(job.cases_file, built)
+        # Per-case serialisation runs on the generation processes; rows keep `built` order.
+        _post_workers = _n_workers if dispatch is None else 1
+        _, digests = save_cases(job.cases_file, built, workers=_post_workers)
         from .payloads import FILENAME as _PL_NAME
         from .payloads import save_payloads as _save_payloads
         try:
-            _, _pl_digests = _save_payloads(job.cases_file.parent / _PL_NAME, built)
+            _, _pl_digests = _save_payloads(job.cases_file.parent / _PL_NAME, built,
+                                            workers=_post_workers)
             print(f"[haenv] payloads persisted for {len(_pl_digests)} case(s) "
                   f"-- re-judging no longer depends on the generation code ({_PL_NAME})")
         except Exception as _e:                              # noqa: BLE001
@@ -786,7 +789,10 @@ def _main(argv=None) -> int:
         _ev_type = next(iter(_ev_types)) if len(_ev_types) == 1 else None
         _a5_unpowered_strata = 0
         _a5_kinds: dict = {}
-        for w in check_shortcut(rows, graded_targets=_graded, event_type=_ev_type):
+        from functools import partial as _partial
+        from .build_pool import map_ordered as _map_ordered
+        for w in check_shortcut(rows, graded_targets=_graded, event_type=_ev_type,
+                                p_map=_partial(_map_ordered, workers=_post_workers)):
             n_hit[w.get("class", "nonclinical")] = n_hit.get(w.get("class", "nonclinical"), 0) + 1
             _kc = _a5_kinds.setdefault(str(w.get("kind")), {})
             _kcls = str(w.get("class", "nonclinical"))

@@ -280,14 +280,24 @@ _SPLIT_ORDER_CACHE: dict = {}
 _SPLIT_ORDER_CACHE_MAX_CELLS = 4_000_000
 
 
+#: `t` -> `range(m)` sorted by `sha1(i|t)`, for the largest `m` asked so far. The key of `i`
+#: does not depend on `n`, so the order for any `n <= m` is this order without the indices
+#: `>= n`.
+_SPLIT_BASE: dict = {}
+
+
 def _split_order(n: int, t: int) -> list[int]:
     """Permutation `t` of `range(n)`: indices sorted by `sha1(i|t)`. The same for every feature
     of a tier, so it is computed once per `(n, t)`."""
     key = (n, t)
     got = _SPLIT_ORDER_CACHE.get(key)
     if got is None:
-        import hashlib as _h
-        got = sorted(range(n), key=lambda i: _h.sha1(f"{i}|{t}".encode()).hexdigest())
+        base = _SPLIT_BASE.get(t)
+        if base is None or len(base) < n:
+            import hashlib as _h
+            base = sorted(range(n), key=lambda i: _h.sha1(f"{i}|{t}".encode()).hexdigest())
+            _SPLIT_BASE[t] = base
+        got = base if len(base) == n else [i for i in base if i < n]
         if (len(_SPLIT_ORDER_CACHE) + 1) * n > _SPLIT_ORDER_CACHE_MAX_CELLS:
             _SPLIT_ORDER_CACHE.clear()
         _SPLIT_ORDER_CACHE[key] = got
@@ -415,8 +425,13 @@ def _perm_floor(cases: list, tname: str, ys: list, feat_names: list,
     return floor
 
 
+def _split_p_of(args: tuple) -> float:
+    xs, yy, f1, p_useful = args
+    return _split_p(xs, yy, f1, p_useful=p_useful)
+
+
 def check_shortcut(cases: list, graded_targets: set[str] | None = None,
-                   event_type: str | None = None) -> list[dict]:
+                   event_type: str | None = None, p_map=None) -> list[dict]:
     """A5. cases = [(case_id, features, gold_driver, outcome_label[, join_gold]), ...].
 
     For each gold category (driver values, outcome, join_gold values) x feature, fits the best
@@ -425,6 +440,9 @@ def check_shortcut(cases: list, graded_targets: set[str] | None = None,
     `graded_targets`: hits on targets outside this set get `class="ungraded"` -- reported,
     never blocked. `None` scores everything; `cli.py` exempts outcome only when every case
     carries `outcome_rule_not_applicable`.
+
+    `p_map(fn, items)` returns `[fn(x) for x in items]` in order; the permutation p-values,
+    which are independent per (target, feature), are computed through it. Default: serial.
     """
     hits: list[dict] = []
     cases = [tuple(c) + (None,) * (5 - len(c)) for c in cases]
@@ -484,6 +502,7 @@ def check_shortcut(cases: list, graded_targets: set[str] | None = None,
             _c += 1
         _n_tests[tname] = max(1, _c)
 
+    _tests = []
     for tname, ys in targets:
         for fn in feat_names:
             xs, yy = [], []
@@ -493,52 +512,56 @@ def check_shortcut(cases: list, graded_targets: set[str] | None = None,
             if len(xs) < 4 or sum(yy) < A5_MIN_CLASS or len(set(xs)) < 2:
                 continue
             f1, how = _best_single_threshold_f1(xs, yy)
-            # Baseline: predict positive for everything.
-            tp0 = sum(yy)
-            f1_major = 2 * tp0 / (2 * tp0 + (len(yy) - tp0)) if tp0 else 0.0
-            _eff_ok = not near_constant_feature(fn, xs)
-            # Candidates that are not significant are still reported. `_powered` is False when even a
-            # perfect split could not reach significance ("unmeasurable", not "clean").
-            _lift = f1 - f1_major
-            _ntest = _n_tests.get(tname, 1)
-            _p = _split_p(xs, yy, f1, p_useful=A5_ALPHA / max(1, _ntest))
-            _padj = min(1.0, _p * _ntest)
-            from math import comb as _comb
-            _kk = sum(1 for y in yy if y)
-            _pmin = min(1.0, (2.0 / _comb(len(yy), _kk)) * _ntest) if 0 < _kk < len(yy) else 1.0
-            _powered = _pmin <= A5_ALPHA
-            _sig = _padj <= A5_ALPHA
-            _cand = f1 >= max(A5_F1, f1_major + A5_MARGIN_OVER_MAJORITY) and _eff_ok
-            cls = classify_shortcut(tname, fn, event_type=event_type)
-            if graded_targets is not None and _target_key(tname) not in graded_targets:
-                cls = "ungraded"
-            if _cand and not _sig:
-                # Not significant: reported with class "chance", which never blocks.
-                hits.append({
-                    "kind": "shortcut_not_significant", "severity": "info",
-                    "class": "chance", "target": tname, "feature": fn,
-                    "f1": round(f1, 3), "powered": _powered, "p_adj": round(_padj, 5),
-                    "detail": (f"[{cls}·not significant] {tname} is solved by `{fn}` to F1={round(f1, 3)}"
-                               f"({how})· p={_p:.2e} × {_ntest} tests = {_padj:.3f} > α={A5_ALPHA}"
-                               f"(n={len(xs)}, positives {sum(yy)}) -- "
-                               + (f"this tier has no power: even a perfect split would, after correction, reach only "
-                                  f"{_pmin:.3f} at best => recorded as \"unpowered\", not read as \"no shortcut\""
-                                  if not _powered else "indistinguishable from what shuffled labels can already achieve"))})
-            if _cand and _sig:
-                # A clinical feature solving the question to F1 >= 0.95 is reported as "too easy".
-                if cls == "clinical" and f1 >= 0.95:
-                    hits.append({"kind": "shortcut_clinical_saturated", "severity": "warn",
-                                 "class": "clinical", "target": tname, "feature": fn,
-                                 "f1": round(f1, 3),
-                                 "detail": f"[clinical·saturated] {tname} can be solved by a single clinical feature "
-                                           f"`{fn}` to F1={round(f1, 3)}({how}) -- "
-                                           f"legitimate but too easy: this question needs no cross-time synthesis"})
-                hits.append({"kind": "shortcut_solvable", "severity": A5_SEVERITY,
-                             "class": cls,          # clinical = reported, not blocked / nonclinical = rejects emission
-                             "target": tname, "feature": fn, "f1": round(f1, 3),
-                             "detail": f"[{cls}] {tname} can be solved by the single feature `{fn}`: {how} · F1={round(f1, 3)}"
-                                       f"(n={len(xs)}, positives {sum(yy)}, "
-                                       f"predict-all-positive baseline F1={round(f1_major, 3)})"})
+            _tests.append((tname, fn, xs, yy, f1, how))
+    _p_args = [(xs, yy, f1, A5_ALPHA / max(1, _n_tests.get(tname, 1)))
+               for tname, _, xs, yy, f1, _ in _tests]
+    _ps = (p_map or (lambda g, it: [g(x) for x in it]))(_split_p_of, _p_args)
+
+    for (tname, fn, xs, yy, f1, how), _p in zip(_tests, _ps):
+        # Baseline: predict positive for everything.
+        tp0 = sum(yy)
+        f1_major = 2 * tp0 / (2 * tp0 + (len(yy) - tp0)) if tp0 else 0.0
+        _eff_ok = not near_constant_feature(fn, xs)
+        # Candidates that are not significant are still reported. `_powered` is False when even a
+        # perfect split could not reach significance ("unmeasurable", not "clean").
+        _ntest = _n_tests.get(tname, 1)
+        _padj = min(1.0, _p * _ntest)
+        from math import comb as _comb
+        _kk = sum(1 for y in yy if y)
+        _pmin = min(1.0, (2.0 / _comb(len(yy), _kk)) * _ntest) if 0 < _kk < len(yy) else 1.0
+        _powered = _pmin <= A5_ALPHA
+        _sig = _padj <= A5_ALPHA
+        _cand = f1 >= max(A5_F1, f1_major + A5_MARGIN_OVER_MAJORITY) and _eff_ok
+        cls = classify_shortcut(tname, fn, event_type=event_type)
+        if graded_targets is not None and _target_key(tname) not in graded_targets:
+            cls = "ungraded"
+        if _cand and not _sig:
+            # Not significant: reported with class "chance", which never blocks.
+            hits.append({
+                "kind": "shortcut_not_significant", "severity": "info",
+                "class": "chance", "target": tname, "feature": fn,
+                "f1": round(f1, 3), "powered": _powered, "p_adj": round(_padj, 5),
+                "detail": (f"[{cls}·not significant] {tname} is solved by `{fn}` to F1={round(f1, 3)}"
+                           f"({how})· p={_p:.2e} × {_ntest} tests = {_padj:.3f} > α={A5_ALPHA}"
+                           f"(n={len(xs)}, positives {sum(yy)}) -- "
+                           + (f"this tier has no power: even a perfect split would, after correction, reach only "
+                              f"{_pmin:.3f} at best => recorded as \"unpowered\", not read as \"no shortcut\""
+                              if not _powered else "indistinguishable from what shuffled labels can already achieve"))})
+        if _cand and _sig:
+            # A clinical feature solving the question to F1 >= 0.95 is reported as "too easy".
+            if cls == "clinical" and f1 >= 0.95:
+                hits.append({"kind": "shortcut_clinical_saturated", "severity": "warn",
+                             "class": "clinical", "target": tname, "feature": fn,
+                             "f1": round(f1, 3),
+                             "detail": f"[clinical·saturated] {tname} can be solved by a single clinical feature "
+                                       f"`{fn}` to F1={round(f1, 3)}({how}) -- "
+                                       f"legitimate but too easy: this question needs no cross-time synthesis"})
+            hits.append({"kind": "shortcut_solvable", "severity": A5_SEVERITY,
+                         "class": cls,          # clinical = reported, not blocked / nonclinical = rejects emission
+                         "target": tname, "feature": fn, "f1": round(f1, 3),
+                         "detail": f"[{cls}] {tname} can be solved by the single feature `{fn}`: {how} · F1={round(f1, 3)}"
+                                   f"(n={len(xs)}, positives {sum(yy)}, "
+                                   f"predict-all-positive baseline F1={round(f1_major, 3)})"})
     return hits
 
 

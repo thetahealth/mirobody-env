@@ -20,25 +20,35 @@ from haenv_kernel.schema import RawCase          # kernel
 log = logging.getLogger("haenv.store")
 
 
-def save_cases(path: Path, built: dict[str, RawCase]) -> tuple[Path, dict]:
+def _case_line(item) -> tuple[str, str]:
+    """`(world digest, stamped JSON Lines row)` for one `(case_id, RawCase)`."""
+    from . import canary, wq
+    cid, raw = item
+    case = asdict(raw)
+    world = json.dumps({"case_id": cid, "case": case},
+                       ensure_ascii=False, separators=(",", ":"))
+    return (hashlib.sha256(world.encode()).hexdigest()[:16],
+            canary.stamp_line({"case_id": cid, "case": case,
+                               "question": {"injected_manifest":
+                                            wq.injected_manifest(cid, required=False)}}))
+
+
+def save_cases(path: Path, built: dict[str, RawCase], workers: int = 1) -> tuple[Path, dict]:
     """Persist the cases and return per-case sha256 digests (recorded in batch.json).
 
     Each line is `{case_id, case, question}`: `case` is the world W, `question` the Q-side
     injection ledger (see `wq`). The digest covers `{case_id, case}` only, so it answers
     "did the world change". The canary field is added after hashing and moves no digest.
+    Rows are serialised on `workers` processes and written in `built` order.
     """
-    from . import canary, wq
+    from .build_pool import map_ordered
     path.parent.mkdir(parents=True, exist_ok=True)
     digests: dict[str, str] = {}
+    lines = map_ordered(_case_line, built.items(), workers)
     with open(path, "w", encoding="utf-8") as f:
-        for cid, raw in built.items():
-            world = json.dumps({"case_id": cid, "case": asdict(raw)},
-                               ensure_ascii=False, separators=(",", ":"))
-            digests[cid] = hashlib.sha256(world.encode()).hexdigest()[:16]
-            f.write(canary.stamp_line({
-                "case_id": cid, "case": asdict(raw),
-                "question": {"injected_manifest":
-                             wq.injected_manifest(cid, required=False)}}) + "\n")
+        for cid, (digest, line) in zip(built, lines):
+            digests[cid] = digest
+            f.write(line + "\n")
     log.info("[store] persisted %d case(s) -> %s (%.1f KB)", len(built), path,
              path.stat().st_size / 1024)
     return path, digests

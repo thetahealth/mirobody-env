@@ -1,9 +1,10 @@
-"""Deterministic case generation on forked worker processes.
+"""Deterministic case generation, and the per-item stages after it, on forked worker processes.
 
 Each case's world is seeded by its own `case_id`, so cases build independently. Results come
 back in input order, and the parent re-registers each case's Q-side injection ledger (`wq`),
 the one piece of per-case module state that later stages read, so the batch is byte-identical
-to a serial build.
+to a serial build. `map_ordered` runs any pure per-item function the same way: the fork
+inherits the parent's state at the call, and results return in input order.
 """
 from __future__ import annotations
 
@@ -59,3 +60,26 @@ def build_all(cases: list, build, workers: int) -> list[tuple]:
             wq.register_injection(k, v)
         results.append((cs, ra, None if err is None else _child_error(*err)))
     return results
+
+
+def _map_one(i: int):
+    return _CTX["map_fn"](_CTX["map_items"][i])
+
+
+def map_ordered(fn, items, workers: int, chunksize: int = 1) -> list:
+    """`[fn(x) for x in items]`, on `workers` forked processes when `workers > 1`.
+
+    `fn` runs in a child forked at this call, so it sees the parent's module state as it is
+    now; any state it changes stays in the child. Results come back in input order. An
+    exception in `fn` is raised in the parent.
+    """
+    items = list(items)
+    if workers <= 1 or len(items) <= 1:
+        return [fn(x) for x in items]
+    _CTX.update(map_fn=fn, map_items=items)
+    try:
+        with _mp.get_context("fork").Pool(processes=min(workers, len(items))) as pool:
+            return list(pool.imap(_map_one, range(len(items)), chunksize=chunksize))
+    finally:
+        _CTX.pop("map_fn", None)
+        _CTX.pop("map_items", None)
