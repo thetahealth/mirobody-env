@@ -72,6 +72,7 @@ class Info:
     receipt: Path | None = None
     failed: Path | None = None
     failure: dict | None = None     # parsed .failed.json
+    inflight_id: str | None = None  # generation id from the in-flight marker
     source: str = "none"            # tags | receipt | failed | lock | id-prefix
 
     @property
@@ -124,11 +125,15 @@ def scan_batch(batch: Path, index: dict, locks: dict, cells: dict) -> BatchScan:
     meta = _load(batch / "batch.json") or {}
     scan.models = list(meta.get("models") or [])
     solver_dir = batch / "solver-accounting" / "receipts"
+    markers: list[str] = []
     if solver_dir.is_dir():
         for entry in os.scandir(solver_dir):
             name = entry.name
             if name.endswith(".lock"):
                 locks[name[:-5]] = scan.name
+                continue
+            if name.endswith(".inflight.json"):
+                markers.append(entry.path)
                 continue
             if name.endswith(".billing.json") or not name.endswith(".json"):
                 continue
@@ -159,17 +164,42 @@ def scan_batch(batch: Path, index: dict, locks: dict, cells: dict) -> BatchScan:
                 cells[cell] = (scan.name, backend, model, provider)
     for rdir in sorted(batch.glob("semantic*/**/receipts")):
         for entry in os.scandir(rdir):
+            if entry.name.endswith(".inflight.json"):
+                markers.append(entry.path)
+                continue
             if not entry.name.endswith(".json") or entry.name.endswith(".billing.json"):
                 continue
             data = _load(Path(entry.path))
             request = (data or {}).get("request") or {}
             rid = request.get("sample_id")
-            if not rid or rid in index:
+            if not rid:
                 continue
-            index[rid] = Info(batch=scan.name, kind="judge", backend=JUDGE_BACKEND,
-                              model=request.get("model") or UNATTRIBUTED,
-                              receipt=Path(entry.path), source="receipt")
+            if entry.name.endswith(".failed.json"):      # a failed attempt: its id, not an answer
+                info = index.get(rid) or Info(batch=scan.name, kind="judge", backend=JUDGE_BACKEND,
+                                              model=request.get("model") or UNATTRIBUTED, source="failed")
+                info.failed, info.failure = Path(entry.path), data
+                index[rid] = info
+                continue
+            if rid in index and index[rid].receipt is not None:
+                continue
+            info = index.get(rid) or Info()
+            info.batch, info.kind, info.backend = scan.name, "judge", JUDGE_BACKEND
+            info.model = request.get("model") or UNATTRIBUTED
+            info.receipt, info.source = Path(entry.path), "receipt"
+            index[rid] = info
             scan.n_receipts += 1
+    for path in markers:                       # the id a killed request left before its answer
+        marker = _load(Path(path)) or {}
+        rid, gid = marker.get("request_id"), marker.get("generation_id")
+        if not rid or not isinstance(gid, str):
+            continue
+        info = index.get(rid)
+        if info is None:
+            info = index[rid] = Info(batch=scan.name, backend=marker.get("backend") or UNATTRIBUTED,
+                                     kind="solver" if rid.startswith("solver:") else "judge")
+            if info.kind == "judge":
+                info.backend = JUDGE_BACKEND
+        info.inflight_id = gid
     return scan
 
 
@@ -205,7 +235,8 @@ def attribute(rid: str, rec: dict, index: dict) -> Info:
                     provider=(base.provider if base else None),
                     key=str(tags["key_ordinal"]) if tags.get("key_ordinal") is not None else "-",
                     receipt=base.receipt if base else None, failed=base.failed if base else None,
-                    failure=base.failure if base else None, source="tags")
+                    failure=base.failure if base else None,
+                    inflight_id=base.inflight_id if base else None, source="tags")
         if tags.get("route") and "/" in str(tags["route"]):
             info.provider = str(tags["route"]).split("/", 1)[1]
         return info
@@ -573,6 +604,7 @@ class Action:
     reason: str = ""
     model: str = ""
     batch: str = ""
+    status: str = "unknown_capped"     # the ledger status the action starts from
 
 
 class GenerationLookup:
@@ -604,9 +636,20 @@ class GenerationLookup:
         return (404 if misses == self.attempts else 0), b""
 
 
+def _receipt_cost(info: Info):
+    """`usage.cost` of the saved completion (the provider's own charge), or None."""
+    saved = _load(info.receipt) if info.receipt is not None else None
+    resp = (saved or {}).get("response")
+    usage = resp.get("usage") if isinstance(resp, dict) else None
+    cost = usage.get("cost") if isinstance(usage, dict) else None
+    return _dec(cost) if isinstance(cost, (int, float)) and not isinstance(cost, bool) else None
+
+
 def _generation_id(info: Info) -> tuple[str | None, str]:
     if info.failure and info.failure.get("generation_id"):
         return info.failure["generation_id"], "failed.json"
+    if info.inflight_id:
+        return info.inflight_id, "inflight marker"
     if info.receipt is not None and info.backend == "openrouter":
         saved = _load(info.receipt) or {}
         resp = saved.get("response")
@@ -617,15 +660,28 @@ def _generation_id(info: Info) -> tuple[str | None, str]:
     return None, ""
 
 
-def plan_reconcile(state: dict, index: dict, lookup=None, *, key_usage_evidence=None) -> list[Action]:
-    """One Action per unknown_capped entry: settle only with evidence, else skip; over bound -> refuse."""
+def plan_reconcile(state: dict, index: dict, lookup=None, *, key_usage_evidence=None,
+                   include_reserved=False) -> list[Action]:
+    """One Action per unknown_capped entry: settle only with evidence, else skip; over bound -> refuse.
+
+    `include_reserved`: also plan the entries still `reserved`, which belong to requests that
+    ended without settling. Pass it only while no paid request is live on the ledger.
+    """
     actions = []
     for rid, rec in state["requests"].items():
-        if rec["status"] != "unknown_capped":
+        if rec["status"] != "unknown_capped" and not (include_reserved and rec["status"] == "reserved"):
             continue
         info = attribute(rid, rec, index)
         bound = _dec(rec["reserved_usd"])
-        base = dict(request_id=rid, bound_usd=bound, model=info.model, batch=info.batch)
+        base = dict(request_id=rid, bound_usd=bound, model=info.model, batch=info.batch,
+                    status=rec["status"])
+        # 0. the saved completion carries the provider's own charge (usage.cost)
+        if rec["status"] == "reserved" and (cost := _receipt_cost(info)) is not None:
+            dec = "refuse_over_bound" if cost > bound else "settle"
+            actions.append(Action(**base, decision=dec, actual_usd=cost, kind="receipt_usage_cost",
+                                  reason="saved completion with usage.cost",
+                                  evidence=f"usage.cost={cost} in {info.receipt.name}"))
+            continue
         # 1. OpenRouter generation record
         gid, where = _generation_id(info)
         if gid and info.backend == "openrouter" and lookup is not None:
@@ -673,6 +729,17 @@ def apply_reconcile(actions: list[Action], ledger_path: Path, evidence_dir: Path
     evidence_dir.mkdir(parents=True, exist_ok=True)
     done, refused = [], []
     for a in actions:
+        if a.status == "reserved":
+            if a.kind == "receipt_usage_cost" and a.decision in ("settle", "refuse_over_bound"):
+                try:
+                    led.settle(a.request_id, str(a.actual_usd))
+                except BudgetExceeded:
+                    pass                                   # over the bound: halt is set on the ledger
+                (done if a.decision == "settle" else refused).append(a.request_id)
+                continue
+            if a.decision == "skip":
+                continue                                   # no evidence: the entry stays as recorded
+            led.record_unknown(a.request_id, reason="reserved_without_durable_receipt")
         if a.decision == "refuse_over_bound":
             # Evidence of a charge above the bound: book the actual charge (never keep the lower
             # bound) and halt, exactly as `settle` / `settle_unknown_later` do.
@@ -792,7 +859,12 @@ def main(argv=None) -> int:
         if not args.no_network and os.environ.get("OPENROUTER_API_KEY"):
             lookup = GenerationLookup(os.environ["OPENROUTER_API_KEY"],
                                       os.environ.get("HAENV_OPENROUTER_PROXY") or os.environ.get("https_proxy"))
-        actions = plan_reconcile(state, index, lookup)
+        from .paid_slots import requests_in_flight
+        live = requests_in_flight(args.ledger)
+        actions = plan_reconcile(state, index, lookup, include_reserved=not live)
+        if live:
+            print("a paid request is live on this ledger: entries still `reserved` are left alone",
+                  file=sys.stderr)
         applied = None
         if args.apply:
             if args.evidence_dir is None:

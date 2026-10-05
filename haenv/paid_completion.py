@@ -18,8 +18,21 @@ from .semantic_budget import BudgetExceeded, _amount
 _INFLIGHT = threading.local()
 
 
+def begin_inflight(path: Path, **fields) -> dict:
+    """Mark the request this thread is about to send; `note_generation` fills in its id."""
+    marker = {"path": Path(path), **fields, "generation_id": None}
+    _INFLIGHT.marker = marker
+    return marker
+
+
+def end_inflight() -> dict | None:
+    """Clear this thread's marker and return it."""
+    marker, _INFLIGHT.marker = getattr(_INFLIGHT, "marker", None), None
+    return marker
+
+
 def note_generation(generation_id) -> None:
-    """Called by a transport as soon as the provider's generation id is known (first SSE chunk).
+    """Called by a transport as soon as the provider's generation id is known (response header).
 
     Writes `<receipt>.inflight.json` so a request killed mid-stream can still be settled
     from the provider's generation record. Never raises into the transport.
@@ -32,6 +45,62 @@ def note_generation(generation_id) -> None:
         AccountedCompletion._persist(marker["path"], {k: v for k, v in marker.items() if k != "path"})
     except OSError:
         pass
+
+
+def generation_id_on_disk(receipt: Path) -> tuple[str, str] | None:
+    """(provider generation id, where it was recorded) of a request, or None.
+
+    Sources in order: the in-flight marker, the failed-attempt receipt, the saved completion.
+    """
+    for suffix, label in ((".inflight.json", "inflight marker"), (".failed.json", "failed receipt"),
+                          (".json", "completion receipt")):
+        try:
+            saved = json.loads(receipt.with_suffix(suffix).read_text())
+        except (OSError, ValueError):
+            continue
+        if suffix == ".json":
+            saved = saved.get("response") if isinstance(saved, dict) else None
+            saved = {"generation_id": (saved.get("_generation_id") or saved.get("id"))
+                     if isinstance(saved, dict) else None}
+        gid = saved.get("generation_id") if isinstance(saved, dict) else None
+        if isinstance(gid, str) and gid:
+            return gid, label
+    return None
+
+
+def settle_by_generation(ledger, request_id: str, receipt: Path, lookup) -> bool:
+    """Replace an interrupted request's counted bound by the provider's generation record.
+
+    The id comes from disk (`generation_id_on_disk`); `lookup(id)` is the OpenRouter record
+    reader. The provider publishes a record about a minute after the request, so call this on
+    resume or at close-out, not right after a failure. Returns True once the request is settled
+    at the recorded charge. Without an id, a
+    lookup or a record the request stays at its bound. A charge above the bound halts the
+    ledger (`BudgetExceeded`), as every settlement does.
+    """
+    if lookup is None:
+        return False
+    found = generation_id_on_disk(receipt)
+    record = ledger.record(request_id)
+    if found is None or record is None or record["status"] not in ("reserved", "unknown", "unknown_capped"):
+        return False
+    gid, where = found
+    try:
+        bill = lookup(gid)
+    except ValueError:
+        return False
+    if bill.get("generation_id") != gid or bill.get("actual_usd") is None:
+        return False
+    bill_path = receipt.with_suffix(".generation.json")
+    raw = json.dumps(bill, ensure_ascii=False, sort_keys=True)
+    persist_json(bill_path, bill)
+    if record["status"] != "unknown_capped":
+        ledger.record_unknown(request_id, reason="reserved_without_durable_receipt")
+    ledger.settle_unknown_later(
+        request_id, str(bill["actual_usd"]),
+        evidence=f"openrouter generation record id={gid} (from {where}); file={bill_path}; "
+                 f"sha256={hashlib.sha256(raw.encode()).hexdigest()}")
+    return True
 
 
 def is_quota_exhausted(evidence: dict) -> bool:
@@ -409,11 +478,15 @@ class AccountedCompletion:
                     raise ReconciledRequestFailure("Failed attempt settled afterwards; not reissued")
                 if prior["status"] in ("reserved", "unknown"):
                     # This process holds the same-id lock, so the issuing attempt has
-                    # ended without a durable answer: count it at its bound, move on.
-                    self.ledger.record_unknown(request_id, reason=(
-                        "reserved_without_durable_receipt" if prior["status"] == "reserved"
-                        else "legacy_unknown_carried"))
+                    # ended without a durable answer: settle it from its generation id,
+                    # or count it at its bound, and move on.
+                    if not settle_by_generation(self.ledger, request_id, receipt, self.generation_lookup):
+                        self.ledger.record_unknown(request_id, reason=(
+                            "reserved_without_durable_receipt" if prior["status"] == "reserved"
+                            else "legacy_unknown_carried"))
                     prior = {**prior, "status": "unknown_capped"}
+                elif prior["status"] == "unknown_capped":
+                    settle_by_generation(self.ledger, request_id, receipt, self.generation_lookup)
                 if prior["status"] == "unknown_capped":
                     raise ReconciledRequestFailure("Failed attempt with unknown cost; not reissued")
                 raise BudgetExceeded("A settled request has no durable receipt; do not reissue")
@@ -425,7 +498,9 @@ class AccountedCompletion:
                 prior = {**prior, "status": "unknown_capped"}
             if prior["status"] == "unknown_capped":
                 # Saved answer whose missing charge was closed at its full bound: replay
-                # it (the caller validates it as before); never settle or re-buy it.
+                # it (the caller validates it as before), settle the charge from the
+                # provider's record when it has one; never re-buy it.
+                settle_by_generation(self.ledger, request_id, receipt, self.generation_lookup)
                 return saved["response"]
             if prior["status"] not in ("reserved", "settled", "tariff_capped"):
                 raise BudgetExceeded("Unknown request cost needs explicit reconciliation")
@@ -450,9 +525,8 @@ class AccountedCompletion:
                 except Exception:  # noqa: BLE001 -- no before-reading => no $0 settlement later
                     usage_before = None
             inflight = receipt.with_suffix(".inflight.json")
-            _INFLIGHT.marker = {"path": inflight, "request_id": identity["request_id"],
-                                "backend": self.backend, "started_at": started_at,
-                                "generation_id": None, **meta}
+            begin_inflight(inflight, request_id=identity["request_id"], backend=self.backend,
+                           started_at=started_at, **meta)
             try:
                 response = dispatch(prompt)
                 from .transport import served_of
@@ -462,10 +536,10 @@ class AccountedCompletion:
                                         **({"cell": cell} if cell else {}),
                                         "served": served_of(response),
                                         **({"attempt": meta} if meta else {})})
-                _INFLIGHT.marker = None
+                end_inflight()
                 inflight.unlink(missing_ok=True)
             except Exception as error:
-                marker, _INFLIGHT.marker = _INFLIGHT.marker, None
+                marker = end_inflight()
                 # Exception class, timing and transport evidence; the message itself is never
                 # stored (it can carry keys/URLs), the error body only redacted and truncated.
                 evidence = wire_evidence(error)

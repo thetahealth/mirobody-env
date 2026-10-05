@@ -642,11 +642,12 @@ class BudgetLedger:
                     "tariff_bound_usd": str(q(5)), "settled_usd": str(q(1))}
 
 def cost_summary(snapshot: dict) -> str:
-    """"paid $X + N unknown (counted at bound $Y)", plus tariff bounds and in-flight holds."""
+    """"paid $X + N unknown (counted at bound $Y)", plus tariff estimates and in-flight holds."""
     text = (f"paid ${snapshot['settled_usd']} + {snapshot['unknown_capped_n']} unknown "
             f"(counted at bound ${snapshot['unknown_capped_usd']})")
     if snapshot.get("tariff_capped_n"):
-        text += f" + {snapshot['tariff_capped_n']} tariff-bounded (${snapshot['tariff_bound_usd']})"
+        text += (f" + {snapshot['tariff_capped_n']} tariff-estimated "
+                 f"(${snapshot['tariff_bound_usd']}, response tokens x published price)")
     if Decimal(snapshot.get("in_flight_usd", "0")):
         text += f" + in flight ${snapshot['in_flight_usd']}"
     return text + f"; committed ${snapshot['committed_usd']} of ${snapshot['limit_usd']}"

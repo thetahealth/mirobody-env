@@ -11,6 +11,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 
+from .paid_completion import begin_inflight, end_inflight, unbilled_rejection, wire_evidence
 from .semantic_budget import BudgetExceeded, BudgetLedger
 from .semantic_judge import JudgeReply, JudgeRequest, reply_from_response
 
@@ -221,7 +222,8 @@ class PricedJudge:
                     raise RejectedCallFailure("HTTP error before generation, settled at $0 (replayed)")
                 if prior["status"] in ("reserved", "unknown"):
                     # The issuing attempt ended without a durable answer (the run lock
-                    # excludes a live one): count it at its bound, never re-buy it.
+                    # excludes a live one): count it at its bound, never re-buy it. Its
+                    # in-flight marker keeps the generation id for `haenv spend reconcile`.
                     self.ledger.record_unknown(request.sample_id, reason=(
                         "reserved_without_durable_receipt" if prior["status"] == "reserved"
                         else "legacy_unknown_carried"))
@@ -240,6 +242,10 @@ class PricedJudge:
             self.ledger.reserve(request.sample_id, str(bound))
             started = time.perf_counter()
             started_at = datetime.now(timezone.utc).isoformat()
+            inflight = receipt.with_suffix(".inflight.json") if receipt is not None else None
+            if inflight is not None:
+                begin_inflight(inflight, request_id=request.sample_id,
+                               backend=getattr(self.solver, "backend", None), started_at=started_at)
             try:
                 self.solver.response_format = request.response_format
                 response = self.solver._post(request.prompt)
@@ -256,9 +262,13 @@ class PricedJudge:
                         file.flush()
                         os.fsync(file.fileno())
                     os.replace(file.name, receipt)
+                    end_inflight()
+                    inflight.unlink(missing_ok=True)
             except Exception as error:
-                from .paid_completion import unbilled_rejection, wire_evidence
+                marker = end_inflight()
                 evidence = wire_evidence(error)
+                if evidence.get("generation_id") is None and (marker or {}).get("generation_id"):
+                    evidence["generation_id"] = marker["generation_id"]
                 zero = unbilled_rejection(getattr(self.solver, "backend", ""), evidence)
                 if receipt is not None:
                     try:
@@ -275,6 +285,8 @@ class PricedJudge:
                     raise RejectedCallFailure(
                         f"HTTP {zero['http_status']} before generation; settled at $0") from None
                 self.ledger.record_unknown(request.sample_id, reason="dispatch_failed_no_receipt")
+                if receipt is not None:
+                    inflight.unlink(missing_ok=True)
                 # Class name only: exception text can carry backend URLs or keys.
                 raise UnknownCostCallFailure(
                     f"{type(error).__name__}; call failed, cost counted at its bound") from None

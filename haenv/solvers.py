@@ -443,6 +443,13 @@ class OpenAICompatSolver(Solver):
                 with _stall_guard(self) as _stall, \
                         urllib.request.urlopen(req, timeout=self.timeout) as r:
                     wire["http_status"], wire["response_started"] = getattr(r, "status", None), True
+                    # OpenRouter names the generation in a response header, before any body byte:
+                    # a request cut at any later point can still be settled from its record.
+                    _gid = getattr(getattr(r, "headers", None), "get", lambda _k: None)("X-Generation-Id")
+                    if isinstance(_gid, str) and _gid:
+                        from .paid_completion import note_generation
+                        wire["generation_id"] = _gid
+                        note_generation(_gid)
                     r = _stall.attach(r)
                     accounted = getattr(self, "_accounting", None) is not None
                     if self.stream:

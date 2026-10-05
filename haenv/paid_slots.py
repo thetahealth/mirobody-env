@@ -81,6 +81,21 @@ def current_limits(ledger_path: Path) -> tuple[int, int]:
     return limit, min(JUDGE_RESERVED_LANES, limit - 1)
 
 
+def requests_in_flight(ledger_path: Path) -> bool:
+    """True while any process holds a request slot of this ledger (a paid request is live)."""
+    root = Path(ledger_path).resolve().with_suffix(Path(ledger_path).suffix + ".slots")
+    for path in root.glob("*.lock"):                  # read only: a missing directory means no slot was ever taken
+        if path.name == "capacity.lock":
+            continue
+        with path.open("a") as file:
+            try:
+                fcntl.flock(file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return True
+            fcntl.flock(file.fileno(), fcntl.LOCK_UN)
+    return False
+
+
 @contextmanager
 def request_slot(ledger_path: Path, *, limit: int | None = None, lanes: int | None = None,
                  role: str = "any", poll_s: float = .05):
