@@ -16,6 +16,7 @@
 | One declaration per lab indicator (`registry/indicators.yaml`) | [`design/indicator-dossier.md`](design/indicator-dossier.md) |
 | Adding an LLM-based judge as a plugin | [`design/llm-judge-plugin.md`](design/llm-judge-plugin.md) |
 | Plugging in an external task type (gold, prompt, probe) | [`design/external-task-contract.md`](design/external-task-contract.md) |
+| Combining synthesis capabilities and verification across tasks | [Multi-task synthesis](MULTI_TASK_SYNTHESIS.md) · [中文](MULTI_TASK_SYNTHESIS.zh-CN.md) |
 | Driving the pipeline from a conversation (three skills) | [`../skills/`](../skills) |
 | Terms used throughout the code and documents | [`design/glossary.md`](design/glossary.md) |
 

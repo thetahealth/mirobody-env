@@ -107,7 +107,7 @@ uv run --with scikit-learn --with joblib python tools/make_pack.py --pack p4 --n
 
 规格通过出题闸门才会成为病例。题包、病例数和已知缺口见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md)。
 
-**一条流水线，多个任务。** 一个任务 = 一种金标形状 + 一份作答契约。各题包的病人由同一个世界渲染、过同一道逐项校验的出题闸门，每个题包把自己的金标与计分登记为一个判据组。自己加一个任务类型不需要改本仓，而是一个仓外的包：见[评测你自己的 agent](#评测你自己的-agent) 与 [`docs/design/external-task-contract.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md)。
+**跨任务合成与验证。** 新任务可以组合已有的病人时间线、噪声和事件密度控制，定义自己的金标与作答契约，并在评测前复用适用的公共校验、补充任务专属验证。[罕见病案例](https://github.com/thetahealth/mirobody-env/blob/main/docs/MULTI_TASK_SYNTHESIS.zh-CN.md)展示了如何通过 `haenv-synth` 与 `haenv-extend`，将这些能力用于表型编码和遗传附件。
 
 **语言。** 题面与病例内容为中文：指令部分，以及病历中的自由文本字段（主诉、情境、事件）。字段名、数据流名、答案枚举值与各类编号为英文。
 

@@ -139,11 +139,12 @@ The bridge tracks and two smaller example tasks ship as plain job files:
 A specification becomes a case only if it passes the emission gate. The question packs, their case
 counts and the known gaps are in the [data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md).
 
-**One pipeline, several tasks.** A task is a gold-standard shape plus an answer contract. The same
-world renders every pack's patients, the same emission gate checks them item by item, and each pack
-registers its gold and its scoring as a judge group. Adding a task type of your own is a package
-outside this repository, not a change to it: [Evaluate your own agent](#evaluate-your-own-agent) and
-[`docs/design/external-task-contract.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/design/external-task-contract.md).
+**Multi-task synthesis and verification.** New tasks combine existing patient timelines,
+noise and event-density controls with their own gold standard and answer contract. They reuse
+applicable shared checks and add task-specific verification before evaluation.
+[The rare-disease example](https://github.com/thetahealth/mirobody-env/blob/main/docs/MULTI_TASK_SYNTHESIS.md)
+shows how this works with phenotype coding and genetic attachments, using `haenv-synth` and
+`haenv-extend`.
 
 **Language.** Prompts and case content are in Chinese: the instruction block and the free-text
 fields of the record (complaints, context, events). Field names, stream names, enumerated answer
