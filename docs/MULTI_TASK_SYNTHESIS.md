@@ -9,7 +9,7 @@ connect the task's gold to the evidence actually available to the agent.
 
 ## Example: rare-disease phenotype coding
 
-The [rare-disease extension](https://github.com/thetahealth/mirobody-env/tree/rare-code-bench/haenv_rare)
+The [rare-disease extension](https://github.com/thetahealth/mirobody-env/tree/rare-code-bench)
 lives on the `rare-code-bench` branch; it is not bundled in the main-branch `haenv` package.
 It asks an agent to code Human Phenotype Ontology (HPO) terms, including whether a finding is
 present or absent and whether it concerns the patient or a relative, and to identify an Orphanet
@@ -23,10 +23,8 @@ diagnosis and, where applicable, a causal gene and variant.
 | Verification | Reuses shared event filtering and sex-consistency rules; adds checks that gold terms remain in the visible record, variants can be read back from VCF files, and attachment text does not leak the answer. |
 | Evaluation | Adds coding judges through the plugin interface alongside existing task judges. |
 
-See the branch's [job generator](https://github.com/thetahealth/mirobody-env/blob/rare-code-bench/haenv_rare/haenv_rare/gen_job.py)
-for the reused profile, timeline and density functions, and its
-[phenotype generator and gates](https://github.com/thetahealth/mirobody-env/blob/rare-code-bench/haenv_rare/haenv_rare/gen.py)
-for sampling and verification.
+In that branch, `haenv_rare/haenv_rare/gen_job.py` shows the reused profile, timeline and density
+functions; `haenv_rare/haenv_rare/gen.py` contains phenotype sampling and verification gates.
 
 ## Why the checks must cover the combination
 

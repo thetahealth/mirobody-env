@@ -6,7 +6,7 @@
 
 ## 案例：罕见病表型编码
 
-[罕见病扩展](https://github.com/thetahealth/mirobody-env/tree/rare-code-bench/haenv_rare)位于 `rare-code-bench` 分支，未包含在主分支发布的 `haenv` 包中。任务要求 agent 编码人类表型本体（HPO）术语，区分阳性与阴性、患者与亲属，并给出 Orphanet 诊断；适用时还需识别致病基因与变异。
+[罕见病扩展](https://github.com/thetahealth/mirobody-env/tree/rare-code-bench)位于 `rare-code-bench` 分支，未包含在主分支发布的 `haenv` 包中。任务要求 agent 编码人类表型本体（HPO）术语，区分阳性与阴性、患者与亲属，并给出 Orphanet 诊断；适用时还需识别致病基因与变异。
 
 | 组成部分 | 案例中复用或新增的能力 |
 |---|---|
@@ -16,7 +16,7 @@
 | 验证 | 复用公共事件过滤与性别一致性规则；新增金标术语在可见记录中的可恢复性、VCF 变异读回、附件文本答案泄漏等检查。 |
 | 评测 | 通过插件接口增加编码判据，与已有任务判据共同使用。 |
 
-复用的画像、时间线和密度函数见分支中的[任务生成器](https://github.com/thetahealth/mirobody-env/blob/rare-code-bench/haenv_rare/haenv_rare/gen_job.py)；采样与验证见[表型生成器及闸门](https://github.com/thetahealth/mirobody-env/blob/rare-code-bench/haenv_rare/haenv_rare/gen.py)。
+在上述分支中，`haenv_rare/haenv_rare/gen_job.py` 展示了画像、时间线和密度函数的复用；`haenv_rare/haenv_rare/gen.py` 包含表型采样与验证闸门。
 
 ## 为什么要验证组合后的结果
 
