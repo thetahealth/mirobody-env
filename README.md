@@ -623,7 +623,7 @@ All patients are synthetic. Nothing here is medical advice or suitable for clini
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.2.1}
+  version = {1.2.2}
 }
 ```
 

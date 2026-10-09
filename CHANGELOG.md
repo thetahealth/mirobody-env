@@ -6,6 +6,20 @@ The package version (`pyproject.toml`) versions the code. Scores are versioned s
 score row carries the judging fingerprint of the code that produced it, and boards produced under
 different fingerprints are not comparable (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [1.2.2] - 2026-10-09
+
+Documentation-only release. Runtime code, dependencies, scoring and generation rules,
+frozen packs and leaderboard data are unchanged from 1.2.1.
+
+### Changed
+
+- Replace the English and Chinese README's multi-task paragraph with a concise explanation
+  of composing synthesis capabilities and applicable shared checks with task-specific verification.
+- Add a bilingual rare-disease case study covering reused components, verification failures
+  and the batch-gate exception, linked from the README and documentation index.
+- Clarify that the example lives on `rare-code-bench` and is not included in the main-branch
+  package; it uses the existing `haenv-synth` and `haenv-extend` skills.
+
 ## [1.2.1] - 2026-10-05
 
 Boards of 1.2.0 and 1.2.1 are comparable: the 1.2.0 board, re-scored from its stored responses
