@@ -72,7 +72,10 @@ _RULES: list[tuple[str, re.Pattern]] = [
                           r"|\b50[0234]\b|\b429\b|too\s*many\s*requests|rate[ _-]?limit"
                           r"|gateway\s*time-?out|bad\s*gateway"
                           r"|service\s*unavailable|connection|timed?\s*out|timeout"
-                          r"|URLError|RemoteDisconnected|IncompleteRead", re.I)),
+                          r"|URLError|RemoteDisconnected|IncompleteRead"
+                          # The HTTP response envelope itself did not parse (status 200, no body
+                          # the client could read): a transport break, not a model reply.
+                          r"|UnknownCostAttemptFailure:\s*JSONDecodeError\s+HTTP\s+200", re.I)),
     ("format", re.compile(r"JSONDecode|Expecting\s|Unterminated|Extra data"
                           r"|无法解析|取不出\s*JSON|could\s*not\s*extract\s*JSON", re.I)),
 ]
@@ -217,6 +220,8 @@ def selftest() -> int:
         # even though both can present as "answer 0 chars".
         ("ValueError: 流式响应未收到终止帧(finish_reason 缺失):作答 0 字符、推理 10217 字符、"
          "usage=有 —— 判为流被截断", "infra"),
+        ("UnknownCostAttemptFailure: JSONDecodeError HTTP 200; attempt failed, cost counted at its bound",
+         "infra"),
         ("JSONDecodeError: Expecting ',' delimiter: line 1 column 2232", "format"),
         ("JSONDecodeError: Unterminated string starting at …", "format"),
         ("some new error shape we've never seen zzz", "unknown"),
