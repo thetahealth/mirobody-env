@@ -157,6 +157,8 @@ class RequestIndex:
             rid, psha = request.get("request_id"), request.get("prompt_sha256")
             if not isinstance(rid, str) or not rid.startswith("solver:") or rid.startswith("solver:v2:"):
                 continue
+            # Resend rounds belong to the same original content address.
+            rid = rid.split(":resend:", 1)[0]
             if rid in seen and seen[rid] != psha:
                 raise RequestIndexConflict(f"Legacy request {rid} carries two different prompts")
             seen[rid] = psha
@@ -285,6 +287,10 @@ def _saved_attempt(paid: AccountedCompletion, request_id: str) -> dict | None:
     return None
 
 
+class ResendLimitReached(RuntimeError):
+    """A resume exhausted its paid failure rounds; this cell keeps an ABORT."""
+
+
 class SolverRequestAccountant:
     """One mutable request cursor per cell, never shared across solver copies.
 
@@ -303,11 +309,14 @@ class SolverRequestAccountant:
                  backoff: dict | None = None, *, sleep=None, rng=None, cell_v2: str | None = None,
                  index: RequestIndex | None = None, routes: list | None = None,
                  model: str | None = None, keys: KeyRotation | None = None,
-                 case_id: str | None = None):
+                 case_id: str | None = None, resend_failed: bool = False,
+                 max_resends: int = 2):
         import random
         import time
         self.paid, self.cell_id, self.stop = paid, cell_id, stop
         self.sequence = 0
+        self.resend_failed, self.max_resends = resend_failed, max_resends
+        self._resend_exhausted = False
         self.backoff = {**BACKOFF_DEFAULTS, **(backoff or {})}
         self._sleep, self._rng = sleep or time.sleep, rng or random.random
         self._events: list[dict] = []
@@ -337,14 +346,66 @@ class SolverRequestAccountant:
         events, self._events = self._events, []
         return events
 
-    def _next_id(self, prompt: str) -> str:
+    def _next_id(self, prompt: str, solver=None) -> str:
         if self.cell_v2 is None:
             self.sequence += 1
-            return f"solver:{self.cell_id}:{self.sequence}"
+            return self._resume_id(f"solver:{self.cell_id}:{self.sequence}", prompt, solver)
         psha = hashlib.sha256(prompt.encode()).hexdigest()
         n = self._counts.get(psha, 0) + 1
         self._counts[psha] = n
-        return self.index.get(self.cell_v2, psha, n) or v2_request_id(self.cell_v2, psha, n)
+        return self._resume_id(self.index.get(self.cell_v2, psha, n) or v2_request_id(self.cell_v2, psha, n), prompt, solver)
+
+    def _resume_id(self, base: str, prompt: str, solver) -> str:
+        from .resume import OUR_SIDE_CLASSES
+        from .run_ledger import retry_classifier
+        if self._resend_exhausted:
+            raise ResendLimitReached(f"Resend limit reached ({self.max_resends}); cell remains ABORT")
+        for round in range(self.max_resends + 1):
+            rid = base if round == 0 else f"{base}:resend:{round}"
+            route = self._route_for(rid)
+            paid = self.paid if route is None else route.paid
+            receipt = paid.receipts / (hashlib.sha256(rid.encode()).hexdigest() + ".json")
+            # An answer is always replayed, including one whose charge is still unknown.
+            if receipt.is_file():
+                return rid
+            prior = paid.ledger.record(rid)
+            failed = receipt.with_suffix(".failed.json")
+            # This ledger cannot prove a reservation was never dispatched.
+            # Preserve its bound and use a fresh identity when resuming.
+            interrupted = prior is not None
+            if not self.resend_failed or not (failed.is_file() or interrupted):
+                return rid
+            if failed.is_file():
+                evidence = json.loads(failed.read_text())
+                from .paid_completion import same_request
+                target = solver if route is None else route.solver
+                identity = {"request_id": rid, "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+                            "settings": wire_settings(target)}
+                if not same_request(evidence.get("request"), identity, paid.upstream_declared):
+                    return rid  # The normal sequence-mismatch path will step over it.
+                error = str(evidence.get("error_class", ""))
+                status = evidence.get("http_status")
+                if status is not None:
+                    error += f": HTTP Error {status}"
+                if evidence.get("transport_cut"):
+                    error += ": Connection reset by peer"
+                if retry_classifier().classify(error) not in OUR_SIDE_CLASSES:
+                    return rid
+            elif prior["status"] not in ("reserved", "unknown", "unknown_capped"):
+                return rid
+            if failed.is_file() or (prior is not None and prior["status"] in ("reserved", "unknown")):
+                from .paid_completion import ReconciledRequestFailure, RejectedBeforeGeneration
+                target = solver if route is None else route.solver
+                def refuse_dispatch(_):
+                    raise AssertionError("An interrupted request cannot be dispatched again")
+                try:
+                    paid.request(rid, prompt, wire_settings(target), refuse_dispatch)
+                except (ReconciledRequestFailure, RejectedBeforeGeneration):
+                    pass
+            if round == self.max_resends:
+                self._resend_exhausted = True
+                raise ResendLimitReached(f"Resend limit reached ({self.max_resends}); cell remains ABORT")
+        raise AssertionError("unreachable resend round")
 
     def _route_for(self, request_id: str):
         """The route an already-recorded request went out on (replay), else the active one."""
@@ -380,7 +441,7 @@ class SolverRequestAccountant:
         from . import relay_accounting
         from .transport import WireMismatch, verify_wire
         for _ in range(MAX_SEQUENCE_SKIPS + 1):
-            request_id = self._next_id(prompt)
+            request_id = self._next_id(prompt, solver)
             self.last_request_id = request_id
             route = self._route_for(request_id)
             paid, target, send, keys = self.paid, solver, dispatch, self.keys
@@ -734,6 +795,13 @@ class BatchAccounting:
         self.index = RequestIndex()
         #: solver name -> [(route name, make_solver, prices)] fallback routes after the primary
         self.fallbacks: dict[str, list] = {}
+        self.resume_rows = {}
+        rows = self.root.parent / "eval.jsonl"
+        if rows.is_file():
+            for line in rows.read_text(encoding="utf-8").split("\n"):
+                if line.strip():
+                    row = json.loads(line)
+                    self.resume_rows[row["case"], row["solver"]] = row
 
     def enable_content_keys(self, case_ids, *, legacy_roots=None) -> dict:
         """Give the batch a stable `batch_uid` and build the legacy request index once."""
@@ -823,10 +891,14 @@ class BatchAccounting:
                 alt_keys = self._keys(alt, self.ledger.path)
                 alt.pool = None
                 routes.append(Route(name, self._completion(prices, alt, solver_name), alt, alt_keys))
+        from .resume import resend_cause
+        previous = self.resume_rows.get((case_id, solver_name))
         solver._accounting = SolverRequestAccountant(
             paid, cell, self.stop, self.cfg.get("rate_limit_backoff"),
             cell_v2=None if self.batch_uid is None else cell_v2(self.batch_uid, case_id, solver_name),
-            index=self.index, routes=routes, model=solver_name, keys=keys, case_id=case_id)
+            index=self.index, routes=routes, model=solver_name, keys=keys, case_id=case_id,
+            resend_failed=previous is None or resend_cause(previous) is not None,
+            max_resends=self.cfg.get("paid", {}).get("max_resends", 2))
 
 
 def answer_settings_of(settings: dict) -> dict:

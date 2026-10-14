@@ -75,6 +75,7 @@ from . import settings
 
 
 class RuntimePaidSettings(settings.PaidSection):
+    max_resends: int = settings._f("execution", 2, ge=0, strict=True)
     catalog_cache_ttl_s: float = settings._f("execution", 3600.0, ge=0, allow_inf_nan=False)
 
 
@@ -87,11 +88,12 @@ def _validate_runtime(cfg: dict) -> dict:
     raw = dict(cfg)
     paid = raw.get("paid")
     if isinstance(paid, dict):
-        raw["paid"] = {k: v for k, v in paid.items() if k != "catalog_cache_ttl_s"}
+        raw["paid"] = {k: v for k, v in paid.items() if k not in {"catalog_cache_ttl_s", "max_resends"}}
     out = settings.validate(raw)
     try:
         validated = RuntimePaidSettings.model_validate(paid or {})
     except settings.ValidationError as error:
         raise settings.ConfigError(f"Invalid paid configuration: {error}") from None
-    out["paid"] = {**out["paid"], "catalog_cache_ttl_s": validated.catalog_cache_ttl_s}
+    out["paid"] = {**out["paid"], "catalog_cache_ttl_s": validated.catalog_cache_ttl_s,
+                   "max_resends": validated.max_resends}
     return out
