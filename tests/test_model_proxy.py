@@ -254,3 +254,26 @@ def test_paid_receipts_record_route_with_an_attempt_route(network, tmp_path, nam
     assert saved["attempt"]["route"] == "primary"
     assert len(proxy.seen) == (name == "beta")
 
+
+def test_backend_proxy_survives_loading_and_backend_registration(tmp_path, monkeypatch, network):
+    import haenv.solvers as solvers
+    url, origin, proxy, _ = network
+    (tmp_path / 'config.yaml').write_text(yaml.safe_dump({
+        'backends': {'local': {'url': url, 'key_env': 'LOCAL_KEY', 'proxy': 'direct'}},
+        'models': {'plain': {'backend': 'local', 'model': 'shared'},
+                   'override': {'backend': 'local', 'model': 'shared', 'proxy': 'env'}}}))
+    monkeypatch.setattr(config, 'ROOT', tmp_path)
+    monkeypatch.setattr(config, 'load_cfg', _CONFIG_LOADER)
+    cfg = config.load_cfg()
+    monkeypatch.setattr(solvers, 'BACKENDS', dict(solvers.BACKENDS))
+    solvers.register_backends(cfg)
+    assert 'proxy' not in cfg['backends']['local']
+    assert transport.proxy_for_model('plain', cfg=cfg) == 'direct'
+    assert transport.proxy_for_model('override', cfg=cfg) == 'env'
+    monkeypatch.setattr(config, 'load_cfg', lambda: cfg)
+    s = solver('plain', url)
+    s._post_wire('hello')
+    assert len(origin.seen) == 1 and proxy.seen == []
+
+
+_CONFIG_LOADER = config.load_cfg

@@ -283,9 +283,24 @@ def validate_proxy_config(cfg: dict, validate) -> dict:
                 except ValueError as error:
                     from .settings import ConfigError
                     raise ConfigError(f"{section}.{name}.{error}") from None
+    defaults = (raw.get("transport") or {}).pop("backend_proxies", {})
+    if not isinstance(defaults, dict):
+        from .settings import ConfigError
+        raise ConfigError("transport.backend_proxies must be a mapping")
+    for backend, value in defaults.items():
+        try:
+            routes["backends", backend] = check_proxy(value)
+        except ValueError as error:
+            from .settings import ConfigError
+            raise ConfigError(f"transport.backend_proxies.{backend}.{error}") from None
     out = validate(raw)
     for (section, name), value in routes.items():
-        out[section][name]["proxy"] = value
+        if section == "backends":
+            out.setdefault("transport", {}).setdefault("backend_proxies", {})[name] = value
+        else:
+            out[section][name]["proxy"] = value
+    for value in (out.get("transport", {}).get("backend_proxies") or {}).values():
+        check_proxy(value)
     return out
 
 
@@ -298,7 +313,7 @@ def proxy_for_model(name=None, *, backend=None, cfg=None, spec=None) -> str:
     entry = spec if spec is not None else (models.get(name, {}) if isinstance(models, dict) else {})
     backend = backend or entry.get("backend", "openrouter")
     return check_proxy(entry.get("proxy", ((cfg.get("backends") or {}).get(backend) or {})
-                                 .get("proxy", "env")))
+                                 .get("proxy", (cfg.get("transport") or {}).get("backend_proxies", {}).get(backend, "env"))))
 
 
 def proxy_for_solver(solver, cfg=None) -> str:
