@@ -609,6 +609,22 @@ def route_supported_parameters(meta: dict, pin: str | None) -> list | None:
     return meta.get("supported_parameters")
 
 
+def _read_with_retries(request, *, cfg: dict, attempts: int = 6, timeout: float = 60.0):
+    """GET a JSON `data` field, retrying with backoff: a saturated egress proxy can hold a new
+    connection past one timeout while a run's own requests are in flight. None when every
+    attempt fails."""
+    import time as _time
+    from .transport import model_urlopen
+    for attempt in range(attempts):
+        try:
+            with model_urlopen(request, cfg=cfg, timeout=timeout) as response:
+                return json.loads(response.read())["data"]
+        except Exception:
+            if attempt + 1 < attempts:
+                _time.sleep(5 * (attempt + 1))
+    return None
+
+
 def fetch_catalog(cfg: dict) -> list[dict]:
     """Free exact-model price lookup; credentials and failure URLs are not logged."""
     from .solvers import BACKENDS, _ensure_backends_registered
@@ -620,12 +636,9 @@ def fetch_catalog(cfg: dict) -> list[dict]:
         raise ValueError("OpenRouter credentials are required for solver pricing")
     url = backend["url"].rsplit("/chat/completions", 1)[0] + "/models"
     request = urllib.request.Request(url, headers={"Authorization": f"Bearer {key}"})
-    try:
-        from .transport import model_urlopen
-        with model_urlopen(request, cfg=cfg, timeout=30) as response:
-            catalog = json.loads(response.read())["data"]
-    except Exception:
-        raise ValueError("Could not verify solver price metadata; no paid calls started") from None
+    catalog = _read_with_retries(request, cfg=cfg)
+    if catalog is None:
+        raise ValueError("Could not verify solver price metadata; no paid calls started")
     if not isinstance(catalog, list):
         raise ValueError("Invalid solver model catalog")
     return catalog
