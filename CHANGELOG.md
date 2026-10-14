@@ -6,6 +6,24 @@ The package version (`pyproject.toml`) versions the code. Scores are versioned s
 score row carries the judging fingerprint of the code that produced it, and boards produced under
 different fingerprints are not comparable (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [Unreleased]
+
+### Added
+
+- Select environment proxies or direct connections per model, with backend defaults and
+  receipt-level route records.
+- Record interrupted cells, prioritize them on resume, and report recovered and pending cells.
+
+### Fixed
+
+- Retry transient price-catalog failures with backoff and share locked, expiring catalogs
+  across solver and default judge preflights in the same ledger directory.
+- Attribute an unparseable HTTP 200 response envelope to infrastructure failure.
+- Resend infrastructure failures with bounded, distinct request identities while preserving
+  earlier counted costs and replaying successful answers.
+- Read an existing ledger's budget limit when the run omits a limit, and reject mismatched
+  explicit limits before starting paid work.
+
 ## [1.2.2] - 2026-10-09
 
 Documentation-only release. Runtime code, dependencies, scoring and generation rules,
