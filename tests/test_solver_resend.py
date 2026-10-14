@@ -186,3 +186,18 @@ def test_invalid_resend_limits_are_refused(limit):
     from haenv.config import validate
     with pytest.raises(ValueError):
         validate({"paid": {"max_resends": limit}})
+
+
+def test_unparseable_http_200_envelope_can_resume_under_a_new_id(tmp_path):
+    a, s, paid = cursor(tmp_path)
+    def broken_envelope(_):
+        error = json.JSONDecodeError('synthetic empty envelope', '', 0)
+        error.haenv_wire = {'http_status': 200, 'response_started': True}
+        raise error
+    with pytest.raises(UnknownCostAttemptFailure):
+        a.request(s, 'q', broken_envelope)
+    first = a.last_request_id
+    a, s, paid = cursor(tmp_path, allowed=True)
+    a.request(s, 'q', lambda _: {'usage': {'cost': .001}})
+    assert a.last_request_id == first + ':resend:1'
+    assert paid.ledger.record(first)['status'] == 'unknown_capped'
