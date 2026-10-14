@@ -6,6 +6,8 @@ receipts. Google/Dashscope use dated tariff upper bounds, never fake USD invoice
 from __future__ import annotations
 
 import fcntl
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass
 from decimal import Decimal, InvalidOperation
 import functools
@@ -625,6 +627,32 @@ def _read_with_retries(request, *, cfg: dict, attempts: int = 6, timeout: float 
     return None
 
 
+_CATALOG_DIRECTORY = ContextVar("price_catalog_directory", default=None)
+_CATALOG_CFG = ContextVar("price_catalog_settings", default=None)
+_FETCHING_CATALOG = ContextVar("fetching_price_catalog", default=False)
+
+
+@contextmanager
+def catalog_scope(ledger_path: Path | None, cfg: dict | None = None):
+    """Use one ledger directory's catalog for solver and judge price preflights."""
+    if ledger_path is None:
+        yield
+        return
+    token = _CATALOG_DIRECTORY.set(Path(ledger_path).resolve().parent / "price-catalogs")
+    settings_token = _CATALOG_CFG.set(cfg)
+    try:
+        yield
+    finally:
+        _CATALOG_DIRECTORY.reset(token)
+        _CATALOG_CFG.reset(settings_token)
+
+
+def _catalog_for_ledger(cfg: dict, ledger_path: Path) -> list[dict]:
+    """Share price metadata within a ledger directory, keeping fetch_catalog's API."""
+    with catalog_scope(ledger_path, cfg):
+        return fetch_catalog(cfg)
+
+
 def fetch_catalog(cfg: dict) -> list[dict]:
     """Free exact-model price lookup; credentials and failure URLs are not logged."""
     from .solvers import BACKENDS, _ensure_backends_registered
@@ -636,12 +664,63 @@ def fetch_catalog(cfg: dict) -> list[dict]:
         raise ValueError("OpenRouter credentials are required for solver pricing")
     url = backend["url"].rsplit("/chat/completions", 1)[0] + "/models"
     request = urllib.request.Request(url, headers={"Authorization": f"Bearer {key}"})
-    catalog = _read_with_retries(request, cfg=cfg)
-    if catalog is None:
-        raise ValueError("Could not verify solver price metadata; no paid calls started")
-    if not isinstance(catalog, list):
-        raise ValueError("Invalid solver model catalog")
-    return catalog
+    return catalog_request(request, cfg)
+
+
+def catalog_request(request, cfg: dict) -> list[dict]:
+    """Read the raw provider catalog, sharing complete snapshots inside catalog_scope."""
+    def fetch():
+        token = _FETCHING_CATALOG.set(True)
+        try:
+            catalog = _read_with_retries(request, cfg=cfg)
+        finally:
+            _FETCHING_CATALOG.reset(token)
+        if catalog is None:
+            raise ValueError("Could not verify solver price metadata; no paid calls started")
+        if not isinstance(catalog, list) or not all(isinstance(row, dict) for row in catalog):
+            raise ValueError("Invalid solver model catalog")
+        return catalog
+    directory = _CATALOG_DIRECTORY.get()
+    if directory is None:
+        return fetch()
+    import time
+    directory.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha256(request.full_url.encode()).hexdigest()
+    cache = directory / f"{key}.json"
+    ttl = float(cfg.get("paid", {}).get("catalog_cache_ttl_s", 3600))
+    # The kernel lock serializes readers with the first fetcher across all processes.
+    # A killed fetcher releases it; only complete atomic snapshots are visible.
+    with (directory / f"{key}.lock").open("a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            saved = json.loads(cache.read_text())
+            age = time.time() - saved["fetched_at"]
+            catalog = saved["data"]
+            if (saved.get("schema") == 1 and saved.get("endpoint_sha256") == key
+                    and 0 <= age < ttl and isinstance(catalog, list)
+                    and all(isinstance(row, dict) for row in catalog)):
+                return catalog
+        except (OSError, ValueError, TypeError, KeyError):
+            pass
+        catalog = fetch()
+        AccountedCompletion._persist(cache, {"schema": 1, "endpoint_sha256": key,
+                                             "fetched_at": time.time(), "data": catalog})
+        return catalog
+
+
+def catalog_response(request):
+    """Serve a scoped catalog GET through the existing transport opener."""
+    cfg = _CATALOG_CFG.get()
+    if cfg is None or _CATALOG_DIRECTORY.get() is None or _FETCHING_CATALOG.get():
+        return None
+    import io
+    from email.message import Message
+    from urllib.response import addinfourl
+    data = json.dumps({"data": catalog_request(request, cfg)}).encode()
+    headers = Message()
+    headers['Content-Type'] = 'application/json'
+    headers['Content-Length'] = str(len(data))
+    return addinfourl(io.BytesIO(data), headers, request.full_url, 200)
 
 
 class BatchAccounting:
@@ -1117,7 +1196,7 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
                     key = f"{name}@{s.backend}"
                     if key not in route_meta:
                         if catalog is None and s.backend == "openrouter":
-                            catalog = fetch_catalog(cfg)
+                            catalog = _catalog_for_ledger(cfg, ledger_path)
                         route_meta[key] = _route_metadata(cfg, s, name, catalog)
                         route_changes.append({"solver": name, "from": was, "to": s.backend,
                                               "at": _now()})
@@ -1153,7 +1232,7 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
                         raise ValueError(f"The declared price of {name} changed since this batch "
                                          "was created; use a new batch (--fresh)")
         else:
-            catalog = fetch_catalog(cfg) if any(s.backend == "openrouter" for s in live.values()) else []
+            catalog = _catalog_for_ledger(cfg, ledger_path) if any(s.backend == "openrouter" for s in live.values()) else []
             metadata = {name: _route_metadata(cfg, s, name, catalog) for name, s in live.items()}
         check_route_conditions(live, metadata, cfg)
         resumed = manifest.exists()
@@ -1307,7 +1386,7 @@ def _prepare_fallbacks(accounting, live: dict, cfg: dict, root: Path, ledger_pat
                 key = f"{name}@{rname}"
                 if key not in route_meta:
                     if catalog is None and alt.backend == "openrouter":
-                        catalog = fetch_catalog(cfg)
+                        catalog = _catalog_for_ledger(cfg, ledger_path)
                     route_meta[key] = _route_metadata(cfg, alt, name, catalog)
                     changed = True
                 meta = route_meta[key]

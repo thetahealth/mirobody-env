@@ -34,8 +34,7 @@ def load_cfg() -> dict:
     if local.is_file():
         _deep_merge(cfg, _cached(local) or {})
     from . import settings                    # pydantic; imported on first load only
-    from .transport import validate_proxy_config
-    return validate_proxy_config(settings.apply_set(apply_config_overlay(cfg)), settings.validate)
+    return validate(settings.apply_set(apply_config_overlay(cfg)))
 
 
 def config_layers() -> list[dict]:
@@ -69,3 +68,30 @@ def apply_config_overlay(cfg: dict) -> dict:
     if not path.is_file():
         raise FileNotFoundError(f"{CONFIG_OVERLAY_ENV} names a file that does not exist: {path}")
     return _deep_merge(cfg, _cached(path) or {})
+
+
+# Transport and execution extensions are validated outside the frozen world schema.
+from . import settings
+
+
+class RuntimePaidSettings(settings.PaidSection):
+    catalog_cache_ttl_s: float = settings._f("execution", 3600.0, ge=0, allow_inf_nan=False)
+
+
+def validate(cfg: dict) -> dict:
+    from .transport import validate_proxy_config
+    return validate_proxy_config(cfg, _validate_runtime)
+
+
+def _validate_runtime(cfg: dict) -> dict:
+    raw = dict(cfg)
+    paid = raw.get("paid")
+    if isinstance(paid, dict):
+        raw["paid"] = {k: v for k, v in paid.items() if k != "catalog_cache_ttl_s"}
+    out = settings.validate(raw)
+    try:
+        validated = RuntimePaidSettings.model_validate(paid or {})
+    except settings.ValidationError as error:
+        raise settings.ConfigError(f"Invalid paid configuration: {error}") from None
+    out["paid"] = {**out["paid"], "catalog_cache_ttl_s": validated.catalog_cache_ttl_s}
+    return out

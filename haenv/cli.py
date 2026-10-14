@@ -1146,10 +1146,12 @@ def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report, *,
             # `--limit` saves no cases.jsonl, so the batch cannot be prepared for judging.
             semantic = _limited_run_semantic(rows)
         else:
-            semantic = default_after_run(job.results_file.parent, cfg,
-                                         offline=bool(a.offline),
-                                         budget_ledger=getattr(a, "judge_budget_ledger", None),
-                                         budget_usd=getattr(a, "judge_budget_usd", None))
+            from .solver_accounting import catalog_scope
+            with catalog_scope(getattr(a, "judge_budget_ledger", None), cfg):
+                semantic = default_after_run(job.results_file.parent, cfg,
+                                             offline=bool(a.offline),
+                                             budget_ledger=getattr(a, "judge_budget_ledger", None),
+                                             budget_usd=getattr(a, "judge_budget_usd", None))
         print(f"[haenv] semantic judging: {semantic['status']}")
     if not a.offline:
         from .semantic_report import view_for_batch

@@ -350,6 +350,15 @@ class ModelOpener:
                                                   PacedHTTPHandler(), PacedHTTPSHandler())
 
     def open(self, request, data=None, timeout=None):
+        # Provider catalogs are free GETs. A ledger scope can serve the identical
+        # catalog to the frozen judge preflight without changing its price checks.
+        if (data is None and isinstance(request, urllib.request.Request)
+                and request.get_method() == "GET" and request.has_header("Authorization")
+                and urllib.parse.urlsplit(request.full_url).path.rstrip('/').endswith('/models')):
+            from .solver_accounting import catalog_response
+            response = catalog_response(request)
+            if response is not None:
+                return response
         route = getattr(request, "_haenv_proxy", None)
         pending = getattr(_WIRE_ROUTE, "pending", None)
         if route is None and pending and isinstance(request, urllib.request.Request):
