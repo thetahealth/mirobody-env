@@ -36,6 +36,8 @@ def wire_settings(solver) -> dict:
            "reasoning_effort": solver.reasoning_effort, "stream": solver.stream,
            "response_format": solver.response_format, "retries": solver.retries,
            "endpoint_sha256": _hash(solver.URL)}
+    from .transport import proxy_for_solver
+    out["proxy"] = proxy_for_solver(solver)
     if getattr(solver, "provider", None):          # only when set: identities of unrouted solvers are unchanged
         out["provider"] = solver.provider
     if getattr(solver, "upstream", None):          # declared upstream (config `upstream`), only when set
@@ -520,7 +522,8 @@ class SolverRequestAccountant:
                     self._sleep(delay)
 
 
-def generation_cost_lookup(cfg: dict, *, attempts: int = 6, delay_s: float = 5.0):
+def generation_cost_lookup(cfg: dict, *, attempts: int = 6, delay_s: float = 5.0,
+                           proxy: str | None = None):
     """Exact per-generation USD from OpenRouter's generation record (free GET).
 
     Used only when a completion lost its `usage.cost` (e.g. a cut stream). The
@@ -544,7 +547,8 @@ def generation_cost_lookup(cfg: dict, *, attempts: int = 6, delay_s: float = 5.0
             request = urllib.request.Request(f"{base}/generation?id={quote(generation_id)}",
                                              headers={"Authorization": f"Bearer {key}"})
             try:
-                with urllib.request.urlopen(request, timeout=30) as response:
+                from .transport import model_urlopen
+                with model_urlopen(request, cfg=cfg, proxy=proxy, timeout=30) as response:
                     data = json.loads(response.read()).get("data") or {}
             except urllib.error.HTTPError as error:
                 not_found += error.code == 404
@@ -576,7 +580,13 @@ def fetch_endpoints(cfg: dict, model: str) -> list[dict]:
     url = backend["url"].rsplit("/chat/completions", 1)[0] + f"/models/{model}/endpoints"
     request = urllib.request.Request(url, headers={"Authorization": f"Bearer {key}"})
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        from .transport import model_urlopen, proxy_for_model
+        specs = [s for s in (cfg.get("models") or {}).values()
+                 if isinstance(s, dict) and s.get("model") == model
+                 and s.get("backend", "openrouter") == "openrouter"]
+        routes = {proxy_for_model(cfg=cfg, spec=s) for s in specs}
+        proxy = next(iter(routes)) if len(routes) == 1 else None
+        with model_urlopen(request, cfg=cfg, proxy=proxy, timeout=30) as response:
             data = json.loads(response.read())["data"]
     except Exception:
         raise ValueError("Could not verify endpoint prices; no paid calls started") from None
@@ -611,7 +621,8 @@ def fetch_catalog(cfg: dict) -> list[dict]:
     url = backend["url"].rsplit("/chat/completions", 1)[0] + "/models"
     request = urllib.request.Request(url, headers={"Authorization": f"Bearer {key}"})
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        from .transport import model_urlopen
+        with model_urlopen(request, cfg=cfg, timeout=30) as response:
             catalog = json.loads(response.read())["data"]
     except Exception:
         raise ValueError("Could not verify solver price metadata; no paid calls started") from None
@@ -678,10 +689,13 @@ class BatchAccounting:
             reader = RelayBilling.for_solver(prices, solver, self.cfg)
             _ensure_backends_registered(self.cfg)
             base = BACKENDS["relay"].get("quota_url")
-            probe = usage_probe(base) if base else None
+            from .transport import proxy_for_solver
+            probe = usage_probe(base, proxy=proxy_for_solver(solver)) if base else None
         elif solver.backend in {"google", "dashscope"} or isinstance(prices, DeclaredPrices):
             reader = prices.cost_receipt
-        lookup = generation_cost_lookup(self.cfg) if solver.backend == "openrouter" else None
+        from .transport import proxy_for_solver
+        lookup = (generation_cost_lookup(self.cfg, proxy=proxy_for_solver(solver))
+                  if solver.backend == "openrouter" else None)
         return AccountedCompletion(prices, self.ledger, self.root / "receipts",
                                    backend=solver.backend, cost_reader=reader,
                                    generation_lookup=lookup, usage_probe=probe,
@@ -702,6 +716,7 @@ class BatchAccounting:
         if (solver_name not in self.prices or answer_settings(solver) != self.answer[solver_name]
                 or solver.backend != self.settings[solver_name]["backend"]):
             raise ValueError("Solver settings differ from the verified accounting preflight")
+        solver.proxy = self.settings[solver_name].get("proxy", "env")
         keys = self._keys(solver, self.ledger.path)
         solver.pool = None                   # never rotated inside an attempt; see KeyRotation
         cell = _hash([self.run_id, case_id, solver_name])
@@ -711,6 +726,8 @@ class BatchAccounting:
             routes = [Route("primary", paid, solver, keys)]
             for name, make, prices in self.fallbacks[solver_name]:
                 alt = make()
+                from .transport import proxy_for_solver
+                alt.proxy = proxy_for_solver(alt, self.cfg)
                 alt_keys = self._keys(alt, self.ledger.path)
                 alt.pool = None
                 routes.append(Route(name, self._completion(prices, alt, solver_name), alt, alt_keys))
@@ -996,6 +1013,9 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
     from .baselines import BASELINE_NAMES
     from .solvers import OpenAICompatSolver, GoogleSolver
     live = {name: make() for name, make in solvers if name not in BASELINE_NAMES}
+    from .transport import proxy_for_model
+    for name, solver in live.items():
+        solver.proxy = proxy_for_model(name, backend=solver.backend, cfg=cfg)
     declared_prices = {name: declared_price(cfg, name, s) for name, s in live.items()}
     misplaced = [name for name, s in live.items()
                  if declared_prices[name] is not None and s.backend in VERIFIED_PRICE_BACKENDS]

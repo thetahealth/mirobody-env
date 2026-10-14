@@ -415,6 +415,14 @@ def _main(argv=None) -> int:
         print(f"[haenv] physiology layer {'enabled' if a.physio else 'disabled'} from the command line (overrides job.yaml)")
     if a.models:
         job.models = [m.strip() for m in a.models.split(",") if m.strip()]
+    if a.cmd == "run" and not a.offline:
+        from .transport import log_proxy_routes
+        from .semantic_rubric import load_policy
+        route_models = list(job.models or cfg.get("default_models") or [])
+        judge_model = load_policy()["judge"]["model_key"]
+        if judge_model not in route_models:
+            route_models.append(judge_model)
+        log_proxy_routes(route_models, cfg, logging.getLogger("haenv"))
     if a.cases:
         want = {x.strip() for x in a.cases.split(",") if x.strip()}
         job.cases = [c for c in job.cases if c.case_id in want]

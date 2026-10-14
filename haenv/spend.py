@@ -330,24 +330,31 @@ def aggregate(state: dict, index: dict, by=DEFAULT_BY) -> dict:
 
 # --------------------------------------------------------------------------- balances
 
-def _http_get(url: str, key: str, *, proxy: str | None, timeout: int = 30):
+def _http_get(url: str, key: str, *, proxy: str | None, timeout: int = 30,
+              route: str = "env"):
     import urllib.request
-    handler = urllib.request.ProxyHandler({"http": proxy, "https": proxy} if proxy else {})
+    from .transport import model_urlopen
     request = urllib.request.Request(url, headers={"Authorization": f"Bearer {key}"})
-    with urllib.request.build_opener(handler).open(request, timeout=timeout) as response:
+    with model_urlopen(request, proxy=route, proxy_url=proxy, timeout=timeout) as response:
         return json.loads(response.read())
 
 
 def fetch_balances(env: dict | None = None, get=None, relay_base: str | None = None,
                    relay_key_prefix: str | None = None,
-                   or_base: str = "https://openrouter.ai/api/v1", or_proxy: str | None = None) -> dict:
+                   or_base: str = "https://openrouter.ai/api/v1", or_proxy: str | None = None,
+                   model: str | None = None, cfg: dict | None = None) -> dict:
     """Free read-only balance GETs. Key values are only ever used as headers, never returned.
 
     The relay's billing base and key pool prefix come from the deployment config
     (`backends.relay.quota_url` / `key_env_pool`); without them relay balances are skipped."""
     env = os.environ if env is None else env
+    from .transport import proxy_for_model
+    or_route = proxy_for_model(model, cfg=cfg)
+    relay_route = proxy_for_model(model, backend="relay", cfg=cfg)
     or_proxy = or_proxy or env.get("HAENV_OPENROUTER_PROXY") or env.get("https_proxy") or env.get("HTTPS_PROXY")
-    get = get or (lambda url, key, via_proxy: _http_get(url, key, proxy=or_proxy if via_proxy else None))
+    get = get or (lambda url, key, via_proxy: _http_get(
+        url, key, proxy=or_proxy if via_proxy else None,
+        route=or_route if via_proxy else relay_route))
     out = {"openrouter": {}, "relay": {}, "google": "n/a (tariff bound)", "dashscope": "n/a (tariff bound)"}
     key = env.get("OPENROUTER_API_KEY")
     if key:
@@ -610,21 +617,23 @@ class Action:
 class GenerationLookup:
     """OpenRouter GET /api/v1/generation?id= ; returns (status, raw bytes)."""
 
-    def __init__(self, key: str, proxy: str | None, base="https://openrouter.ai/api/v1", attempts=6, delay_s=5.0):
+    def __init__(self, key: str, proxy: str | None, base="https://openrouter.ai/api/v1", attempts=6, delay_s=5.0,
+                 *, model=None, cfg=None):
         self.key, self.proxy, self.base, self.attempts, self.delay_s = key, proxy, base, attempts, delay_s
+        from .transport import proxy_for_model
+        self.route = proxy_for_model(model, cfg=cfg)
 
     def __call__(self, generation_id: str):
         import urllib.error
         import urllib.parse
         import urllib.request
-        handler = urllib.request.ProxyHandler({"http": self.proxy, "https": self.proxy} if self.proxy else {})
-        opener = urllib.request.build_opener(handler)
+        from .transport import model_urlopen
         url = f"{self.base}/generation?id={urllib.parse.quote(generation_id)}"
         misses = 0
         for _ in range(self.attempts):
             try:
                 req = urllib.request.Request(url, headers={"Authorization": f"Bearer {self.key}"})
-                with opener.open(req, timeout=30) as resp:
+                with model_urlopen(req, proxy=self.route, proxy_url=self.proxy, timeout=30) as resp:
                     return 200, resp.read()
             except urllib.error.HTTPError as e:
                 if e.code != 404:
@@ -830,6 +839,7 @@ def main(argv=None) -> int:
     if mode == "spend":
         ap.add_argument("--by", action="append", choices=DIMENSIONS, help="grouping (repeatable)")
         ap.add_argument("--balances", action="store_true", help="query provider balances (free GETs)")
+        ap.add_argument("--model", help="use this configured model's proxy route for balance GETs")
         ap.add_argument("--window-min", type=float, default=30.0, help="throughput window for the forecast")
         ap.add_argument("--no-forecast", action="store_true")
     else:
@@ -845,9 +855,10 @@ def main(argv=None) -> int:
         by = tuple(args.by) if args.by else DEFAULT_BY
         bal = None
         if args.balances:
-            relay = ((load_cfg().get("backends") or {}).get("relay") or {})
+            cfg = load_cfg()
+            relay = ((cfg.get("backends") or {}).get("relay") or {})
             bal = fetch_balances(relay_base=relay.get("quota_url"),
-                                 relay_key_prefix=relay.get("key_env_pool"))
+                                 relay_key_prefix=relay.get("key_env_pool"), model=args.model, cfg=cfg)
         rep = build_report(args.ledger, batches, by=by, balances=bal, window_min=args.window_min,
                            with_forecast=not args.no_forecast)
         text = json.dumps(_jsonable(rep), indent=2, ensure_ascii=False) if args.json else render_markdown(rep)

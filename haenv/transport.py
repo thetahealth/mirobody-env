@@ -41,7 +41,7 @@ from .semantic_budget import BudgetExceeded
 ANSWER_KEYS = ("model_canonical", "upstream", "max_tokens", "reasoning_effort",
                "response_format", "sampling")
 #: Route keys (recorded per receipt, never part of the identity).
-ROUTE_KEYS = ("backend", "model", "endpoint_sha256", "max_tokens_field", "stream", "retries",
+ROUTE_KEYS = ("backend", "model", "proxy", "endpoint_sha256", "max_tokens_field", "stream", "retries",
               "provider")
 #: Upstream provider of the direct (non-routing) backends.
 DIRECT_UPSTREAM = {"google": "google", "dashscope": "alibaba-dashscope"}
@@ -232,6 +232,7 @@ def verify_wire(solver, body: bytes, prompt: str) -> None:
     `max_tokens` / effort / response format / model with the solver's answer settings, and
     refuses any body key it does not know (a sampling key would change the answer).
     """
+    original_body = body
     backend = solver.backend
     seen = wire_view(backend, body, getattr(solver, "max_tokens_field", "max_tokens"))
     problems = []
@@ -255,6 +256,101 @@ def verify_wire(solver, body: bytes, prompt: str) -> None:
     if problems:
         raise WireMismatch("request body differs from the accounted request ("
                            + "; ".join(problems) + "); not sent")
+    # The frozen solver send sites already call this immediately before urlopen. Bind
+    # routing to these exact bytes and endpoint, never to a host or a thread alone.
+    _WIRE_ROUTE.pending = (solver.URL, original_body, proxy_for_solver(solver))
+
+
+def check_proxy(value) -> str:
+    if value not in ("env", "direct"):
+        raise ValueError("proxy must be env or direct")
+    return value
+
+
+def validate_proxy_config(cfg: dict, validate) -> dict:
+    """Validate transport-only extensions without changing the frozen world schema."""
+    import copy
+    raw = copy.deepcopy(cfg)
+    routes = {}
+    for section in ("models", "backends"):
+        entries = raw.get(section)
+        if not isinstance(entries, dict):
+            continue
+        for name, spec in entries.items():
+            if isinstance(spec, dict) and "proxy" in spec:
+                try:
+                    routes[section, name] = check_proxy(spec.pop("proxy"))
+                except ValueError as error:
+                    from .settings import ConfigError
+                    raise ConfigError(f"{section}.{name}.{error}") from None
+    out = validate(raw)
+    for (section, name), value in routes.items():
+        out[section][name]["proxy"] = value
+    return out
+
+
+def proxy_for_model(name=None, *, backend=None, cfg=None, spec=None) -> str:
+    """Model override, then config.backends.<backend>.proxy, then env."""
+    if cfg is None:
+        from .config import load_cfg
+        cfg = load_cfg()
+    models = cfg.get("models") or {}
+    entry = spec if spec is not None else (models.get(name, {}) if isinstance(models, dict) else {})
+    backend = backend or entry.get("backend", "openrouter")
+    return check_proxy(entry.get("proxy", ((cfg.get("backends") or {}).get(backend) or {})
+                                 .get("proxy", "env")))
+
+
+def proxy_for_solver(solver, cfg=None) -> str:
+    declared = getattr(solver, "proxy", None)
+    return (check_proxy(declared) if declared is not None else
+            proxy_for_model(getattr(solver, "name", None),
+                            backend=getattr(solver, "backend", "openrouter"), cfg=cfg))
+
+
+def model_urlopen(request, *, name=None, backend=None, cfg=None, spec=None,
+                  proxy=None, proxy_url=None, timeout=30):
+    """Open a model or backend request through the same selector as solver sends."""
+    request._haenv_proxy = (check_proxy(proxy) if proxy is not None else
+                            proxy_for_model(name, backend=backend, cfg=cfg, spec=spec))
+    request._haenv_proxy_url = proxy_url
+    return urllib.request.urlopen(request, timeout=timeout)
+
+
+def log_proxy_routes(models, cfg, logger) -> None:
+    routes = {"direct": [], "env": []}
+    for name in models:
+        routes[proxy_for_model(name, cfg=cfg)].append(name)
+    logger.info("代理路由：direct=%s env=%s", sorted(routes["direct"]), sorted(routes["env"]))
+
+
+_WIRE_ROUTE = threading.local()
+
+
+class ModelOpener:
+    """Keep the env opener and dispatch verified model sends before proxy handling."""
+    def __init__(self):
+        self.env = urllib.request.build_opener(PacedHTTPHandler(), PacedHTTPSHandler())
+        self.direct = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+                                                  PacedHTTPHandler(), PacedHTTPSHandler())
+
+    def open(self, request, data=None, timeout=None):
+        route = getattr(request, "_haenv_proxy", None)
+        pending = getattr(_WIRE_ROUTE, "pending", None)
+        if route is None and pending and isinstance(request, urllib.request.Request):
+            endpoint, body, proxy = pending
+            if (request.data == body and (request.full_url == endpoint or
+                    request.full_url.startswith(endpoint.rstrip("/") + "/"))):
+                route = proxy
+        opener = self.direct if route == "direct" else self.env
+        proxy_url = getattr(request, "_haenv_proxy_url", None)
+        if route != "direct" and proxy_url:
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({"http": proxy_url, "https": proxy_url}),
+                PacedHTTPHandler(), PacedHTTPSHandler())
+        if timeout is None:
+            return opener.open(request, data)
+        return opener.open(request, data, timeout)
 
 
 # ---------------------------------------------------------------- connections
@@ -381,7 +477,7 @@ def install() -> None:
     Environment proxies apply as before (the opener keeps urllib's default handlers).
     Runs on import; a caller passing its own `context` to `urlopen` bypasses it.
     """
-    urllib.request.install_opener(urllib.request.build_opener(PacedHTTPHandler(), PacedHTTPSHandler()))
+    urllib.request.install_opener(ModelOpener())
 
 
 install()

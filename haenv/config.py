@@ -34,7 +34,8 @@ def load_cfg() -> dict:
     if local.is_file():
         _deep_merge(cfg, _cached(local) or {})
     from . import settings                    # pydantic; imported on first load only
-    return settings.validate(settings.apply_set(apply_config_overlay(cfg)))
+    from .transport import validate_proxy_config
+    return validate_proxy_config(settings.apply_set(apply_config_overlay(cfg)), settings.validate)
 
 
 def config_layers() -> list[dict]:

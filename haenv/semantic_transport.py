@@ -115,11 +115,11 @@ def _rejected_at_zero(receipt: Path, prior: dict) -> bool:
 
 def failure_receipt(receipt: Path, identity: dict, error: BaseException, started_at: str,
                     started: float, *, evidence: dict | None = None,
-                    settlement: dict | None = None) -> None:
+                    settlement: dict | None = None, route: dict | None = None) -> None:
     """Exception class, timing and transport evidence; never the message (it can carry secrets)."""
     path = receipt.with_suffix(".failed.json")
     with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, delete=False) as file:
-        json.dump({"request": identity, "error_class": type(error).__name__,
+        json.dump({"request": identity, "route": route or {}, "error_class": type(error).__name__,
                    "started_at": started_at,
                    "failed_at": datetime.now(timezone.utc).isoformat(),
                    "seconds": round(time.perf_counter() - started, 3), **(evidence or {}),
@@ -186,6 +186,8 @@ class PricedJudge:
         if getattr(solver, "_accounting", None) is not None:
             raise ValueError("Judge solver already has accounting; refuse duplicate reservations")
         self.solver, self.prices, self.ledger = solver, prices, ledger
+        from .transport import proxy_for_solver
+        solver.proxy = proxy_for_solver(solver)
         self.receipts = receipts
         if receipts is not None:
             receipts.mkdir(parents=True, exist_ok=True)
@@ -245,7 +247,8 @@ class PricedJudge:
             inflight = receipt.with_suffix(".inflight.json") if receipt is not None else None
             if inflight is not None:
                 begin_inflight(inflight, request_id=request.sample_id,
-                               backend=getattr(self.solver, "backend", None), started_at=started_at)
+                               backend=getattr(self.solver, "backend", None),
+                               proxy=self.solver.proxy, started_at=started_at)
             try:
                 self.solver.response_format = request.response_format
                 response = self.solver._post(request.prompt)
@@ -255,6 +258,8 @@ class PricedJudge:
                     with tempfile.NamedTemporaryFile(mode="w", dir=receipt.parent,
                                                      delete=False) as file:
                         json.dump({"request": identity, "response": response,
+                                   "route": {"backend": getattr(self.solver, "backend", "openrouter"),
+                                             "proxy": self.solver.proxy},
                                    "transport": {"started_at": started_at,
                                        "received_at": datetime.now(timezone.utc).isoformat(),
                                        "seconds": round(time.perf_counter() - started, 3)}}, file,
@@ -273,7 +278,9 @@ class PricedJudge:
                 if receipt is not None:
                     try:
                         failure_receipt(receipt, identity, error, started_at, started,
-                                        evidence=evidence, settlement=zero)
+                                        evidence=evidence, settlement=zero,
+                                        route={"backend": getattr(self.solver, "backend", "openrouter"),
+                                               "proxy": self.solver.proxy})
                     except OSError:
                         zero = None               # no durable basis => keep the bound
                 else:

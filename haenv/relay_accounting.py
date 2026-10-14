@@ -25,10 +25,10 @@ def attempt_key(default: str) -> str:
     return getattr(ATTEMPT, "key", None) or default
 
 
-def usage_probe(base: str):
+def usage_probe(base: str, *, proxy=None):
     """key -> used quota (`/dashboard/billing/usage` total_usage, free GET); raises when unreadable."""
     def probe(key: str):
-        result = get_json(base, key, "/dashboard/billing/usage")
+        result = get_json(base, key, "/dashboard/billing/usage", proxy=proxy)
         used = result.get("total_usage")
         if not isinstance(used, (int, float)):
             raise ValueError("Relay usage unreadable")
@@ -36,11 +36,12 @@ def usage_probe(base: str):
     return probe
 
 
-def get_json(base: str, key: str, path: str) -> dict:
+def get_json(base: str, key: str, path: str, *, proxy=None) -> dict:
     request = urllib.request.Request(base.rstrip("/") + path,
         headers={"Authorization": f"Bearer {key}"})
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        from .transport import model_urlopen
+        with model_urlopen(request, backend="relay", proxy=proxy, timeout=30) as response:
             result = json.loads(response.read())
     except Exception:
         raise ValueError("Relay billing metadata could not be read") from None
@@ -91,8 +92,10 @@ def fetch_metadata(cfg: dict, solver) -> dict:
     base = BACKENDS["relay"].get("quota_url")
     if not base:
         raise ValueError("Relay route has no billing endpoint")
-    prices = get_json(base, solver.api_key, "/api/pricing")
-    status = get_json(base, solver.api_key, "/api/status")
+    from .transport import proxy_for_solver
+    proxy = proxy_for_solver(solver, cfg)
+    prices = get_json(base, solver.api_key, "/api/pricing", proxy=proxy)
+    status = get_json(base, solver.api_key, "/api/status", proxy=proxy)
     if prices.get("success") is not True or status.get("success") is not True:
         raise ValueError("Relay price/status lookup did not succeed")
     matches = [row for row in prices.get("data", []) if row.get("model_name") == solver.model]
@@ -123,7 +126,9 @@ class RelayBilling:
             raise ValueError("Relay route has no billing endpoint")
         def logs():
             # The attempt's own key: a rotated key's bill is not in another key's log.
-            result = get_json(base, attempt_key(solver.api_key), "/api/log/token")
+            from .transport import proxy_for_solver
+            result = get_json(base, attempt_key(solver.api_key), "/api/log/token",
+                              proxy=proxy_for_solver(solver, cfg))
             if result.get("success") is not True or not isinstance(result.get("data"), list):
                 raise ValueError("Relay log lookup did not succeed")
             return result["data"]

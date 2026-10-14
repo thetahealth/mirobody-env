@@ -526,7 +526,7 @@ class AccountedCompletion:
                     usage_before = None
             inflight = receipt.with_suffix(".inflight.json")
             begin_inflight(inflight, request_id=identity["request_id"], backend=self.backend,
-                           started_at=started_at, **meta)
+                           started_at=started_at, transport_route=route, **meta)
             try:
                 response = dispatch(prompt)
                 from .transport import served_of

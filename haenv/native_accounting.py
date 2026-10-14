@@ -233,7 +233,9 @@ def _capacity_metadata(req) -> dict:
     got={}
     def fetch():
         try:
-            with urllib.request.urlopen(req,timeout=30) as r:got['metadata']=json.loads(r.read())
+            from .transport import model_urlopen
+            with model_urlopen(req, proxy=getattr(req, '_haenv_proxy', None),
+                               backend='google', timeout=30) as r:got['metadata']=json.loads(r.read())
         except Exception as error:                     # noqa: BLE001 -- re-raised below
             got['error']=error
     worker=threading.Thread(target=fetch,daemon=True)
@@ -260,6 +262,8 @@ def preflight_native(solver, backend: str, url: str, require_current: bool = Tru
     if backend=='google':
         req=urllib.request.Request(url.rstrip('/')+'/'+solver.model,
                                    headers={'x-goog-api-key':solver.api_key})
+        from .transport import proxy_for_solver
+        req._haenv_proxy=proxy_for_solver(solver)
         try:
             metadata=_capacity_metadata(req)
         except Exception as error:
