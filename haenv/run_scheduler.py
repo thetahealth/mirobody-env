@@ -479,7 +479,7 @@ def _shutdown(resp) -> None:
 
 # ---------------------------------------------------------------- run
 
-def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
+def _run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
         geometry_of=None, pooling: str | None = None, backend_limits: dict | None = None,
         timing: dict | None = None, batch_dir: Path | None = None,
         per_model: dict | None = None, wall_budget: dict | None = None,
@@ -633,6 +633,9 @@ def run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
     if errors:
         raise errors[0]
     if stops:
+        from .ops.runtime import Draining
+        if any(isinstance(exc, Draining) for exc in stops):
+            raise next(exc for exc in stops if isinstance(exc, Draining))
         raise stops[0]
     return [out[i] for i in sorted(out)]
 
@@ -722,3 +725,20 @@ def _write_plan(batch_dir, plan: dict, rows: list, stats: dict) -> None:
         p.write_text(json.dumps({"runs": runs}, ensure_ascii=False, indent=1), encoding="utf-8")
     except Exception as e:                                   # noqa: BLE001
         log.warning("[scheduler] could not write scheduler.json: %s", e)
+
+
+def run(fn, tasks: list, emit, *, workers: int, **kwargs) -> list[dict]:
+    """Journal cell starts and prioritize interrupted cells through the scheduler."""
+    from .cell_recovery import recovery, cell_of
+    model_of = kwargs.get("key_of") or (lambda task: "_offline")
+    with recovery(kwargs.get("batch_dir"), tasks, model_of) as recovered:
+        tasks = sorted(tasks, key=lambda task: cell_of(task, model_of(task))
+                       not in recovered.interrupted)
+        def observed(task):
+            recovered.start(task)
+            return fn(task)
+        def persisted(row):
+            result = emit(row)
+            recovered.emitted(row)
+            return result
+        return _run(observed, tasks, persisted, workers=workers, **kwargs)
