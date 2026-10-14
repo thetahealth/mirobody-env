@@ -273,7 +273,7 @@ def _main(argv=None) -> int:
                          "(dotted key, YAML value; repeatable), e.g. --set eval.workers=4")
     ap.add_argument("--offline", action="store_true",
                     help="run only the offline deterministic reference (no real model calls); for smoke tests/CI")
-    ap.add_argument("--judge-budget-usd", help="approved combined solver and semantic-judge API budget ceiling")
+    ap.add_argument("--judge-budget-usd", help="cap for a new ledger; omit to reuse the pinned ledger cap")
     ap.add_argument("--judge-budget-ledger", type=Path,
                     help="shared persistent API cost ledger; required for online run")
     ap.add_argument("--semantic-run", type=Path,
@@ -398,10 +398,17 @@ def _main(argv=None) -> int:
         return 1 if (_unreg or _inputs.absent_entries()) else 0
 
     if a.cmd == "run" and not a.offline:
-        if a.judge_budget_usd is None or a.judge_budget_ledger is None:
+        if a.judge_budget_ledger is None:
             print("[haenv] online solvers and default LLM semantic judging share one budget; provide "
-                  "--judge-budget-usd and --judge-budget-ledger before any paid calls")
+                  "--judge-budget-ledger before any paid calls")
             return 2
+        from .semantic_budget import run_budget_limit
+        try:
+            a.judge_budget_usd = run_budget_limit(a.judge_budget_ledger, a.judge_budget_usd)
+        except ValueError as error:
+            print(f"[haenv] cannot start a billed run: {error}")
+            return 2
+        print(f"[haenv] pinned ledger budget: ${a.judge_budget_usd}")
 
     # A job file or case text; text is extracted to `derived/<stem>.job.yaml` under the output root.
     _job_path = _resolve_input(a, OUT)
@@ -1142,6 +1149,9 @@ def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report, *,
     semantic = None
     if a.cmd == "run":
         from .semantic_pipeline import default_after_run
+        if not a.offline:
+            from .semantic_budget import run_budget_limit
+            a.judge_budget_usd = run_budget_limit(a.judge_budget_ledger)
         if a.limit and not a.offline:
             # `--limit` saves no cases.jsonl, so the batch cannot be prepared for judging.
             semantic = _limited_run_semantic(rows)

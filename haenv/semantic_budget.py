@@ -122,6 +122,19 @@ def read_state(path: Path) -> dict | None:
     return state
 
 
+def run_budget_limit(path: Path, given: str | None = None) -> str:
+    """Paid run entry: reuse the ledger cap, or explicitly create a new ledger.
+
+    An explicit cap must match an existing ledger. Callers need no duplicate cap.
+    """
+    ledger = BudgetLedger(path, limit_usd=given)
+    cap = _amount(ledger.snapshot()["limit_usd"])
+    if given is not None and _amount(given, positive=True) != cap:
+        raise ValueError(f"--judge-budget-usd {given} differs from ledger limit {cap}; "
+                         "omit --judge-budget-usd to use the pinned ledger limit")
+    return str(cap)
+
+
 class BudgetLedger:
     """Reserve a verified upper bound before every HTTP attempt, including retries.
 
