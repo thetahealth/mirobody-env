@@ -336,7 +336,7 @@ def log_proxy_routes(models, cfg, logger) -> None:
     routes = {"direct": [], "env": []}
     for name in models:
         routes[proxy_for_model(name, cfg=cfg)].append(name)
-    logger.info("代理路由：direct=%s env=%s", sorted(routes["direct"]), sorted(routes["env"]))
+    logger.info("proxy routes: direct=%s env=%s", sorted(routes["direct"]), sorted(routes["env"]))
 
 
 _WIRE_ROUTE = threading.local()

@@ -231,7 +231,7 @@ def test_startup_log_groups_effective_routes(network, caplog):
     _, _, _, cfg = network
     with caplog.at_level(logging.INFO):
         transport.log_proxy_routes(cfg["models"], cfg, logging.getLogger("haenv"))
-    assert "代理路由：direct=['alpha'] env=['beta']" in caplog.text
+    assert "proxy routes: direct=['alpha'] env=['beta']" in caplog.text
 
 
 @pytest.mark.parametrize("name", ["alpha", "beta"])
