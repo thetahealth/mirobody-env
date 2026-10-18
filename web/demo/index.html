@@ -193,8 +193,9 @@ details code{font-family:var(--mono);font-size:12px;background:var(--muted);padd
 @media(max-width:599px){.tabs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%}.tab{padding:7px 9px;font-size:12.5px}}
 .a2{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);overflow:hidden}
 @media(max-width:900px){.a2{grid-template-columns:minmax(0,1fr)}}
-.rec{padding:20px;border-right:1px solid var(--grid);font-size:13px;line-height:1.45;min-width:0}
-@media(max-width:900px){.rec{border-right:0;border-bottom:1px solid var(--grid)}}
+.rec{border-right:1px solid var(--grid);font-size:13px;line-height:1.45;min-width:0;position:relative;min-height:560px}
+.recin{position:absolute;inset:0;overflow-y:auto;padding:20px;scrollbar-gutter:stable}
+@media(max-width:900px){.rec{border-right:0;border-bottom:1px solid var(--grid);position:static;min-height:0}.recin{position:static;overflow:visible}}
 .rec .q{background:var(--muted);border-radius:8px;padding:10px 12px;margin:0 0 12px}
 .rec .q span{display:block;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
 .rec dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;margin:0 0 12px}
@@ -6203,7 +6204,7 @@ function sAct2(s){
     tabs.innerHTML = PACK_KEYS.map(k => '<button class="tab" type="button" role="tab" data-p="' + k + '" aria-selected="' + (k === CUR_PACK) + '">'
       + PACK_NUM[k] + " " + esc(T("pk_" + k)) + "<small>" + esc(T("pq_" + k)) + "</small></button>").join("");
     const gd = GOLD[CUR_PACK]();
-    $("#pack", s).innerHTML = '<div class="rec">' + REC[CUR_PACK]() + '</div><div class="viz2"><div id="c2"></div><div class="legend" id="lg2"></div><div class="rec2" id="rec2"></div></div>'
+    $("#pack", s).innerHTML = '<div class="rec"><div class="recin">' + REC[CUR_PACK]() + '</div></div><div class="viz2"><div id="c2"></div><div class="legend" id="lg2"></div><div class="rec2" id="rec2"></div></div>'
       + '<div class="goldrow"><div><h4>' + esc(T("hGold")) + "</h4><p>" + gd.g + "</p></div><div><h4>" + esc(T("hJudged")) + "</h4><p>" + esc(gd.j) + "</p></div></div>" + '<div class="trajectory" id="trajectory" hidden></div>';
     VIZ[CUR_PACK]();
     recordPanel(); trajectory();
