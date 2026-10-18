@@ -77,6 +77,7 @@ def test_rehearsal_url_sends_https_requests_to_the_fake_provider(fake, rehearse_
                          {"model": WIRE, "messages": [{"role": "user", "content": 'answer {"disposition": ...}'}]})
     assert doc["choices"][0]["message"]["content"].startswith('{"disposition"')
     assert headers["X-Generation-Id"] == doc["id"]
+    assert provider.wait_logged(1)
     log = [json.loads(line) for line in provider.log_path.read_text().splitlines()]
     assert [r["backend"] for r in log] == ["openrouter"]
 

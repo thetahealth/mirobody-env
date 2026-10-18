@@ -7,17 +7,15 @@ per-criterion fingerprints identify which result columns remain comparable, and 
 fingerprint identifies the complete set of criteria. Combined scores also require matching
 aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
-## [Unreleased]
+## [1.3.0] - 2026-10-18
 
-### Added
-- `haenv twin`: one-fact twin records of a built batch (operations `drop-reagent-note`,
-  `drop-planted-symptoms`, `unname-explainer`), built through the normal build path and checked against the
-  original field by field. Fingerprints are unchanged.
-
-## [1.4.0] - Unreleased
-
-The release candidate remains `1.4.0.dev0`. This board uses four tasks with 100 questions
-per task and three answers per question. Eight models have complete four-task results.
+The first release since 1.2.2. The 1.3.0 board uses four tasks with 100 questions per task and
+three answers per question; eight models have complete four-task results. Judging and world
+fingerprints change, so 1.3.0 boards are not comparable with 1.2.x boards. This release also
+contains the changes of an unreleased candidate prepared on 2026-10-06 (listed below); that
+candidate was never published and is superseded. Code comments that mention "world 1.4" refer to the fourth revision of the
+simulated world, which ships in this release; they are left unchanged because the world and judging
+fingerprints are computed over those files.
 
 ### Changed
 
@@ -40,6 +38,9 @@ per task and three answers per question. Eight models have complete four-task re
 
 ### Added
 
+- `haenv twin`: one-fact twin records of a built batch (operations `drop-reagent-note`,
+  `drop-planted-symptoms`, `unname-explainer`), built through the normal build path and checked against the
+  original field by field. Fingerprints are unchanged.
 - Management-plan rubric scoring, repeat judgments, per-criterion provenance, and
   snapshot-checked judge routes across configured endpoints.
 - Centralized deployment concurrency settings, effective-limit diagnostics, graceful
@@ -56,20 +57,17 @@ per task and three answers per question. Eight models have complete four-task re
   successful answers are replayed and previous charges are retained.
 - Model-level and backend-default proxy selection share the same transport path.
 
-## [1.3.0] - Unreleased
+### Included from the unreleased 2026-10-06 candidate
 
-Boards of 1.3.0 and 1.2.x are not comparable: the four packs ask different questions and score
-them differently, and the world renders different patients. The judging fingerprint moves from
-`950578a687aacc5e` to `a44341f58a8b78f2` and the world fingerprint from `633cb0576e0472f0` to
-`0283ea9ca28d58ae`. The two diagnosis tracks of the 1.x board (`ddx-timeline`, `ddx-workup`) are
-unchanged.
-
-The 1.3.0 board ranks ten models on the four packs, 100 items each, every item answered three times.
+The candidate moved the judging fingerprint from `950578a687aacc5e` to `a44341f58a8b78f2` and the
+world fingerprint from `633cb0576e0472f0` to `0283ea9ca28d58ae`; the two diagnosis tracks of the
+1.x board (`ddx-timeline`, `ddx-workup`) were unchanged. Its board ranked ten models on the four packs, 100 items each, every item answered three times.
 The overall score is the equal-weight mean of the chance-corrected pack scores: gpt-6-sol 0.712 leads and
 is separable from every other model; gemini-3.1-pro 0.648, gemini-3.7-flash 0.640 and gpt-6-luna 0.609
-share ranks 2-4 and are not separable from one another. Ranks are reported as bootstrap intervals.
+share ranks 2-4 and are not separable from one another. Ranks were reported as bootstrap intervals. That board is kept in the
+[data card](docs/DATA_CARD.md#historical-boards).
 
-### Changed
+#### Changed
 
 - Packs are nested: for one seed the 50-item pack is a subset of the 100-item pack with
   byte-identical cases, so a 50-item run is extended to 100 by running only the new items. Every
@@ -102,11 +100,11 @@ share ranks 2-4 and are not separable from one another. Ranks are reported as bo
   A job that only adds cases resumes its batch in paid mode. Request pools are per backend, with
   per-model caps (`eval.model_caps`) and a measured timing table. A ledger file that a compaction
   replaced is read again from the start. Scores do not change.
-- The demo page shows the 1.3.0 board with rank intervals and the sample items of the four new packs.
+- The demo page shows the board with rank intervals and the sample items of the four packs.
 - Native Gemini and DashScope tariffs were re-read from the providers' pricing pages; prices, tiers
   and cache rates are unchanged.
 
-### Added
+#### Added
 
 - `tools/evaluation/board_readout.py` and `tools/evaluation/rank_rule.py`: the per-pack boards (chance-corrected,
   case × round bootstrap), the overall board under equal and SD-equalized weights, pairwise
@@ -119,13 +117,27 @@ share ranks 2-4 and are not separable from one another. Ranks are reported as bo
   [`docs/design/concurrency-caps.md`](docs/design/concurrency-caps.md),
   [`docs/design/paid-ledger.md`](docs/design/paid-ledger.md)).
 - `tools/evaluation/recompute_judges.py` attaches the judge plugins a batch's job declares.
-- The batches, model answers and judge verdicts of the 1.3.0 board, and the board's seed, are attached to the
-  GitHub release (`haenv-board-1.3.0-*`); `verify_seed.py` rebuilds the packs from the seed; `tools/evaluation/board_readout.py` reads a pack run in several batches, writes every
-  model pair's separability, and `web/demo/export_board.py` builds the demo's `board.json` from its readout.
+- `tools/evaluation/board_readout.py` reads a pack run in several batches and writes every model pair's
+  separability; `web/demo/export_board.py` builds the demo's `board.json` from its readout. The candidate's
+  batches, answers and seed were packaged as release archives but not published.
 
-### Fixed
+#### Fixed
 
 - Paid runs on `google` / `dashscope` stopped a week after the built-in tariff check; they now warn once per backend. `paid.tariff_checked_on` records your own check, `paid.tariff_expiry: refuse` (official boards) keeps the refusal.
+
+## [1.2.2] - 2026-10-09
+
+Documentation-only patch release. Runtime code, dependencies, generation and scoring rules,
+frozen packs and leaderboard data are unchanged from 1.2.1.
+
+### Documentation
+
+- The English and Chinese README explain how new synthesis tasks combine patient timelines, noise
+  and event-density controls with shared checks and task-specific verification.
+- A bilingual rare-disease case study shows reused components, examples of verification failures
+  and the explicit batch-gate exception; it is linked from the README and the documentation index.
+- The rare-disease implementation remains on `rare-code-bench` and is not bundled in this package;
+  the workflow uses the existing `haenv-synth` and `haenv-extend` skills.
 
 ## [1.2.1] - 2026-10-05
 

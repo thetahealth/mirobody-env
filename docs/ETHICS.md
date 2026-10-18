@@ -122,7 +122,7 @@ practice.
 
 ## 5. Three things that get misread
 
-1. **A leaderboard score is not clinical ability.** The 1.4.0 overall score is the equal-weight
+1. **A leaderboard score is not clinical ability.** The 1.3.0 overall score is the equal-weight
    mean of four pack scores, each the item mean of `S = G·D·(1+Q)/2` (hard gates, core decision,
    plan quality). It measures performance on this benchmark's question types; extrapolating to the clinic needs independent evidence.
 2. **A leaderboard holds only under one judge version.** Change the scoring code and every

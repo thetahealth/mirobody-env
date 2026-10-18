@@ -17,14 +17,13 @@
 <p align="center">
   <strong>English</strong> &middot; <a href="https://github.com/thetahealth/mirobody-env/blob/main/README.zh-CN.md">简体中文</a>
   &nbsp;|&nbsp;
-  <a href="https://thetahealth.github.io/mirobody-env/">Live demo</a> &middot;
+  <a href="#how-it-works">How it works</a> &middot;
   <a href="#the-four-packs">Packs</a> &middot;
   <a href="#leaderboard">Results</a> &middot;
   <a href="#quick-start">Quick start</a> &middot;
-  <a href="#synthetic-patients">Patients</a> &middot;
-  <a href="#how-it-works">How it works</a> &middot;
   <a href="#evaluate-your-own-agent">Your agent</a> &middot;
   <a href="#documentation">Docs</a> &middot;
+  <a href="https://thetahealth.github.io/mirobody-env/">Live demo</a> &middot;
   <a href="#citation">Cite</a>
 </p>
 
@@ -33,19 +32,44 @@
 </p>
 <p align="center"><sub>One item of the public-seed medication pack, up to the visit <code>T</code>; hollow markers, adherence and symptom colours are hidden from the agent. HbA1c is above target at the top dose, but only 12 of 19 doses were taken since the last fill, so the gold is to check adherence, not to raise the dose.</sub></p>
 
-## What it measures
+## How it works
 
-HAEnv (Health Agent Environment) grades clinical decisions on a patient's record over time. A
-synthetic patient's record grows over months or years; the agent sees it up to an index time `T`
-and makes one decision. The world that rendered the record fixed the right answer before the record
-was written, and the answer is hidden from the agent. HAEnv lives in the `mirobody-env` repository
-and installs as the `haenv` Python package and command-line tool; to run an existing system against
-published health benchmarks such as ESL-Bench, use [mirobody-eval](https://github.com/thetahealth/mirobody-eval).
+HAEnv builds every question from one hidden patient state. **Define:** a job file sets the patient's
+facts (condition, drugs, dose steps, devices) and latent variables such as adherence and true lab values.
+**Render:** the generator turns them into months or years of dated records, with the configured
+artifacts and distractors. **Check:** a case ships only if it passes the release checks.
+**Run:** the agent under test sees the record up to the visit `T` and makes one decision.
+**Score:** code checks the decision against the gold derived from the same hidden state, and one
+LLM judge rates the management plan.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_hero.png" alt="HAEnv in five steps: define a hidden patient state, render years of records, run release checks, run the agent under test on the questions, and score its answer with code and an LLM judge against hidden gold derived from the same state" width="100%">
 </p>
 <p align="center"><sub>The agent sees records up to <code>T</code>; hidden gold goes only to the judges, which are code plus one LLM judge for management-plan quality <code>Q</code> (see <a href="#scoring">Scoring</a>).</sub></p>
+
+The release checks work at three levels: a premise check rejects contradictory job files, every
+stream and event of each item is verified, and a leak probe runs on every prompt. Batch gates and a
+pack audit then check the pack as a whole, for example that real symptoms cannot be told from
+distractors by their data footprint. The simulation kernel lives in `src/haenv_kernel/`.
+
+- **Packs are plugins.** Each pack registers its gold, its question template and its scoring as a
+  judge group; the core pipeline does not know which packs exist.
+- **Fingerprints follow definitions.** The scoring and generation code each have a fingerprint,
+  stamped on every row and batch; boards with mixed fingerprints are refused by the publish gate.
+- **Four formats.** The same patients can be posed as `single`, `gated` (tests ordered against a
+  budget), `slices` (questions at several time points) or `multi` (rounds the agent may revise).
+
+The generator draws each patient's drug response, adherence and lab course from the bands its job
+declares, and difficulty (artifacts, distractors, the timing of the clinical turn) is a setting of
+the job. The [live demo](https://thetahealth.github.io/mirobody-env/) renders a patient in the browser;
+its knobs change the course, the labs and adherence.
+
+## What it measures
+
+HAEnv (Health Agent Environment) is the `haenv` Python package and command-line tool in this
+repository. Each question asks for one clinical decision on a synthetic record that grows over months
+or years. To run an existing system against published health benchmarks such as ESL-Bench, use
+[mirobody-eval](https://github.com/thetahealth/mirobody-eval).
 
 ### The four packs
 
@@ -77,13 +101,13 @@ identifiers are in English.
 
 ## Leaderboard
 
-The 1.4.0 board ranks 8 models on the four packs, 100 items per pack (N100), with 3 answers per
+The 1.3.0 board ranks 8 models on the four packs, 100 items per pack (N100), with 3 answers per
 item. The main score averages the three answer scores `S = G·D·(1+Q)/2` of each item (k3) and gives
 the four packs equal weight; the preregistered first-answer score (pk1) gives the same model order.
 Intervals are 95% paired item-cluster bootstrap intervals (2,000 draws) that resample the same items
 for every model; rank intervals come from the same draws.
 
-### 1.4.0 overall
+### 1.3.0 overall
 
 <p align="center">
   <img src="docs/figures/readme_board.png" alt="Overall scores and 95% intervals for eight models, ordered by score, with rank intervals at left" width="88%">
@@ -109,8 +133,8 @@ noise). Overlapping rank intervals do not establish an order.</sub>
 The evaluated question sets ship as frozen pack files and regenerate byte for byte at the commits
 their batches record. [Interactive board](https://thetahealth.github.io/mirobody-env/#act3) ·
 [board data (JSON)](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/board.json) ·
-[earlier boards (1.3.0 and 1.x)](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
-[recomputing the board](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-14-overall-board)
+[earlier boards](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
+[recomputing the board](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-130-overall-board)
 
 ## Quick start
 
@@ -188,15 +212,6 @@ Runs resume by default and resend only cells without an answer. Caching, token b
 accounting: [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#3-the-step-that-costs-money).
 </details>
 
-## Synthetic patients
-
-The figure at the top is one of them. The generator draws each patient's drug response, adherence and lab course from the bands its job
-declares, and difficulty (artifacts, distractors, the timing of the clinical turn) is a setting of
-the job. The [live demo](https://thetahealth.github.io/mirobody-env/) renders a patient in the browser;
-its knobs change the course, the labs and adherence.
-
-<!-- Top figure: tools/presentation/make_readme_meds_patient.py (deterministic, no model calls). -->
-
 ## One case, end to end
 
 <details>
@@ -237,23 +252,6 @@ The first solver names the right driver and still fails the case: action was war
 to keep monitoring.
 </details>
 
-## How it works
-
-A job file declares patient facts (condition, drugs, dose steps, devices) and latent variables. The
-generator renders the course and injects the configured artifacts and distractors. A case is released
-only if it passes the emission gate: a premise check that rejects contradictory specifications,
-per-item verification of every stream and event, and a leak probe on every prompt. Batch-level gates
-and the pack audit then check the pack as a whole, for example that real symptoms cannot be told from
-distractors by their data footprint. The simulation kernel that renders the patients is part of this
-repository; it lives in `src/haenv_kernel/`.
-
-- **Packs are plugins.** Each pack registers its gold, its question template and its scoring as a
-  judge group; the core pipeline does not know which packs exist.
-- **Fingerprints follow definitions.** The scoring and generation code each have a fingerprint,
-  stamped on every row and batch; boards with mixed fingerprints are refused by the publish gate.
-- **Four formats.** The same patients can be posed as `single`, `gated` (tests ordered against a
-  budget), `slices` (questions at several time points) or `multi` (rounds the agent may revise).
-
 ## Scoring
 
 - **Answer score.** Each answer scores `S = G·D·(1+Q)/2`. The hard gates `G` and the core decision
@@ -264,7 +262,7 @@ repository; it lives in `src/haenv_kernel/`.
 - **Auditable core.** `src/verifier_core/` holds the fingerprinting, the publish gate, the
   hard-gate multiplier and the noise-floor audit, with no clinical vocabulary.
 
-Gate lists, the 1.3.0 pack composites and the scored, profile and retired measures are in the
+Gate lists, the pack composites of the unreleased 2026-10-06 candidate and the scored, profile and retired measures are in the
 [data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#scoring). Self-checks
 run in seconds without model calls: [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#4-self-checks).
 
@@ -360,7 +358,7 @@ of decisions and gates with one LLM judge for plan quality, and regenerable synt
 > The whole pipeline is public: the world that renders the patients, the generators that write
 > the questions, and the judges. The canary string ([`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md))
 > marks this pack's text so its presence in a corpus can be detected; training on the public
-> sample is permitted; the 1.4.0 board is built from the public seed (earlier boards used private seeds).
+> sample is permitted; the 1.3.0 board is built from the public seed (earlier boards used private seeds).
 
 All patients are synthetic. Nothing here is medical advice or suitable for clinical decisions.
 
@@ -372,7 +370,7 @@ All patients are synthetic. Nothing here is medical advice or suitable for clini
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.4.0.dev0}
+  version = {1.3.0}
 }
 ```
 

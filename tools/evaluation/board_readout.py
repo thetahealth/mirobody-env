@@ -24,7 +24,7 @@ composite is on the raw scale, so it is mapped with the random-menu stub measure
 (`haenv.m2.stubs.randoms`, run through the production row builder by `tools/testing/m2_stub_ladder.py`):
 cc = (score - stub) / (1 - stub), stub = mean composite of the random stubs. The stub rows are
 written next to the readout, so a judging change re-scores them instead of reusing a number.
-M2 always uses the current scoring recipe; reproduce 1.3 with the archived release.
+M2 always uses the current scoring recipe; reproduce the 2026-10-06 candidate board with its archived checkout.
 Supplied random-stub rows need `<rows.jsonl>.meta.json`, equal to
 `m2_baseline_metadata(prefixes, cases, reps, items)`: the selected cases, source-case
 hashes, repetitions and runtime M2 stamp. Every random stub must cover those cells.

@@ -1,6 +1,6 @@
 {
  "_generated": "do not hand-edit; rebuild with `python web/demo/export_board.py --score ... --figures ... --work ...`",
- "version": "1.4.0",
+ "version": "1.3.0",
  "source": {
   "boot": 2000,
   "answer": "mean_of_three",

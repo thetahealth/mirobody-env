@@ -79,6 +79,8 @@ class FakeProvider:
         self.signatures: set[str] = set()
         self.in_flight: dict[str, int] = {}
         self.lock = threading.Lock()
+        self.logged = threading.Condition(self.lock)
+        self.n_logged = 0
         self.log_path = Path(log_path)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self._log = self.log_path.open("a", encoding="utf-8")
@@ -108,9 +110,17 @@ class FakeProvider:
 
     def log(self, record: dict) -> None:
         line = json.dumps(record, ensure_ascii=False) + "\n"
-        with self.lock:
+        with self.logged:
             self._log.write(line)
             self._log.flush()
+            self.n_logged += 1
+            self.logged.notify_all()
+
+    def wait_logged(self, n: int, timeout: float = 10.0) -> bool:
+        """Block until `n` requests are in the log. A request is logged after its reply is
+        sent, so a client can read its answer before the record is written."""
+        with self.logged:
+            return self.logged.wait_for(lambda: self.n_logged >= n, timeout)
 
     def enter(self, backend: str) -> bool:
         """Count a request in flight; False when the backend's concurrency limit is exceeded."""

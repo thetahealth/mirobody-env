@@ -72,9 +72,9 @@ Unchanged criterion columns remain comparable when another criterion changes; co
 scores also require matching aggregation rules and task weights. Legacy results retain
 their `judging_sha16` and freeze revision; see [`DATA_CARD.md`](DATA_CARD.md).
 
-### Recomputing the 1.4 overall board
+### Recomputing the 1.3.0 overall board
 
-Given an archived 1.4 answer tree and its per-answer Q JSONL file, recompute the
+Given an archived 1.3.0 answer tree and its per-answer Q JSONL file, recompute the
 main board without calling a model:
 
 ```bash
@@ -93,9 +93,10 @@ three answer scores and gives the four tasks equal weight.
 
 The evaluated question sets ship as frozen pack files. Each batch records its generation commit and world settings, and regenerating at those commits reproduces all four sets byte for byte (verified 2026-10-17: ① diagnosis and ② triage at `c3cecbee`, the ③ medication candidate arm at `fcf3b389` with its pairing at `c3cecbee`, ④ lab-change attribution at `05f97181`). `Q` averages two judgments by one LLM judge: of 7,246 Q records, 7,215 average two judgments, 20 contain one, and 11 have no management plan and score zero.
 
-### Historical 1.3 board
+### Historical candidate board (2026-10-06)
 
-This subsection retains the commands and paths of the original release checkout.
+This subsection retains the commands and paths of the unreleased 2026-10-06 candidate checkout. Its
+board archives were packaged but never published; the commands apply to a local copy of them.
 
 `tools/evaluation/board_readout.py` reads the stored batches of the four packs and makes no model call:
 
@@ -107,19 +108,18 @@ python tools/evaluation/board_readout.py --out board/ \
 A batch prefix `<dir>/<stamp>` reads the rounds `<stamp>-pk1` to `<stamp>-pk3`. The batches must pass the
 publish gate (restamp them as above when the judging code has moved).
 
-The following commands describe the historical 1.3.0 archive layout, not the 1.4 overall-score format.
-Historical bundles are named `haenv-board-1.3.0-common.tar.gz` (README, `MANIFEST.tsv`, `rebuild.sh`, the board's job files, the readout),
-`haenv-board-1.3.0-m2.tar.gz`, `-pack2.tar.gz`, `-p3.tar.gz`, `-p4.tar.gz` (one pack each) and
-`haenv-board-1.3.0.SHA256SUMS`. Download them into one directory, check them and unpack, then rebuild the
-board with the script of the bundle, which runs the two commands below with the bundle's batch names and
-compares `board.json` with the published one:
+The following commands describe the candidate's archive layout, not the 1.3.0 overall-score format.
+A candidate archive set holds a common bundle (README, `MANIFEST.tsv`, `rebuild.sh`, the board's job files,
+the readout), one bundle per pack and a `SHA256SUMS` file. Put them in one directory, check them and unpack,
+then rebuild the board with the script of the bundle, which runs the two commands below with the bundle's
+batch names and compares `board.json` with the bundled one:
 
 ```bash
-sha256sum -c haenv-board-1.3.0.SHA256SUMS && for f in haenv-board-1.3.0-*.tar.gz; do tar xzf "$f"; done
-haenv-board-1.3.0/rebuild.sh <haenv 1.3.0 checkout> board-rebuilt      # then: sha256sum -c MANIFEST.tsv inside the bundle
+sha256sum -c <archive>.SHA256SUMS && for f in <archive>-*.tar.gz; do tar xzf "$f"; done
+<archive>/rebuild.sh <candidate checkout> board-rebuilt      # then: sha256sum -c MANIFEST.tsv inside the bundle
 ```
 
-A pack whose items were run in two batches (the 1.3.0 board: the first 50 items, then the other 50 on a
+A pack whose items were run in two batches (the candidate board: the first 50 items, then the other 50 on a
 byte copy of the batch) is given as `--pack <pack>=<prefix A>+<prefix B>`, with `--items <prefix>=<job file>`
 naming the items each batch owns, and the pack ① random-menu stub rows run on the same 100 items:
 
@@ -146,12 +146,12 @@ Any other board is read with one batch prefix per pack: `--pack <pack>=<batch pr
 ### Regenerating the board's packs from its seed
 
 An official board draws its packs with a private seed; the jobs and batches record only the seed's sha256. The
-seed is published once the board retires: for the 1.3.0 board that is with the release `v1.3.0` (the release notes
-and the asset `haenv-board-1.3.0-seed.txt`). The bundle's `verify_seed.py` then rebuilds the four packs from it with
-the code of a haenv 1.3.0 checkout and compares them with the bundle:
+seed is published once the board retires; the 1.3.0 board uses the public seed. Given a retired board's seed, the
+bundle's `verify_seed.py` rebuilds the four packs from it with the code of the board's checkout and compares
+them with the bundle:
 
 ```bash
-cd haenv-board-1.3.0 && python verify_seed.py --haenv <haenv 1.3.0 checkout> --seed-file <seed file>
+cd <archive> && python verify_seed.py --haenv <board checkout> --seed-file <seed file>
 ```
 
 It checks that the sha256 of the seed equals the hash the jobs record, builds each pack at N = 50 and N = 100
@@ -173,13 +173,13 @@ The readout holds:
   separable.
 - **A sensitivity analysis.** The SD-equalized total divides each pack's chance-corrected score by
   that pack's between-model standard deviation before averaging, so a pack that separates the models more
-  weighs less. On the 1.3.0 board this makes the effective pack weights 12% (①), 39% (②), 34% (③) and
+  weighs less. On the candidate board this makes the effective pack weights 12% (①), 39% (②), 34% (③) and
   15% (④). The ten ranks are the same under both weightings. The readout writes both totals; the
   published board shows the equal-weight total.
 - **Unresolved semantic fields in pack ①.** The semantic judge needs two votes, a third on disagreement,
   and at least two agreeing labels; a field without that is unresolved, and no further votes are bought when
   the board is read. The pack ① scorer uses the code value `m2_tests_precision` for F1–F3 items and 0 for F0
-  items. On the 1.3.0 board 302 of the 3,000 pack ① cells have an unresolved semantic field; in 271 of them
+  items. On the candidate board 302 of the 3,000 pack ① cells have an unresolved semantic field; in 271 of them
   it is the tests precision (218 cells F1–F3, 53 cells F0). Leaving the F0 zeros out moves a model's pack ①
   score by 0.000 to 0.039 and swaps only the pack ① order of gpt-6-luna and gemini-3.7-flash. The scores of
   packs ② to ④ read no semantic field, so a field left unresolved there does not enter a score.
@@ -320,7 +320,7 @@ available in a clone; missing objects remain unmeasured there.
 * [`ETHICS.md`](ETHICS.md): the data is synthetic, and exactly where real EMR entered.
 * Noise floor. Before reading any difference between two scores, measure `pass^k` with
   k ≥ 3. The noise level changes sharply with the number of cells. The original 1.x board ran once
-  per cell (k = 1): its tiers cover case sampling only. The 1.4 main board averages three
+  per cell (k = 1): its tiers cover case sampling only. The 1.3.0 main board averages three
   responses per question and resamples question clusters.
 
 **Source and wheel provenance.** Fingerprints resolve code and resources in either installation

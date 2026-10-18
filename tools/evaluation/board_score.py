@@ -1,4 +1,4 @@
-"""Read the 1.4 overall board from stored answers and management-plan scores.
+"""Read the 1.3.0 overall board from stored answers and management-plan scores.
 
     python -P board_score.py --work runs/main-n50 --tree <board tree> [--q q.jsonl] [--packs p2,p3,p4,m2] [--boot 2000] --out <dir>
 
@@ -10,7 +10,7 @@ Per item:  S = G * D * (1 + Q) / 2   on the first answer (pk1).
      unless G*D = 0, where S = 0 for every Q
 Pack score = mean S over the pack's items; overall = equal-weight mean of pack scores.
 Uncertainty: paired item-cluster bootstrap inside each pack (same draws for every model), combined across packs.
-Rank interval (added 2026-10-14, additive): overall.<model>.rank / rank_ci, the 1.3.0 rule (tools/evaluation/board_readout.py) on the same draws.
+Rank interval (added 2026-10-14, additive): overall.<model>.rank / rank_ci, the 2026-10-06 candidate board's rule (tools/evaluation/board_readout.py) on the same draws.
 Also reported: D accuracy and pass^k over k=3, hard-gate and propensity-gate rates, Q mean on D=1 items.
 """
 from __future__ import annotations
@@ -174,7 +174,7 @@ def main():
         return [round(v[int(0.025 * n)], 4), round(v[min(n - 1, int(0.975 * n))], 4)] if n else None
 
     ranked = sorted([m for m in models if point[m]["overall"] is not None], key=lambda m: -point[m]["overall"])
-    # Rank interval, the 1.3.0 board's rule (tools/evaluation/board_readout.py `overall`, `rank_of`, `pct`): rank every draw in which
+    # Rank interval, the 2026-10-06 candidate board's rule (tools/evaluation/board_readout.py `overall`, `rank_of`, `pct`): rank every draw in which
     # every ranked model has a score (1 = highest; sorted() order breaks ties), then the 2.5th / 97.5th percentile of each
     # model's ranks with linear interpolation. web/demo/export_board.py shows it as [int(lo), int(hi)].
     # Additive field only: S, pack scores, CIs and adjacent pairs above are computed exactly as before.

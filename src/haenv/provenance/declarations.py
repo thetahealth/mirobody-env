@@ -368,7 +368,7 @@ P3_WORLD = PROTOCOL_WORLD + (
 #: Same arrangement as pack 4: neither segment is in `JUDGING` or `GENERATION`; `P2_JUDGING` is
 #: stamped on rebuilt pack-2 rows as `p2_judging_sha16`, `P2_WORLD` on the gold block as
 #: `p2_world_sha16` and enters `world_sha` of a rebuilt pack-2 batch through the registered probe.
-#: The previous pack 2 (`PACK2_WORLD` / `PACK2_JUDGING`, board 1.3.0) is unchanged.
+#: The previous pack 2 (`PACK2_WORLD` / `PACK2_JUDGING`, board of the unreleased 2026-10-06 candidate) is unchanged.
 P2_JUDGING = (
     'haenv/app/packs.py',
     "haenv/p2/score.py", "haenv/p2/plugin.py", "haenv/p2/hooks.py",

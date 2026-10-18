@@ -161,7 +161,7 @@ evenly over the cases with and without a hidden condition). The job carries `pac
 seed_sha256}`; `batch.json` records `N`, the seed's hash and the job, never the seed. Packs of one seed are nested: the 50-item pack is a subset of the
 100-item pack with byte-identical cases, and the emitted pool holds at least four times `N` candidate
 items, which the audit's shortcut gates read. The shipped job files are example packs at the current
-defaults, `N = 50`; they are not the evaluated 1.4.0 question sets, which ship as frozen pack files
+defaults, `N = 50`; they are not the evaluated 1.3.0 question sets, which ship as frozen pack files
 and are reproduced byte for byte at the generation commit each batch records. Each job carries its pool:
 
 | Pack | Items at N = 50 | Drawn from | Answer classes |
@@ -185,9 +185,11 @@ tables (drug tables, analyte baselines), so it can change the gold answer.
 
 ## Historical boards
 
-Earlier boards are kept as published. They are not comparable with the 1.4.0 board: the judging and world fingerprints, the questions and the scoring have changed since. The 1.x board on the two bridge tracks is in [1.x evaluation](#1x-evaluation-historical).
+Earlier boards are kept for reference. They are not comparable with the 1.3.0 board: the judging and world fingerprints, the questions and the scoring have changed since. The 1.x board on the two bridge tracks is in [1.x evaluation](#1x-evaluation-historical).
 
-### 1.3.0 overall
+### 2026-10-06 candidate overall
+
+The 2026-10-06 candidate was prepared as a release but never published; 1.3.0 supersedes it.
 
 | Rank | Model | Overall | 95% CI |
 |---:|---|---:|---:|
@@ -205,10 +207,10 @@ Earlier boards are kept as published. They are not comparable with the 1.4.0 boa
 gpt-6-sol is first and is separable from every other model (none of its nine pairs is within 2 paired
 standard errors). gemini-3.1-pro, gemini-3.7-flash and gpt-6-luna share ranks 2–4: no pair among them
 differs by more than 2 paired standard errors, so their order is not a ranking. Ranks are intervals for
-that reason: 37 of the 45 model pairs are separable. 1.3.0 boards are not comparable with 1.2.x
+that reason: 37 of the 45 model pairs are separable. The candidate board is not comparable with 1.2.x
 boards: the judging and the world fingerprints changed.
 
-### 1.3.0 by pack
+### 2026-10-06 candidate by pack
 
 Each cell is the pack score with its 95% interval.
 
@@ -456,7 +458,7 @@ Both arms are answered like any batch (`tools/evaluation/reliability_passk.py <j
 
 ## Scoring
 
-### 1.4.0 board
+### 1.3.0 board
 
 Each answer scores `S = G·D·(1+Q)/2`. The hard gates `G` and the core decision `D` are graded by
 code in all four packs; in pack ① code matches the listed diagnoses to the gold through registered
@@ -464,9 +466,9 @@ aliases (and reads the stated link for independent findings), with no model call
 scores the management-plan quality `Q`. A pack's score is the item mean of `S` (k3: the mean over
 three answers per item), and the overall score gives the four packs equal weight.
 
-### Pack scoring (1.3.0 board)
+### Pack scoring (2026-10-06 candidate board)
 
-The rest of this subsection describes the pack composites of the 1.3.0 board.
+The rest of this subsection describes the pack composites of the 2026-10-06 candidate board.
 
 Each pack has its own board and composite; composites are not pooled across packs. A pack's
 decision is scored as chance-corrected balanced accuracy, `cc = (m · BA − 1) / (m − 1)`, where `BA`
@@ -562,18 +564,18 @@ without its fingerprint is not reproducible. For a pack, also cite its `n_items`
 
 **Packs**
 
-* The 1.3.0 board ran 10 models on 100 items per pack, 3 rounds each. Among the six best models on
+* The 2026-10-06 candidate board ran 10 models on 100 items per pack, 3 rounds each. Among the six best models on
   a pack, 11 of 15 pairs are separable on pack ①, 0 on pack ②, 4 on pack ③ and 10 on pack ④; on the
   overall board gpt-6-sol is separable from every other model, and gemini-3.1-pro, gemini-3.7-flash and
   gpt-6-luna are not separable from one another. A larger pool per pack would separate more pairs.
 * The rules behind pack ② (which findings send a patient to the emergency department) and pack ③
   (when a dose change is on target, when to check adherence first) and the lay-sentence registry
   carry `review: pending`; no practising clinician has signed them off.
-* On the 1.3.0 board pack ① matched the proposed tests with one LLM judge; on the 1.4.0 board its
+* On the 2026-10-06 candidate board pack ① matched the proposed tests with one LLM judge; on the 1.3.0 board its
   core decision is graded by code. Its diagnosis dimensions have no blind-human validity reading.
 * In pack ①, a semantic field the judges leave unresolved (two votes, a third on disagreement, and at
   least two agreeing labels are required; no further votes are bought when the board is read) is scored
-  with the code value `m2_tests_precision` for F1–F3 items and as 0 for F0 items. On the 1.3.0 board the
+  with the code value `m2_tests_precision` for F1–F3 items and as 0 for F0 items. On the 2026-10-06 candidate board the
   judges left a semantic field unresolved in 302 of the 3,000 pack ① cells; in 271 of them it is the tests
   precision (218 cells F1–F3, 53 cells F0). Leaving the F0 zeros out moves a model's pack ① score by at
   most 0.039 and swaps only the pack ① order of gpt-6-luna and gemini-3.7-flash.

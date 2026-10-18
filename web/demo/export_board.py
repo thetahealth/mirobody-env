@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Write `board.json`, the board the demo page shows in its third act, from a board readout.
 
-For 1.4.0 use `--score <board_score.json> --figures <figures_data.json> --work <run-root>`
+For 1.3.0 use `--score <board_score.json> --figures <figures_data.json> --work <run-root>`
 (repeat --work for separate pack runs). Scores, overall intervals, ranks, profiles and adjacent
 paired differences are copied from the score readout; chart values are copied from the approved
 figure data. Stored answer rows provide only decision counts and round disagreement.
@@ -433,7 +433,7 @@ def build_score(score: pathlib.Path, figures: pathlib.Path, work: list[pathlib.P
     if len(draws) != 1:
         raise Missing("overall: inconsistent bootstrap draw counts")
     return {"_generated": "do not hand-edit; rebuild with `python web/demo/export_board.py --score ... --figures ... --work ...`",
-            "version": "1.4.0", "source": {"boot": next(iter(draws)), "answer": "mean_of_three" if R["aggregation"] == "k3" else "first",
+            "version": "1.3.0", "source": {"boot": next(iter(draws)), "answer": "mean_of_three" if R["aggregation"] == "k3" else "first",
                                                "aggregation": R["aggregation"], "seed": "public"},
             "provenance": {"score_sha16": _sha(score), "figures_sha16": _sha(figures)},
             "models": ranked, "packs": packs,

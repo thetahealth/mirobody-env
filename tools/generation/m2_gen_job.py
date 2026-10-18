@@ -348,7 +348,7 @@ def declare_complaint_count(latent: dict, n: int) -> dict:
 def declare_life_event_rate(latent: dict, pool: list[float], case_id: str) -> dict:
     """The case's life-event rate (the context notes of its record: a trip, a new appliance) drawn from the
     F1-F3 pool's own rates by case id alone. The rates the source rows carry are higher on the positive arm
-    (mean 0.121 against 0.079 on the negative arm in the 1.4 pool), which put about one more context note on
+    (mean 0.121 against 0.079 on the negative arm in the 1.3.0 pool), which put about one more context note on
     every positive record; the resample keeps the pool's rate distribution and drops the arm from it."""
     ed = latent["event_density"] = dict(latent["event_density"])
     ed["life_event_rate"] = pool[int(_u(case_id, "life-rate") * len(pool))]

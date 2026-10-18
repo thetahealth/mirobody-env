@@ -17,14 +17,13 @@
 <p align="center">
   <a href="https://github.com/thetahealth/mirobody-env/blob/main/README.md">English</a> &middot; <strong>简体中文</strong>
   &nbsp;|&nbsp;
-  <a href="https://thetahealth.github.io/mirobody-env/">在线演示</a> &middot;
+  <a href="#工作原理">工作原理</a> &middot;
   <a href="#四个题包">题包</a> &middot;
   <a href="#排行榜">评测结果</a> &middot;
   <a href="#快速开始">快速开始</a> &middot;
-  <a href="#合成病人">合成病人</a> &middot;
-  <a href="#工作原理">工作原理</a> &middot;
   <a href="#评测你自己的-agent">评测你的 agent</a> &middot;
   <a href="#文档">文档</a> &middot;
+  <a href="https://thetahealth.github.io/mirobody-env/">在线演示</a> &middot;
   <a href="#引用">引用</a>
 </p>
 
@@ -33,14 +32,27 @@
 </p>
 <p align="center"><sub>公开种子用药题包中的一道题，截至就诊时点 <code>T</code>（图中标注为英文）；空心点、依从性和症状颜色对 agent 隐藏。格列齐特已在最高剂量而 HbA1c 仍高于目标，但上次取药后 19 天只服了 12 天的量，所以金标是核查依从性，而不是加量。</sub></p>
 
-## 测什么
+## 工作原理
 
-HAEnv（Health Agent Environment）评测在随时间展开的病历上做出的临床决定。合成病人的病历按月、按年增长，agent 看到截止时点 `T` 之前的记录，做出一个决定。正确答案由渲染这份病历的世界在写出病历之前就已确定，对 agent 隐藏。HAEnv 的代码仓库是 `mirobody-env`，安装后的 Python 包与命令行工具名为 `haenv`；要用已发表的健康基准（如 ESL-Bench）评测现成系统，请用 [mirobody-eval](https://github.com/thetahealth/mirobody-eval)。
+HAEnv 的每道题都从一个隐藏的病人状态出发。**定义：** job 文件设定病人事实（病种、药物、剂量阶梯、设备）和依从性、化验真值等隐变量。**渲染：** 生成器据此写出按月、按年展开的带日期记录，并注入配置的伪影和干扰。**检查：** 病例通过发布检查才会放行。**运行：** 被测 agent 看到截至就诊时点 `T` 的记录，做出一个决定。**评分：** 代码把这个决定与由同一隐藏状态推出的金标比对，另有一个 LLM 裁判评判处理方案。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/thetahealth/mirobody-env/main/docs/figures/readme_hero.png" alt="HAEnv 五步：定义隐藏的病人状态，渲染多年的记录，发布检查，被测 agent 回答题目，代码与 LLM 裁判对照由同一状态推出的隐藏金标判分" width="100%">
 </p>
 <p align="center"><sub>agent 只接收截至 <code>T</code> 的记录，隐藏金标只交给判分器；判分器是代码，另有一个 LLM 裁判判定处理方案质量 <code>Q</code>（见<a href="#计分">计分</a>）。</sub></p>
+
+发布检查分三层：前提校验拒绝自相矛盾的 job 文件，逐项校验检查每道题的每条数据流和事件，泄漏探针检查每条题面。之后批次级闸门和题包审计检查整个题包，例如真实症状不能靠数据足迹与干扰事件区分开。仿真内核位于 `src/haenv_kernel/`。
+
+- **题包是插件。** 每个题包把自己的金标、问法模板和计分登记为一个判据组；核心流水线不知道有哪些题包。
+- **指纹跟着定义走。** 判分代码与出题代码各有一个指纹，打在每一行、每个批次上；指纹不一致的榜会被发布闸门拒绝。
+- **四种形式。** 同一批病人可以用 `single`、`gated`（在预算内开检查）、`slices`（在多个时点分别提问）或 `multi`（分轮推进，agent 可修正）出题。
+
+生成器在 job 声明的区间内为每个病人抽取药物反应、依从性与化验走势；难度（伪影、干扰、临床转折的时点）是 job 的设置。
+[在线演示](https://thetahealth.github.io/mirobody-env/)在浏览器里生成病人，拖动参数即可改变病程、化验与依从性。
+
+## 测什么
+
+HAEnv（Health Agent Environment）是本仓库中的 Python 包与命令行工具 `haenv`。每道题要求在一份按月、按年增长的合成病历上做出一个临床决定。要用已发表的健康基准（如 ESL-Bench）评测现成系统，请用 [mirobody-eval](https://github.com/thetahealth/mirobody-eval)。
 
 ### 四个题包
 
@@ -62,9 +74,9 @@ HAEnv（Health Agent Environment）评测在随时间展开的病历上做出的
 
 ## 排行榜
 
-1.4.0 榜在四个题包上给 8 个模型排名，每包 100 题（N100），每题作答 3 次。主分为每题三次作答的 `S = G·D·(1+Q)/2` 取平均（k3），四包等权；首次作答的预注册分 pk1 名次相同。95% 区间来自配对题簇自助法（2,000 次），对所有模型重抽同一批题目；名次区间来自同一批抽样。
+1.3.0 榜在四个题包上给 8 个模型排名，每包 100 题（N100），每题作答 3 次。主分为每题三次作答的 `S = G·D·(1+Q)/2` 取平均（k3），四包等权；首次作答的预注册分 pk1 名次相同。95% 区间来自配对题簇自助法（2,000 次），对所有模型重抽同一批题目；名次区间来自同一批抽样。
 
-### 1.4.0 总分
+### 1.3.0 总分
 
 <p align="center">
   <img src="docs/figures/readme_board.png" alt="八个模型的总分与 95% 区间，按总分排列，左侧为名次区间" width="88%">
@@ -85,8 +97,8 @@ HAEnv（Health Agent Environment）评测在随时间展开的病历上做出的
 
 评测所用题集以冻结题包文件发布，在各批次记录的提交上可逐字节重新生成。[交互式榜单](https://thetahealth.github.io/mirobody-env/#act3) ·
 [榜单数据（JSON）](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/board.json) ·
-[早期榜单（1.3.0 与 1.x）](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
-[重算榜单](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-14-overall-board)
+[早期榜单](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
+[重算榜单](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-130-overall-board)
 
 ## 快速开始
 
@@ -154,13 +166,6 @@ uv run haenv run benchmarks/inputs/example-ew.job.yaml --models gemini-3.1-pro -
 评测默认断点续跑，只补发还没有答案的格子。缓存、token 预算与用量记账见 [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#3-the-step-that-costs-money)。
 </details>
 
-## 合成病人
-
-页首的图就是其中一个。生成器在 job 声明的区间内为每个病人抽取药物反应、依从性与化验走势；难度（伪影、干扰、临床转折的时点）是 job 的设置。
-[在线演示](https://thetahealth.github.io/mirobody-env/)在浏览器里生成病人，拖动参数即可改变病程、化验与依从性。
-
-<!-- 页首图：tools/presentation/make_readme_meds_patient.py（确定性生成器，不调用模型） -->
-
 ## 一个病例，从头到尾
 
 <details>
@@ -197,21 +202,13 @@ agent 返回风险预测、从固定列表中选出并排序的驱动因素（�
 第一个求解器找对了驱动因素，整例仍然判负：本例需要临床介入，它却选择继续观察。
 </details>
 
-## 工作原理
-
-job 文件声明病人事实（病种、药物、剂量阶梯、设备）和隐变量。生成器渲染病程，并注入配置的伪影和干扰。病例必须通过出题闸门才会放行：前提校验拒绝自相矛盾的规格，逐项校验检查每条数据流和事件，泄漏探针检查每条题面。之后还有批次级闸门和题包审计检查整个题包，例如真实症状不能靠数据足迹与干扰事件区分开。渲染病人的仿真内核包含在本仓库中，位于 `src/haenv_kernel/`。
-
-- **题包是插件。** 每个题包把自己的金标、问法模板和计分登记为一个判据组；核心流水线不知道有哪些题包。
-- **指纹跟着定义走。** 判分代码与出题代码各有一个指纹，打在每一行、每个批次上；指纹不一致的榜会被发布闸门拒绝。
-- **四种形式。** 同一批病人可以用 `single`、`gated`（在预算内开检查）、`slices`（在多个时点分别提问）或 `multi`（分轮推进，agent 可修正）出题。
-
 ## 计分
 
 - **作答分。** 每次作答记 `S = G·D·(1+Q)/2`。四个题包的硬门 `G` 与核心决定 `D` 都由代码判定；一个 LLM 裁判（`gpt-6-luna`）只判处理方案质量 `Q`。题包分是各题 `S` 的平均。
 - **重算而非重跑。** 模型原始回答全量保存，修正判分只需重算（`tools/evaluation/restamp_batch.py <batch>`），无需再次调用被测模型。
 - **可单独审阅的核心。** `src/verifier_core/` 包含指纹、发布闸门、硬性门槛乘子和噪声下限审计，不含临床词汇。
 
-门槛清单、1.3.0 的题包综合分，以及计分、画像、退役三类度量见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#scoring)。自检不调用模型，几秒内完成，见 [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#4-self-checks)。
+门槛清单、未发布的 2026-10-06 候选版的题包综合分，以及计分、画像、退役三类度量见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#scoring)。自检不调用模型，几秒内完成，见 [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#4-self-checks)。
 
 ## 评测你自己的 agent
 
@@ -284,7 +281,7 @@ HAEnv 同时具备在 `T` 处截断的纵向病历、先于数据确定的金标
 
 ## 数据、伦理与复现
 
-> 整条管线公开：渲染病人的世界、写题的生成器、判分器。canary 串（[`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md)）标记本题包的文本，便于检测它是否出现在某个语料中；允许用公开样例训练；1.4.0 榜的题由公开种子生成（更早的榜用私有种子）。
+> 整条管线公开：渲染病人的世界、写题的生成器、判分器。canary 串（[`CANARY.md`](https://github.com/thetahealth/mirobody-env/blob/main/CANARY.md)）标记本题包的文本，便于检测它是否出现在某个语料中；允许用公开样例训练；1.3.0 榜的题由公开种子生成（更早的榜用私有种子）。
 
 所有病人均为合成数据，不构成医疗建议，不可用于临床决策。
 
@@ -296,7 +293,7 @@ HAEnv 同时具备在 `T` 处截断的纵向病历、先于数据确定的金标
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.4.0.dev0}
+  version = {1.3.0}
 }
 ```
 
