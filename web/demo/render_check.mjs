@@ -178,8 +178,12 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
   sel.value = other; fire(sel, "change");
   check("model_switch_repaints_the_panel", $("#mpanel").innerHTML !== p0 && $("#act3 tr.sel").dataset.m === other);
   const cf = board.decisions.pack2, cells = cf.models[other], tot = cells.reduce((a, c) => a + c[2], 0);
-  check("decision_counts_cover_every_item_and_round", tot === cf.n_items * cf.n_rounds && $$("#cf-pack2 td[data-g]").length === cf.classes.length * (cf.classes.length + 1),
+  // The "No answer" column appears only for a model with answers outside the classes.
+  const noneCol = cfm => cfm.some(c => c[1] === "none" && c[2]) ? 1 : 0;
+  check("decision_counts_cover_every_item_and_round", tot === cf.n_items * cf.n_rounds && $$("#cf-pack2 td[data-g]").length === cf.classes.length * (cf.classes.length + noneCol(cells)),
     { tot, want: cf.n_items * cf.n_rounds });
+  const outlinedBlank = $$("#mpanel td.ok").filter(td => td.textContent.trim() === "").length;
+  check("outlined_cells_always_show_a_count", outlinedBlank === 0, { outlinedBlank });
   const rv = board.decisions.m2.models[other], rvTot = rv.review.reduce((a, c) => a + c[2], 0);
   const shown = $$("#cf-m2 td[data-w]").reduce((a, td) => a + (+td.textContent || 0), 0);
   check("pack1_review_counts_are_the_rows", shown === rvTot && rvTot > 0, {shown,rvTot});

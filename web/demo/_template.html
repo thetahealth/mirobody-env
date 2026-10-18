@@ -44,7 +44,7 @@
   --muted:#EFEEE9; --border:rgba(11,11,11,.10); --grid:#E1E0D9; --axis:#C3C2B7; --wash:#F0EFEC;
   --accent:#2A78D6; --c2:#EB6834; --ok:#006300; --hatch:rgba(11,11,11,.16);
   --shadow:rgba(0,0,0,.10); --nav-bg:rgba(249,249,247,.88); --on-accent:#FFFFFF;
-  --seq-hi:#2A78D6; --track:#E1E0D9; --fill:#52514E;
+  --seq-hi:#2A78D6; --seq-warm:#C4521F; --track:#E1E0D9; --fill:#52514E;
 }
 @media(prefers-color-scheme:dark){
   :root:not([data-theme=light]){
@@ -52,7 +52,7 @@
     --muted:#262624; --border:rgba(255,255,255,.10); --grid:#2C2C2A; --axis:#383835; --wash:#383835;
     --accent:#3987E5; --c2:#D95926; --ok:#0CA30C; --hatch:rgba(255,255,255,.16);
     --shadow:rgba(0,0,0,.45); --nav-bg:rgba(13,13,13,.88); --on-accent:#FFFFFF;
-    --seq-hi:#3987E5; --track:#2C2C2A; --fill:#C3C2B7;
+    --seq-hi:#3987E5; --seq-warm:#D8692F; --track:#2C2C2A; --fill:#C3C2B7;
   }
 }
 :root[data-theme=dark]{
@@ -60,7 +60,7 @@
   --muted:#262624; --border:rgba(255,255,255,.10); --grid:#2C2C2A; --axis:#383835; --wash:#383835;
   --accent:#3987E5; --c2:#D95926; --ok:#0CA30C; --hatch:rgba(255,255,255,.16);
   --shadow:rgba(0,0,0,.45); --nav-bg:rgba(13,13,13,.88); --on-accent:#FFFFFF;
-  --seq-hi:#3987E5; --track:#2C2C2A; --fill:#C3C2B7;
+  --seq-hi:#3987E5; --seq-warm:#D8692F; --track:#2C2C2A; --fill:#C3C2B7;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:64px}
@@ -258,13 +258,16 @@ table.bt td.upd{background:repeating-linear-gradient(45deg,var(--hatch) 0 2px,tr
 .rvbar small{grid-column:2/4;margin-top:-4px}
 .mpg h4,.mps h4{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:0 0 6px;font-weight:600}
 table.cf{border-collapse:separate;border-spacing:2px;font-size:11.5px;table-layout:fixed;width:auto}
-table.cf col.c{width:62px} table.cf col.h{width:6.6em}
-@media(max-width:560px){table.cf col.c{width:42px} table.cf col.h{width:6em} .mpg h4,.mps h4{white-space:normal}}
-table.cf th{font-weight:400;color:var(--faint);padding:2px;line-height:1.2;vertical-align:bottom}
+table.cf col.c{width:62px} table.cf col.h{width:8.6em}
+@media(max-width:560px){table.cf col.c{width:42px} table.cf col.h{width:6em} table.cf th.r{white-space:normal} .mpg h4,.mps h4{white-space:normal}}
+table.cf th{font-weight:400;color:var(--faint);padding:2px;line-height:1.2;vertical-align:bottom;white-space:nowrap;overflow:visible}
 table.cf th.ah{text-align:left;white-space:nowrap;overflow:visible}
 table.cf th.r{text-align:right;color:var(--muted-fg);padding-right:6px}
 table.cf td{text-align:center;height:26px;border-radius:3px;font-variant-numeric:tabular-nums}
 table.cf td.ok{box-shadow:inset 0 0 0 1.5px var(--foreground)}
+.cflegend{margin-top:14px}
+.cflegend .sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.cflegend .sw.ok{background:var(--seq-hi);box-shadow:inset 0 0 0 1.5px var(--foreground)} .cflegend .sw.bad{background:var(--seq-warm)}
 
 .insights{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:16px}
 .insight{padding:20px 18px 14px;min-width:0;display:flex;flex-direction:column}.insight .fig{margin-top:auto}
@@ -279,8 +282,8 @@ table.cf td.ok{box-shadow:inset 0 0 0 1.5px var(--foreground)}
 .trajectory-result{margin:6px 0;font-size:12.5px;color:var(--muted-fg)}
 .trajectory-result b{color:var(--foreground);font-weight:600}
 .wrong{color:var(--c2)}
-.profiles{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;font-variant-numeric:tabular-nums}
-.profiles th,.profiles td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+.profiles{width:auto;min-width:min(100%,520px);border-collapse:collapse;font-size:12px;margin-top:12px;font-variant-numeric:tabular-nums}
+.profiles th,.profiles td{padding:6px 14px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
 .profiles th{font-weight:500;color:var(--faint)} .profiles th:first-child,.profiles td:first-child{text-align:left}
 @media(max-width:900px){.insights{grid-template-columns:minmax(0,1fr)}.history-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.history-grid{grid-template-columns:minmax(0,1fr)}}
@@ -503,14 +506,14 @@ en: {
   n3final: "Models are listed by overall score. A rank shown as an interval (for example 1–2) is shared: the models whose intervals overlap are not separable on this board.",
   mpModel: "Model", mpOverall: (s, lo, hi, r, n) => "Overall " + s + " (95% interval " + lo + "–" + hi + ") · rank " + r + " of " + n,
   mpScores: "Scores", thPack: "Pack", thScore: "Score", th95: "95%", thRank: "Rank", thRounds: "By round",
-  mpScoresSub: "Mean S over three answers (k3), by pack · one dot per pack", tipRound: i => "Round " + i,
+  mpScoresSub: "Mean S over three answers (k3), by pack · grey dots: the other models", tipRound: i => "Round " + i,
   mpNote: "Pack ④ in Act 2 is an item from this public board; its first-answer tool-call sequences are shown with the sample.",
   mpCf: p => p + ": answers vs truth", mpReview: p => p + ": what is scored",
-  rvFlag: "Flagged", rvNo: "Not flagged", rvNone: "None", rvYes: "Review warranted", rvNot: "Not warranted", rvAnswer: "model's review flag →",
+  rvFlag: "Flagged", rvNo: "Unflagged", rvNone: "No answer", rvYes: "Review warranted", rvNot: "Not warranted", rvAnswer: "model's review flag →",
   rvNote: n => "Review decisions over " + n + " item-rounds; rows show whether review is warranted, outlined cells agree with the truth.",
   rvTip: (g, s, n, t) => g + ": " + s + " " + n + " of " + t,
   barDx: "Gold lines listed", barTests: "Tests match (F1)", barRecall: v => "recall " + v, cfNote: (n, r) => n + " items × " + r + " rounds; rows are the truth, outlined cells are correct.",
-  cfAnswer: "model's answer →", cfNone: "None", cfTip: (g, s, n, t) => "Truth " + g + ": answered " + s + " " + n + " of " + t,
+  cfAnswer: "model's answer →", cfNone: "No answer", noneTip: "no valid decision in the answer", cfLegOk: "blue: agrees with truth", cfLegBad: "orange: disagrees", cfLegShade: "shade: share of the row", cfTip: (g, s, n, t) => "Truth " + g + ": answered " + s + " " + n + " of " + t,
   short_ed_now: "ED now", short_within_24h: "≤ 24 h", short_routine_followup: "Routine", short_watchful_waiting: "Watch",
   short_uptitrate: "Raise", short_downtitrate: "Lower", short_maintain: "Keep", short_switch: "Switch", short_check_adherence_or_adverse_effect: "Check",
   short_true_change: "True", short_analytic_biological_noise: "Noise", short_preanalytical: "Pre-an.", short_method_difference: "Method",
@@ -528,7 +531,7 @@ en: {
   histCounts: (h,o) => h + " history · " + o + " ordinary items",
   adjacentNote: "Paired score differences in board order, with 95% intervals. An interval crossing zero does not establish an order.",
   profileGate: "Hard-gate rate",
-  profileSub: "D, All-3 and hard-gate rate use all three answers; Q uses correct first answers. These are profiles. Pack ② rows below show the minimum acceptable urgency.",
+  profileSub: "D, All-3 and hard-gate rate use all three answers; Q uses correct first answers. These are profiles. In pack ② only the reference disposition counts as correct; a more urgent answer is over-triage.",
   p4Methods: "Method and reagent records",
   p4Specimens: "Collection and standardized verification",
   p4Arms: (sample,infusion,running) => "Sampling arm: " + sample + "; infusion arm: " + infusion + (running ? ", infusion running" : ", no infusion running"),
@@ -680,14 +683,14 @@ zh: {
   n3final: "模型按总分排列。名次写成区间（如 1–2）表示区间重叠的模型在本榜上分不开，并不是确定的先后。",
   mpModel: "模型", mpOverall: (s, lo, hi, r, n) => "总分 " + s + "（95% 区间 " + lo + "–" + hi + "）· 名次 " + r + " / " + n,
   mpScores: "分数", thPack: "题包", thScore: "分数", th95: "95%", thRank: "名次", thRounds: "各轮",
-  mpScoresSub: "三次 S 平均（k3）的分包分数 · 每包一个点", tipRound: i => "第 " + i + " 轮",
+  mpScoresSub: "三次 S 平均（k3）的分包分数 · 灰点为其他模型", tipRound: i => "第 " + i + " 轮",
   mpNote: "第 2 幕的题包 ④ 样题来自本版公开榜，首次作答轨迹与样题放在一起。",
   mpCf: p => p + "：回答对金标", mpReview: p => p + "：计分的部分",
-  rvFlag: "标记", rvNo: "未标记", rvNone: "无", rvYes: "应复核", rvNot: "不必复核", rvAnswer: "模型的复核标记 →",
+  rvFlag: "标记", rvNo: "未标记", rvNone: "未作答", rvYes: "应复核", rvNot: "不必复核", rvAnswer: "模型的复核标记 →",
   rvNote: n => n + " 格作答的复核决定；行表示是否需要复核，描边格与金标一致。",
   rvTip: (g, s, n, t) => g + "：" + s + " " + n + " / " + t,
   barDx: "列出的金标线", barTests: "检查匹配 (F1)", barRecall: v => "召回 " + v, cfNote: (n, r) => n + " 题 × " + r + " 轮；行是金标，加框的格子是答对的。",
-  cfAnswer: "模型的回答 →", cfNone: "无", cfTip: (g, s, n, t) => "金标 " + g + "：答成 " + s + " " + n + " / " + t,
+  cfAnswer: "模型的回答 →", cfNone: "未作答", noneTip: "回答里没有有效的决定", cfLegOk: "蓝：与金标一致", cfLegBad: "橙：与金标不一致", cfLegShade: "深浅：占该行的比例", cfTip: (g, s, n, t) => "金标 " + g + "：答成 " + s + " " + n + " / " + t,
   short_ed_now: "急诊", short_within_24h: "≤24h", short_routine_followup: "常规", short_watchful_waiting: "观察",
   short_uptitrate: "加量", short_downtitrate: "减量", short_maintain: "维持", short_switch: "换药", short_check_adherence_or_adverse_effect: "先查",
   short_true_change: "真变化", short_analytic_biological_noise: "噪声", short_preanalytical: "分析前", short_method_difference: "方法",
@@ -705,7 +708,7 @@ zh: {
   histCounts: (h,o) => "病史依赖 " + h + " 题 · 普通 " + o + " 题",
   adjacentNote: "按总榜顺序比较相邻模型的配对分差及 95% 区间。区间跨 0，不能确定先后。",
   profileGate: "硬门率",
-  profileSub: "D、All-3 与硬门率看全部三次作答，Q 看首次答对的题；均作为画像。下方题包 ② 的行表示最低可接受紧急程度。",
+  profileSub: "D、All-3 与硬门率看全部三次作答，Q 看首次答对的题；均作为画像。题包 ② 只有与参考处置一致才算对，更紧急的回答记为过度分诊。",
   p4Methods: "方法与试剂记录",
   p4Specimens: "采血与标准化复核",
   p4Arms: (sample,infusion,running) => "采血臂：" + sample + "；输液臂：" + infusion + (running ? "，正在输液" : "，未在输液"),
@@ -1445,49 +1448,52 @@ function boardPaint(){
   $("#n3").textContent = pend.length ? T("n3", pkList(pend), pkList(ov.packs)) : T("n3final") + (Object.keys(BD.unranked || {}).length ? " " + T("boardPartial", Object.keys(BD.unranked)) : "");
 }
 function confusion(host, pk, m){
-  const C = BD.decisions[pk], cols = C.classes.concat(["none"]), cells = C.models[m] || [];
+  const C = BD.decisions[pk], cells = C.models[m] || [], cols = C.classes.concat(cells.some(c => c[1] === "none" && c[2]) ? ["none"] : []);
   const get = (g, s) => (cells.find(c => c[0] === g && c[1] === s) || [0, 0, 0])[2];
   const nm = c => c === "none" ? T("cfNone") : T("short_" + c);
   let h = "<div class='tablewrap'><table class='cf'><colgroup><col class='h'>" + cols.map(() => "<col class='c'>").join("") + "</colgroup><tr><th class='r'></th><th class='ah' colspan='" + cols.length + "'>" + esc(T("cfAnswer")) + "</th></tr><tr><th class='r'></th>"
     + cols.map(c => "<th>" + esc(nm(c)) + "</th>").join("") + "</tr>";
   C.classes.forEach(g => { const tot = cols.reduce((a, s) => a + get(g, s), 0);
     h += "<tr><th class='r'>" + esc(nm(g)) + "</th>" + cols.map(s => { const n = get(g, s), sh = tot ? n / tot : 0;
-      return '<td class="' + (g === s ? "ok" : "") + '" data-g="' + g + '" data-s="' + s + '" style="background:color-mix(in oklab, var(--seq-hi) ' + Math.round(sh * 100) + '%, var(--card));color:'
-        + (sh > .55 ? "var(--on-accent)" : "var(--foreground)") + '">' + (n || "") + "</td>"; }).join("") + "</tr>"; });
+      return '<td class="' + (g === s ? "ok" : "bad") + '" data-g="' + g + '" data-s="' + s + '" style="background:color-mix(in oklab, ' + (g === s ? "var(--seq-hi)" : "var(--seq-warm)") + ' ' + Math.round(sh * 100) + '%, var(--card));color:'
+        + (sh > .55 ? "var(--on-accent)" : "var(--foreground)") + '">' + (n || (g === s ? "0" : "")) + "</td>"; }).join("") + "</tr>"; });
   host.innerHTML = h + "</table></div>";
   $$("td[data-g]", host).forEach(td => { const g = td.dataset.g, s = td.dataset.s, tot = cols.reduce((a, q) => a + get(g, q), 0);
-    hover(td, "", [{ k: T("cfTip", nm(g), nm(s), get(g, s), tot), v: "" }]); });
+    hover(td, "", [{ k: T("cfTip", nm(g), nm(s), get(g, s), tot), v: "" }].concat(s === "none" ? [{ k: T("noneTip"), v: "" }] : [])); });
 }
 /** Pack 1 as scored: the review decision (truth x flag) and the two per-item atoms as bars. */
 function reviewBlock(host, m){
   const R = BD.decisions.m2.models[m] || {}, cells = R.review || [];
   const get = (w, s) => (cells.find(c => c[0] === w && c[1] === s) || [0, 0, 0])[2];
-  const cols = ["flagged", "not_flagged"].concat(cells.some(c => c[1] === "none") ? ["none"] : []);
+  const cols = ["flagged", "not_flagged"].concat(cells.some(c => c[1] === "none" && c[2]) ? ["none"] : []);
   const cn = { flagged: T("rvFlag"), not_flagged: T("rvNo"), none: T("rvNone") }, rn = w => w ? T("rvYes") : T("rvNot");
   const total = cells.reduce((a, c) => a + c[2], 0);
   let h = "<div class='tablewrap'><table class='cf'><colgroup><col class='h'>" + cols.map(() => "<col class='c'>").join("") + "</colgroup><tr><th class='r'></th><th class='ah' colspan='" + cols.length + "'>" + esc(T("rvAnswer")) + "</th></tr><tr><th class='r'></th>"
     + cols.map(c => "<th>" + esc(cn[c]) + "</th>").join("") + "</tr>";
   [true, false].forEach(w => { const tot = cols.reduce((a, c) => a + get(w, c), 0);
     h += "<tr><th class='r'>" + esc(rn(w)) + "</th>" + cols.map(c => { const n = get(w, c), sh = tot ? n / tot : 0, ok = (c === "flagged") === w && c !== "none";
-      return '<td class="' + (ok ? "ok" : "") + '" data-w="' + w + '" data-s="' + c + '" style="background:color-mix(in oklab, var(--seq-hi) ' + Math.round(sh * 100) + '%, var(--card));color:'
-        + (sh > .55 ? "var(--on-accent)" : "var(--foreground)") + '">' + (n || "") + "</td>"; }).join("") + "</tr>"; });
+      return '<td class="' + (ok ? "ok" : "bad") + '" data-w="' + w + '" data-s="' + c + '" style="background:color-mix(in oklab, ' + (ok ? "var(--seq-hi)" : "var(--seq-warm)") + ' ' + Math.round(sh * 100) + '%, var(--card));color:'
+        + (sh > .55 ? "var(--on-accent)" : "var(--foreground)") + '">' + (n || (ok ? "0" : "")) + "</td>"; }).join("") + "</tr>"; });
   h += "</table></div>";
   const bar = (lab, v, extra) => '<div class="rvbar"><span>' + esc(lab) + '</span><span class="track"><span class="fill" style="width:' + ((v || 0) * 100).toFixed(1) + '%"></span></span><b>'
     + (v == null ? "–" : Math.round(v * 100) + "%") + "</b>" + (extra ? '<small class="faint">' + esc(extra) + "</small>" : "") + "</div>";
 
   host.innerHTML = h;
   $$("td[data-w]", host).forEach(td => { const w = td.dataset.w === "true", c = td.dataset.s, tot = cols.reduce((a, q) => a + get(w, q), 0);
-    hover(td, "", [{ k: T("rvTip", rn(w), cn[c], get(w, c), tot), v: "" }]); });
+    hover(td, "", [{ k: T("rvTip", rn(w), cn[c], get(w, c), tot), v: "" }].concat(c === "none" ? [{ k: T("noneTip"), v: "" }] : [])); });
   return total;
 }
 /** The model's per-pack scores in the overall board's form: one row per pack, the point and its
  *  95% interval on a shared 0–1 axis, each round as a small ring, the value and the rank. */
 function scoreRows(host,m){
-  const RH=48,HEAD=24,F=fig(host,HEAD+PACK_KEYS.length*RH+4,T("mpScores")),narrow=F.W<560,ml=narrow?10:235,x=lin(0,1,ml,F.W-42);
+  const narrow=(host.clientWidth||720)<560,RH=narrow?40:30,HEAD=22,F=fig(host,HEAD+PACK_KEYS.length*RH+4,T("mpScores")),ml=narrow?10:235,x=lin(0,1,ml,F.W-62);
   [0,.25,.5,.75,1].forEach(v=>{vline(F.svg,x(v),HEAD-4,F.H);F.lab(x(v),HEAD-12,v.toFixed(2),{anchor:"middle"});});
-  PACK_KEYS.forEach((k,i)=>{const r=BD.packs[k].board.find(q=>q.model===m),ym=HEAD+i*RH;
-    F.lab(2,narrow?ym+7:ym+RH/2,PACK_NUM[k]+" "+T("pk_"+k),{cls:"ann"});
-    const y=narrow?ym+30:ym+RH/2;dot(F.svg,x(r.score),y,"var(--accent)",5);F.lab(x(r.score)+8,y,f3(r.score),{cls:"annb"});
+  PACK_KEYS.forEach((k,i)=>{const B=BD.packs[k].board,r=B.find(q=>q.model===m),ym=HEAD+i*RH;
+    F.lab(2,narrow?ym+8:ym+RH/2,PACK_NUM[k]+" "+T("pk_"+k),{cls:"ann"});
+    const y=narrow?ym+27:ym+RH/2;
+    S("line",{x1:x(0),x2:x(1),y1:y,y2:y,stroke:"var(--grid)","stroke-width":1},F.svg);
+    B.filter(q=>q.model!==m).forEach(q=>hover(dot(F.svg,x(q.score),y,"var(--faint)",3.2),q.model,[{k:PACK_NUM[k]+" "+T("pk_"+k),v:f3(q.score)}]).setAttribute("opacity",.55));
+    dot(F.svg,x(r.score),y,"var(--accent)",5.5);F.lab(F.W-2,y,f3(r.score),{cls:"annb",anchor:"end"});
   });
 }
 function profileTable(m){
@@ -1503,7 +1509,8 @@ function modelPanel(){
     + '<div class="mps"><h4>' + esc(T("mpScores")) + '</h4><p class="sub">' + esc(T("mpScoresSub")) + '</p><div id="mp-scores"></div><p class="note">' + esc(T("mpNote")) + "</p></div>"
     + profileTable(m) + '<div class="mpg">'
     + (hasRv ? "<div><h4>" + esc(T("mpReview", PACK_NUM.m2 + " " + T("pk_m2"))) + '</h4><div id="cf-m2"></div><p class="note" id="rv-note"></p></div>' : "")
-    + cfs.map(k => "<div><h4>" + esc(T("mpCf", PACK_NUM[k] + " " + T("pk_" + k))) + '</h4><div id="cf-' + k + '"></div><p class="note">' + esc(T("cfNote", BD.decisions[k].n_items, BD.decisions[k].n_rounds)) + "</p></div>").join("") + "</div>";
+    + cfs.map(k => "<div><h4>" + esc(T("mpCf", PACK_NUM[k] + " " + T("pk_" + k))) + '</h4><div id="cf-' + k + '"></div><p class="note">' + esc(T("cfNote", BD.decisions[k].n_items, BD.decisions[k].n_rounds)) + "</p></div>").join("") + "</div>"
+    + '<p class="note cflegend"><i class="sw ok"></i>' + esc(T("cfLegOk")) + ' · <i class="sw bad"></i>' + esc(T("cfLegBad")) + " · " + esc(T("cfLegShade")) + "</p>";
   scoreRows($("#mp-scores", h), m);
   if (hasRv) $("#rv-note").textContent = T("rvNote", reviewBlock($("#cf-m2"), m));
   cfs.forEach(k => confusion($("#cf-" + k), k, m));

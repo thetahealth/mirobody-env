@@ -1,6 +1,6 @@
-"""The 1.x board tables in both READMEs must match the 1.x snapshot they are copied from.
+"""The 1.x board tables in the data card must match the 1.x snapshot they are copied from.
 
-The README keeps the 1.x board as a historical record; `web/demo/data.json` carries the same
+The data card keeps the 1.x board as a historical record; `web/demo/data.json` carries the same
 board under `history_1x`. The Markdown tables are written by hand, so without this file a changed
 score, interval, tier or answered count in the README passes every other test.
 """
@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-HEADINGS = {"README.md": "### {} (1.x)", "README.zh-CN.md": "### {}（1.x）"}
+HEADINGS = {"docs/DATA_CARD.md": "### {} (1.x)"}
 ROW = re.compile(r"^\|\s*(\d+)\s*\|\s*(\S+)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)–([\d.]+)\s*\|"
                  r"\s*(\d+)\s*\|\s*(\d+) / (\d+)\s*\|", re.M)
 
@@ -59,7 +59,7 @@ def test_a_changed_reading_is_caught(data):
     """Negative control on a table rendered from the snapshot, so it does not depend on the
     README being in sync: the parser reads it back exactly, and moving any one field breaks it."""
     pack, want = expected(data, "answers")
-    heading = HEADINGS["README.md"].format(pack)
+    heading = HEADINGS["docs/DATA_CARD.md"].format(pack)
     assert shown(_render(heading, want), heading) == want
     for field in (2, 3, 5, 6):
         moved = [list(r) for r in want]
@@ -73,8 +73,8 @@ def test_a_changed_snapshot_is_caught(data):
     first = next(iter(moved["history_1x"]["tracks"]["trace"]["models"].values()))
     first["tier"] += 1
     pack, want = expected(moved, "trace")
-    got = shown((ROOT / "README.md").read_text(encoding="utf-8"),
-                HEADINGS["README.md"].format(pack))
+    got = shown((ROOT / "docs/DATA_CARD.md").read_text(encoding="utf-8"),
+                HEADINGS["docs/DATA_CARD.md"].format(pack))
     assert got != want
 
 

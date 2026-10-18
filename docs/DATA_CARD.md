@@ -183,6 +183,48 @@ deterministic batch of `ddx-workup`, for the cases it shares with it (the bridge
 the known conditions with their medication. In packs ③ and ④ a known comorbidity enters the world
 tables (drug tables, analyte baselines), so it can change the gold answer.
 
+## Historical boards
+
+Earlier boards are kept as published. They are not comparable with the 1.4.0 board: the judging and world fingerprints, the questions and the scoring have changed since. The 1.x board on the two bridge tracks is in [1.x evaluation](#1x-evaluation-historical).
+
+### 1.3.0 overall
+
+| Rank | Model | Overall | 95% CI |
+|---:|---|---:|---:|
+| 1 | gpt-6-sol | 0.712 | 0.671–0.751 |
+| 2–4 | gemini-3.1-pro | 0.648 | 0.610–0.689 |
+| 2–4 | gemini-3.7-flash | 0.640 | 0.595–0.684 |
+| 2–4 | gpt-6-luna | 0.609 | 0.564–0.656 |
+| 5–6 | kimi-k3 | 0.556 | 0.509–0.604 |
+| 5–6 | deepseek-v4-pro | 0.526 | 0.484–0.570 |
+| 7–8 | glm-5.3-flash | 0.470 | 0.424–0.521 |
+| 7–9 | minimax-m3 | 0.458 | 0.417–0.500 |
+| 8–10 | deepseek-v4-flash | 0.415 | 0.366–0.464 |
+| 9–10 | qwen3.7-flash | 0.388 | 0.338–0.437 |
+
+gpt-6-sol is first and is separable from every other model (none of its nine pairs is within 2 paired
+standard errors). gemini-3.1-pro, gemini-3.7-flash and gpt-6-luna share ranks 2–4: no pair among them
+differs by more than 2 paired standard errors, so their order is not a ranking. Ranks are intervals for
+that reason: 37 of the 45 model pairs are separable. 1.3.0 boards are not comparable with 1.2.x
+boards: the judging and the world fingerprints changed.
+
+### 1.3.0 by pack
+
+Each cell is the pack score with its 95% interval.
+
+| Model | ① Differential diagnosis | ② Acute triage | ③ Medication adjustment | ④ Follow-up interpretation |
+|---|---:|---:|---:|---:|
+| gpt-6-sol | 0.643 (0.579–0.703) | 0.436 (0.318–0.551) | 0.776 (0.688–0.860) | 0.991 (0.970–1.000) |
+| gemini-3.1-pro | 0.294 (0.240–0.351) | 0.448 (0.316–0.581) | 0.861 (0.796–0.926) | 0.991 (0.964–1.000) |
+| gemini-3.7-flash | 0.482 (0.410–0.549) | 0.425 (0.310–0.545) | 0.710 (0.610–0.804) | 0.942 (0.888–0.986) |
+| gpt-6-luna | 0.506 (0.397–0.604) | 0.365 (0.250–0.486) | 0.802 (0.725–0.879) | 0.764 (0.699–0.827) |
+| kimi-k3 | 0.347 (0.263–0.429) | 0.383 (0.268–0.503) | 0.741 (0.650–0.829) | 0.751 (0.675–0.828) |
+| deepseek-v4-pro | 0.258 (0.198–0.323) | 0.369 (0.258–0.481) | 0.762 (0.678–0.842) | 0.716 (0.646–0.777) |
+| glm-5.3-flash | 0.232 (0.142–0.331) | 0.420 (0.318–0.530) | 0.656 (0.559–0.753) | 0.573 (0.496–0.655) |
+| minimax-m3 | 0.130 (0.077–0.188) | 0.320 (0.215–0.423) | 0.742 (0.650–0.830) | 0.640 (0.562–0.722) |
+| deepseek-v4-flash | 0.063 (-0.020–0.148) | 0.258 (0.148–0.370) | 0.691 (0.595–0.790) | 0.649 (0.559–0.733) |
+| qwen3.7-flash | 0.015 (-0.055–0.078) | 0.323 (0.201–0.454) | 0.625 (0.523–0.728) | 0.587 (0.507–0.665) |
+
 ## 1.x evaluation (historical)
 
 This section describes the 1.x board on the bridge tracks. It is kept as published and is not
@@ -279,7 +321,24 @@ on `ddx-workup`, on 27–28 applicable cases.
 | minimax-m3 | 143 / 145 | 145 / 145 |
 | qwen3.7-flash | 145 / 145 | 145 / 145 |
 
-### Board: ddx-timeline
+### ddx-timeline (1.x)
+
+Composite with its 95% interval, tier and answered cells:
+
+| Rank | Model | Composite | 95% CI | Tier | Answered |
+|---:|---|---:|---:|---:|---:|
+| 1 | gemini-3.1-pro | 0.724 | 0.671–0.776 | 1 | 145 / 145 |
+| 2 | gpt-6-sol | 0.691 | 0.653–0.730 | 1 | 145 / 145 |
+| 3 | gemini-3.7-flash | 0.678 | 0.618–0.740 | 1 | 145 / 145 |
+| 4 | gpt-6-luna | 0.666 | 0.630–0.705 | 1 | 145 / 145 |
+| 5 | kimi-k3 | 0.662 | 0.632–0.695 | 1 | 145 / 145 |
+| 6 | deepseek-v4-pro | 0.652 | 0.632–0.671 | 1 | 145 / 145 |
+| 7 | minimax-m3 | 0.617 | 0.587–0.647 | 3 | 143 / 145 |
+| 8 | qwen3.7-flash | 0.589 | 0.550–0.631 | 4 | 145 / 145 |
+| 9 | deepseek-v4-flash | 0.434 | 0.380–0.494 | 9 | 144 / 145 |
+| 10 | glm-5.3-flash | 0.048 | 0.024–0.076 | 10 | 17 / 145 |
+
+Composite and its dimensions:
 
 | Rank | Model | Composite | `dx_listed` | recall | precision | `noop_ok` | `review_macro` | `quant_ok` |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|
@@ -294,7 +353,24 @@ on `ddx-workup`, on 27–28 applicable cases.
 | 9 | deepseek-v4-flash | 0.434 | 0.608 | 0.455 | 0.438 | 0.674 | 0.200 | 0.438 |
 | 10 | glm-5.3-flash | 0.048 | 0.023 | 0.009 | 0.003 | 0.096 | 0.040 | 0.076 |
 
-### Board: ddx-workup
+### ddx-workup (1.x)
+
+Composite with its 95% interval, tier and answered cells:
+
+| Rank | Model | Composite | 95% CI | Tier | Answered |
+|---:|---|---:|---:|---:|---:|
+| 1 | kimi-k3 | 0.697 | 0.639–0.751 | 1 | 144 / 145 |
+| 2 | gpt-6-luna | 0.696 | 0.635–0.755 | 1 | 145 / 145 |
+| 3 | gemini-3.1-pro | 0.689 | 0.625–0.751 | 1 | 145 / 145 |
+| 4 | deepseek-v4-pro | 0.685 | 0.651–0.720 | 1 | 144 / 145 |
+| 5 | gemini-3.7-flash | 0.680 | 0.615–0.743 | 1 | 145 / 145 |
+| 6 | gpt-6-sol | 0.673 | 0.615–0.730 | 1 | 145 / 145 |
+| 6 | minimax-m3 | 0.673 | 0.623–0.721 | 1 | 145 / 145 |
+| 8 | qwen3.7-flash | 0.493 | 0.443–0.544 | 8 | 145 / 145 |
+| 9 | glm-5.3-flash | 0.375 | 0.303–0.446 | 8 | 116 / 145 |
+| 10 | deepseek-v4-flash | 0.304 | 0.247–0.365 | 9 | 145 / 145 |
+
+Composite and its dimensions:
 
 | Rank | Model | Composite | `dx_listed` | recall | precision | `noop_ok` | `review_macro` | `quant_ok` | grounded |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -313,7 +389,8 @@ Composite is the mean of the core dimensions times (1 − hard-gate failure rate
 test selection (per-case F1 of `tests_recall` and `tests_precision`), `dx_listed`, `noop_ok`,
 `review_macro`, `quant_ok`, plus `tool_target_grounded_rate` on `ddx-workup`. `dx_hit` is
 reported beside them; `disc_recall` is withheld because its judged atom type did not pass the
-cross-protocol stability gate. Confidence intervals and tiers are in the [README](../README.md#leaderboard).
+cross-protocol stability gate.
+*95% CI* is the case-level bootstrap interval (10,000 resamples) and a tier number is 1 plus the count of models significantly better (Holm-corrected α = 0.05). *Answered* counts the cells with a scorable answer out of 145; a cell without one scored 0. Each cell ran once. The diagnosis dimensions of that composite had no blind-human validity reading, so the board was labelled preliminary. Source values: [`figures/readme_results.csv`](figures/readme_results.csv); the snapshot is `web/demo/data.json:history_1x`.
 The browser demo can drop unanswered-cell causes one by one and recompute the board; the case
 set may then differ from the default board, so ranks there are indicative.
 
@@ -350,6 +427,32 @@ The same cases can be presented four ways:
 * `multi`: multi-round follow-up review.
 
 The process track and the main board are separate boards and cannot be merged.
+
+## Twin records
+
+A twin is a record of a built batch with one declared thing changed. The generator writes the record and its
+gold from the hidden truth, so the change can be made where the record is written and checked against the
+original field by field. A claim about model behaviour ("models attribute noise to a factor the record names")
+is then tested by having each model answer the original and its twin and reading the paired difference.
+
+```bash
+uv run haenv twin <job.yaml> --op drop-reagent-note --from-batch <built batch> --out twins/
+```
+
+The command selects the items the operation applies to (or those named with `--items`), writes the twin job and
+an unchanged original job with the same items, builds both deterministically, and checks that the original
+build is byte-identical to the source batch and that each twin differs from it only at the operation's declared
+fields. It writes a per-item record of the changes into the twin batch and exits 1 on any other difference. A twin job records
+its operation under `_provenance.twin`, so rebuilding it reproduces the twins.
+
+| Operation | Pack | Changes |
+|---|---|---|
+| `drop-reagent-note` | ④ lab-change attribution | the reagent-change note in the report's method strings |
+| `reword-reagent-note-1`, `-2` | ④ lab-change attribution | the same note in another wording |
+| `drop-planted-symptoms` | ① diagnosis (budgeted differential) | the patient-reported symptom entries planted as the support of the gold lines |
+| `unname-explainer` | ① diagnosis (budgeted differential) | the established diagnoses that explain away a hidden condition, in `known_conditions` |
+
+Both arms are answered like any batch (`tools/evaluation/reliability_passk.py <job> --from-batch <stamp> --k 3`).
 
 ## Scoring
 

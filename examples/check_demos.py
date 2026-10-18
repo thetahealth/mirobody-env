@@ -7,8 +7,9 @@
 The example packages must be installed (`uv pip install --no-deps -e examples/<name>`); a
 demo whose package is missing is reported as NOT RUN and fails. A demo passes only when
 the demo batch carries the plugin's output and the control batch (the same job without
-`plugins:`) does not. Offline, no cost; batches go to `HAENV_OUTPUT_ROOT` (default: the
-repository root). Exit code 0 when every demo passes, 1 otherwise (2 for an unknown demo name).
+`plugins:`) does not. Offline, no cost; batches go to haenv's output root
+(`HAENV_OUTPUT_ROOT`, default `artifacts/` in the checkout). Exit code 0 when every demo
+passes, 1 otherwise (2 for an unknown demo name).
 
 SYNTHETIC data, for evaluation only, not medical advice.
 """
@@ -16,14 +17,18 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import os
 import pathlib
 import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 EX = ROOT / "examples"
-OUT = pathlib.Path(os.environ.get("HAENV_OUTPUT_ROOT") or ROOT)
+
+
+def _output_root() -> pathlib.Path:
+    """Where `haenv run` writes batches: the same resolver the CLI uses."""
+    from haenv.locations import output_root
+    return output_root()
 
 
 def _haenv(*args: str) -> subprocess.CompletedProcess:
@@ -32,7 +37,7 @@ def _haenv(*args: str) -> subprocess.CompletedProcess:
 
 
 def _latest_batch(task: str, job_id: str) -> pathlib.Path | None:
-    d = OUT / "results" / task / job_id
+    d = _output_root() / "results" / task / job_id
     bs = sorted(p for p in d.glob("*") if p.is_dir() and p.name[:8].isdigit()) if d.is_dir() else []
     return bs[-1] if bs else None
 

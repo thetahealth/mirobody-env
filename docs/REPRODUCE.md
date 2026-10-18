@@ -91,6 +91,8 @@ questions, rerun agents or obtain new rubric judgments. It reports missing Q
 explicitly when it prevents a score. The main result averages each question's
 three answer scores and gives the four tasks equal weight.
 
+The evaluated question sets ship as frozen pack files. Each batch records its generation commit and world settings, and regenerating at those commits reproduces all four sets byte for byte (verified 2026-10-17: ① diagnosis and ② triage at `c3cecbee`, the ③ medication candidate arm at `fcf3b389` with its pairing at `c3cecbee`, ④ lab-change attribution at `05f97181`). `Q` averages two judgments by one LLM judge: of 7,246 Q records, 7,215 average two judgments, 20 contain one, and 11 have no management plan and score zero.
+
 ### Historical 1.3 board
 
 This subsection retains the commands and paths of the original release checkout.
@@ -205,6 +207,22 @@ uv run haenv run benchmarks/inputs/ddx-timeline.job.yaml --fresh                
   `trace.jsonl` land next to the pack's `cases.jsonl`, including for a run against a frozen pack.
   Give an offline smoke test `--fresh` so that it builds a new batch instead of writing into the
   latest one.
+
+### Model routes and prices
+
+The default models are reached directly: Gemini models through Google's API, Qwen models through
+DashScope, and every other model through OpenRouter, pinned to one upstream with fallbacks off:
+the vendor's own endpoint where the account's zero-data-retention setting allows it, otherwise a
+named host serving the same weights (OpenAI models on Azure, Claude on Google Vertex, MiniMax on
+Novita). No third-party relay sits between the pipeline and a model.
+
+A billed run counts every request against `--judge-budget-usd`. On `openrouter`, `google` and
+`dashscope` the price comes from the provider; on a backend of your own it is the `price`
+declared for each model, applied to the token counts the endpoint returns in `usage` (0 for a
+free local endpoint). A model there without a `price` is refused before any request is sent.
+The built-in `google` and `dashscope` prices were checked against the vendors' pages on a dated day:
+a week later each run warns once per backend that they may be stale. Compare them with the pages and
+set `paid.tariff_checked_on: <YYYY-MM-DD>` in `config.yaml` to record your own check and silence it.
 
 ### Tokens and caching
 

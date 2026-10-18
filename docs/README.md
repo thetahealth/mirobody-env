@@ -26,6 +26,27 @@ Published results retain their original generation and judging sources. The repr
 identifies their inputs; changing the current code does not relabel stored results.
 
 
+## Agent skills
+
+The repository carries three skills under [`skills/`](../skills), in the
+[Agent Skills](https://agentskills.io) layout (`skills/<name>/SKILL.md`; the standard is read by more
+than one agent tool). They are the short path to driving the pipeline from a conversation, and they
+are written to be read on their own:
+
+| Skill | Use it when you want to |
+|---|---|
+| [`haenv-synth`](../skills/haenv-synth/SKILL.md) | **generate** patients and questions — from a job file you write, or from a piece of case-description text — and read what the emission gate rejects |
+| [`haenv-bench`](../skills/haenv-bench/SKILL.md) | **run** a pack against models and read the board: resumable runs, per-batch artifacts, the tool-call trace, what a batch cost |
+| [`haenv-extend`](../skills/haenv-extend/SKILL.md) | **add your own** judge, indicator stream, event or task type, from a package outside the repository |
+
+Each is an index, not a second source of truth: what it says about the pipeline is checked against
+the code and the documents linked from it. A skill is a directory of Markdown plus, in the standard's
+terms, optional `scripts/`, `references/` and `assets/`; nothing about them is specific to one
+vendor's tool. If you use an agent that reads the standard, point it at the repository and ask in
+plain words — "generate a batch of questions from this patient", "run a batch and show me what it
+cost", "add a judge that catches X" — and the matching skill supplies the conventions, the commands
+and the failure modes.
+
 ## Repository layout
 
 The repository installs the `haenv` distribution and command. The source namespaces have

@@ -153,13 +153,12 @@ def _load_from_pool(ref: dict):
     `job.load_plugins` does.
     """
     import json
-    import pathlib
 
     pool, iid = ref.get("pool"), ref.get("item_id")
     if not pool or not iid:
         raise ValueError(f"latent.{LATENT_KEY} needs keys `pool` and `item_id`, got {sorted(ref)}")
-    from haenv import __file__ as _hf
-    root = pathlib.Path(_hf).resolve().parent.parent
+    from haenv.locations import data_root
+    root = data_root()
     ip, gp = root / f"{pool}.items.jsonl", root / f"{pool}.gold.jsonl"
     if not ip.is_file() or not gp.is_file():
         raise FileNotFoundError(f"item pool not found: {ip} / {gp}; "
