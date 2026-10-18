@@ -71,7 +71,7 @@ def _e1_refusals(driver, build):
 def test_e1_negative_control_unobservable_driver(monkeypatch):
     """Negative control: when a driver's required evidence is a stream no case carries, GEN14
     refuses every spec with it and E1 must report the driver."""
-    from haenv import gates as G
+    import haenv.scoring.gates as G
     monkeypatch.setitem(G.DRIVER_REQUIRED_OBSERVABLE, "calorie_intake_change", {"no_such_stream"})
     assert _e1_refusals("calorie_intake_change", C.build_uncached), (
         "E1 still passed with the driver's evidence made unobservable")
@@ -187,7 +187,7 @@ def test_f1_same_spec_same_id_is_byte_identical():
 def _f2_draws(monkeypatch):
     """Build the spec under 12 other case ids, recording the response multiplier each build
     used (`build._drug_response_of`). Uncached, so the spy sees every build."""
-    from haenv import build as B
+    import haenv.world.generation.build as B
     orig = B._drug_response_of
     used: dict = {}
 
@@ -195,7 +195,7 @@ def _f2_draws(monkeypatch):
         r = orig(p)
         used[str((p.meta or {}).get("case_id"))] = r
         return r
-    patch_bound(monkeypatch, "_drug_response_of", source="haenv.build", value=spy)
+    patch_bound(monkeypatch, "_drug_response_of", source="haenv.world.generation.build", value=spy)
     base = C.spec_of(C.T2D_JOB, "T2G-07")
     series, resp = set(), []
     for i in range(12):
@@ -211,7 +211,7 @@ def _f2_draws(monkeypatch):
 def test_f2_other_ids_differ_and_stay_in_band(monkeypatch):
     """Under other case ids the same specification yields different people (their weight
     series differ) whose drug response, as used by the build, stays inside the band and varies."""
-    from haenv import drug_effects as DE
+    import haenv.world.clinical.drug_effects as DE
     _, (blo, bhi) = DE.response_bounds()
     series, resp = _f2_draws(monkeypatch)
     assert len(series) >= 10, f"only {len(series)} distinct weight series across 12 case ids"
@@ -222,11 +222,11 @@ def test_f2_other_ids_differ_and_stay_in_band(monkeypatch):
 def test_f2_negative_control_response_ignores_the_person(monkeypatch):
     """Negative control: a build that draws every person's response under one fixed id must
     fail F2's spread."""
-    from haenv import build as B
-    from haenv import drug_effects as DE
+    import haenv.world.generation.build as B
+    import haenv.world.clinical.drug_effects as DE
     fixed = lambda p: DE.response_for("FIXED", (p.meta or {}).get("driver"), B._drug_of(p),
                                       (p.meta or {}).get("drug_response"))
-    patch_bound(monkeypatch, "_drug_response_of", source="haenv.build", value=fixed)
+    patch_bound(monkeypatch, "_drug_response_of", source="haenv.world.generation.build", value=fixed)
     _, resp = _f2_draws(monkeypatch)
     assert resp and not max(resp) - min(resp) > 0.2, resp
 
@@ -238,8 +238,8 @@ def test_f1_negative_control_unseeded_draw(monkeypatch):
     `a.emitted and b.emitted`); the registry self-check runs before the patch, since it
     samples `rng.unit` itself and must see the unperturbed draws."""
     import random
-    from haenv import rng
-    from haenv.overlay import validate_registry
+    import haenv.world.generation.rng as rng
+    from haenv.world.overlay import validate_registry
     validate_registry()                                     # cached; same loader as the build path
     orig = rng.unit
     monkeypatch.setattr(rng, "unit", lambda *p: (orig(*p) + random.random()) % 1.0)

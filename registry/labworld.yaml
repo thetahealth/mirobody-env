@@ -3,7 +3,7 @@
 # Lab world: follow-up analytes, pre-analytic and method perturbations, and the two
 # visible-cause drug effects used to give a lab value a true change between two visits.
 #
-# Read only by `haenv/labworld/` (segment `tools/make_freeze.py:P4_WORLD`). A job that does
+# Read only by `haenv/labworld/` (segment `tools/release/make_freeze.py:P4_WORLD`). A job that does
 # not declare a plugin using it never reads this file, so it moves no existing world stamp.
 # Every number below is provisional (`status: provisional`, design doc K5): typical literature
 # values written as single points or ranges, awaiting the clinical-laboratory sign-off.
@@ -38,9 +38,19 @@ analytes:
     unit: μmol/L
     ndigits: 0                      # indicators.yaml:Cr.ndigits
     cvi: 0.045                      # EFLM CVI 4.5% (Jonker 2020 meta-analysis; to be re-pinned)
-    cv_total: 0.0504                # CVI x 1.12 (CVA at 0.5 CVI, same rule as physio_streams.yaml)
+    #: analytical CV by method (EuBIVAS, Carobene 2017, Clin Chem 63:1527: enzymatic 1.1%, alkaline
+    #: picrate / Jaffe 4.4%); per-draw total CV = sqrt(cvi^2 + cva^2), the RCV of a pair
+    #: 1.96 x sqrt(cv0^2 + cv1^2) (enzymatic pair 12.8%, Jaffe pair 17.5%, one of each 15.3%).
+    #: review: pending (clinical-laboratory sign-off: CVA by method, CVP omitted, two-sided z)
+    cva: {enzymatic: 0.011, jaffe: 0.044}
+    cva_default: enzymatic
     range: [30.0, 600.0]
-    reference: "59–104"             # indicators.yaml:Cr.reference_range
+    #: adult reference interval by sex and age (WS/T 404.5-2015, serum creatinine, IDMS-traceable
+    #: enzymatic or Jaffe); `reference` is the fallback when the profile has no sex
+    reference: "57–97"
+    reference_by: {M: {young: "57–97", old: "57–111"}, F: {young: "41–73", old: "41–81"}}
+    reference_old_from_age: 60
+    reference_review: pending       # which reference set (WS/T 404.5 vs IFCC 59-104 / 45-84)
     default_method: 酶法（肌氨酸氧化酶法）
     baseline:
       F: {median: 64.0, sd_log: 0.12}
@@ -48,6 +58,143 @@ analytes:
     marker_tokens: [creatinine, Cr, 肌酐, eGFR, 尿蛋白, 肾, 蛋白尿, 血尿, 横纹肌, 肌红蛋白]
     band_upper_rcv: 2.0
     draw_inclusion: 0.75            # share of routine visits that also draw creatinine
+
+  potassium:
+    display: 钾
+    unit: mmol/L
+    ndigits: 2
+    range:
+    - 2.5
+    - 6.2
+    reference: 3.5–5.3
+    default_method: 离子选择电极法
+    cvi: 0.039
+    cva:
+      standard: 0.0041
+    cva_default: standard
+    marker_tokens:
+    - potassium
+    - 钾
+    band_upper_rcv: 2.0
+    draw_inclusion: 0.75
+    source: p4_diversity.yaml#sources.eflm
+    cva_source: p4_diversity.yaml#sources.eubivas_summary
+    ours: true
+    reason: P4-only synthetic baseline and transfer of published EuBIVAS assay CV; CVI from EFLM snapshot, see p4_diversity.yaml.
+  glucose:
+    display: 血糖
+    unit: mmol/L
+    ndigits: 2
+    range:
+    - 3
+    - 20
+    reference: 3.9–6.1
+    default_method: 己糖激酶法（静脉血浆）
+    cvi: 0.049
+    cva:
+      standard: 0.0058
+    cva_default: standard
+    marker_tokens:
+    - fasting_glucose
+    - HbA1c
+    - 血糖
+    - 糖尿病
+    band_upper_rcv: 2.0
+    draw_inclusion: 0.75
+    source: p4_diversity.yaml#sources.eflm
+    cva_source: p4_diversity.yaml#sources.eubivas_summary
+    ours: true
+    reason: P4-only synthetic baseline and transfer of published EuBIVAS assay CV; CVI from EFLM snapshot, see p4_diversity.yaml.
+  tsh:
+    display: 促甲状腺激素
+    unit: mIU/L
+    ndigits: 2
+    range:
+    - 0.1
+    - 25
+    reference: 0.27–4.2
+    default_method: 化学发光免疫法
+    cvi: 0.179
+    cva:
+      standard: 0.0146
+    cva_default: standard
+    marker_tokens:
+    - TSH
+    - 甲状腺
+    band_upper_rcv: 2.0
+    draw_inclusion: 0.75
+    source: p4_diversity.yaml#sources.eflm
+    cva_source: p4_diversity.yaml#sources.eubivas_thyroid
+    ours: true
+    reason: P4-only synthetic baseline and transfer of published EuBIVAS assay CV; CVI from EFLM snapshot, see p4_diversity.yaml.
+  alt:
+    display: 丙氨酸氨基转移酶
+    unit: U/L
+    ndigits: 0
+    range:
+    - 5
+    - 350
+    reference: 7–40
+    default_method: IFCC速率法
+    cvi: 0.124
+    cva:
+      standard: 0.067
+    cva_default: standard
+    marker_tokens:
+    - ALT
+    - 肝
+    band_upper_rcv: 2.0
+    draw_inclusion: 0.75
+    source: p4_diversity.yaml#sources.eflm
+    cva_source: p4_diversity.yaml#sources.eubivas_summary
+    ours: true
+    reason: P4-only synthetic baseline and transfer of published EuBIVAS assay CV; CVI from EFLM snapshot, see p4_diversity.yaml.
+  ck:
+    display: 肌酸激酶
+    unit: U/L
+    ndigits: 0
+    range:
+    - 20
+    - 2500
+    reference: 40–200
+    default_method: IFCC动力学法
+    cvi: 0.141
+    cva:
+      standard: 0.009
+    cva_default: standard
+    marker_tokens:
+    - CK
+    - 肌酸激酶
+    - 横纹肌
+    band_upper_rcv: 2.0
+    draw_inclusion: 0.75
+    source: p4_diversity.yaml#sources.eflm
+    cva_source: p4_diversity.yaml#sources.eubivas_summary
+    ours: true
+    reason: P4-only synthetic baseline and transfer of published EuBIVAS assay CV; CVI from EFLM snapshot, see p4_diversity.yaml.
+  triglycerides:
+    display: 甘油三酯
+    unit: mmol/L
+    ndigits: 2
+    range:
+    - 0.3
+    - 12
+    reference: 0.45–1.7
+    default_method: 酶法（GPO-PAP）
+    cvi: 0.198
+    cva:
+      standard: 0.018
+    cva_default: standard
+    marker_tokens:
+    - TG
+    - triglycerides
+    - 甘油三酯
+    band_upper_rcv: 2.0
+    draw_inclusion: 0.75
+    source: p4_diversity.yaml#sources.eflm
+    cva_source: p4_diversity.yaml#sources.eubivas_summary
+    ours: true
+    reason: P4-only synthetic baseline and transfer of published EuBIVAS assay CV; CVI from EFLM snapshot, see p4_diversity.yaml.
 
 #: Factors that can sit on a follow-up item. `kind`: true_change / preanalytical / method /
 #: background. `acts_on`: the analytes whose value it moves. `sign`: intrinsic direction of its
@@ -101,6 +248,9 @@ factors:
     effect: [0.05, 0.14]
     typical: [5.6, 6.3]
     display: 床旁血糖仪（指尖毛细血管全血）
+    #: a fingerstick-meter note is printed only on a glucose report; no creatinine report carries one, so it is
+    #: never a decoy on another analyte (the one wording that would exist only in a non-acting place)
+    decoy_on: [fasting_glucose]
     source: "ISO 15197:2013 allows +-15% (>=5.55 mmol/L); provisional"
   jaffe_enzymatic_switch:
     kind: method
@@ -110,12 +260,7 @@ factors:
     typical: [80.0, 92.0]
     display: 肌酐检测方法 Jaffe 法与酶法互换
     jaffe_method: Jaffe 苦味酸速率法
-    source: "Jaffe positive bias vs enzymatic ~10-20% at normal range (Peake & Whiting 2006); provisional"
-    #: R15 (review: pending, 暂定): the bias comes from non-creatinine chromogens, a roughly constant
-    #: absolute amount (compensated Jaffe assays subtract a fixed ~18-26 umol/L), so on a CKD
-    #: patient's raised creatinine the same switch moves the value by a few percent. On a CKD item
-    #: the switch sits on one compared draw as an absolute offset in this range.
-    additive_umol: [10, 25]
+    source: "none verified: Peake & Whiting 2006 (PMC1784008) reports reasonably good agreement of carefully calibrated Jaffe and enzymatic methods and gives no Jaffe-vs-enzymatic percentage; the 8-20% range is unsourced (gold audit 2026-10-09); review: pending"
   hemolysis_note:
     kind: background
     acts_on: []
@@ -124,21 +269,446 @@ factors:
   lab_switch_zero_bias:
     kind: background
     acts_on: []
-    display: 换检测机构（同方法）
-    source: "same method, traceable calibration: no bias assumed"
+    display: 换院区检测（同型号分析仪、同厂家试剂）
+    #: zero bias only for the same analyser system and the same manufacturer's reagent (a new lot that passed
+    #: lot-to-lot verification): reagent lots always differ somewhat (Thompson & Chesher, Clin Biochem Rev.
+    #: 2018, PMC6223607) and between-laboratory bias follows the instrument manufacturer (Peake & Whiting,
+    #: Clin Biochem Rev. 2006, PMC1784008). Gold audit 2026-10-09; review: pending.
+    source: "same analyser system and reagent manufacturer, verified lot: no bias assumed (simplification, review: pending)"
+  tube_type:
+    kind: background
+    acts_on: []
+    display: 采血管类型（促凝血清管或肝素锂抗凝血浆管）
+    #: one tube policy per laboratory, the same on every draw of an item, so it cannot carry a change. Paired
+    #: serum / lithium-heparin plasma creatinine differ by +1.0% (52 paired samples), well inside the creatinine
+    #: RCV (Clin Biochem 2022, "Comparison of blood collection tubes for 29 biochemical analytes", pediatric
+    #: oncology cohort); review: pending (adult cohort, enzymatic vs Jaffe).
+    source: "serum vs Li-heparin plasma creatinine +1.0% (Clin Biochem 2022; 52 paired samples): far inside the RCV; one tube policy per laboratory"
+
+  infusion_sampling:
+    kind: preanalytical
+    acts_on:
+    - creatinine
+    - potassium
+    - glucose
+    - tsh
+    - alt
+    - ck
+    - triglycerides
+    sign: -1
+    effect:
+    - 0.06
+    - 0.25
+    typical:
+    - 100
+    - 120
+    display: infusion_sampling
+    source: p4_diversity.yaml#sources.infusion
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  hemolysis:
+    kind: preanalytical
+    acts_on:
+    - potassium
+    sign: 1
+    effect:
+    - 0.08
+    - 0.25
+    typical:
+    - 100
+    - 120
+    display: hemolysis
+    source: p4_diversity.yaml#sources.potassium
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  edta_contamination:
+    kind: preanalytical
+    acts_on:
+    - potassium
+    sign: 1
+    effect:
+    - 0.1
+    - 0.3
+    typical:
+    - 100
+    - 120
+    display: edta_contamination
+    source: p4_diversity.yaml#sources.edta
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  cold_delayed_separation:
+    kind: preanalytical
+    acts_on:
+    - potassium
+    sign: 1
+    effect:
+    - 0.08
+    - 0.23
+    typical:
+    - 100
+    - 120
+    display: cold_delayed_separation
+    source: p4_diversity.yaml#sources.potassium
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  nonfasting:
+    kind: preanalytical
+    acts_on:
+    - glucose
+    - triglycerides
+    sign: 1
+    effect:
+    - 0.05
+    - 0.2
+    typical:
+    - 100
+    - 120
+    display: 含热量餐食
+    source: p4_diversity.yaml#sources.lipids
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  glucose_glycolysis:
+    kind: preanalytical
+    acts_on:
+    - glucose
+    sign: -1
+    effect:
+    - 0.1
+    - 0.28
+    typical:
+    - 100
+    - 120
+    display: glucose_glycolysis
+    source: p4_diversity.yaml#sources.glucose
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  recent_exercise:
+    kind: preanalytical
+    acts_on:
+    - alt
+    - ck
+    sign: 1
+    effect:
+    - 0.2
+    - 0.8
+    typical:
+    - 100
+    - 120
+    display: 抗阻训练
+    source: p4_diversity.yaml#sources.exercise
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  sampling_time:
+    kind: preanalytical
+    acts_on:
+    - tsh
+    sign: -1
+    effect:
+    - 0.2
+    - 0.45
+    typical:
+    - 100
+    - 120
+    display: sampling_time
+    source: p4_diversity.yaml#sources.tsh_time
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  platform_calibration:
+    kind: method
+    acts_on:
+    - creatinine
+    - potassium
+    - glucose
+    - tsh
+    - alt
+    - ck
+    - triglycerides
+    sign: 1
+    effect:
+    - 0.025
+    - 0.12
+    typical:
+    - 100
+    - 120
+    display: 平台比对
+    source: p4_diversity.yaml#sources.comparison
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  reagent_lot:
+    kind: method
+    acts_on:
+    - creatinine
+    - potassium
+    - glucose
+    - tsh
+    - alt
+    - ck
+    - triglycerides
+    sign: 1
+    effect:
+    - 0.025
+    - 0.12
+    typical:
+    - 100
+    - 120
+    display: 试剂批间比对
+    source: p4_diversity.yaml#sources.lot
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  biotin_tsh:
+    kind: method
+    acts_on:
+    - tsh
+    sign: -1
+    effect:
+    - 0.2
+    - 0.42
+    typical:
+    - 100
+    - 120
+    display: 生物素
+    source: p4_diversity.yaml#sources.biotin
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  dehydration:
+    kind: true_change
+    acts_on:
+    - creatinine
+    sign: 1
+    effect:
+    - 0.1
+    - 0.4
+    typical:
+    - 100
+    - 120
+    display: 容量不足
+    source: p4_diversity.yaml#sources.volume
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  thiazide:
+    kind: true_change
+    acts_on:
+    - potassium
+    sign: -1
+    effect:
+    - 0.08
+    - 0.22
+    typical:
+    - 100
+    - 120
+    display: 氢氯噻嗪
+    source: p4_diversity.yaml#sources.thiazide
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  gastrointestinal_loss:
+    kind: true_change
+    acts_on:
+    - potassium
+    sign: -1
+    effect:
+    - 0.1
+    - 0.28
+    typical:
+    - 100
+    - 120
+    display: 胃肠道丢失
+    source: p4_diversity.yaml#sources.volume
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  glucocorticoid:
+    kind: true_change
+    acts_on:
+    - glucose
+    sign: 1
+    effect:
+    - 0.12
+    - 0.4
+    typical:
+    - 100
+    - 120
+    display: 地塞米松
+    source: p4_diversity.yaml#sources.steroid
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  acute_illness:
+    kind: true_change
+    acts_on:
+    - glucose
+    sign: 1
+    effect:
+    - 0.1
+    - 0.4
+    typical:
+    - 100
+    - 120
+    display: 急性感染
+    source: p4_diversity.yaml#sources.steroid
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  thyroiditis:
+    kind: true_change
+    acts_on:
+    - tsh
+    sign: 1
+    effect:
+    - 0.25
+    - 0.75
+    typical:
+    - 100
+    - 120
+    display: 甲状腺炎病程
+    source: p4_diversity.yaml#sources.thyroid
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  thyroxine_adherence:
+    kind: true_change
+    acts_on:
+    - tsh
+    sign: -1
+    effect:
+    - 0.25
+    - 0.75
+    typical:
+    - 100
+    - 120
+    display: 左甲状腺素
+    source: p4_diversity.yaml#sources.thyroid
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  hepatotoxic_drug:
+    kind: true_change
+    acts_on:
+    - alt
+    sign: 1
+    effect:
+    - 0.2
+    - 0.65
+    typical:
+    - 100
+    - 120
+    display: 阿莫西林克拉维酸
+    source: p4_diversity.yaml#sources.liver
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  alcohol_change:
+    kind: true_change
+    acts_on:
+    - alt
+    - triglycerides
+    sign: 1
+    effect:
+    - 0.18
+    - 0.55
+    typical:
+    - 100
+    - 120
+    display: 持续饮酒改变
+    source: p4_diversity.yaml#sources.liver
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  statin_myopathy:
+    kind: true_change
+    acts_on:
+    - ck
+    sign: 1
+    effect:
+    - 0.2
+    - 0.8
+    typical:
+    - 100
+    - 120
+    display: 阿托伐他汀
+    source: p4_diversity.yaml#sources.statin
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  muscle_injury:
+    kind: true_change
+    acts_on:
+    - ck
+    sign: 1
+    effect:
+    - 0.25
+    - 0.85
+    typical:
+    - 100
+    - 120
+    display: 肌肉损伤
+    source: p4_diversity.yaml#sources.exercise
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
+  fibrate_adherence:
+    kind: true_change
+    acts_on:
+    - triglycerides
+    sign: -1
+    effect:
+    - 0.25
+    - 0.6
+    typical:
+    - 100
+    - 120
+    display: 非诺贝特
+    source: p4_diversity.yaml#sources.fibrate
+    ours: true
+    diversity_only: true
+    reason: Effect distribution is synthetic; clinical direction and eligibility are
+      sourced in p4_diversity.yaml.
 
 #: R15 (review: pending, 暂定): a known comorbidity that changes how a creatinine change is read.
-#: CKD G3b-G4: creatinine from eGFR by CKD-EPI 2021 (race-free); at that level a Jaffe/enzymatic
-#: switch (an absolute offset, above) carries less than half of a change beyond the RCV, so the
-#: switch does not name the source. Dealt to a quarter of the cases in each (H, class) whose class
-#: the switch does not name (true change, pre-analytical, noise); a method-difference item cannot
-#: be built at this level.
+#: CKD G3b-G4: creatinine from eGFR by CKD-EPI 2021 (race-free). A Jaffe/enzymatic switch is an
+#: absolute offset (~10-25 umol/L), a few percent of a CKD creatinine, so a method-difference item
+#: cannot be built at this level and no CKD item carries a switch (one visible cause per item).
+#: Dealt to a quarter of the cases in each (H, class) whose class the switch does not name (true
+#: change, pre-analytical, noise).
 comorbidities:
   CKD:
     display: 慢性肾脏病
     egfr: [20, 40]                  # mL/min/1.73 m2, G3b-G4 (KDIGO 2024)
     share: 0.25
-    max_carry: 0.4                  # the offset carries at most this share of the observed change (margin to the 1/2 line)
 
 #: Visible-cause drug and weight effects on the followed analyte's truth (shared with pack 3).
 effects:
@@ -160,8 +730,9 @@ effects:
     smooth_days: 15
     source: "Look AHEAD (provisional)"
   acei_on_creatinine:
-    #: ln creatinine rise while on ACEI; per-case A must fall here
-    A: [0.05, 0.33]
+    #: ln creatinine rise while on ACEI; per-case A must fall here. The cap ln(1.30) = 0.262 keeps the
+    #: steady-state rise within KDIGO's <= 30% acceptable
+    A: [0.05, 0.262]
     tau_days: 7
     drug: 依那普利
     dose: "10 mg qd"
@@ -171,29 +742,57 @@ effects:
     stop_reason: 干咳
     source: "KDIGO 2012: rise <=30% acceptable (provisional)"
 
+#: Wait before centrifugation within which a specimen's value is stable, per analyte. Creatinine: the
+#: enzymatic method is stable over 96 h (+1.8%), the kinetic Jaffe method rises once centrifugation is
+#: delayed past 6 h (Chikomba, Padoa, Tanyanyiwa, S Afr J HIV Med 2020;21(1):a1056). A wait the report shows
+#: below the bound is a decoy that does not act; at or past it the draw would carry a bias this world does
+#: not model, so such a wait is never generated (`gold.gold_block_consistent` refuses it). review: pending
+specimen_stability:
+  creatinine: {max_h: 6.0}
+
 #: Rendering vocabulary of the report (no gold words; scanned by the p4 leak gate).
 render:
   default_lab: 本院检验科
-  alt_lab: 社区卫生服务中心检验科
+  alt_lab: 本院检验科（另一院区，同型号分析仪、同厂家试剂）
   #: a draw between these hours is a fasting draw; any other draw is recorded as non-fasting
   fasting_hours: [7, 10]
   fasting_label: 空腹
   nonfasting_label: 已进食
   #: meals happen at meal times (HH:MM windows) with food of that meal
   breakfast_window: ["06:30", "08:30"]
-  #: a cooked-meat dinner ends at least this many hours before the next morning's draw: the 12-h
-  #: no-meat window (NICE NG203 1.1.4) plus a 2-h margin, so no meat meal sits near the cutoff
-  #: (the acting meat meal is 1-4 h before a draw)
-  meat_dinner_min_hours: 14
+  #: a cooked-meat dinner that does not act is rendered as the evening meal two days before the draw
+  #: (>= 34 h): serum creatinine returns to baseline within 12-24 h of a cooked-meat meal
+  #: (Preiss 2007; NICE NG203 1.1.4 asks for no meat in the 12 h before), so a dinner of the evening
+  #: before the draw sits in the ambiguous window and is never rendered as a non-acting background.
+  #: review: pending (clinical review: the no-effect threshold)
   lunch_window: ["11:30", "13:00"]
   specimen_normal_h: [0.3, 1.2]
-  hemolysis_rate: 0.15
-  meals_light: [白粥、馒头, 豆浆、包子（素馅）, 燕麦片、牛奶, 米粉（清汤）, 面包、酸奶]
+  #: share of draws printed with a mild (1+) haemolysis index: in vitro haemolysis is about 3% of the specimens
+  #: of routine and stat testing (Lippi, Cervellin, Mattiuzzi, Biochem Med 2013;23(2), doi 10.11613/BM.2013.022);
+  #: the earlier 0.15 per draw was an unsourced default that put a haemolysis note on 6 items of 10
+  hemolysis_rate: 0.03
+  #: the lab's tube policy (one per item, the same on every venous draw): share on Li-heparin plasma tubes
+  tube_plasma_share: 0.5
+  tube_serum: 静脉血（促凝血清管）
+  tube_plasma: 静脉血（肝素锂抗凝血浆管）
+  #: printed once per report: the laboratory's own validated bound on the wait before centrifugation, the
+  #: visible basis on which a wait inside it carries no change (`specimen_stability`)
+  stability_statement: "本检验科标本稳定性验证：肌酐标本采血后 {h:g} 小时内离心，结果不受影响"
+  #: pertinent negatives the patient gives at a draw (volume depletion, an intercurrent illness and
+  #: nephrotoxic over-the-counter drugs are the acute causes a reader would otherwise have to rule out,
+  #: KDIGO 2012 AKI guideline, risk factors); each item prints one per compared draw, none carries a cause
+  patient_remarks:
+    - 近两周没有发热、腹泻或呕吐，饮水量和平时差不多。
+    - 最近吃喝如常，没有拉肚子，也没有发烧。
+    - 这段时间没有生病，没有自己加服止痛药或其他药。
+    - 采血前一天作息照旧，水喝得不多也不少。
+    - 没有新出现的不舒服，小便量也没什么变化。
+  meals_light: [白粥、馒头, 豆浆、包子（素馅）, 燕麦片、牛奶, 米粉（清汤）, 面包、酸奶, 小米粥、煮鸡蛋, 全麦面包、牛奶, 蒸红薯、豆浆, 玉米、酸奶、苹果, 青菜面（清汤）, 素馅饺子]
   #: a cooked-meat meal 1-4 h before a non-fasting draw: at breakfast a breakfast dish, at lunch a lunch dish
-  breakfast_meat: [牛肉面（加牛肉，约 150 g）, 羊肉汤泡馍（羊肉约 150 g）, 牛肉粉（加牛肉，约 150 g）]
-  meals_meat: [酱牛肉约 250 g、米饭, 炖牛腩约 250 g、米饭, 红烧牛肉约 250 g、面条, 烤羊肉约 250 g、馕]
-  lunch_light: [米饭、清炒时蔬, 面条、青菜, 米饭、番茄炒蛋、青菜, 馄饨（素馅）]
-  dinner_light: [米饭、清炒时蔬, 面条、青菜, 杂粮粥、凉拌黄瓜, 米饭、豆腐、青菜]
+  breakfast_meat: [牛肉面（加牛肉，约 150 g）, 羊肉汤泡馍（羊肉约 150 g）, 牛肉粉（加牛肉，约 150 g）, 牛肉馅饼（牛肉约 150 g）, 羊肉粉丝汤（羊肉约 150 g）, 牛肉拉面（牛肉约 150 g）]
+  meals_meat: [酱牛肉约 250 g、米饭, 炖牛腩约 250 g、米饭, 红烧牛肉约 250 g、面条, 烤羊肉约 250 g、馕, 小炒黄牛肉约 250 g、米饭, 涮羊肉约 250 g、馒头, 孜然羊肉约 250 g、米饭, 葱爆羊肉约 250 g、花卷, 咖喱牛肉约 250 g、米饭, 黑椒牛柳约 250 g、意面, 清炖羊肉约 250 g、面条]
+  lunch_light: [米饭、清炒时蔬, 面条、青菜, 米饭、番茄炒蛋、青菜, 馄饨（素馅）, 西红柿鸡蛋面, 米饭、麻婆豆腐、青菜, 炒河粉（素）、蔬菜汤, 米饭、清炒西兰花、蛋花汤]
+  dinner_light: [米饭、清炒时蔬, 面条、青菜, 杂粮粥、凉拌黄瓜, 米饭、豆腐、青菜, 蔬菜汤面, 小米粥、凉拌木耳, 米饭、清炒菠菜、紫菜蛋花汤, 素饺子、凉拌萝卜丝]
   #: primary drugs as named on the medication record (class in brackets: the solver needs it to
   #: tell a glucose-acting dose change from any other)
   drugs:
@@ -213,3 +812,92 @@ render:
     amlodipine: {up: 血压未达标，加量, down: 踝部水肿，减量, hold: 踝部水肿，暂停, back: 水肿消退后恢复}
     atorvastatin: {up: 血脂未达标，加量, down: 肌肉酸痛，减量, hold: 肌肉酸痛，暂停, back: 症状缓解后恢复}
     default: {up: 未达标，加量, down: 不良反应，减量, hold: 不良反应，暂停, back: 反应缓解后恢复}
+
+# Legacy control renderer. Values preserve the pre-background release; no new clinical claims.
+render_background_off:
+  default_lab: 本院检验科
+  alt_lab: 本院检验科（另一院区，同型号分析仪、同厂家试剂）
+  fasting_hours:
+  - 7
+  - 10
+  fasting_label: 空腹
+  nonfasting_label: 已进食
+  breakfast_window:
+  - 06:30
+  - 08:30
+  lunch_window:
+  - '11:30'
+  - '13:00'
+  specimen_normal_h:
+  - 0.3
+  - 1.2
+  hemolysis_rate: 0.15
+  meals_light:
+  - 白粥、馒头
+  - 豆浆、包子（素馅）
+  - 燕麦片、牛奶
+  - 米粉（清汤）
+  - 面包、酸奶
+  breakfast_meat:
+  - 牛肉面（加牛肉，约 150 g）
+  - 羊肉汤泡馍（羊肉约 150 g）
+  - 牛肉粉（加牛肉，约 150 g）
+  meals_meat:
+  - 酱牛肉约 250 g、米饭
+  - 炖牛腩约 250 g、米饭
+  - 红烧牛肉约 250 g、面条
+  - 烤羊肉约 250 g、馕
+  lunch_light:
+  - 米饭、清炒时蔬
+  - 面条、青菜
+  - 米饭、番茄炒蛋、青菜
+  - 馄饨（素馅）
+  dinner_light:
+  - 米饭、清炒时蔬
+  - 面条、青菜
+  - 杂粮粥、凉拌黄瓜
+  - 米饭、豆腐、青菜
+  drugs:
+    semaglutide: 司美格鲁肽（GLP-1 受体激动剂，每周皮下注射）
+    liraglutide: 利拉鲁肽（GLP-1 受体激动剂，每日皮下注射）
+    dulaglutide: 度拉糖肽（GLP-1 受体激动剂，每周皮下注射）
+    tirzepatide: 替尔泊肽（GIP/GLP-1 受体激动剂，每周皮下注射）
+    metformin: 二甲双胍（双胍类，口服）
+    amlodipine: 氨氯地平（钙通道阻滞剂，口服）
+    atorvastatin: 阿托伐他汀（他汀类，口服）
+  glp1_class:
+  - semaglutide
+  - liraglutide
+  - dulaglutide
+  - tirzepatide
+  dose_reasons:
+    glp1:
+      up: 按方案逐级加量
+      down: 胃肠道反应明显，减量
+      hold: 胃肠道反应明显，暂停
+      back: 反应缓解后恢复
+    metformin:
+      up: 血糖未达标，加量
+      down: 胃肠道不适，减量
+      hold: 胃肠道不适，暂停
+      back: 症状缓解后恢复
+    amlodipine:
+      up: 血压未达标，加量
+      down: 踝部水肿，减量
+      hold: 踝部水肿，暂停
+      back: 水肿消退后恢复
+    atorvastatin:
+      up: 血脂未达标，加量
+      down: 肌肉酸痛，减量
+      hold: 肌肉酸痛，暂停
+      back: 症状缓解后恢复
+    default:
+      up: 未达标，加量
+      down: 不良反应，减量
+      hold: 不良反应，暂停
+      back: 反应缓解后恢复
+render_background_off_basis:
+  source: ours
+  ours: true
+  rule: Historical control of the pre-background deterministic renderer; kept solely
+    for byte replay.

@@ -6,11 +6,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from haenv import evaluate as ev
-from haenv.semantic_budget import BudgetExceeded, BudgetLedger
-from haenv.semantic_transport import PriceSchedule
-from haenv.solver_accounting import SolverRequestAccountant, prepare_accounting
-from haenv.paid_completion import AccountedCompletion
+import haenv.app.evaluate as ev
+from haenv.scoring.semantic.budget import BudgetExceeded
+from haenv.scoring.semantic.budget import BudgetLedger
+from haenv.scoring.semantic.transport import PriceSchedule
+from haenv.runtime.solver_accounting import SolverRequestAccountant, prepare_accounting
+from haenv.runtime.completion import AccountedCompletion
 from _patch_bound import patch_bound  # noqa: E402
 
 
@@ -59,7 +60,7 @@ def test_solve_does_not_swallow_budget_stop(tmp_path, monkeypatch, kind):
         calls.append(prompt)
         raise BudgetExceeded("stop")
     monkeypatch.setattr(s, "_post", stop)
-    patch_bound(monkeypatch, "render_for", lambda *a: ("question", "probe"), source="haenv.qside")
+    patch_bound(monkeypatch, "render_for", lambda *a: ("question", "probe"), source="haenv.interaction.qside")
     monkeypatch.setattr(ev.time, "sleep", lambda *a: pytest.fail("retry after budget stop"))
     with pytest.raises(BudgetExceeded):
         s.solve(object())
@@ -93,7 +94,7 @@ def test_unsupported_route_refuses_entire_preflight(tmp_path, monkeypatch):
 
 
 def test_binding_disables_key_rotation_and_pins_run(tmp_path, monkeypatch):
-    import haenv.solver_accounting as accounting
+    import haenv.runtime.solver_accounting as accounting
     s = ev.OpenAICompatSolver("s", "m", "secret", 10, max_tokens=1000)
     s.pool = object()
     metadata = {"id": "m", "pricing": {"prompt": ".000001", "completion": ".000002"},
@@ -139,8 +140,8 @@ def test_parallel_budget_stop_persists_inflight_success(tmp_path, monkeypatch):
 
 
 def test_run_eval_binds_real_solver_to_shared_ledger(tmp_path, monkeypatch):
-    import haenv.solver_accounting as accounting
-    import haenv.batch as batch
+    import haenv.runtime.solver_accounting as accounting
+    import haenv.app.artifacts.batch as batch
     s = ev.OpenAICompatSolver("s", "m", "secret", 10, max_tokens=1000)
     metadata = {"id": "m", "pricing": {"prompt": ".000001", "completion": ".000002"},
                 "context_length": 100000, "top_provider": {"max_completion_tokens": 2000}}
@@ -168,7 +169,7 @@ def test_run_eval_binds_real_solver_to_shared_ledger(tmp_path, monkeypatch):
 
 
 def test_output_cap_is_rejected_not_clamped(tmp_path, monkeypatch):
-    import haenv.solver_accounting as accounting
+    import haenv.runtime.solver_accounting as accounting
     s = ev.OpenAICompatSolver("s", "m", "secret", 10, max_tokens=72000)
     metadata = {"id": "m", "pricing": {"prompt": ".000001", "completion": ".000002"},
                 "context_length": 100000, "top_provider": {"max_completion_tokens": 65536}}

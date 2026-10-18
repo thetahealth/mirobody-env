@@ -27,13 +27,13 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import build as B                                  # noqa: E402
-from haenv import job as J                                    # noqa: E402
+import haenv.world.generation.build as B                                  # noqa: E402
+import haenv.app.job as J                                    # noqa: E402
 
 WORK = ROOT / ".tmpwork" / "contracts"
-T2D_JOB = ROOT / "inputs" / "early_warning-t2d-glp1.job.yaml"
-EW20_JOB = ROOT / "inputs" / "early_warning-20.job.yaml"
-EXAMPLE_JOB = ROOT / "inputs" / "example-ew.job.yaml"
+T2D_JOB = ROOT / 'benchmarks' / 'inputs' / 'early_warning-t2d-glp1.job.yaml'
+EW20_JOB = ROOT / 'benchmarks' / 'inputs' / 'early_warning-20.job.yaml'
+EXAMPLE_JOB = ROOT / 'benchmarks' / 'inputs' / 'example-ew.job.yaml'
 
 #: Pipeline layers in the order `build._build_case_inner` runs them after the course is
 #: rendered: kernel noise that changes the patient or drops readings, day-by-day events and

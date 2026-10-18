@@ -8,7 +8,8 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from haenv.ddx import INSUFFICIENT_HIDDEN_RED_FLAG_URGENCY, insufficient_triage   # noqa: E402
+from haenv.world.clinical.ddx import INSUFFICIENT_HIDDEN_RED_FLAG_URGENCY
+from haenv.world.clinical.ddx import insufficient_triage   # noqa: E402
 
 RED = {"red_flag": True, "urgency": "🔴"}
 
@@ -28,7 +29,7 @@ def test_every_insufficient_case_has_all_symptoms_after_t():
     """The premise both `ddx.insufficient_triage` and `wq.derive_from_registry` rely on."""
     bad = []
     for name in ("ddx-timeline", "ddx-workup"):
-        doc = yaml.safe_load((ROOT / "inputs" / f"{name}.job.yaml").read_text(encoding="utf-8"))
+        doc = yaml.safe_load((ROOT / 'benchmarks' / 'inputs' / f'{name}.job.yaml').read_text(encoding="utf-8"))
         for c in doc["cases"]:
             lat = c["latent"]
             if lat.get("ddx_insufficient"):
@@ -46,7 +47,7 @@ def test_sufficient_tier_and_non_red_specs_unchanged():
 def test_shipped_core_packs_have_no_hidden_red_flag():
     bad = []
     for name in ("ddx-timeline", "ddx-workup"):
-        doc = yaml.safe_load((ROOT / "inputs" / f"{name}.job.yaml").read_text(encoding="utf-8"))
+        doc = yaml.safe_load((ROOT / 'benchmarks' / 'inputs' / f'{name}.job.yaml').read_text(encoding="utf-8"))
         for c in doc["cases"]:
             lat = c["latent"]
             days = [int(s["day"]) for s in c["raw"].get("symptoms") or []]
@@ -61,9 +62,9 @@ def _built(case_id):
     import contextlib
     import io
 
-    from haenv import build as B
-    from haenv import job as J
-    job = J.load_job(ROOT / "inputs" / "ddx-workup.job.yaml")
+    import haenv.world.generation.build as B
+    import haenv.app.job as J
+    job = J.load_job(ROOT / 'benchmarks' / 'inputs' / 'ddx-workup.job.yaml')
     cs = next(c for c in job.cases if c.case_id == case_id)
     with contextlib.redirect_stdout(io.StringIO()):
         raw, _ = B.build_case(cs, T=cs.index_time_T)
@@ -74,7 +75,7 @@ def _built(case_id):
 def test_gold_self_consistency_follows_the_tier():
     from copy import deepcopy
 
-    from haenv import wq
+    import haenv.world.wq as wq
     raw = _built("JD-09v2")                # insufficient tier, red-flag condition
     assert raw.adjudication["red_flag_present"] is False
     assert wq.check_gold_matches_world(raw) == []

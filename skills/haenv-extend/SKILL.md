@@ -78,7 +78,7 @@ plugins:
   - haenv.judges.myorg
 ```
 
-`haenv/job.py:load_plugins` calls `judges.load_judge_plugins(<group name>)` for each one,
+`src/haenv/app/job.py:load_plugins` calls `judges.load_judge_plugins(<group name>)` for each one,
 printing how many judges got mounted; it warns if a group was declared but not one got mounted.
 
 **4. A negative control**: following `examples/plugin_demo/demo-noplugin.job.yaml`, make a job that's
@@ -196,7 +196,8 @@ behavior is intentional.
 
 ## 6. Boundaries: what cannot be changed from outside the repo
 
-* **the scoring kernel** -- it lives in this repository, at `core/` (`config.yaml:kernel_path`), and its
+* **the scoring kernel** -- it lives in this repository, at `src/haenv_kernel/`, imported as `haenv_kernel`; a comparison path locates source
+  for inspection and does not replace the executing namespace. Its
   files belong to the frozen judging and generation segments: changing one moves a code fingerprint, so
   every batch scored or generated under the old one is stamped with that older version. `docs/REPRODUCE.md`
   says which files those are and what a change costs;

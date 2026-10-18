@@ -1,0 +1,146 @@
+{
+ "R2a1d878cbc": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-01",
+  "solver": "gpt-5.4"
+ },
+ "R2353adbf8d": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-03",
+  "solver": "gemini-3.1-pro"
+ },
+ "R2b2188c48b": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-06",
+  "solver": "kimi-k3"
+ },
+ "R2d713cd183": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-07",
+  "solver": "gpt-5.4"
+ },
+ "R2c65fad775": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-07",
+  "solver": "terra"
+ },
+ "R23f320fd76": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-07",
+  "solver": "terra"
+ },
+ "R2cee23acce": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-09",
+  "solver": "gpt-5.4"
+ },
+ "R2148e5eaf1": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-09",
+  "solver": "gpt-5.4"
+ },
+ "R27e6ae5b58": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-09",
+  "solver": "terra"
+ },
+ "R229188d991": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-37",
+  "solver": "gpt-5.4"
+ },
+ "R25c11bdc5d": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-35",
+  "solver": "gpt-5.4"
+ },
+ "R27825ec17a": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-18",
+  "solver": "gemini-3.1-pro"
+ },
+ "R2307e9546c": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-16",
+  "solver": "kimi-k3"
+ },
+ "R28eedf3f72": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-24",
+  "solver": "gemini-3.1-pro"
+ },
+ "R2542af5f94": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-25",
+  "solver": "gemini-3.1-pro"
+ },
+ "R254fef39a8": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-31",
+  "solver": "gemini-3.1-pro"
+ },
+ "R2f3a281e89": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-32",
+  "solver": "gemini-3.1-pro"
+ },
+ "R2991f791a7": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-27",
+  "solver": "kimi-k3"
+ },
+ "R28f86d7805": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-28",
+  "solver": "terra"
+ },
+ "R25e7e82e2b": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-37",
+  "solver": "kimi-k3"
+ },
+ "R2ba5b760a2": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-38",
+  "solver": "kimi-k3"
+ },
+ "R2daf50a718": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-28",
+  "solver": "kimi-k3"
+ },
+ "R27b3334770": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-36",
+  "solver": "terra"
+ },
+ "R293eca4224": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-30",
+  "solver": "terra"
+ }
+}

@@ -1,5 +1,10 @@
 # HAEnv LLM input/output and scoring convention
 
+The kernel-track pipeline below describes the legacy task interface. Current four-pack
+query/full-context views, semantic matching and management quality have their contracts in
+[the product specification](../spec/spec.md); their overall score is
+`S = G * D * (1 + Q) / 2`, not a kernel-track aggregate.
+
 > Which fields each LLM call in the pipeline must output, and how the evaluator (the kernel's
 > `verifier.py`) folds them into a score.
 > SYNTHETIC data, evaluation use only, not medical advice.
@@ -11,15 +16,15 @@
 ```
 job.yaml (raw case + hidden control variables)
    │
-   ├─① [case generation · disease-course generation] haenv/build.py:_CASE_PROMPT
+   ├─① [case generation · disease-course generation] src/haenv/world/generation/build.py:_CASE_PROMPT
    │      → LLM (config.synth.gen_model) produces the longitudinal numeric sequence
-   ├─② [case generation · event planning] haenv/events.py:_PLAN_PROMPT
+   ├─② [case generation · event planning] src/haenv/world/observations/events.py:_PLAN_PROMPT
    │      → LLM (config.synth.gen_model) picks daily indicators + writes benign events
    │        ↓ both pass deterministic validation (`synthesize()` consistency checks + verify.py, item by item); failures are
    │          fed back with the reason and regenerated
    │   emission gate → cases.jsonl (includes ground truth)
    │
-   └─③ [under test] haenv/prompts.py:PROMPT
+   └─③ [under test] src/haenv/interaction/prompts.py:PROMPT
           → the model under test produces a conclusion as JSON
             ↓
         verifier.grade()  →  hard gates + five tracks  →  eval.jsonl  →  report (md)
@@ -64,7 +69,7 @@ the same payload; otherwise cross-model comparison would not be valid.
 
 > The prompt asks for 17 leaf fields, and scoring uses 12. `confidence`, `drivers[].rank`,
 > `drivers[].evidence_for`, `action.followup_interval` and `forecast.target_event` are not scored,
-> so getting them wrong costs nothing. Scoring them would require changing `haenv_kernel/verifier.py`,
+> so getting them wrong costs nothing. Scoring them would require changing `src/haenv_kernel/verifier.py`,
 > which is in the judging segment: the change moves the judging fingerprint and requires stored
 > scores to be recomputed.
 
@@ -160,7 +165,7 @@ Triggering any one → `overall = FAIL(gate)`; the `tracks` are still computed b
 `indeterminate` counts as "predicting it won't happen" in the direction check, so staying vague
 costs nothing on negative cases and costs on positive cases.
 
-### 3.3 Step three: the headline score (report convention, `haenv/analytics.py:rank_models`)
+### 3.3 Step three: the headline score (report convention, `src/haenv/scoring/analysis/ranking.py:rank_models`)
 
 ```
 skill(v, c)        = clip((v − c) / (1 − c), 0, 1)     c = this batch's no-information floor for that dimension
@@ -211,7 +216,7 @@ across all three lines, unaffected by the profile.
    wrong (§1.1). In particular, confidence calibration is not evaluated.
 2. **The artifact gate has no time guard**: `acted_on_unverified_signal` looks only at the
    case-level boolean `is_artifact_window`, without comparing it to the solver's visible window,
-   so correctly escalating at T is judged a failure when the artifact window lies after T. The fix belongs in `haenv_kernel/verifier.py` and is priced by a judging-segment recompute.
+   so correctly escalating at T is judged a failure when the artifact window lies after T. The fix belongs in `src/haenv_kernel/verifier.py` and is priced by a judging-segment recompute.
 
 `eval.jsonl` stores the extracted fields used for scoring; the model's complete raw response
 (including the `specific_action` text, `what_not_to_do` and `signal_quality`) is stored per cell in
@@ -225,18 +230,18 @@ the batch's `responses.jsonl`, so a gate verdict can be re-checked against the o
 cd <repo root>
 
 # The same pipeline on the shipped packs, with the offline stubs (free):
-uv run haenv build  inputs/early_warning-20.job.yaml --gen deterministic --fresh
-uv run haenv run    inputs/early_warning-20.job.yaml --offline
-uv run haenv report inputs/early_warning-20.job.yaml                       # or --batch <batch>
+uv run haenv build  benchmarks/inputs/early_warning-20.job.yaml --gen deterministic --fresh
+uv run haenv run    benchmarks/inputs/early_warning-20.job.yaml --offline
+uv run haenv report benchmarks/inputs/early_warning-20.job.yaml                       # or --batch <batch>
 
 # regenerate a report from an existing batch's JSONL (no re-generation, no re-calling the models)
-uv run haenv report inputs/tracking_review-20.job.yaml --batch <batch>
-uv run haenv report inputs/ddx-timeline.job.yaml        --batch <batch>
+uv run haenv report benchmarks/inputs/tracking_review-20.job.yaml --batch <batch>
+uv run haenv report benchmarks/inputs/ddx-timeline.job.yaml        --batch <batch>
 
 # the original prompt text
-uv run python -c "from haenv.prompts import PROMPT; print(PROMPT)"            # ③ the model under test
-uv run python -c "from haenv.build import _CASE_PROMPT; print(_CASE_PROMPT)"  # ① disease-course generation
-uv run python -c "from haenv.events import _PLAN_PROMPT; print(_PLAN_PROMPT)" # ② event planning
+uv run python -c "from haenv.interaction.prompts import PROMPT; print(PROMPT)"            # ③ the model under test
+uv run python -c "from haenv.world.generation.build import _CASE_PROMPT; print(_CASE_PROMPT)"  # ① disease-course generation
+uv run python -c "from haenv.world.observations.events import _PLAN_PROMPT; print(_PLAN_PROMPT)" # ② event planning
 ```
 
 *SYNTHETIC data, evaluation use only, not medical advice.*

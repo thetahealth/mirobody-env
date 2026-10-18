@@ -1,9 +1,15 @@
 # Validity evidence
 
+This page records the legacy anchor convention in `registry/scoring.yaml`. It does not
+validate the current four-pack management rubric or replace the
+[current scoring contract](../spec/spec.md#9-overall-score-and-reporting). Machine-readable
+inputs now live in [`registry/validity/`](../../registry/validity/); original data bytes,
+source labels and fingerprints are preserved. The tables below describe their original readings.
+
 A judgment dimension (a judge that stands in for a reader) enters the composite
 score only with a blind human reading whose agreement with the judge is at least
 `validity_threshold` in [`registry/scoring.yaml`](../../registry/scoring.yaml)
-(0.70, fixed before any annotation). This directory holds the anchors those
+(0.70, fixed before any annotation). The linked resource directory holds the anchors those
 readings come from. Each dimension's recorded reading is its `validity` entry in
 the same file.
 
@@ -21,6 +27,11 @@ measure clinical correctness.
 | Test lists with constructed defects | `tests_recall`, `tests_precision` | 40 (20 effective) | `tasks-tests-neg.jsonl`, `truth-tests-neg.json` | [`validity-readout-tests-neg.md`](validity-readout-tests-neg.md): 0.950 / 0.950 on the effective tiers; both dimensions are scored |
 | Discriminating tests with constructed defects | `disc_recall` | 36 (20 effective) | `tasks-disc-neg.jsonl`, `truth-disc-neg.json`, `tasks-disc-neg-effective-set.json` | `disc_recall.validity`: 1.000 on the effective tiers; scored |
 | Belief revision with constructed defects | `rev_stability`, `rev_responsiveness` | 36 (24 effective) | `tasks-rev-neg.jsonl`, `truth-rev-neg.json`, `tasks-rev-neg-effective-set.json` | `rev_stability.validity`: 0.792 on the effective tiers, 0.861 on all; recorded as a defect, both dimensions are `diagnostic` |
+
+The later revision families are preserved with their matching truth and effective-tier files:
+`tasks-rev-neg2*`, `truth-rev-neg2.json`, `tasks-rev-neg3*`, `truth-rev-neg3.json` and
+`labels-rev-neg3-consensus.json`. See the [layered protocol](README-rev3.md) and
+[consensus readout](readout-rev3-consensus.md); model consensus is not human validation.
 
 ## Protocol
 
@@ -46,7 +57,7 @@ measure clinical correctness.
   ```bash
   uv run python -c "import json,hashlib,sys; L=('anchor_label','anchor_label_precision','anchor_changed','anchor_should_change'); \
   rows=[{k:(None if k in L else v) for k,v in json.loads(x).items() if k!='anchor_note'} for x in open(sys.argv[1],encoding='utf-8') if x.strip()]; \
-  print(hashlib.sha256(('\n'.join(json.dumps(r,ensure_ascii=False) for r in rows)+'\n').encode()).hexdigest()[:16])" docs/anchor/tasks.jsonl
+  print(hashlib.sha256(('\n'.join(json.dumps(r,ensure_ascii=False) for r in rows)+'\n').encode()).hexdigest()[:16])" registry/validity/tasks.jsonl
   ```
 
   This gives `769ff23106e4363a` for `tasks.jsonl`, `bef67e5b2069e111` for
@@ -58,8 +69,8 @@ The revision anchor records the judge's verdict per task (`judge_changed` in
 `truth-rev-neg.json`), so its agreement is recomputable here:
 
 ```bash
-uv run python -c "import json; t=[json.loads(x) for x in open('docs/anchor/tasks-rev-neg.jsonl',encoding='utf-8')]; \
-tr=json.load(open('docs/anchor/truth-rev-neg.json')); eff=json.load(open('docs/anchor/tasks-rev-neg-effective-set.json')); \
+uv run python -c "import json; t=[json.loads(x) for x in open('registry/validity/tasks-rev-neg.jsonl',encoding='utf-8')]; \
+tr=json.load(open('registry/validity/truth-rev-neg.json')); eff=json.load(open('registry/validity/tasks-rev-neg-effective-set.json')); \
 ok=[(tr[x['task_id']]['mutation'], tr[x['task_id']]['judge_changed']==x['anchor_changed']) for x in t]; \
 e=[o for m,o in ok if not eff[m]['trivial']]; print(sum(e),len(e), sum(o for _,o in ok),len(ok))"
 ```

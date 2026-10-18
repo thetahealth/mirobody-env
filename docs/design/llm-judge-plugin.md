@@ -1,6 +1,6 @@
 # The LLM judge plugin — reference implementation and its boundaries
 
-**Code**: `haenv/judges/llm.py` (in the package, off by default); `examples/llm_judge_demo/` is a thin
+**Code**: `src/haenv/judges/llm.py` (in the package, off by default); `examples/llm_judge_demo/` is a thin
 shell that demonstrates the entry-point plugin route
 **Judge name**: `llmj_rival_discriminator` · **key prefix**: `llmj_disc_`
 
@@ -14,7 +14,7 @@ shell that demonstrates the entry-point plugin route
 All other judges are deterministic code; this plugin is the only judge that calls a model.
 
 It plugs into the standard judge surface (`register_judge` / `load_judge_plugins` in
-`haenv/judges/`, `Job.plugins` in `haenv/job.py`).
+`src/haenv/judges/`, `Job.plugins` in `src/haenv/app/job.py`).
 
 ---
 
@@ -64,8 +64,8 @@ two is the shape of confirmation bias.
 * **Pricing unit** = one `(row × claimed-excluded registered look-alike)` pair = one request.
   Requests are only made for the look-alikes the model itself claims to have excluded, so the upper
   bound is `Σ rival_n_declared` and the actual count is far below it.
-* **Disk cache** reuses the one in `haenv/llm.py` (key = `sha256(model ‖ argv ‖ prompt)`, stored
-  under `cases/_llm_cache/`). The prompt contains only those four pieces of text, no `case_id` and
+* **Disk cache** reuses the one in `src/haenv/runtime/llm.py` (key = `sha256(model ‖ argv ‖ prompt)`, stored
+  under `artifacts/cases/_llm_cache/`). The prompt contains only those four pieces of text, no `case_id` and
   no disease course, so the same exclusion sentence shares one cache entry across cases, models
   under test and reruns.
 * **The raw text stays in the cache file** (`{"prompt": …, "response": …}`); the row itself keeps
@@ -90,7 +90,7 @@ sentence.
 The switch is a single environment variable, off by default:
 
 ```bash
-HAENV_LLM_JUDGE=terra uv run haenv run inputs/<pack>.job.yaml   # on (names the judge model, costs money)
+HAENV_LLM_JUDGE=terra uv run haenv run benchmarks/inputs/<pack>.job.yaml   # on (names the judge model, costs money)
 # (unset / set to off, 0, false, no)                       # off — `--offline` and CI take this path
 ```
 
@@ -125,7 +125,7 @@ got two right." `n_rivals` is reported alongside it as context.
 ## 6. Known gaps
 
 * **Not yet run against a real model.** All quantities above are offline.
-* **The offline end-to-end demo cannot produce `ok`.** The offline stubs in `haenv/baselines.py`
+* **The offline end-to-end demo cannot produce `ok`.** The offline stubs in `src/haenv/world/generation/baselines.py`
   never write `ruled_out_by`, so every row of the demo job's offline run is `no_claim` with
   `n_claims=0` and `n_rivals=2`, and the extraction path does not run in the demo. The scan in §4
   (against real model responses on disk) and a fake dispatcher that walks through all six states

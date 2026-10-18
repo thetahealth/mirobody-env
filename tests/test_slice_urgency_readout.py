@@ -36,7 +36,7 @@ def test_empty_urgency_support_stays_unmeasured(monkeypatch):
 
 
 def test_saved_urgency_distinguishes_failed_answer_from_wrong_action():
-    from haenv.semantic_report import urgency_from_saved_actions
+    from haenv.scoring.semantic.report import urgency_from_saved_actions
     readings = [{"t": 2, "action": "A1", "raw_empty": True},
                 {"t": 1, "action": "A5"}]
     result = urgency_from_saved_actions(readings, "🔴")

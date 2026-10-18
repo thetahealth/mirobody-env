@@ -2,7 +2,7 @@
 
 On the gated geometry tests are bought from the menu, not written into the answer. The live path
 (`evaluate._row_gated`) merges the bought tests into `tests_to_order` before the hard gates and
-the judges read the answer; `tools/recompute_judges.py` makes the same merge from the row's
+the judges read the answer; `tools/evaluation/recompute_judges.py` makes the same merge from the row's
 `tool_targets` and a menu rebuilt from the case (`evaluate.gated_menu`), through the same
 function (`evaluate.merge_bought_tests`). Without the merge a recompute reads "bought tests" as
 "ordered nothing" and every test-ordering judge on those rows comes out low.
@@ -32,10 +32,10 @@ sys.path.insert(0, str(ROOT / "tools"))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import evaluate as EV                    # noqa: E402
-import recompute_judges as RJ                       # noqa: E402
+import haenv.app.evaluate as EV                    # noqa: E402
+import tools.evaluation.recompute_judges as RJ                       # noqa: E402
 from _patch_bound import patch_bound  # noqa: E402
-from haenv.run_state import RunContext as _RunContext  # noqa: E402
+from haenv.runtime.state import RunContext as _RunContext  # noqa: E402
 _CTX = _RunContext()   # the run these tests drive; monkeypatch restores its fields
 
 MENU = [{"target": "TSH", "is_test": True},
@@ -83,7 +83,9 @@ class _Solver:
 
 def _live_row(monkeypatch):
     """Run `_row_gated` on stubs; return the row and the answer the kernel graded."""
-    from haenv import gated as _g, judges as _j, tracks as _tk
+    import haenv.interaction.gated as _g
+    from haenv import judges as _j
+    import haenv.scoring.tracks as _tk
     seen: list = []
 
     def _grade(out, vp, ev, **kw):

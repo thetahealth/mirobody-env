@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "declarations": "src/haenv/provenance/declarations.py",
+  "source_layout": "src"
+}

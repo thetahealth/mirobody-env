@@ -34,7 +34,7 @@ def _probe_polarities() -> set[str]:
     """The polarity values the production probe actually emits -- read from the source, not hand-copied a second time."""
     import ast
     import inspect
-    from haenv import evaluate as E
+    import haenv.app.evaluate as E
     # The file that defines the probe builder, wherever it lives.
     src = pathlib.Path(inspect.getsourcefile(E.build_noop_probe)).read_text(encoding="utf-8")
     out: set[str] = set()
@@ -58,8 +58,8 @@ def test_report_covers_every_polarity_the_probe_emits():
     some side. If one doesn't, that tier's rows are permanently empty in
     the table.
     """
-    from haenv.report import rank_models      # noqa: F401  ensures the module actually imports
-    import haenv.report as R
+    from haenv.scoring.analysis.ranking import rank_models      # noqa: F401  ensures the module actually imports
+    import haenv.reporting.probes as R
     src = pathlib.Path(R.__file__).read_text(encoding="utf-8")
     # get the two sets the report side declares (they're literal tuples in the module)
     import ast
@@ -85,7 +85,7 @@ def test_report_covers_every_polarity_the_probe_emits():
 def test_the_two_sides_do_not_overlap():
     """Converse: the two sides' value sets must not overlap -- the same value counting as both "no data" and "has data" would be meaningless."""
     import ast
-    import haenv.report as R
+    import haenv.reporting.probes as R
     src = pathlib.Path(R.__file__).read_text(encoding="utf-8")
     sets = {}
     for n in ast.walk(ast.parse(src)):

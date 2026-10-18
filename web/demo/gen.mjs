@@ -23,9 +23,9 @@
  *
  * | This file | Production |
  * |---|---|
- * | `shape` | `haenv/build.py:_shape` |
- * | `feasibleK` | `haenv/build.py:_feasible_k` |
- * | `weightSeries` · `weightRender` | `haenv/build.py:_weight_series` · `_weight_render` (deterministic path) |
+ * | `shape` | `src/haenv/world/generation/build_weight.py:_shape` |
+ * | `feasibleK` | `src/haenv/world/generation/build_weight.py:_feasible_k` |
+ * | `weightSeries` · `weightRender` | `src/haenv/world/generation/build_weight.py:_weight_series` · `_weight_render` (deterministic path) |
  * | `skeletonBase` | `_skeleton_base` (three-segment skeleton, descent pacing, rebound shape) |
  * | `pacePieces` · `paceAt` · `descentPieces` · `reboundPieces` · `pacedProgress` | `_pace_pieces` · `_pace_at` · `_descent_pieces` · `_rebound_pieces` · `_paced_progress` |
  * | `driftSeries` | `_drift_series` |
@@ -34,21 +34,21 @@
  * | `ensureRegain` · `postTPlain` | `_ensure_regain` · `_post_t_plain` |
  * | `labelGuard` · `noRegainUntil` · `stepsWithin` · `reversalVisible` · `reversalGain` · `slopeKgWeek` | `_label_guard` · `_no_regain_until` · `_steps_within` · `_reversal_visible` · `_reversal_gain` · `_slope_kg_week` |
  * | `maxWeeklyDelta` | `_max_weekly_delta` |
- * | `deriveOutcome` · `labelSeries` | `haenv/gates.py:derive_outcome` · `label_series` (7-reading centred median, floor, `reading`) |
+ * | `deriveOutcome` · `labelSeries` | `src/haenv/world/validation/gates_outcome.py:derive_outcome` · `label_series` (7-reading centred median, floor, `reading`) |
  * | `weightOverlay` · `pchipDaily` · `resampleToGrid` | `_weight_overlay` · `_pchip_daily` · `_resample_to_grid` (the LLM generator's path: PCHIP split at T, a held point at T when T is not a model point) |
  * | `pySum` | CPython's float `sum()` (compensated) |
- * | `adherencePts` | the `traj` segment inside `haenv/build.py:premise_spec` |
- * | `clinicalSeries` | `haenv/build.py:render_clinical` |
- * | `quantizeWithinSlope` | `haenv/build.py:_quantize_within_slope` |
- * | `effectAt` | `haenv/drug_effects.py:effect_at` + `direct_effect` + `total_effect` + `applies_to` |
- * | `carryForward` | `haenv/post_inject.py:carried_forward` (draws looked up from `PER.cf_u`) |
- * | `abnormalSide` | `haenv/indicators.py:abnormal_side` |
- * | `kineticFraction` | `haenv/drug_effects.py:_kinetic_fraction` |
- * | `responseOf` | `haenv/drug_effects.py:response_for` (per-person draw looked up from `PER.response`) |
- * | `doseCourse` · `doseAt` | `haenv/med_course.py:dose_course` · `dose_at` (draws looked up from `PER.med`) |
- * | `indication` | `registry/drug_indications.yaml` as `haenv/gates_case.py:check_drug_indication` reads it |
- * | `emissionGate` | the emission gate in `haenv/build.py`: `haenv_kernel/synth.py:premise_conflicts` (weight range, weekly slope) on the course · `gates.check_observed_in_domain` · `check_anchors_honored` (GEN22) · `check_outcome_derivable` (GEN13) · `check_drug_indication` (GEN27) |
- * | `weightObserved` | `haenv/physio/apply.py:apply_physio` (weight stream: AR(1) over the weigh-in days, scaled to the first reading) · `haenv/physio/noise.py:weight_noise_shaped` · `haenv/physio/bounds.py:project` · `haenv/events_pools.py:_round_to_declared_digits` · `haenv/physio/noise.py:weight_on_scale_grid` (draws looked up from `WN.per`) |
+ * | `adherencePts` | the `traj` segment inside `src/haenv/world/generation/build.py:premise_spec` |
+ * | `clinicalSeries` | `src/haenv/world/generation/build_clinical.py:render_clinical` |
+ * | `quantizeWithinSlope` | `src/haenv/world/generation/build_clinical.py:_quantize_within_slope` |
+ * | `effectAt` | `src/haenv/world/clinical/drug_effects.py:effect_at` + `direct_effect` + `total_effect` + `applies_to` |
+ * | `carryForward` | `src/haenv/world/clinical/post_inject.py:carried_forward` (draws looked up from `PER.cf_u`) |
+ * | `abnormalSide` | `src/haenv/world/clinical/indicators.py:abnormal_side` |
+ * | `kineticFraction` | `src/haenv/world/clinical/drug_effects.py:_kinetic_fraction` |
+ * | `responseOf` | `src/haenv/world/clinical/drug_effects.py:response_for` (per-person draw looked up from `PER.response`) |
+ * | `doseCourse` · `doseAt` | `src/haenv/world/clinical/med_course.py:dose_course` · `dose_at` (draws looked up from `PER.med`) |
+ * | `indication` | `registry/drug_indications.yaml` as `src/haenv/world/validation/gates_case.py:check_drug_indication` reads it |
+ * | `emissionGate` | the emission gate in `src/haenv/world/generation/build.py`: `src/haenv_kernel/synth.py:premise_conflicts` (weight range, weekly slope) on the course · `gates.check_observed_in_domain` · `check_anchors_honored` (GEN22) · `check_outcome_derivable` (GEN13) · `check_drug_indication` (GEN27) |
+ * | `weightObserved` | `src/haenv/world/physio/apply.py:apply_physio` (weight stream: AR(1) over the weigh-in days, scaled to the first reading) · `src/haenv/world/physio/noise.py:weight_noise_shaped` · `src/haenv/world/physio/bounds.py:project` · `src/haenv/world/observations/events_pools.py:_round_to_declared_digits` · `src/haenv/world/physio/noise.py:weight_on_scale_grid` (draws looked up from `WN.per`) |
  *
  * The skeleton's uniforms (`build._skeleton_draws`) depend on `case_id` only and are looked
  * up from `PER.skel`; its constants (`SKEL_*`) and the label rule come from
@@ -833,7 +833,7 @@
   }
 
   /** `adherence` is a function `day -> [0, 1]` or a constant, as in production. */
-  function effectAt(drug, sig, day, adherence, perKg, atten, doseMg, cohort, K, response) {
+  function effectAt(drug, sig, day, adherence, perKg, atten, doseMg, cohort, K, response, base) {
     // `weight` carries the gold label; production's `FORBIDDEN` throws here too.
     if ((K.drug_forbidden || []).indexOf(sig) >= 0)
       throw new Error(sig + " carries the gold label, drug effects may not be applied to it");
@@ -843,8 +843,16 @@
     const pre = resolveDrug(drug, K); if (pre === null) return 0;
     const got = totalEffect(K.drugs[pre], doseMg, field); if (!got) return 0;
     const direct = got[0] - Number(perKg) * Number(atten) * got[1];
-    return direct * kineticFraction(sig, day, driveOf(adherence, K), K)
-      * (response == null ? 1 : Number(response));
+    // Production scales HbA1c's effect to the baseline and floors glucose-lowering
+    // terms at the normal level. Both constants are exported from the registry.
+    const normal = K.baseline_normal_level;
+    const trial = K.drugs[pre].trial_baseline_hba1c;
+    const factor = sig === "HbA1c" && base != null && trial != null && normal.HbA1c != null && trial > normal.HbA1c
+      ? Math.max(0, Math.min(1, (base - normal.HbA1c) / (trial - normal.HbA1c))) : 1;
+    const effect = direct * kineticFraction(sig, day, driveOf(adherence, K), K)
+      * (response == null ? 1 : Number(response)) * factor;
+    return base != null && normal[sig] != null && effect < 0
+      ? Math.max(effect, Math.min(0, normal[sig] - base)) : effect;
   }
 
   /** The drive `effect_at` feeds the kinetics: zero until `onset_days`, then adherence. */
@@ -917,7 +925,7 @@
     const valueAt = (day, k) => {
       let v = spec.base + spec.per_kg * K.clinical_atten * (wAt(day) - w0);
       v += effectAt(P.drug, sig, day, adhAt, spec.per_kg, K.clinical_atten,
-                    P.dose_mg, spec.cohort, K, resp);
+                    P.dose_mg, spec.cohort, K, resp, spec.base);
       if (cv) v *= 1 + cv * Math.sqrt(3) * (meas[k] || 0);       // indexed by draw, not by day
       return Math.min(Math.max(v, lo), hi);
     };

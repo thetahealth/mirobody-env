@@ -19,8 +19,10 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from haenv.events import sanitize_context                            # noqa: E402
-from haenv.tracks import alternative_a1, ddx_hit, join_gold_hit      # noqa: E402
+from haenv.world.observations.events import sanitize_context                            # noqa: E402
+from haenv.scoring.tracks import alternative_a1
+from haenv.scoring.tracks import ddx_hit
+from haenv.scoring.tracks import join_gold_hit      # noqa: E402
 
 
 class FakeOut:

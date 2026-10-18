@@ -1,5 +1,10 @@
 # Judging Criteria in Plain Language — What Each Number Asks
 
+This guide explains the registered legacy process judges. Their `registry/scoring.yaml`
+roles describe that scoring convention. For current M2/P2/P3/P4 correctness, management quality
+and overall `S = G * D * (1 + Q) / 2`, use the
+[product specification](../spec/spec.md#9-overall-score-and-reporting).
+
 > Who this is for: people who need to read haenv reports without first learning thirty field
 > names.
 > To change the judging code, see [`glossary.md`](glossary.md) (for implementers) and
@@ -19,7 +24,7 @@ one acts on something different:
 
 ```
                                 ┌───────────────────────────────────────────┐
-   inputs/<pack>.job.yaml ─►    │  ① generate the case (generation side)     │
+   benchmarks/inputs/<pack>.job.yaml ─►    │  ① generate the case (generation side)     │
    (hidden control vars:        │     judging here checks the generator      │
     disease/outcome/reversal    │     fails → this case is not emitted       │
     week/noise/event density)   │                                             │
@@ -73,7 +78,7 @@ Four places, four different natures; conflating them is the most common misreadi
 
 There is exactly one entry point, `job.yaml`, which encodes hidden control variables (the answer
 is pinned down first, then a world consistent with that answer is drawn around it).
-The code lives in `haenv/build.py:build_case`; any failed step means the case is not emitted:
+The code lives in `src/haenv/world/generation/build.py:build_case`; any failed step means the case is not emitted:
 
 ```
 ① premise: make_premise        turns job.yaml's knobs into a structured "premise"
@@ -141,7 +146,7 @@ Two more checks run at the batch level, after the whole batch is generated:
 
 ## 0c. Evaluation side: how one cell gets judged
 
-The code lives in `haenv/evaluate.py:_row_single`. The order is fixed:
+The code lives in `src/haenv/app/evaluate.py:_row_single`. The order is fixed:
 
 ```
       one case from cases.jsonl (with gold)

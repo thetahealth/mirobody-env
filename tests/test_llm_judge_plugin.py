@@ -42,8 +42,8 @@ sys.path.insert(0, str(EXAMPLE_DIR))
 
 import haenv_llm_judge_demo as P                    # noqa: E402
 from haenv import judges as J                       # noqa: E402
-from haenv import mount_table as MT                 # noqa: E402
-from haenv import mount_coverage as MC                 # noqa: E402
+import haenv.scoring.mounts.table as MT                 # noqa: E402
+import haenv.scoring.mounts.coverage as MC                 # noqa: E402
 
 #: A spec_id with near-miss rivals registered in this repo's `registry/rivals.yaml` (JD-PCOS has 2).
 SPEC_WITH_RIVALS = "JD-PCOS"
@@ -111,7 +111,7 @@ def _load_plugin() -> list:
 # =============================================================== 0. positive control for existence
 def test_fixture_surface_is_not_empty():
     """Positive control for scan coverage. Every "found / not found" assertion below is built on these three things; if they were empty, the whole file would degenerate into a string of vacuously true `not in` checks. Assert a lower bound, not just `is not None`."""
-    from haenv.overlay import rivals_for
+    from haenv.world.overlay import rivals_for
     rivals = rivals_for(SPEC_WITH_RIVALS, {})
     assert len(rivals) >= 2, f"{SPEC_WITH_RIVALS} 在 registry/rivals.yaml 里应有 ≥2 条近名"
     assert all(str(r.get("discriminator") or "").strip() for r in rivals), \
@@ -361,7 +361,7 @@ def _fake_dispatcher(tmp_path, monkeypatch, counter):
     repo's on-disk cache (key = sha256(model||argv||prompt)); building a
     fake one would only test itself.
     """
-    from haenv import llm as L
+    import haenv.runtime.llm as L
 
     class _Proc:
         returncode, stderr = 0, ""
@@ -552,7 +552,7 @@ def test_demo_jobs_differ_only_by_plugins():
     assert a["task_type"] == b["task_type"] == "joint_dx"
     assert a["job_id"] != b["job_id"], "两张单必须落在不同批次目录,否则会互相覆盖"
     # `!` the case pack must genuinely contain a case with registered rivals, otherwise everything comes back no_rival and the demo demonstrates nothing
-    from haenv.overlay import rivals_for
+    from haenv.world.overlay import rivals_for
     with_rivals = [c for c in a["cases"]
                    if rivals_for(c["latent"].get("ddx_spec_id"), {})]
     assert len(with_rivals) == len(a["cases"]), \

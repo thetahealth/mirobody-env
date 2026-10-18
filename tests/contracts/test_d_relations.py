@@ -17,12 +17,12 @@ import pytest
 import yaml
 
 import _cohort as C
-from haenv import relations as R
-from haenv.findings_render import NA_CL_GAP
+import haenv.world.clinical.relations as R
+from haenv.world.observations.findings_render import NA_CL_GAP
 
 pytestmark = pytest.mark.world
 
-DX_JOB = C.ROOT / "inputs" / "ddx-timeline.job.yaml"
+DX_JOB = C.ROOT / 'benchmarks' / 'inputs' / 'ddx-timeline.job.yaml'
 _LAB = re.compile(r"^(?P<name>.+?) (?P<v>-?[\d.]+) (?P<unit>\S+?)[(（]参考 (?P<lo>[\d.]+)[–-](?P<hi>[\d.]+)[)）]")
 
 
@@ -92,7 +92,7 @@ def check_panel_residual(tc: float, hdl: float, tg: float, ldl: float) -> R.Chec
     2%-98% quantiles of 12597 real four-item draws). So rho = (LDL - Friedewald LDL) / LDL must
     lie inside that range, up to print rounding. Outside Friedewald's domain (TG >= 4.5) the
     relation does not apply, as before."""
-    from haenv import findings_render as FR
+    import haenv.world.observations.findings_render as FR
     pred = R.friedewald_ldl(tc, hdl, tg)
     if pred is None:
         return R.check_friedewald(tc, hdl, tg, ldl, tol_mmol=R2_PRINT_TOL_MMOL)

@@ -1,0 +1,126 @@
+{
+ "source": {
+  "dataset": "LifeSnaps",
+  "doi": "10.5281/zenodo.7229547",
+  "paper": "10.1038/s41597-022-01764-x",
+  "file": "csv_rais_anonymized/daily_fitbit_sema_df_unprocessed.csv",
+  "licence": "CC BY 4.0",
+  "subjects": 71,
+  "windows": 165,
+  "window_days": 28,
+  "note": "Aggregate summary statistics only. Levels are reference context, not calibration targets: the cohorts differ. `stress_score` is the corpus column reversed (100 - x) to haenv's convention.",
+  "generated_by": "python3 docs/scripts/estimate_lifesnaps.py <daily.csv> est.json && python3 docs/scripts/build_lifesnaps_reference.py est.json <daily.csv> docs/anchor/lifesnaps-reference.json",
+  "do_not_edit": true
+ },
+ "per_stream": {
+  "resting_hr": {
+   "rel_sd_diff": 0.0183,
+   "sd_diff": 1.2196,
+   "acf1": 0.8081,
+   "level": 66.678,
+   "off_rate": 0.1192,
+   "avail": 0.9273,
+   "run_gt3_share": 0.1511,
+   "run_len1_share": 0.5867,
+   "run_max": 16
+  },
+  "hrv": {
+   "rel_sd_diff": 0.2428,
+   "sd_diff": 8.0448,
+   "acf1": 0.2091,
+   "level": 34.132,
+   "off_rate": 0.1604,
+   "avail": 0.5333,
+   "run_gt3_share": 0.0837,
+   "run_len1_share": 0.682,
+   "run_max": 14
+  },
+  "steps": {
+   "rel_sd_diff": 0.6851,
+   "sd_diff": 5244.7057,
+   "acf1": 0.0923,
+   "level": 7689.0,
+   "off_rate": 0.0957,
+   "avail": 0.9515,
+   "run_gt3_share": 0.2374,
+   "run_len1_share": 0.4964,
+   "run_max": 15
+  },
+  "stress_score": {
+   "rel_sd_diff": 0.2605,
+   "sd_diff": 6.0879,
+   "acf1": 0.1749,
+   "level": 23.0,
+   "off_rate": 0.1986,
+   "avail": 0.3515,
+   "run_gt3_share": 0.1503,
+   "run_len1_share": 0.4183,
+   "run_max": 11
+  },
+  "sleep_hours": {
+   "rel_sd_diff": 0.2835,
+   "sd_diff": 1.9035,
+   "acf1": -0.0659,
+   "level": 6.683,
+   "off_rate": 0.154,
+   "avail": 0.7697,
+   "run_gt3_share": 0.104,
+   "run_len1_share": 0.682,
+   "run_max": 13
+  },
+  "skin_temp": {
+   "rel_sd_diff": 5.3223,
+   "sd_diff": 0.57,
+   "acf1": 0.073,
+   "level": -0.0,
+   "off_rate": 0.1747,
+   "avail": 0.7515,
+   "run_gt3_share": 0.097,
+   "run_len1_share": 0.6787,
+   "run_max": 13
+  },
+  "spo2": {
+   "rel_sd_diff": 0.0115,
+   "sd_diff": 1.0955,
+   "acf1": -0.0367,
+   "level": 95.9,
+   "off_rate": 0.2177,
+   "avail": 0.3091,
+   "run_gt3_share": 0.0882,
+   "run_len1_share": 0.5765,
+   "run_max": 17
+  }
+ },
+ "miss_rate_dispersion_across_streams": 0.0607,
+ "miss_rate_dispersion_zero_share": 0.0315,
+ "missing_indicator_phi_median": 0.5716,
+ "cross_stream_corr": {
+  "note": "median within-subject correlation of daily values, log scale for the log-normal streams; subjects with >=30 paired days",
+  "hrv|resting_hr": -0.54,
+  "hrv|skin_temp": -0.1107,
+  "hrv|sleep_hours": 0.1033,
+  "hrv|spo2": -0.0419,
+  "hrv|steps": -0.0121,
+  "hrv|stress_score": -0.2906,
+  "resting_hr|skin_temp": 0.1656,
+  "resting_hr|sleep_hours": -0.0842,
+  "resting_hr|spo2": 0.0347,
+  "resting_hr|steps": 0.0649,
+  "resting_hr|stress_score": 0.0408,
+  "skin_temp|sleep_hours": -0.0485,
+  "skin_temp|spo2": -0.0449,
+  "skin_temp|steps": 0.0223,
+  "skin_temp|stress_score": 0.0332,
+  "sleep_hours|spo2": 0.0197,
+  "sleep_hours|steps": -0.0182,
+  "sleep_hours|stress_score": -0.3125,
+  "spo2|steps": -0.1453,
+  "spo2|stress_score": 0.0276,
+  "steps|stress_score": -0.064
+ },
+ "derived_level": {
+  "sleep_efficiency": 0.95,
+  "vo2_max": 45.385,
+  "note": "LifeSnaps publishes no activity-energy, no basal-energy and no deep/REM percentage of the night (only a ratio to each subject's own norm), so active_burn / calories_bmr / exercise_* / deep_percentage / rem_percentage have no reference level here."
+ }
+}

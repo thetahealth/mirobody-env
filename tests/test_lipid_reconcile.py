@@ -15,10 +15,10 @@ import re
 
 import pytest
 
-from haenv import findings_render as FR
-from haenv import relations as R
-from haenv import rng
-from haenv.registry import load_findings
+import haenv.world.observations.findings_render as FR
+import haenv.world.clinical.relations as R
+import haenv.world.generation.rng as rng
+from haenv.resources.registry import load_findings
 
 V = {"TC": {"ref": {"low": 2.8, "high": 5.17}}, "HDL": {"ref": {"low": 1.04, "high": 2.07}},
      "TG": {"ref": {"low": 0.4, "high": 1.7}}, "LDL": {"ref": {"low": 0.0, "high": 3.37}}}
@@ -96,7 +96,7 @@ def test_inverse_partner_follows_a_declared_rise_only():
 
 
 def test_abnormality_pool_takes_the_same_expansion(monkeypatch):
-    import haenv.registry as REG
+    import haenv.resources.registry as REG
 
     def pool_for(direction):
         monkeypatch.setattr(REG, "condition_findings_for_case",

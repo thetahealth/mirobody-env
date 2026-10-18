@@ -13,8 +13,11 @@ import types
 
 import pytest
 
-from haenv import gates
-from haenv.latent_rules import LABEL_SMOOTHING, MIN_CHANGE_FRAC, MIN_CHANGE_KG, MIN_PERSIST_DAYS
+import haenv.scoring.gates as gates
+from haenv.world.clinical.latent_rules import LABEL_SMOOTHING
+from haenv.world.clinical.latent_rules import MIN_CHANGE_FRAC
+from haenv.world.clinical.latent_rules import MIN_CHANGE_KG
+from haenv.world.clinical.latent_rules import MIN_PERSIST_DAYS
 
 pytestmark = pytest.mark.world
 

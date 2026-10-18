@@ -4,15 +4,15 @@ from pathlib import Path
 
 import pytest
 
-from haenv import semantic_pipeline as pipeline
+import haenv.scoring.semantic.pipeline as pipeline
 from _patch_bound import patch_bound  # noqa: E402
 
 
 def test_default_online_cli_refuses_before_eval_without_budget(monkeypatch, capsys):
-    from haenv import cli
-    from haenv import evaluate
+    import haenv.app.cli as cli
+    import haenv.app.evaluate as evaluate
     patch_bound(monkeypatch, "run_eval", lambda *a, **k: pytest.fail("Paid evaluation ran without budget"))
-    assert cli.main(["run", "inputs/example-ew.job.yaml", "--models", "gpt-6-luna"]) == 2
+    assert cli.main(["run", 'benchmarks/inputs/example-ew.job.yaml', "--models", "gpt-6-luna"]) == 2
     assert "default LLM semantic judging" in capsys.readouterr().out
 
 
@@ -74,8 +74,8 @@ def test_unsealed_or_modified_inputs_refuse_to_run(monkeypatch, tmp_path):
 
 
 def fake_run(monkeypatch, tmp_path):
-    from haenv import evaluate
-    from haenv.semantic_judge import JudgeTask
+    import haenv.app.evaluate as evaluate
+    from haenv.scoring.semantic.judge import JudgeTask
     from test_semantic_transport import Solver, metadata
     monkeypatch.setattr(pipeline, "validate_run", lambda out: {
         "run_id": "test", "policy": {"judge": {"model_key": "judge", "model_id": Solver.model,
@@ -124,7 +124,7 @@ def test_budget_stop_leaves_pending_cell_without_fake_result(monkeypatch, tmp_pa
 
 def test_registry_concurrency_controls_actual_pipeline_requests(monkeypatch, tmp_path):
     import threading
-    from haenv import evaluate
+    import haenv.app.evaluate as evaluate
     from test_semantic_transport import Solver
     cfg, _ = fake_run(monkeypatch, tmp_path)
     manifest = pipeline.validate_run(tmp_path)

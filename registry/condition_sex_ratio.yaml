@@ -54,6 +54,49 @@ atomic:
 # deviation must be listed here.
 # ---------------------------------------------------------------------------
 
+
+  HD-UNI-07:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-08:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-09:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-10:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-11:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-12:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-13:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-14:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-15:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-16:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-17:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-18:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-19:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
+  HD-UNI-20:
+    male: 0.5
+    why: '[design] balanced benchmark cohort; not an estimate of disease sex prevalence; review pending'
 text_determined:
   JD-OSA:      "d77「夜尿3-4次(前列腺+血糖正常)」⇒ 恒男(登记 0.70 realizes 不了)"
   HD-UNI-01:   "d35「无月经过多、无黑便」⇒ 恒女(登记 0.35 realizes 不了)"

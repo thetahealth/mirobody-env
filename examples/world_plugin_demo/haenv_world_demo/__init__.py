@@ -25,7 +25,7 @@ def _demo_injector(points, *, rng_key: str, drop_frac: float = 0.0, **_):
 
 def world() -> None:
     """The entry point points here. Calls the registration points internally, returns nothing."""
-    from haenv import world_plugins as wp
+    import haenv.world.generation.world_plugins as wp
 
     # 1. A physiological stream block beyond the ones built in. It passes the same field checks
     #    as `registry/physio_streams.yaml` (group, loading, idio_sd, bounds, transform, source,
@@ -71,5 +71,5 @@ def world() -> None:
 
 def _forbidden_demo() -> None:
     """Registers `weight`, which raises `WorldPluginError`; not called by `world()`."""
-    from haenv import world_plugins as wp
+    import haenv.world.generation.world_plugins as wp
     wp.register_stream("weight", {"unit": "kg"}, source=SOURCE)

@@ -98,7 +98,7 @@ def test_default_is_higher_backward_compatible():
 def test_production_profile_has_objects_for_this_fix():
     """This fix has a real target on disk — otherwise it's a case of "declared to
     exist, never triggered"."""
-    from haenv.scoring import load_profile
+    from haenv.scoring.legacy import load_profile
     prof = load_profile(root=ROOT)
     dirs = {d: prof.direction(d) for d in prof.metrics}
     assert "lower" in dirs.values(), f"没有 lower 维 ⇒ 这条修复没有对象:{dirs}"
@@ -114,7 +114,7 @@ def test_rank_ddx_gate_column_uses_gated_units():
     per-slice `gates` is non-empty, so the old convention reads 0 and the new
     one reads non-zero.
     """
-    from haenv.report import rank_ddx
+    from haenv.scoring.analysis.ranking import rank_ddx
     rows = [{"case": f"C{i}", "solver": "gemini-3.1-pro", "overall": "SCORED",
              "gates": ["missed_emergency_red_flag"] if i == 1 else [],
              "dx_hit": 1, "n_slices": 3,

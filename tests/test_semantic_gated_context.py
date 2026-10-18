@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from haenv.semantic_inputs import gated_observations
+from haenv.scoring.semantic.inputs import gated_observations
 
 
 def events():
@@ -57,3 +57,25 @@ def test_recorded_unavailable_feedback_is_preserved_as_feedback_not_a_lab_value(
     visible, _ = gated_observations(sp, ev, "answer")
     assert visible.prediction_context["tool_unavailable_results"]["other-test"] == "unsupported_or_ambiguous_target"
     assert "other-test" not in visible.longitudinal_data
+
+
+def test_call_without_a_target_is_a_noop_not_an_abort():
+    """A call that names its tool in `name` instead of `target` reveals and buys nothing."""
+    sp = SimpleNamespace(longitudinal_data={"weight": [1]})
+    ev = events()
+    malformed = [
+        {"type": "tool/call", "step": 1, "data": {"call_id": "1.1", "arguments": {
+            "name": "scale_qc_flag", "kind": "vitals"}, "kind": "vitals", "target": None,
+            "billed_kind": None, "menu_cost": None}},
+        {"type": "tool/result", "step": 1, "data": {"call_id": "1.1", "truncated": False,
+            "revealed": False, "observation": None, "n_points": None, "grounded": False,
+            "is_test": False, "cost": None, "spent_after": 1.0, "need_synth": True,
+            "outcome": "returned", "unavailable_reason": None}},
+    ]
+    ev[3:3] = malformed
+    visible, bought = gated_observations(sp, ev, "answer")
+    assert visible.longitudinal_data == {"weight": [1], "lab": [{"ts": 1, "value": 7}]}
+    assert bought == ["lab", "late"]
+    orphan = [e for e in ev if not (e["type"] == "tool/call" and e["data"]["call_id"] == "1.1")]
+    with pytest.raises(ValueError, match="no matching request"):
+        gated_observations(sp, orphan, "answer")

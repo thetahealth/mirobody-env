@@ -21,6 +21,7 @@ fingerprint marks "needs recompute" must be a subset of the set the
 coarse fingerprint marks "needs recompute."
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import pathlib
 import sys
@@ -33,9 +34,9 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import anchor as A                       # noqa: E402
+import haenv.provenance.anchor as A                       # noqa: E402
 from haenv import judges as J                       # noqa: E402
-from haenv import mount_table as MT                 # noqa: E402
+import haenv.scoring.mounts.table as MT                 # noqa: E402
 
 
 # ---------------------------------------------------------------- per-part fingerprint
@@ -115,17 +116,15 @@ def test_comment_edit_in_judges_package_keeps_part_stamps(monkeypatch, tmp_path)
     """A comment-only edit under `haenv/judges/` leaves every part stamp alone; a logic edit to a judge body still moves its stamp."""
     import types
     root = tmp_path / "root"
-    (root / "tools").mkdir(parents=True)
-    (root / "haenv" / "judges").mkdir(parents=True)
-    (root / "tools" / "make_freeze.py").write_text(
-        'JUDGING = ("haenv/judges/outcome.py", "haenv/gates.py")\n', encoding="utf-8")
-    body = root / "haenv" / "judges" / "outcome.py"
-    (root / "haenv" / "gates.py").write_text("X = 1\n", encoding="utf-8")
+    (_haenv_source_path('haenv/judges', root=root)).mkdir(parents=True)
+    body = _haenv_source_path('haenv/judges/outcome.py', root=root)
+    (root / "haenv/gates.py").write_text("X = 1\n", encoding="utf-8")
     text = "def judge(*args):\n    return {'value': 1}\n"
     body.write_text(text, encoding="utf-8")
     module = types.ModuleType("w5_body")
     exec(compile(text, str(body), "exec"), module.__dict__)
     monkeypatch.setattr(A, "ROOT", root)
+    monkeypatch.setattr(A, "judging_files", lambda: ("haenv/judges/outcome.py", "haenv/gates.py"))
     monkeypatch.setattr(J, "_CORE", (J.Judge("body", ("*",), module.judge),))
     before = A.judge_parts()
     assert "file:haenv/gates.py" in before and not any("judges/" in k for k in before)
@@ -287,7 +286,7 @@ def test_adding_an_unmatched_kind_does_not_expire_existing_rows():
     existing rows' kinds don't match it, so it never enters
     `parts_used_by`, and the compatibility determination is unaffected.
     """
-    from haenv import gold_kinds as GK
+    import haenv.scoring.gold_kinds as GK
     before = A.judge_parts()
     rows = _rows("ddx:unified", "single")
     assert A.parts_compatible(rows, before)[0]
@@ -308,7 +307,7 @@ def test_adding_an_unmatched_kind_does_not_expire_existing_rows():
 
 
 def test_never_scored_aborted_row_uses_no_part_but_unknown_row_still_blocks():
-    from haenv import anchor as A
+    import haenv.provenance.anchor as A
     parts = A.judge_parts()
     aborted = {"case": "c", "solver": "s", "overall": "ABORT(no_answer:budget)", "geometry": "gated"}
     assert A.parts_compatible(_rows() + [aborted], parts) == A.parts_compatible(_rows(), parts)

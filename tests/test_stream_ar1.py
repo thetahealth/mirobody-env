@@ -29,7 +29,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from haenv import events as E                              # noqa: E402
+import haenv.world.observations.events as E                              # noqa: E402
 
 #: Acceptance bound for |ACF(7)| of an auxiliary stream.
 ACF7_LIMIT = 0.35
@@ -82,7 +82,7 @@ def test_counter_metric_day_to_day_persistence_survives() -> None:
     values elsewhere; uncalibrated ones render with the global phi = 0.80, so turning into
     white noise is a failure for them.
     """
-    from haenv import wearable as _w
+    import haenv.world.observations.wearable as _w
     checked = [n for n in ("hrv", "spo2", "steps", "sleep_hours", "resting_hr",
                            "skin_temp", "body_temp")
                if not _w.is_calibrated(n)]
@@ -117,8 +117,12 @@ def test_counter_metric_values_stay_in_physio_range() -> None:
         E.render_stream(p, 365, seed="CASE-A", stats=st)
         lo, hi = p.spec.hard_range
         # The bound only catches a fixture that never filled in; it does not pin a wear
-        # rate (non-wear days drop points from the 366 rendered days).
-        assert st["n"] > 200, f"{name} 只渲染了 {st['n']} 点 —— 夹具没铺满"
+        # rate (non-wear days drop points from the 366 rendered days), so it sits at half
+        # of the days this patient's declared non-wear rate leaves (`wearable.case_rates`,
+        # which since the long-gap class of W3 round 3 can exceed `OFF_RATE_CAP`).
+        import haenv.world.observations.wearable as _W
+        _left = 366 * (1.0 - _W.case_rates("CASE-A", name)[2]) if _W.is_calibrated(name) else 366
+        assert st["n"] > 0.5 * _left, f"{name} 只渲染了 {st['n']} 点 —— 夹具没铺满"
         assert st["n_clipped"] == 0, (
             f"{name} 有 {st['n_clipped']}/{st['n']} 点被夹回 {lo}~{hi} —— "
             f"`_AR_SD_FRAC` 要收窄")

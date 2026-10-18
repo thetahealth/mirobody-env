@@ -53,7 +53,7 @@ def _judge(episode, vp, ctx):
 
 def _ensure_registered():
     """Register the subject, the mount, and return the judge."""
-    from haenv import mount_table as MT
+    import haenv.scoring.mounts.table as MT
     from haenv.judges import Judge, register_judge
 
     if SUBJECT not in MT.SUBJECTS:

@@ -29,9 +29,9 @@ import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from haenv.physio import apply as physio_apply       # noqa: E402
-from haenv.physio import bounds as B                 # noqa: E402
-from haenv.physio import noise as N                  # noqa: E402
+from haenv.world.physio import apply as physio_apply       # noqa: E402
+from haenv.world.physio import bounds as B                 # noqa: E402
+from haenv.world.physio import noise as N                  # noqa: E402
 
 REG = pathlib.Path(__file__).resolve().parents[1] / "registry" / "physio_streams.yaml"
 
@@ -162,7 +162,7 @@ def test_conversion_happens_in_the_loader_not_by_hand(tmp_path) -> None:
         assert w == pytest.approx(_expected(float(r["loading"]), sp.bound), abs=1e-12), \
             f"{name}: loading"
         assert sp.noise.external == str(r.get("noise_external") or ""), f"{name}: external"
-    assert reg.specs["spo2"].noise.external == "haenv.wearable"
+    assert reg.specs["spo2"].noise.external == "haenv.world.observations.wearable"
 
     doc = yaml.safe_load(REG.read_text(encoding="utf-8"))
     ent = doc["streams"]["spo2"]

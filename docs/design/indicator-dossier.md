@@ -220,10 +220,10 @@ would surface only downstream, in a scored evaluation, for every solver at once.
 | physiology-layer exclusions | `physio: exclude`; a `physio: render` stream without a parameter block in `physio_streams.yaml` fails at load |
 | `gates.DEVICE_SIGNALS` (GEN7) | `proves_device` |
 | `wearable.DERIVED_BINDINGS`, `GRID_PARENT` | `derived_from`, `grid_parent` |
-| gated pricing | written to `registry/gated_pricing_streams.yaml` by `tools/gen_stream_tables.py`, because scoring reads it; the judging fingerprint then moves only when a price does |
+| gated pricing | written to `registry/gated_pricing_streams.yaml` by `tools/generation/gen_stream_tables.py`, because scoring reads it; the judging fingerprint then moves only when a price does |
 
 Parameters stay with the subsystem that owns them: noise blocks in `physio_streams.yaml`,
-calibration in `haenv/wearable.py`, clinical facts in the dossier. §5.1 still holds for
+calibration in `src/haenv/world/observations/wearable.py`, clinical facts in the dossier. §5.1 still holds for
 quantities; the manifest declares membership.
 
 A check requires the dossier range of every rendered stream to equal the range the pipeline
@@ -237,7 +237,7 @@ does not affect any case.
 - the profile does not decide who reviews these values; it guarantees that every value has a
   source and every contradiction is flagged;
 - INV-2 can only be judged from emitted cases, which is more expensive than the other invariants;
-- the kernel's `DISEASE_SIGNAL_DOMAIN` lives in `haenv_kernel/latent.py` (generation segment); the profile
+- the kernel's `DISEASE_SIGNAL_DOMAIN` lives in `src/haenv_kernel/latent.py` (generation segment); the profile
   reconciles against its `range`/`max_weekly_delta` rather than taking them over, because changing
   them in the kernel changes the question packs;
 - `fasting_glucose` has no age- or cohort-specific bound, `FIB4` has no age stratification, and the

@@ -11,7 +11,7 @@ from __future__ import annotations
 import sys
 
 
-def patch_bound(monkeypatch, name: str, value, *, source: str = "haenv.evaluate",
+def patch_bound(monkeypatch, name: str, value, *, source: str = "haenv.app.evaluate",
                 raising: bool = True) -> int:
     """Replace `name` in every loaded `haenv` module bound to the same object as in `source`.
 

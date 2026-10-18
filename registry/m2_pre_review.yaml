@@ -1,0 +1,100 @@
+# M2 diagnostic-stage rules. Clinical adoption remains pending; sources support
+# the staging/relationship, not a universal management recommendation.
+version: 3
+review: pending
+conditional_optional:
+  HD-UNI-01:
+    test: 抗肌内膜抗体EMA
+    applies: Positive tTG-IgA with adequate total IgA; an additional confirmatory assay is optional in the initial biopsy pathway.
+    excludes: Weakly positive/equivocal tTG-IgA, IgA deficiency, and the selected non-biopsy diagnostic pathway.
+    source: 'NICE NG20 1.2.2: total IgA and tTG-IgA first; EMA when tTG-IgA is weakly positive. Strongly positive adult serology proceeds to specialist biopsy under 1.3.1. https://www.nice.org.uk/guidance/ng20/chapter/Recommendations'
+  JD-PCOS:
+    test: 经阴道超声(PCOM)或AMH
+    applies: Adult with documented ovulatory dysfunction and biochemical hyperandrogenism, with exclusion tests retained.
+    excludes: Fewer than two criteria, adolescents, or an alternative cause not yet excluded; acne alone is not biochemical hyperandrogenism.
+    source: '2023 International PCOS guideline 1.4.9 and 1.5.2: ultrasound/AMH are unnecessary when irregular cycles and hyperandrogenism are present. https://prod.asrm.org/practice-guidance/practice-committee-documents/recommendations-from-the-2023-international-evidence-based-guideline-for-the-assessment-and-management-of-polycystic-ovary-syndrome/'
+fibrosis_evidence:
+  test: 肝脏弹性成像(VCTE/必要时MRE)
+  finding: FibrosisAssessment
+  lower: 1.3
+  lower_age_over_65: 2.0
+  upper: 2.67
+  applies: FIB-4 indeterminate in a patient eligible for metabolic liver fibrosis assessment; obtain secondary evidence.
+  excludes: Acute illness, age under 35, or a competing cause; FIB-4 alone does not establish advanced fibrosis.
+  source: 'AASLD Practice Guidance 2023, Figure 2: FIB-4 >=1.3 requires secondary assessment, preferentially VCTE or ELF; use >2.0 in patients older than 65. The present menu models VCTE/MRE; ELF is not modelled. https://pmc.ncbi.nlm.nih.gov/articles/PMC10735173/'
+budget:
+  floor: 128
+  minimum_margin: 24
+  fractional_margin: 0.20
+  quantum: 16
+  source: 'haenv-authored resource policy: minimum mandatory cost plus max(24, 20%), rounded up to 16; floor retains the old basic workup allowance. Not a clinical threshold.'
+post_diagnosis:
+  JD-ALDO:
+    tests: [肾上腺CT/AVS]
+    source: 'Endocrine Society 2025 PA guideline, recommendation 6: CT and AVS for lateralization before selecting surgery in diagnosed PA. https://www.endocrine.org/clinical-practice-guidelines/primary-aldosteronism-2'
+  JD-PHEO:
+    tests: [腹部CT/MRI, MIBG(必要时)]
+    source: 'Endocrine Society PPGL guideline 2014, recommendations 2.1 and 2.4: localization after clear biochemical evidence; MIBG for selected metastatic/high-risk disease. https://academic.oup.com/jcem/article/99/6/1915/2537399'
+  JD-CUSH:
+    tests: [ACTH+垂体/肾上腺影像]
+    source: 'Endocrine Society, Diagnosis of Cushing Syndrome 2008, recommendations 3.3 and 3.9: biochemical diagnosis precedes testing the cause. https://www.endocrine.org/clinical-practice-guidelines/diagnosis-of-cushing-syndrome'
+  JD-ACRO:
+    tests: [垂体MRI]
+    source: 'Endocrine Society acromegaly guideline 2014, recommendation 1.6: pituitary imaging following biochemical diagnosis. https://academic.oup.com/jcem/article/99/11/3933/2836347'
+  HD-UNI-05:
+    tests: [定位检查:胰腺增强CT或超声内镜(**在生化确证之后**)]
+    source: 'Endocrine Society adult hypoglycemia guideline 2009, recommendation 3.3: endogenous hyperinsulinemic hypoglycemia must be documented before localization. https://academic.oup.com/jcem/article/94/3/709/2596247'
+alternatives:
+  - tests: [骶髂关节MRI(脂肪抑制序列), 骨盆正位X线]
+    source: 'EULAR 2015 imaging recommendation 1: SI-joint MRI is an alternative first study in young/short-symptom-duration patients; MRI is recommended when clinical suspicion persists despite nondiagnostic radiography. Normal radiography does not exclude early axSpA. M2 chooses SI MRI for the registered newly presenting inflammatory-back-pain line, while accepting either SI study; spine MRI is not a substitute. https://doi.org/10.1136/annrheumdis-2014-206971; NICE NG65 1.2.4-1.2.6 https://www.nice.org.uk/guidance/ng65/chapter/recommendations'
+  - tests: [十二导联心电图, 动态心电图]
+    source: 'NICE NG196 1.1.2-1.1.3: 12-lead ECG for suspected AF; ambulatory ECG when paroxysmal AF is suspected but not detected by 12-lead ECG. One initial acquisition, not two mandatory recordings. M2 has a 12-lead recording model only; ambulatory ECG remains unavailable. https://www.nice.org.uk/guidance/ng196/chapter/Recommendations'
+  - tests: [1mg地塞米松抑制试验, 24h尿游离皮质醇, 午夜唾液皮质醇]
+    source: 'Endocrine Society Cushing guideline 2008, recommendation 3.4: one initial test chosen for suitability; another recommended test after an abnormal initial result (3.8). https://www.endocrine.org/clinical-practice-guidelines/diagnosis-of-cushing-syndrome'
+menu_names:
+  血清铁蛋白·25-羟维生素D·骨密度:
+    tests: [血清铁蛋白, 25-OH-VitD]
+    source: 'ACG celiac guideline 2023: nutritional deficiency assessment; bone density belongs to complication assessment after diagnosis. Existing registry declares Ferritin and VitD25, no bone-density reading. https://doi.org/10.14309/ajg.0000000000002075'
+  ANA + 抗着丝点抗体/抗Scl-70:
+    tests: [ANA]
+    source: 'BSR systemic sclerosis guideline 2024, diagnosis/classification recommendations 1-3: clinical criteria guide diagnosis; SSc-associated antibody subset stratifies organ risk. Haenv-authored stage choice: available ANA screening and capillaroscopy initially, specific antibodies at specialist classification/risk assessment; registry has no specific antibody reading model. ANA is not equivalent to those assays; clinical review pending. https://doi.org/10.1093/rheumatology/keae394'
+  胸部高分辨率CT + 肺功能(DLCO):
+    tests: [胸部高分辨率CT]
+    source: 'BSR systemic sclerosis guideline 2024, SSc-ILD screening recommendation 1: BOTH baseline HRCT and PFT (including gas transfer) at SSc diagnosis, not alternatives. Haenv-authored stage choice: HRCT initially for the registered respiratory complaints, PFT at confirmed-SSc baseline organ assessment; registry has no DLCO reading model. This is an initial diagnostic workup, not the complete SSc assessment; clinical review pending. https://doi.org/10.1093/rheumatology/keae394'
+  发作时同步血糖·胰岛素·C肽·β-羟丁酸(必要时72小时饥饿试验):
+    tests: [血糖评估, 血胰岛素, C肽, 血β-羟丁酸]
+    source: 'Endocrine Society adult hypoglycemia guideline 2009, recommendation 3.2: plasma glucose, insulin, C-peptide, proinsulin, beta-hydroxybutyrate and drug screen during spontaneous hypoglycemia. Names split only; registry has no proinsulin assay. https://academic.oup.com/jcem/article/94/3/709/2596247'
+  CA19-9:
+    tests: [糖类抗原19-9(CA19-9)]
+    source: 'registry/gated_pricing.yaml and findings.yaml: existing CA19-9 menu item, spelling normalization only.'
+  粪弹性蛋白酶-1(胰腺外分泌功能):
+    tests: [粪弹性蛋白酶-1]
+    source: 'registry/gated_pricing.yaml and findings.yaml: existing fecal elastase-1 menu item, spelling normalization only.'
+drug_targets:
+  metformin: [HbA1c, FBG]
+  semaglutide: [HbA1c, FBG, ALT]
+  liraglutide: [HbA1c, FBG]
+  dulaglutide: [HbA1c, FBG]
+  tirzepatide: [HbA1c, FBG]
+  atorvastatin: [LDL, TG]
+  amlodipine: [systolic_bp]
+drug_targets_source: 'registry/drug_effects.yaml (glycemic drug effects); registry/drug_indications.yaml (atorvastatin/dyslipidemia, amlodipine/hypertension); F2 MASLD semaglutide ALT surrogate remains provisional (AASLD 2023 doi:10.1097/HEP.0000000000000323). No effect size is added.'
+secondary_hypertension:
+  components: [HD-UNI-10, JD-CKM, JD-ALDO, JD-OSA, JD-PHEO, JD-CUSH, JD-HYPO, JD-GRAVES, JD-PHPT, JD-ACRO]
+  source: 'ACC/AHA 2017 hypertension guideline, secondary hypertension table; existing F2_SECONDARY_HTN relationship moved to data. https://doi.org/10.1161/HYP.0000000000000065'
+drug_adverse_effects:
+  HD-UNI-19:
+    drugs: [atorvastatin, rosuvastatin, simvastatin, pravastatin]
+    source: 'EAS statin-associated muscle symptoms consensus 2015. https://doi.org/10.1093/eurheartj/ehv043'
+  HD-UNI-20:
+    drugs: [semaglutide, liraglutide, dulaglutide, tirzepatide]
+    source: 'FDA GLP-1/GIP prescribing information: delayed gastric emptying; existing F2_DRUG_RELATED mapping moved to data. https://www.accessdata.fda.gov/drugsatfda_docs/label/2022/215866s000lbl.pdf'
+adverse_reduction:
+  atorvastatin:
+    reason: 肌肉酸痛，减量
+    protocol_id: HP-36D6404A
+    source: 'EAS SAMS consensus 2015, assessment and management: review symptoms, CK, secondary causes, dechallenge and rechallenge; lower-dose or alternative treatment with reassessment rather than automatic return to the symptomatic dose. Uninvestigated myalgia does not establish confirmed maximum tolerated dose, consistent with registry/protocols.yaml med-statin. M2 accepts current-dose maintenance pending reassessment; this is not a claim of adequate LDL control or permanent intolerance. https://doi.org/10.1093/eurheartj/ehv043'
+imaging:
+  ctpa_scope: [CTPA]
+  adrenal_structural_name: 肾上腺结构影像评估
+  source: 'CTPA is an angiographic study of pulmonary arteries (ACR Appropriateness Criteria Suspected PE https://acsearch.acr.org/docs/69404/narrative/); AVS is a separate catheter sampling procedure (Endocrine Society PA 2025 recommendation 6). The task deliberately reports only pulmonary-artery findings for its CTPA item.'

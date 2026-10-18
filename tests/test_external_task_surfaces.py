@@ -22,12 +22,14 @@ import sys
 import pytest
 
 import haenv                                              # noqa: F401  mounts the kernel
-from haenv import anchor, provenance
-from haenv import external_gold as EG
-from haenv import job as J
-from haenv import world_plugins as WP
+from haenv.locations import data_root
+import haenv.provenance.anchor as anchor
+from haenv import provenance
+import haenv.contracts.external_gold as EG
+import haenv.app.job as J
+import haenv.world.generation.world_plugins as WP
 
-ROOT = pathlib.Path(haenv.__file__).resolve().parent.parent
+ROOT = data_root()
 
 
 @contextlib.contextmanager
@@ -52,7 +54,7 @@ def clean_registries():
 
 def _a_case():
     """First case of a job in the repo; a fabricated spec could not be built."""
-    return J.load_job(ROOT / "inputs" / "example-ew.job.yaml").cases[0]
+    return J.load_job(ROOT / 'benchmarks' / 'inputs' / 'example-ew.job.yaml').cases[0]
 
 
 # ---------------------------------------------------------------- gates
@@ -65,7 +67,7 @@ def test_gates_for_is_empty_when_nothing_is_registered():
 def test_a_registered_gate_blocks_emission():
     """Reverse control: a gate-severity hit must stop the case at the emission
     gate, and the gate must see the solver payload and the case's own T."""
-    from haenv.build import build_case
+    from haenv.world.generation.build import build_case
     seen = {}
 
     def always(raw, cs, sp, T):
@@ -83,7 +85,7 @@ def test_a_registered_gate_blocks_emission():
 
 
 def test_a_warn_hit_is_logged_not_blocking():
-    from haenv.build import build_case
+    from haenv.world.generation.build import build_case
     with clean_registries():
         _, before = build_case(_a_case())
         EG.register_gate("probewarn", lambda raw, cs, sp, T: [
@@ -123,7 +125,7 @@ def test_a_string_question_side_lands_at_the_top_of_prediction_context():
     """A block with no gold side and a string question side puts a solver-visible field at
     `prediction_context.<name>`; the gold side writes nothing, and a non-dict, non-string
     value is refused."""
-    from haenv.build import build_case
+    from haenv.world.generation.build import build_case
     with clean_registries():
         EG.register_gold_block("probenote", lambda s: None, probe_fn=lambda s: "code every line",
                                latent_keys=(), latent_classes={}, source="tests", why="x")

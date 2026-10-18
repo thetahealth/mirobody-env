@@ -1,0 +1,371 @@
+# Sourced P2-only clinical-history rules and RPM composition prior.
+# SYNTHETIC data, evaluation only.
+version: 3
+sources:
+  RPM_KIM_2026:
+    cite: Kim et al. (2026), From Days to Minutes, arXiv 2603.09052, Appendix Table A1 human-majority column totals;
+      section 3.1 and 3.2.1
+    url: https://arxiv.org/pdf/2603.09052
+    status: verified
+    verified_on: '2026-10-14'
+    note: Preprint, vendor-affiliated retrospective study. Human-majority counts 24 emergency, 80 urgent, 121 monitor,
+      242 not an issue. These are classified readings, not prospective observed care outcomes.
+  NICE_NG232:
+    cite: NICE NG232 (2023) §§1.2.3, 1.5.13
+    url: https://www.nice.org.uk/guidance/NG232/chapter/recommendations
+    status: verified
+    verified_on: '2026-10-14'
+    note: Remote advice should refer head injury with current anticoagulant treatment to an emergency department,
+      even without other listed risk factors; consider CT within 8 hours. A fall without head contact does not satisfy
+      this rule.
+  NICE_CG151:
+    cite: NICE CG151 §§1.3.1-1.4.1; St George’s 急性肿瘤规程
+    url: https://www.nice.org.uk/guidance/cg151/chapter/recommendations ; https://www.stgeorges.nhs.uk/aos/community-healthcare-professional/guidance/generally-unwell-fever/
+    status: verified
+    verified_on: '2026-10-14'
+    note: Anticancer treatment plus becoming unwell warrants suspected neutropenic sepsis and immediate secondary/tertiary
+      assessment; fever above 38 is not required for suspicion.
+  NHS_ACUTE_ONCOLOGY:
+    cite: St George's Acute Oncology Service, Generally Unwell or Fever
+    url: https://www.stgeorges.nhs.uk/aos/community-healthcare-professional/guidance/generally-unwell-fever/
+    status: verified
+    verified_on: '2026-10-14'
+    note: Systemic anticancer therapy within 6-8 weeks and fever/systemic illness needs immediate oncology contact;
+      temperature above 37.5 C or below 36 C is a trigger.
+disposition_prior:
+  weights:
+    ed_now: 24
+    within_24h: 80
+    routine_followup: 121
+    watchful_waiting: 242
+  source: RPM_KIM_2026
+  denominator: 467
+  sampling: 500 home device readings from 340 polychronic-care patients in 25 US states, one representative weekday;
+    33 majority-vote ties excluded
+  mapping_ours: true
+  review: pending
+  mapping: Emergency clinician outreach within 60 minutes maps to ed_now; urgent within 24 hours to within_24h;
+    monitor within 14 days to routine_followup; no action to watchful_waiting. Outreach is not the same as an ED
+    transfer; this is a benchmark allocation proxy, not an observed ED-disposition rate.
+  rounding: largest remainder; retain seeded nested selection
+  coverage: published packs exercise their positive integer rule quotas; full scenario coverage is checked on the
+    generation pool and clinical negative controls, not by forcing every rare emergency rule into N50
+thresholds:
+  anticancer_recent_days: 42
+rules:
+- id: R0a_head_anticoag
+  when: today's head injury and a dated prescription confirms current anticoagulant treatment
+  set:
+  - ed_now
+  source: NICE_NG232
+  mapping_review: pending
+  printed: R0a 已有头部外伤，即使当前生命体征正常、无昏迷呕吐，病历确认仍在抗凝治疗 → 立即急诊。本次用药核对确认遵从现行处方，并核对旧处方覆盖日期及停药记录；只有跌倒而未碰头、或抗凝已结束者不触发本条。
+  before: R1_news2_high
+- id: R0b_chemo_unwell
+  when: new systemic unwellness during a documented recent systemic anticancer course
+  set:
+  - ed_now
+  source: NICE_CG151
+  thresholds_ours: false
+  mapping_review: pending
+  printed: R0b 病历确认近 6 周内实际接受系统性抗癌治疗，今天新出现全身不适并有感染相关诉述 → 立即联系肿瘤团队并立即到急诊评估疑似中性粒细胞减少性脓毒症；低热甚至没有高热不能排除。已结束超过 6 周且恢复、仅计划而未给药者不触发。
+  before: R1_news2_high
+- id: R10a_stable_rate
+  when: isolated low NEWS2 heart-rate point, prior clinical assessment of stable asymptomatic sinus bradycardia,
+    current rate inside documented baseline and no new relevant symptoms
+  set:
+  - watchful_waiting
+  source: ESC_2021_PACING
+  ours: true
+  mapping_review: pending
+  reason: ESC accepts asymptomatic resting sinus rates 40-50 as possible physiological findings and does not recommend
+    pacing for asymptomatic/transient sinus-node dysfunction. Watchful waiting with the existing follow-up plan
+    is our mapping for an already assessed unchanged baseline, not a general exemption from NEWS2 or a newly low
+    pulse.
+  printed: R10a 仅心率带来 NEWS2 1 分（其余参数 0），病历已有心电图及临床评估证实长期无症状窦性慢心率，今日心率仍在已登记基线范围，且无新头晕、晕倒、胸部症状、气促，本次用药核对确认相关药物近期未变化
+    → 按原随访计划居家观察。新下降、旧慢心率曾恢复正常、仅病名或未核实基线者不适用；此前急性条款优先。
+  before: R10_news2_low
+tiers:
+  head_anticoag:
+    scenario: benign
+    render_as: ben_sleep
+    rule: R0a_head_anticoag
+    floor: ed_now
+    context: head
+    acts: true
+  chemo_unwell:
+    scenario: infection
+    render_as: inf_n0
+    rule: R0b_chemo_unwell
+    floor: ed_now
+    context: chemo
+    acts: true
+    add_conditions:
+    - cancer
+  head_no_anticoag:
+    scenario: benign
+    render_as: ben_sleep
+    rule: R13_news2_zero_symptom
+    floor: watchful_waiting
+    context: head
+    acts: false
+  chemo_recovered:
+    scenario: infection
+    render_as: inf_n0
+    rule: R13_news2_zero_symptom
+    floor: watchful_waiting
+    context: chemo
+    acts: false
+    add_conditions:
+    - cancer
+  copd_target:
+    scenario: benign
+    render_as: ben_sleep
+    rule: R14_nothing
+    floor: watchful_waiting
+    context: oxygen
+    acts: true
+    add_conditions:
+    - COPD
+    - hypercapnic_respiratory_failure
+  copd_unconfirmed:
+    scenario: benign
+    render_as: ben_sleep
+    rule: R3b_single3_spo2
+    floor: within_24h
+    context: oxygen
+    acts: false
+    add_conditions:
+    - COPD
+  rate_baseline:
+    scenario: benign
+    render_as: ben_sleep
+    rule: R10a_stable_rate
+    floor: watchful_waiting
+    context: rate
+    acts: true
+  rate_new:
+    scenario: benign
+    render_as: ben_sleep
+    rule: R10_news2_low
+    floor: routine_followup
+    context: rate
+    acts: false
+  af_known:
+    scenario: benign
+    render_as: ben_sleep
+    rule: R14_nothing
+    floor: watchful_waiting
+    context: rhythm
+    acts: true
+    add_conditions:
+    - atrial_fibrillation
+  af_unconfirmed:
+    scenario: benign
+    render_as: ben_sleep
+    rule: R9_af_alerts
+    floor: within_24h
+    context: rhythm
+    acts: false
+  hf_reduced:
+    scenario: heart_failure
+    render_as: hf_gain
+    rule: R8_hf_gain
+    floor: within_24h
+    context: volume
+    acts: true
+  hf_reduced_stable:
+    scenario: heart_failure
+    rule: R14_nothing
+    floor: watchful_waiting
+    context: volume
+    acts: false
+    render_as: hf_stable
+strata:
+  head_anticoag:
+  - plain
+  chemo_unwell:
+  - plain
+  - atypical
+  head_no_anticoag:
+  - plain
+  chemo_recovered:
+  - plain
+  - atypical
+  copd_target:
+  - plain
+  copd_unconfirmed:
+  - plain
+  rate_baseline:
+  - plain
+  rate_new:
+  - plain
+  af_known:
+  - plain
+  af_unconfirmed:
+  - plain
+  hf_reduced:
+  - trend
+  hf_reduced_stable:
+  - plain
+  - atypical
+rule_weights:
+  ed_now:
+    R0a_head_anticoag: 6
+    R0b_chemo_unwell: 6
+    R0_red_flag: 1
+    R1_news2_high: 1
+    R2_news2_medium: 1
+    R3a_single3_vital: 1
+    R6_htn_emergency: 1
+  within_24h:
+    R8_hf_gain: 4
+    R5_hypo_level2_repeat: 2
+    R9_af_alerts: 2
+    R3b_single3_spo2: 2
+    R3c_single3_low_hr: 1
+    R3_news2_single3: 1
+    R4_hypo_level3: 1
+    R7a_htn_severe_hf: 1
+  routine_followup:
+    R10_news2_low: 12
+    R11_hypo_level1: 5
+    R12_htn_raised: 5
+    R7_htn_severe: 4
+  watchful_waiting:
+    R10a_stable_rate: 10
+    R13_news2_zero_symptom: 12
+    R14_nothing: 30
+rule_mix_source:
+  ours: true
+  source: 'ours: clinical-history case-family enrichment within each sourced disposition, not subtype prevalence'
+  review: pending
+clinical_context:
+  source: ours
+  ours: true
+  review: pending
+  reason: Dated examples of prescriptions, follow-up assessments and clinician-authorized baselines; these ranges
+    are generation interiors, not extra triage thresholds. Acting/inert members share source and timing samplers.
+  recent_history_rules:
+    R0b_chemo_unwell:
+      min_separation_days: 0
+      max_age_days: 42
+      source: NICE_CG151 and NHS_ACUTE_ONCOLOGY
+      ours: true
+      reason: Actual anticancer administration within six weeks is recent clinical history; a 180-day archival margin
+        would contradict this indication. Require dates before the ten-day recent boundary, within the clinical
+        treatment window and a retrievable source; all other P2 archival timing rules remain unchanged.
+  note_age_days:
+  - 14
+  - 35
+  anticoagulants:
+  - 阿哌沙班
+  - 利伐沙班
+  head_statement:
+  - 今天滑了一下，头碰到门框，现在清醒，没有吐。
+  - 早上绊了一下碰到头，之后一直清醒，没觉得恶心。
+  unwell_statement:
+  - 今天有点发冷，人不太舒服，嗓子也疼。
+  - 这两天觉得乏力，今天开始发冷，有点咳嗽。
+  chemo_temp_c:
+  - 37.6
+  - 37.9
+  chemo_recovered_age_days:
+  - 70
+  - 120
+  oxygen_pct:
+  - 88
+  - 91
+  sinus_rate_bpm:
+  - 45
+  - 50
+  assessed_rate_baseline_bpm:
+  - 43
+  - 52
+  recovered_rate_baseline_bpm:
+  - 64
+  - 78
+  hf_diuretic_before_mg: 40
+  hf_diuretic_current_mg: 20
+  hf_discharge_age_days:
+  - 14
+  - 28
+  procedure_notes:
+    head:
+    - 心律与抗凝用药核对
+    - 门诊处方与用药复核
+    - 心血管用药随访
+    chemo:
+    - 治疗经过与血象复核
+    - 肿瘤科疗程复评
+    - 系统治疗随访
+    oxygen:
+    - 呼吸门诊与血气复评
+    - 呼吸病程复核
+    - 出院后呼吸评估
+    rate:
+    - 静息心率与心电图复核
+    - 门诊心电图随访
+    - 心率随访记录
+    rhythm:
+    - 心电图与症状复核
+    - 心律随访
+    - 门诊心电图复核
+    volume:
+    - 超声心动图与专科评估
+    - 心功能与用药随访
+    - 心衰病程复核
+  library_protocols:
+  - key: triage-course
+    protocol_id: HP-7A4D1952
+    name: 外伤和治疗期间不适的家庭分诊
+    topics:
+    - 家庭监测
+    - 分诊
+    keywords:
+    - 头部外伤
+    - 抗凝
+    - 抗癌治疗
+    - 低热
+    - 全身不适
+    applies: 成人家庭分诊，本次外伤或新不适需要对照处方及治疗经过。
+    excludes:
+    - 未碰头的跌倒不套用头部外伤条款；已结束且恢复的旧疗程不当作正在治疗。
+    exceptions:
+    - R0a、R0b 属于急性条款，均优先于 NEWS2；原 R0 症状仍最优先。
+    rules:
+    - R0a
+    - R0b
+    scoring: false
+    history: false
+  - key: triage-baseline-rate
+    protocol_id: HP-03C71E69
+    name: 家庭慢心率的既往评估复核
+    topics:
+    - 家庭监测
+    - 分诊
+    keywords:
+    - 心电图
+    - 窦性慢心率
+    - 基线
+    - 用药
+    applies: 成人目前无相关症状，心率与以往临床评估需要比较。
+    excludes:
+    - 只见病名或单次旧心率不认定长期基线；曾恢复正常后的再下降不适用稳定条款。
+    exceptions:
+    - R10a 满足时先用稳定基线条款，再考虑 R10；R0 至 R9 的更紧急条款仍优先。
+    rules:
+    - R10a
+    scoring: false
+    history: false
+  native_history_families:
+    weights:
+      hypercapnic_respiratory_failure: 1
+      atrial_fibrillation: 1
+    ours: true
+    source: 'ours: two existing clinically feasible background histories in non-HF low/normal and medium NEWS2 scenarios;
+      not an estimate of condition prevalence'
+    reason: Avoid assigning every compatible low/normal episode the same respiratory evaluation. Both histories
+      retain their own clinical conclusions, appropriate current observations and first-match disposition. Acute
+      single-3 SpO2 cases retain the original unconfirmed pathway.
+    review: pending

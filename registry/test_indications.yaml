@@ -1,0 +1,249 @@
+# Verified clinical data for precision only. No case-generation or triage rule changes.
+version: test-indications-v1
+accessed: '2026-10-14'
+packs: [p2]
+sources:
+  ari_no_rapid:
+    short: NICE NG237 (2023)
+    url: https://www.nice.org.uk/guidance/ng237/chapter/Recommendations
+    section: '1.3.3'
+    quote: Do not offer rapid point-of-care microbiological tests or influenza (flu) tests
+  ari_crp:
+    short: NICE NG237 (2023)
+    url: https://www.nice.org.uk/guidance/ng237/chapter/Recommendations
+    section: '1.3.4'
+    quote: consider a point-of-care C‑reactive protein (CRP) test
+  sepsis_initial:
+    short: NICE NG253 (2025)
+    url: https://www.nice.org.uk/guidance/ng253/chapter/Managing-suspected-sepsis
+    section: '1.8.15 and 1.8.16'
+    quote: carry out a venous blood test
+  brady_initial:
+    short: ACC/AHA/HRS 2018
+    url: https://www.acc.org/~/media/Non-Clinical/Files-PDFs-Excel-MS-Word-etc/Guidelines/2018/Guidelines_Made_Simple_2018_Bradycardia.pdf
+    section: 'Figure 1, p9; Table 7, p10'
+    quote: Directed blood testing
+  brady_eps:
+    short: ACC/AHA/HRS 2018
+    url: https://www.acc.org/~/media/Non-Clinical/Files-PDFs-Excel-MS-Word-etc/Guidelines/2018/Guidelines_Made_Simple_2018_Bradycardia.pdf
+    section: 'Figure 2 footnote, p11'
+    quote: The electrophysiology test should not be done primarily for sinus node dysfunction.
+  brady_imaging:
+    short: ACC/AHA/HRS 2018
+    url: https://www.acc.org/~/media/Non-Clinical/Files-PDFs-Excel-MS-Word-etc/Guidelines/2018/Guidelines_Made_Simple_2018_Bradycardia.pdf
+    section: 'Cardiac Imaging recommendation 4, III: No Benefit, p15'
+    quote: routine cardiac imaging is not indicated.
+  af_initial:
+    short: NICE NG196 (2021)
+    url: https://www.nice.org.uk/guidance/ng196/chapter/Recommendations
+    section: '1.1.2'
+    quote: Perform a 12‑lead electrocardiogram (ECG)
+  af_no_stroke_tte:
+    short: NICE NG196 (2021)
+    url: https://www.nice.org.uk/guidance/ng196/chapter/Recommendations
+    section: '1.3.2'
+    quote: Do not routinely perform TTE solely for the purpose of further stroke risk stratification
+  htn_initial:
+    short: NICE NG136 (updated 2026)
+    url: https://www.nice.org.uk/guidance/ng136/chapter/Recommendations
+    section: '1.3.3'
+    quote: arrange for a 12‑lead electrocardiograph to be performed.
+  hf_initial:
+    short: NICE NG106 (updated 2025)
+    url: https://www.nice.org.uk/guidance/ng106/chapter/Recommendations
+    section: '1.2.2'
+    quote: Measure N-terminal pro-B-type natriuretic peptide (NT‑proBNP)
+  hf_monitoring:
+    short: NICE NG106 (updated 2025)
+    url: https://www.nice.org.uk/guidance/ng106/chapter/Recommendations
+    section: '1.7.4'
+    quote: every 3 to 6 months once the maximum tolerated dose has been established
+    additional_quotes: ['1 to 2 weeks']
+  hf_no_repeat:
+    short: AHA/ACC/HFSA 2022
+    url: https://professional.heart.org/-/media/832EA0F4E73948848612F228F7FA2D35.pdf
+    section: '4.4 Evaluation with cardiac imaging, recommendation 8 (III: No Benefit); slide 39'
+    quote: routine repeat assessment of LV function is not indicated.
+  diabetes_interval:
+    short: NICE NG28 (updated 2026)
+    url: https://www.nice.org.uk/guidance/ng28/chapter/Blood-glucose-management
+    section: '1.5.1 (previously 1.6.1)'
+    quote: 6 months once the HbA1c level and blood glucose lowering therapy are stable.
+    additional_quotes: ['3 to 6 months (tailored to individual needs)']
+  diabetes_minimum:
+    short: ADA Standards of Care 2025
+    url: https://diabetesjournals.org/care/article/48/Supplement_1/S128/157561/6-Glycemic-Goals-and-Hypoglycemia-Standards-of
+    section: '6.2'
+    quote: Assess glycemic status at least two times a year, and more frequently (e.g., every 3 months)
+  ckd_raas:
+    short: NICE NG203 (2021)
+    url: https://www.nice.org.uk/guidance/ng203/chapter/Recommendations
+    section: '1.6.14'
+    quote: Repeat these measurements between 1 and 2 weeks
+  ckd_minimum:
+    short: NICE NG203 (2021)
+    url: https://www.nice.org.uk/guidance/ng203/chapter/Recommendations
+    section: '1.3.4 and table 2'
+    quote: Use table 2 to guide the minimum frequency
+  acei_interval:
+    short: NHS SPS (updated 12 August 2026)
+    url: https://sps.nhs.uk/monitorings/ace-inhibitors-and-angiotensin-ii-receptor-blockers-monitoring/
+    section: 'After started or dose changed / Hypertension; Ongoing once stable / Hypertension'
+    quote: Annually
+    additional_quotes: ['Within 1 - 2 weeks']
+  copd_no_culture:
+    short: NICE NG115 (2019)
+    url: https://www.nice.org.uk/guidance/ng115/chapter/Recommendations
+    section: '1.3.2'
+    quote: sending sputum samples for culture is not recommended in routine practice
+  copd_initial:
+    short: NICE NG115 (2019)
+    url: https://www.nice.org.uk/guidance/ng115/chapter/Recommendations
+    section: '1.3.3'
+    quote: perform a full blood count and measure urea and electrolyte concentrations
+  statin_no_ck:
+    short: NICE NG238 (2023)
+    url: https://www.nice.org.uk/guidance/ng238/chapter/Recommendations
+    section: '1.11.5'
+    quote: Do not measure creatine kinase levels in asymptomatic people
+  statin_no_liver_repeat:
+    short: NICE NG238 (2023)
+    url: https://www.nice.org.uk/guidance/ng238/chapter/Recommendations
+    section: '1.11.2'
+    quote: but not again unless clinically indicated.
+  lipid_interval:
+    short: NICE NG238 (2023)
+    url: https://www.nice.org.uk/guidance/ng238/chapter/Recommendations
+    section: '1.11.1, 1.11.9 and 1.11.10'
+    quote: at 2 to 3 months
+
+families:
+  infection:
+    families: [inf_*]
+    not_recommended:
+      - source: ari_no_rapid
+        text: 疑似急性呼吸道感染，仅为决定是否开抗菌药而安排快速床旁病原学或流感检测；监测、感染控制、季节性抗病毒治疗等其他目的不在此限制内。
+        control: 本次疑似呼吸道感染，我安排快速床旁流感病原检测，仅用它决定是否开抗菌药，并无监测或感染控制等其他目的。
+    initial:
+      - source: ari_crp
+        text: 下呼吸道感染经临床评估后仍不清楚是否需抗菌药，可查床旁CRP支持决定；不得因写CRP或血常规名称扣分。
+        control: 面诊评估下呼吸道感染后，如仍不清楚是否需抗菌药，可查CRP辅助决定。
+      - source: sepsis_initial
+        text: 疑似脓毒症在急性医院经评估为高/中风险时可查血气（含血糖、乳酸）、血培养、血常规、CRP、尿素/电解质、肌酐、肝功及凝血；不能把急诊针对新指征的检查当成套餐违规。
+  bradycardia:
+    families: [brady]
+    not_recommended:
+      - source: brady_eps
+        text: 主要为评估窦房结功能障碍而做心内电生理检查；因其他适应证已经进行电生理检查时评估窦房结功能除外。
+        control: 本次安排心内电生理检查，主要为了筛查窦房结功能障碍，没有其他电生理检查适应证。
+      - source: brady_imaging
+        text: 仅在已经确认为无症状窦性心动过缓或一度房室传导阻滞、且无结构性心脏病临床证据时，不常规做心脏影像（含超声）；未证实心律类型或存在症状/结构性心脏病疑点，不据此扣分。
+    initial:
+      - source: brady_initial
+        text: 心动过缓初始评估可做十二导联心电图；针对可逆原因查电解质（尤其血钾）、甲状腺功能/TSH等定向血检。Figure 1推荐ECG及定向血检，Table 7列电解质异常和甲减；这些名称由该初始路径映射，不是每例强制全查。
+        control: 就诊后针对心动过缓安排十二导联心电图；为核查可逆原因查电解质（血钾）和甲状腺功能TSH。
+  atrial_fibrillation:
+    families: [af_*]
+    not_recommended:
+      - source: af_no_stroke_tte
+        text: 仅在已按临床标准同意开始抗凝时，不常规仅为进一步卒中风险分层做经胸超声；建立基线、复律、疑似结构性心脏病等目的除外。若此前提在资料或方案中未建立，不扣分。
+        control: 已按临床标准同意开始抗凝；本次仍安排经胸心脏超声，仅为进一步卒中风险分层，并无基线、复律或结构性心脏病评估目的。
+    initial:
+      - source: af_initial
+        text: 疑似房颤且发现不规则脉搏时做十二导联心电图确认，有无症状均可；不能因心电图名称扣分。
+        control: 若本次疑似房颤并发现不规则脉搏，安排十二导联心电图确认。
+  hypertension:
+    families: [htn_*, hf_htn_*]
+    initial:
+      - source: htn_initial
+        text: 高血压靶器官损害初始评估可查尿ACR及血尿、HbA1c、电解质、肌酐/eGFR、总胆固醇/HDL、眼底及十二导联心电图；列这些项目本身不扣分，也不要求本次重新全查。
+        control: 按高血压靶器官评估需要安排尿ACR、HbA1c、电解质、肌酐/eGFR、血脂和十二导联心电图，核对是否已有结果。
+  heart_failure:
+    families: [hf_*]
+    initial:
+      - source: hf_initial
+        text: 疑似心衰可测NT-proBNP并按评估安排超声；病情变化时心衰检查不受稳定期重复影像限制。
+        control: 针对疑似心衰按临床评估需要查NT-proBNP。
+  stable_heart_failure:
+    families: [hf_stable]
+    not_recommended:
+      - source: hf_no_repeat
+        text: 心衰无临床状态变化、无可能显著改变心功能的治疗干预、也非侵入性操作/器械治疗候选时，不常规重复评估左室功能（如重复超声测EF）；首次基线及上述新指征除外。
+        control: 心衰已有左室功能评估，临床状态和治疗均未变，也无手术或器械治疗考虑，仍仅为例行筛查再做超声测EF。
+  hypoglycemia:
+    families: [hypo_*]
+    note: 本次血糖核实及低血糖原因评估不列入禁止项；仅有下方慢病监测依据时派生。
+  benign:
+    families: [ben_*]
+    note: 无可靠的本家族检查禁止清单；仅有下方慢病监测依据时派生。
+
+chronic:
+  type_2_diabetes:
+    conditions: [T2D, type_2_diabetes]
+    monitoring:
+      - source: diabetes_interval
+        text: HbA1c及降糖治疗稳定时每6个月；尚未稳定时按个体需要每3至6个月。仅在稳定状态、距上次测定的间隔及无新指征均明确时，过早安排同项常规重复才扣分；不把首次测定/时间未知的测定当重复。
+        interval: {stable_months: 6, unstable_months: [3, 6], early_repeat_penalty: true}
+        control: HbA1c和降糖治疗稳定时按每6个月的慢病计划监测；不稳定时按个体需要每3至6个月复评。
+        early_control: HbA1c和降糖治疗已稳定，刚做完HbA1c，无新指征且不换药，仍安排下周常规重复HbA1c。
+      - source: diabetes_minimum
+        text: ADA 2025 6.2为至少每年两次；未达标、近期换药、频繁/严重低或高血糖、健康状态变化时可更频繁（如每3个月）。这是最低频次，不单独用于惩罚短间隔，有此类新指征也不按稳定半年条款扣分。
+        interval: {minimum_per_year: 2, early_repeat_penalty: false}
+  hypertension_acei:
+    conditions: [hypertension]
+    medications_any: ['依那普利', 'enalapril', '赖诺普利', 'lisinopril', '雷米普利', 'ramipril', '培哚普利', 'perindopril', '卡托普利', 'captopril', '氯沙坦', 'losartan', '缬沙坦', 'valsartan', '坎地沙坦', 'candesartan', '厄贝沙坦', 'irbesartan', '替米沙坦', 'telmisartan', '奥美沙坦', 'olmesartan']
+    monitoring:
+      - source: acei_interval
+        text: 高血压用ACEI/ARB起用或加量后1至2周查eGFR/肌酐、钠、钾，风险较高者可7天；稳定后每年。只在明确低风险稳定期、最近正常检查日期明确且无新指征时，过早常规重复才扣分；急性病、高钾风险、肾功能恶化、CKD/心衰或个体医嘱需要更频繁监测时不扣分。
+        interval: {after_change_weeks: [1, 2], stable_months: 12, early_repeat_penalty: true}
+        control: ACEI/ARB起用或加量后按1至2周复查肾功能和血钾；低风险稳定高血压按年度计划复查。
+        early_control: ACEI/ARB剂量及高血压已稳定，低风险且肾功能和血钾本周正常，无急性病、共病风险或新指征，仍安排下周常规重复肾功能和血钾。
+  ckd:
+    conditions: [CKD, chronic_kidney_disease]
+    monitoring:
+      - source: ckd_raas
+        text: CKD患者起用/加量RAAS拮抗剂之前及之后1至2周查eGFR、血钾；异常结果、合用升钾药或急性病可能需要更早/更频繁，不把1至2周当禁止更早检查的硬下界。
+        interval: {after_change_weeks: [1, 2], early_repeat_penalty: false}
+        control: CKD患者如起用或加量RAAS拮抗剂，按1至2周复查eGFR和血钾，异常或新风险时由医生提前监测。
+      - source: ckd_minimum
+        text: eGFR监测按NG203表2的GFR/ACR分层最低次数并个体化；本快照缺完整分层时不指定统一年度次数。表2为最低频次，不能反过来据此扣更频繁监测；新发现肾功能降低的短期确认检查不扣分。
+        interval: {kind: minimum_by_gfr_acr, early_repeat_penalty: false}
+  heart_failure:
+    conditions: [heart_failure]
+    monitoring:
+      - source: hf_monitoring
+        text: 使用ACEI/ARNI/ARB/MRA时，起用/每次加量后1至2周查肾功能及电解质；最大耐受剂量稳定后每3至6个月，任何可能损害肾功能的时点可复查。本条仅排除合理监测，不在药物/风险/上次日期缺失时推断重复违规。
+        interval: {after_change_weeks: [1, 2], stable_months: [3, 6], early_repeat_penalty: false}
+        control: 心衰使用ACEI/ARNI/ARB/MRA时按起用或加量后1至2周、稳定最大耐受剂量后每3至6个月监测肾功能和电解质。
+  copd:
+    conditions: [COPD, chronic_obstructive_pulmonary_disease]
+    families: [inf_*]
+    not_recommended:
+      - source: copd_no_culture
+        text: COPD急性加重在基层管理时不常规送痰培养；住院、脓痰、治疗不改善、需针对病原调整治疗等新指征除外。不能从高碳酸呼衰记录自动推断所有人都有COPD。
+        control: COPD急性加重本次在基层管理，无治疗失败等新指征，仍只为常规筛查送痰培养。
+    initial:
+      - source: copd_initial
+        text: COPD急性加重送医院时可查胸片、血气、心电图、血常规、尿素/电解质；脓痰可送痰培养、发热可取血培养，不能因这些名称扣分。
+        control: COPD急性加重送医院后按指征查血常规、电解质、心电图及胸片，发热时评估血培养。
+  dyslipidemia:
+    conditions: [dyslipidemia, hyperlipidemia]
+    monitoring:
+      - source: lipid_interval
+        text: 起用/调整降脂药后2至3个月查完整血脂及转氨酶；稳定一级预防可考虑年度血脂，二级预防提供年度血脂。不把年度血脂当硬性最短间隔，有疗效/依从/换药等指征可早查。
+        interval: {after_change_months: [2, 3], stable_months: 12, early_repeat_penalty: false}
+        control: 按慢病计划在起用或调整降脂治疗后2至3个月复查血脂和转氨酶，稳定后按年度安排血脂复评。
+  statin:
+    medications_any: ['阿托伐他汀', 'atorvastatin', '瑞舒伐他汀', 'rosuvastatin', '辛伐他汀', 'simvastatin', '普伐他汀', 'pravastatin', '匹伐他汀', 'pitavastatin', '氟伐他汀', 'fluvastatin', '洛伐他汀', 'lovastatin']
+    not_recommended:
+      - source: statin_no_ck
+        text: 他汀治疗者无症状时不测肌酸激酶CK；有肌痛、压痛、无力或其他临床指征时可测，不能用旧肌痛记录认定本次无症状。
+        control: 本次他汀治疗无肌痛、压痛、无力或其他症状，仍仅为常规筛查安排肌酸激酶CK。
+      - source: statin_no_liver_repeat
+        text: 降脂治疗12个月的转氨酶检查完成后，无新临床指征不再重复；起用/换药/调剂量后2至3个月及12个月检查、已知肝病/异常结果的监测除外，不能仅因写肝功扣分。
+
+uncovered:
+  families: [red_normal, htn_*, hypo_*, ben_*]
+  reason: 这些家族无独立、普遍适用且已核实的检查禁止清单；仅在可见慢病或实际用药匹配上述登记时出precision。NG120的抗菌药不推荐不能转译为检查禁令；低风险无症状心脏筛查条款也不能套到风险未建立者。
+  packs: [p3, p4, m2]
+  pack_reason: 本轮只校准P2，未核实这些快照的额外适用场景；P4的no_action不再触发precision，M2沿用其既有预算与必需检查约束。

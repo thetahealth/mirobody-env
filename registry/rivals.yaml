@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Near-name rivals: the disease whose presentation overlaps the gold standard and must be explicitly
 # ruled out. Judge-side ground truth: it never enters the world, so stored responses can be rescored.
-# Validated at load by haenv/registry.py: a rival's aliases may not overlap the gold's, and every rival
+# Validated at load by haenv/resources/registry.py: a rival's aliases may not overlap the gold's, and every rival
 # must state a `discriminator` (otherwise it is another name for the gold). A rival that is another
 # case's gold only warns (mutual rivals such as hypo-/hyperthyroidism are legitimate).
 # SYNTHETIC, for evaluation only, not medical advice.
@@ -441,3 +441,262 @@ rivals:
       aliases: [甲亢, hyperthyroidism, 甲状腺功能亢进]
       discriminator: 甲亢的TSH受抑;本例TSH正常,消瘦不能用甲亢解释
       discriminator_finding: {finding: TSH, gold: normal, rival: low}
+
+  HD-UNI-07:
+  - name: 药物相关外周水肿
+    aliases:
+    - 药物相关水肿
+    - 药物性水肿
+    - 氨氯地平相关水肿
+    - drug induced edema
+    - amlodipine edema
+    discriminator: 复核在用药物(钙通道阻滞剂等)与体征,心超评价心功能及充血;药物性踝肿单独不足以解释端坐后缓解的气促
+    discriminator_finding:
+      finding: EchoCongestion
+      gold: positive
+      rival: negative
+  - name: 社区获得性肺炎
+    aliases:
+    - 社区获得性肺炎
+    - community acquired pneumonia
+    discriminator: 胸片比较局灶实变与充血,结合发热和心超;两病可以共存
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-08:
+  - name: 频发房性早搏
+    aliases:
+    - 房性早搏
+    - premature atrial contractions
+    discriminator: 发作期心电图/动态心电图逐段判断提前P波与持续不规则RR且无重复P波;不能靠脉搏不齐区分
+    discriminator_finding:
+      finding: ECGAtrialPattern
+      gold: positive
+      rival: negative
+  - name: 焦虑伴窦性心动过速
+    aliases:
+    - 焦虑伴窦性心动过速
+    - anxiety with sinus tachycardia
+    discriminator: 发作期心电图确认窦性P波及节律;症状和手表提示均不能独立确诊
+    discriminator_finding:
+      finding: ECGAtrialPattern
+      gold: positive
+      rival: negative
+  HD-UNI-09:
+  - name: 既有CKD的慢性异常
+    aliases:
+    - 既有慢性肾病
+    - chronic kidney disease
+    discriminator: 比较本次与可靠既往基线,确认48小时/7天内新增变化;慢性病仍可叠加AKI
+    discriminator_finding:
+      finding: AKICreatinineChange
+      gold: positive
+      rival: negative
+  - name: 尿路梗阻所致急性肾损伤
+    aliases:
+    - 梗阻性急性肾损伤
+    - postrenal aki
+    discriminator: 肾脏/膀胱超声及残余尿评价排除梗阻;Cr升高不能判断肾前性病因
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-10:
+  - name: 近期脱水相关急性肾损伤
+    aliases:
+    - 近期脱水性急性肾损伤
+    - dehydration associated aki
+    discriminator: 需≥3个月客观历史及复查支持慢性异常,同时检查近期急性改变,二者可共存
+    discriminator_finding:
+      finding: CKDPersistence
+      gold: positive
+      rival: negative
+  - name: 短暂性白蛋白尿
+    aliases:
+    - 短暂性白蛋白尿
+    - transient albuminuria
+    discriminator: 复查清晨UACR,排除发热、感染、剧烈运动等暂时因素;不由单次阳性定CKD
+    discriminator_finding:
+      finding: CKDPersistence
+      gold: positive
+      rival: negative
+  - name: 药物相关外周水肿
+    aliases:
+    - 药物相关水肿
+    - 药物性水肿
+    - 氨氯地平相关水肿
+    - drug induced edema
+    - amlodipine edema
+    discriminator: 复核在用药物(钙通道阻滞剂等)与踝肿时序;药物性水肿不解释白蛋白尿与eGFR下降,二者可共存
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-11:
+  - name: 消化性溃疡
+    aliases:
+    - 消化性溃疡
+    - peptic ulcer
+    discriminator: 胆囊超声寻找结石/局部炎症,若阴性或解释不充分再按临床需要胃镜;两病可共存
+    discriminator_finding:
+      finding: BiliaryUltrasound
+      gold: positive
+      rival: negative
+  - name: 急性胰腺炎
+    aliases:
+    - 急性胰腺炎
+    - acute pancreatitis
+    discriminator: 比较脂肪酶≥3×当地ULN与胆囊超声,必要时胰腺影像;胆源性胰腺炎可同时有结石
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-12:
+  - name: 无胰腺炎的胆囊炎
+    aliases:
+    - 单纯胆囊炎
+    - isolated cholecystitis
+    discriminator: 脂肪酶和相符胰腺影像结合疼痛评估;轻度酶升高不能诊断胰腺炎,结石不排除并发;与胰腺急性炎症相符的实际CT/MRI报告可区分仅有该对手的选定模板,阴性或延迟影像不能普遍排除,亦不排除共存
+    discriminator_finding:
+      finding: PancreaticImaging
+      gold: positive
+      rival: negative
+  - name: 上消化道溃疡或穿孔
+    aliases:
+    - 上消化道溃疡
+    - 溃疡穿孔
+    - perforated peptic ulcer
+    discriminator: 急诊查体与影像评估游离气体/穿孔,必要时相关检查;不能靠脂肪酶一次升高排除穿孔;与胰腺急性炎症相符的实际CT/MRI报告可区分仅有该对手的选定模板,阴性或延迟影像不能普遍排除,亦不排除共存
+    discriminator_finding:
+      finding: PancreaticImaging
+      gold: positive
+      rival: negative
+  HD-UNI-13:
+  - name: 单纯脂肪变性且无进展期纤维化
+    aliases:
+    - 单纯脂肪变性
+    - simple steatosis
+    discriminator: FIB-4仅分层,需有效弹性成像/专科解释,不确定时组织学;普通超声不能排除纤维化
+    discriminator_finding:
+      finding: FibrosisAssessment
+      gold: positive
+      rival: negative
+  - name: 酒精相关肝病
+    aliases:
+    - 酒精相关肝病
+    - alcohol related liver disease
+    discriminator: 结构化饮酒史与竞争病因评估,纤维化检查只判断程度不能鉴别代谢与酒精病因
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-14:
+  - name: 慢性炎症相关贫血
+    aliases:
+    - 慢性炎症相关贫血
+    - anemia of inflammation
+    discriminator: 铁蛋白结合TSAT/CRP判断,炎症可使铁蛋白假性正常,两者可共存
+    discriminator_finding:
+      finding: Ferritin
+      gold: low
+      rival: normal
+  - name: 维生素B12缺乏相关贫血
+    aliases:
+    - 维生素b12缺乏贫血
+    - b12 deficiency anemia
+    discriminator: MCV、血清B12和必要时MMA,并可共存缺铁;低铁蛋白不排除混合缺乏
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-15:
+  - name: 非感染性尿路结石
+    aliases:
+    - 非感染性尿路结石
+    - noninfected urinary stone
+    discriminator: 尿培养结合尿路影像检查;结石可伴感染,梗阻加感染是需急诊处理的另一个危险情形
+    discriminator_finding:
+      finding: UrineCulture
+      gold: positive
+      rival: negative
+  - name: 非感染性膀胱疼痛综合征
+    aliases:
+    - 膀胱疼痛综合征
+    - bladder pain syndrome
+    discriminator: 规范尿培养/重复取样结合病程;非感染性疼痛不能由一次阴性培养直接确诊
+    discriminator_finding:
+      finding: UrineCulture
+      gold: positive
+      rival: negative
+  HD-UNI-16:
+  - name: 急性支气管炎
+    aliases:
+    - 急性支气管炎
+    - acute bronchitis
+    discriminator: 胸片评估新出现局灶浸润,症状/CRP不能单独区分;早期阴性影像需结合临床复查
+    discriminator_finding:
+      finding: ChestFocalOpacity
+      gold: positive
+      rival: negative
+  - name: 心源性肺水肿
+    aliases:
+    - 心源性肺水肿
+    - cardiogenic pulmonary edema
+    discriminator: 胸部影像形态结合NT-proBNP与心超,必要时复评;两种病可以共存
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  - name: 肺栓塞
+    aliases:
+    - 肺栓塞
+    - pulmonary embolism
+    discriminator: 胸膜痛伴气短须评估肺栓塞临床概率,按需D-二聚体或CT肺动脉造影;胸片局灶浸润不能排除肺栓塞
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-17:
+  - name: 单纯活动不足或肥胖相关气促
+    aliases:
+    - 活动不足相关气促
+    - obesity related dyspnea
+    discriminator: 有质量保证的支气管舒张后肺功能,结合暴露和临床背景;肥胖也可与气流阻塞并存
+    discriminator_finding:
+      finding: PostBDObstruction
+      gold: positive
+      rival: negative
+  - name: 支气管哮喘
+    aliases:
+    - 支气管哮喘
+    - asthma
+    discriminator: 复查肺功能、症状变异和必要时进一步气道评估;单次舒张后持续阻塞不能排除哮喘或重叠
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-18:
+  - name: 躯体疾病相关乏力而无抑郁障碍
+    aliases:
+    - 躯体疾病相关乏力
+    - fatigue from physical illness
+    discriminator: 临床精神状态、兴趣/心境、功能与躯体疾病综合评估,不能从正常TSH或正常Hb反推诊断
+    discriminator_finding:
+      finding: DepressionAssessment
+      gold: positive
+      rival: negative
+  - name: 双相障碍抑郁发作
+    aliases:
+    - 双相抑郁
+    - bipolar depression
+    discriminator: 询问既往躁狂/轻躁狂及心境升高史;PHQ-9与可穿戴不能区分
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-19:
+  - name: 甲状腺功能减退相关肌肉症状
+    aliases:
+    - 甲减相关肌肉症状
+    - hypothyroid myopathy
+    discriminator: TSH及必要时FT4结合症状;正常TSH用于分开此例,不能确认药物因果
+    discriminator_finding:
+      finding: TSH
+      gold: normal
+      rival: high
+  - name: 运动后肌肉损伤
+    aliases:
+    - 运动后肌肉损伤
+    - exercise related muscle injury
+    discriminator: 运动史、CK复查与医师主导的药物时序/减量停药后随访;CK一次升高不能区分
+    discriminator_unresolvable: 当前有限数据不能用单个方向分开;须完成所述检查并由临床综合判断,不可自动排除
+  HD-UNI-20:
+  - name: 机械性胃出口梗阻
+    aliases:
+    - 胃出口梗阻
+    - gastric outlet obstruction
+    discriminator: 先胃镜/相关影像排除机械梗阻;延迟排空本身也会出现在梗阻中
+    discriminator_finding:
+      finding: GastricObstruction
+      gold: negative
+      rival: positive
+  - name: 无客观延迟排空的功能性消化不良
+    aliases:
+    - 功能性消化不良
+    - functional dyspepsia
+    discriminator: 规范固体餐排空测定结合临床与必要时复查;症状高度重叠,胃镜食物潴留不是确诊
+    discriminator_finding:
+      finding: GastricRetention
+      gold: positive
+      rival: negative

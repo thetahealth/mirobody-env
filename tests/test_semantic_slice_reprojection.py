@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from haenv.semantic_pipeline import _context_for_cell
+from haenv.scoring.semantic.pipeline import _context_for_cell
 
 
 @dataclass

@@ -31,7 +31,9 @@ disputed_gold:
       12 条 comorbidity 类盲标中的 8 条;`join_hit` 与 `join_scope_ok` 两维受影响。
       这两维是 `diagnostic`,不进大分。
     who_can_resolve: "临床复核(临床事实问题,不是口径问题):「糖尿病肾病算一个病还是两个病」。"
-    status: open
+    # accept-both: join_hit / join_scope_ok credit `current` and `proposed` on the specs in `applies_to`
+    # (`registry.accepted_joins`); the gold stays `current`. Clinical review can still pick one.
+    status: accept-both
 
   - id: DG-002
     scope: "金标 `tests` 清单里把二线/条件性检查写进必需集(3 项,覆盖 3 个病种)"
@@ -156,14 +158,14 @@ literature_review:
     status: literature-resolved
     resolved_by: "文献复核(定性)+ 盲标锚重测(20/20)"
   - id: DG-001
-    verdict: '判断题,不由文献单方面裁定:保持 open'
+    verdict: '判断题,不由文献单方面裁定:两种读法并收(accept-both),金标仍记 comorbidity'
     basis:
     - 临床上糖尿病肾病是糖尿病的并发症(一条因果链),支持 unified 读法;但 comorbidity 的定义是「两个需分别管理的过程」,而降糖与蛋白尿/肾脏替代的管理路径分开
       —— 两种分法各有依据。
     - '反证:两例作答把二者分成 #1/#2,与现行金标一致(见该条 counter 字段)。'
-    action: 不动(join 两维是 diagnostic,不进大分)。
-    note: 需要的是明确的 join 分类学定义,不是文献;定义确定后金标随之确定。
-    status: open
+    action: join_hit / join_scope_ok 对 JD-CKM 同时接受 unified 与 comorbidity(registry.accepted_joins);金标字段不改。
+    note: 需要的是明确的 join 分类学定义,不是文献;定义确定后改回单一金标。规格名「心肾代谢综合征」与 composition_comorbid 页头的定义都指向 unified,故不再只收 comorbidity。
+    status: accept-both
 
 # ==========================================================================
 # Entries this repo resolves itself, outside `disputed_gold`.

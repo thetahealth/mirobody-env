@@ -34,8 +34,8 @@ archiving.
 ## A · Hand-writing a job.yaml
 
 ```bash
-uv run haenv build  inputs/example-ew.job.yaml --gen deterministic   # generate questions (formulaic, free)
-uv run haenv verify inputs/example-ew.job.yaml --gen deterministic   # a per-item verification report
+uv run haenv build  benchmarks/inputs/example-ew.job.yaml --gen deterministic   # generate questions (formulaic, free)
+uv run haenv verify benchmarks/inputs/example-ew.job.yaml --gen deterministic   # a per-item verification report
 ```
 
 The reading is the last line of the report `verify` writes:
@@ -58,22 +58,23 @@ thing that must never be mixed (`job.LATENT_REGISTRY` lists the keys):
 > only ever sees the `<=T` payload, and ground truth, premises and future data are never in it (see
 > `docs/design/llm-io-and-scoring.md`), and it's circular reasoning
 > (a question produced by the model, used to test the model). How all three are handled is documented at the
-> top of `haenv/extract.py`.
+> top of `src/haenv/interaction/extract.py`.
 
 ---
 
 ## B · Generating questions from case text
 
 ```bash
-uv run python tools/text_to_job.py \
-  --in raw_cases/joint_dx/rc-jd-*.md \
+uv run python tools/generation/text_to_job.py \
+  --in benchmarks/raw_cases/joint_dx/rc-jd-*.md \
   --job-id my-job --task-type joint_dx \
   --gold text --input-kind retrospective \
-  --out my-job.job.yaml
+  --out artifacts/derived/my-job.job.yaml
 ```
 
 What you get is an ordinary job file: build it like any other (section A), and the extracted gold
-rides along in its `_provenance` block.
+rides along in its `_provenance` block. The CLI text-input path writes new jobs under the
+configured output root's `derived/`; fixed checked-in examples stay under `benchmarks/derived/`.
 
 ### Four switches, each with a "what happens if you get it backwards"
 
@@ -102,7 +103,7 @@ real case chart --extract--> job.yaml --build--> trajectory+gold --render--> syn
 ```
 
 ```python
-from haenv.record_render import render_record, leak_words
+from haenv.world.observations.record_render import render_record, leak_words
 text, origin = render_record(sp)        # sp = the first return value of build_instance
 assert not leak_words(text)             # the prose modality's own leak gate
 ```
@@ -126,7 +127,7 @@ Leak-word hits: 0/12.
 (the biggest one measured: the solver payload has no drug name at all, only the dose ladder).
 
 The per-case rows behind these summary values are written by the probe itself; it is
-`docs/scripts/record_roundtrip_probe.py` (`--offline` only consumes the cache, zero cost).
+`tools/validation/record_roundtrip_probe.py` (`--offline` only consumes the cache, zero cost).
 
 Warning: the denominator is fixed first: `record_render.ROUNDTRIP_FIELDS` contains only class-A patient
 facts. Class-C generation knobs (`index_time_T` / `event_density` / `noise`) don't describe the patient and
@@ -141,7 +142,7 @@ you can tune at will.
 |---|---|
 | `--gen deterministic` (default, `config.yaml:synth.generator`) / `--offline` | 0 (formulaic generation) |
 | `--gen llm` | a GV-1 round plus an event-planning round per case; the model is `config.yaml:synth.gen_model` |
-| re-running the same batch | 0, as long as the prompt hasn't changed -- `cases/_llm_cache/` hits on `sha256(model+argv+prompt)`; `--regen` forces a fresh run |
+| re-running the same batch | 0, as long as the prompt hasn't changed -- `artifacts/cases/_llm_cache/` hits on `sha256(model+argv+prompt)`; `--regen` forces a fresh run |
 | text extraction | one call/case (`--extract-model`); 0 with `--extract-offline` |
 
 The generation model's calls and cache hits for a batch are in its `batch.json`
@@ -210,14 +211,14 @@ reason kinds include `device_backed` · `baseline_matches_raw_facts` · `not_dri
 
 Important: the generator and the verifier share the same spec -- so "a normal batch passes clean on the
 first try" proves nothing about whether the verifier works; only a negative control can. Anyone changing
-`events.py` / `verify.py` must run `tools/verify_selftest.py`.
+`events.py` / `verify.py` must run `tools/testing/verify_selftest.py`.
 
 ## 4. Acceptance tests (must run after changing anything on the question-generation side)
 
 | what changed | what to run | time |
 |---|---|---|
-| `events.py` / `verify.py` / any injection logic | `uv run python tools/verify_selftest.py` | 0.2s |
-| the payload's shape | `uv run python tools/leak_probe_selftest.py` | 0.8s |
+| `events.py` / `verify.py` / any injection logic | `uv run python tools/testing/verify_selftest.py` | 0.2s |
+| the payload's shape | `uv run python tools/testing/leak_probe_selftest.py` | 0.8s |
 
 Warning: how to cite that self-test's item count: quote its **genuine-negative-control** count, not the
 total. The total also counts positive controls, so deleting 5 negative controls and adding 5 positive

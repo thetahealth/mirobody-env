@@ -36,7 +36,7 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import indicators as I  # noqa: E402
+import haenv.world.clinical.indicators as I  # noqa: E402
 
 D = I.dossiers()
 
@@ -167,7 +167,7 @@ def test_known_defects_are_enumerable_not_remembered():
 def test_inv6_every_clinical_spec_signal_has_a_dossier():
     """Every clinical indicator a case carries has a dossier; a missing one is a place where
     the value is guessed by name."""
-    from haenv.build import CLINICAL_SPEC
+    from haenv.world.generation.build import CLINICAL_SPEC
     missing = sorted(set(CLINICAL_SPEC) - set(D))
     assert not missing, f"这些信号没有档案:{missing}"
 
@@ -203,7 +203,7 @@ def test_clinical_spec_no_longer_carries_base_or_ndigits():
 
     A dead slot left in place makes "still used" look the same as "not deleted yet".
     """
-    from haenv.build import CLINICAL_SPEC
+    from haenv.world.generation.build import CLINICAL_SPEC
     assert CLINICAL_SPEC, "空表 ⇒ 本条失去对象"
     for sig, tup in CLINICAL_SPEC.items():
         assert len(tup) == 2, f"{sig}: 元组还是 {len(tup)} 元 —— base/ndigits 没删干净"
@@ -219,8 +219,8 @@ def test_ndigits_has_exactly_one_declaration_site():
     `events._NON_METRIC_NDIGITS`, precision declared in one place can be overridden in
     another and put spurious decimal places on the numbers in cases.
     """
-    from haenv import events as E
-    from haenv.build import CLINICAL_SPEC
+    import haenv.world.observations.events as E
+    from haenv.world.generation.build import CLINICAL_SPEC
     assert E._NON_METRIC_NDIGITS == {}, (
         f"第三处声明又回来了:{E._NON_METRIC_NDIGITS}")
     assert all(len(t) == 2 for t in CLINICAL_SPEC.values()), "第二处声明(元组第4槽)还在"
@@ -242,7 +242,7 @@ def test_ndigits_has_exactly_one_declaration_site():
     # read by `findings_render._round`; `null` stays legal (magnitude rounding) but unused.
     n_panel = sum(1 for d in D.values() if d.get("kind") == "panel")
     assert n_panel >= 5, f"kind: panel 的只有 {n_panel} 条 —— 这一支的扫描面塌了"
-    from haenv import findings_render as _FR
+    import haenv.world.observations.findings_render as _FR
     for name, d in D.items():
         if d.get("kind") == "panel" and d["ndigits"] is not None:
             assert _FR._ndigits(name) == int(d["ndigits"]), name
@@ -255,7 +255,7 @@ def test_metrics_ndigits_agrees_with_the_dossier():
     It is not a second declaration: rendering reads `_declared_ndigits`. This catches a
     stream left out of the dossier and an edit made on one side only.
     """
-    from haenv import events as E
+    import haenv.world.observations.events as E
     bad = [m.name for m in E.METRICS
            if m.name in D and int(m.ndigits) != int(D[m.name]["ndigits"])]
     assert not bad, f"这些流的 METRICS.ndigits 与档案分叉:{bad}"
@@ -268,7 +268,7 @@ def test_dossier_is_the_only_source_of_the_baseline():
     import ast
     sys.path.insert(0, str(ROOT / "tests"))
     from _module_family import family_source
-    src = family_source("haenv/build.py")
+    src = family_source('haenv/world/generation/build.py')
     tree = ast.parse(src)
     for node in ast.walk(tree):
         if (isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name)

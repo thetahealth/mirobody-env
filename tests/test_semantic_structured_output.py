@@ -1,8 +1,8 @@
 """The response schema is enforced at request time; a reply is never repaired after judging."""
 import json
 
-from haenv.evaluate import OpenAICompatSolver
-from haenv.semantic_judge import _request
+from haenv.app.evaluate import OpenAICompatSolver
+from haenv.scoring.semantic.judge import _request
 from test_reasoning_effort_dispatch import Response
 from test_semantic_consensus import task
 

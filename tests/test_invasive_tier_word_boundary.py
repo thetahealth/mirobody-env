@@ -172,7 +172,7 @@ def _gate_fires(tests: list[str]) -> bool:
 
 
 def test_gate_positive_control_imaging_only_proposal_still_fails():
-    """`gatetrip_invasive` (haenv/baselines.py) emits exactly this -- it must keep hitting,
+    """`gatetrip_invasive` (haenv/world/generation/baselines.py) emits exactly this -- it must keep hitting,
     or the repo's only positive control for this gate goes silent."""
     assert _gate_fires(["腹部CT增强", "MRCP"])
     assert _gate_fires(["Adrenal CT scan", "MRI pituitary"])

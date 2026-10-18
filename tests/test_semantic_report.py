@@ -1,9 +1,10 @@
 """Primary reports use semantic values, never a proxy or imputed judge result."""
 from copy import deepcopy
 
-from haenv.semantic_report import overlay_rows, report_section
-from haenv.analytics import rank_ddx
-from haenv.quantities import resolve
+from haenv.scoring.semantic.report import overlay_rows
+from haenv.scoring.semantic.report import report_section
+from haenv.scoring.analysis.ranking import rank_ddx
+from haenv.scoring.quantities import resolve
 import json
 
 import pytest
@@ -86,8 +87,8 @@ def test_auxiliary_value_does_not_change_composite():
 
 
 def test_old_proxy_validity_never_transfers_to_llm_judgment():
-    from haenv.scoring import load_profile
-    from haenv.semantic_report import profile_for_rows
+    from haenv.scoring.legacy import load_profile
+    from haenv.scoring.semantic.report import profile_for_rows
     profile = load_profile(); previous = profile.validity_state("tests_recall")
     viewed = overlay_rows(rows(), results(rows()), run_id="test", judging_sha="semantic")
     new = profile_for_rows(profile, viewed)
@@ -98,7 +99,7 @@ def test_old_proxy_validity_never_transfers_to_llm_judgment():
 
 def test_full_report_renders_actual_semantic_coverage_and_auxiliary_section(tmp_path):
     from types import SimpleNamespace
-    from haenv.report import render
+    from haenv.reporting.document import render
     job = SimpleNamespace(multiround=False, sample_cases=3, job_id="synthetic",
                           task_type="joint_dx", batch="synthetic", root=tmp_path,
                           results_file=tmp_path / "eval.jsonl", results_dir=tmp_path)
@@ -109,9 +110,11 @@ def test_full_report_renders_actual_semantic_coverage_and_auxiliary_section(tmp_
 
 def saved_run(tmp_path):
     from dataclasses import asdict
-    from haenv.semantic_pipeline import digest
-    from haenv.semantic_judge import JudgeTask, JudgeReply, evaluate_consensus
-    from haenv.semantic_rubric import summarize_verdicts
+    from haenv.scoring.semantic.pipeline import digest
+    from haenv.scoring.semantic.judge import JudgeTask
+    from haenv.scoring.semantic.judge import JudgeReply
+    from haenv.scoring.semantic.judge import evaluate_consensus
+    from haenv.scoring.semantic.rubric import summarize_verdicts
     batch = tmp_path / "source";batch.mkdir()
     original = batch / "responses.jsonl";original.write_text('original answer\n')
     out = tmp_path / "semantic";out.mkdir();(out / "results").mkdir()
@@ -137,7 +140,7 @@ def saved_run(tmp_path):
 
 
 def test_report_reconstructs_votes_without_dispatch(tmp_path):
-    from haenv.semantic_report import read_run
+    from haenv.scoring.semantic.report import read_run
     out, batch, _ = saved_run(tmp_path)
     manifest, result = read_run(out, batch)
     assert result[("case", "model")]["summary"]["metrics"]["dx_hit"] == 1.
@@ -145,7 +148,7 @@ def test_report_reconstructs_votes_without_dispatch(tmp_path):
 
 @pytest.mark.parametrize("change", ["source", "summary", "vote", "identity", "tasks", "journal"])
 def test_report_refuses_tampered_inputs_or_scores(tmp_path, change):
-    from haenv.semantic_report import read_run
+    from haenv.scoring.semantic.report import read_run
     out, batch, path = saved_run(tmp_path)
     result = json.loads(path.read_text())
     if change == "source":

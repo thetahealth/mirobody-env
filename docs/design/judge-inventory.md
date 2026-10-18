@@ -1,9 +1,9 @@
-<!-- generated, do not edit. Rebuild: `uv run python tools/gen_judge_inventory.py` -->
+<!-- generated, do not edit. Rebuild: `uv run python tools/presentation/gen_judge_inventory.py` -->
 # Judge inventory and open items (**generated from code — do not hand-edit**)
 
 Source of truth: `judges.JUDGES` · `registry/scoring.yaml` · `process.UNIMPLEMENTED` · `registry/disputed_gold.yaml`.
 This file is generated from code, not hand-written, so it can't go stale silently. Rebuild
-with `uv run python tools/gen_judge_inventory.py`; `--check` exits 1 when this file differs from what the code says.
+with `uv run python tools/presentation/gen_judge_inventory.py`; `--check` exits 1 when this file differs from what the code says.
 
 ## 1. Judges mounted on the table
 
@@ -58,7 +58,7 @@ registered as a scoring dimension. A judge the generator's explicit metric table
 ## 3. Gold standard is written, judge not implemented
 
 The status mark is copied from the source; what is implemented, what is missing and why is
-written next to each key in `haenv/process.py` (`UNIMPLEMENTED`).
+written next to each key in `src/haenv/scoring/process.py` (`UNIMPLEMENTED`).
 
 * 🟡 **`discriminative_tool`**
 * 🟡 **`revision_grounded`**

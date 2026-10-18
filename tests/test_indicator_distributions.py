@@ -36,7 +36,7 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import indicators as I  # noqa: E402
+import haenv.world.clinical.indicators as I  # noqa: E402
 
 N = 2000
 IDS = [f"PROBE-{i:05d}" for i in range(N)]

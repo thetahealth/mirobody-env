@@ -27,13 +27,13 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import evaluate as EV                    # noqa: E402
+import haenv.app.evaluate as EV                    # noqa: E402
 from haenv import judges as _j                      # noqa: E402
-from haenv import solve_guard as _sg                # noqa: E402
-from haenv import tracks as _tk                     # noqa: E402
-from haenv import wq as _wq                        # noqa: E402
+import haenv.interaction.solve_guard as _sg                # noqa: E402
+import haenv.scoring.tracks as _tk                     # noqa: E402
+import haenv.world.wq as _wq                        # noqa: E402
 from _patch_bound import patch_bound  # noqa: E402
-from haenv.run_state import RunContext as _RunContext  # noqa: E402
+from haenv.runtime.state import RunContext as _RunContext  # noqa: E402
 _CTX = _RunContext()   # the run these tests drive; monkeypatch restores its fields
 
 

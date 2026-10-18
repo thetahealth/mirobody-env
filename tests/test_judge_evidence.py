@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from haenv.judge_evidence import evidence_catalogue
+from haenv.scoring.judge_evidence import evidence_catalogue
 
 
 def test_every_catalogue_entry_is_verbatim_and_has_an_unambiguous_path():

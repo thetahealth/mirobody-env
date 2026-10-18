@@ -248,7 +248,7 @@ metrics:
       agreement_headline: 1.000
       n: 20
       effective_set: "drop_disc+original(预注册)"
-      source: docs/anchor/tasks-disc-neg.jsonl
+      source: registry/validity/tasks-disc-neg.jsonl
       # MMA / methylmalonic acid / homocysteine are accepted aliases for gray-zone serum B12
       # (140-300 pmol/L); see registry/findings.yaml.
       note: "MMA/同型半胱氨酸计为 B12 判别项的可接受别名(DG-004);有效档 20/20 = 1.000。"
@@ -276,7 +276,7 @@ metrics:
       n: 24
       effective_set: "force_hold+original(预注册)"
       failing_kind: defect
-      source: docs/anchor/tasks-rev-neg.jsonl
+      source: registry/validity/tasks-rev-neg.jsonl
       note: >-
         概念集取法承重 0.750,只看枚举 0.600,字符串 0.750(承重档较弱)。
         四种信念取法下锚一致率与产物区分度成反比:只枚举层 承重 0.58 / 产物极差 0.161 ·
@@ -316,7 +316,7 @@ metrics:
       n: 24
       effective_set: "force_hold+original(预注册)"
       failing_kind: defect
-      source: docs/anchor/tasks-rev-neg.jsonl
+      source: registry/validity/tasks-rev-neg.jsonl
       note: >-
         概念集取法承重 0.750,只看枚举 0.600,字符串 0.750(承重档较弱)。
         四种信念取法下锚一致率与产物区分度成反比:只枚举层 承重 0.58 / 产物极差 0.161 ·

@@ -1,0 +1,2 @@
+[haenv.p2]
+p2 = haenv.p2.plugin:judges

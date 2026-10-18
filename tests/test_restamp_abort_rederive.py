@@ -26,10 +26,10 @@ sys.path.insert(0, str(ROOT / "tools"))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import evaluate as EV                    # noqa: E402
-import recompute_judges as RJ                       # noqa: E402
+import haenv.app.evaluate as EV                    # noqa: E402
+import tools.evaluation.recompute_judges as RJ                       # noqa: E402
 from _patch_bound import patch_bound  # noqa: E402
-from haenv.run_state import RunContext as _RunContext  # noqa: E402
+from haenv.runtime.state import RunContext as _RunContext  # noqa: E402
 _CTX = _RunContext()   # the run these tests drive; monkeypatch restores its fields
 
 FP_NOW = "fp-now-0000000000"
@@ -40,7 +40,7 @@ BUDGET_ROW = {"case": "C1", "solver": "m1", "T": 84, "overall": "ABORT(no_answer
 
 
 def _run(tmp_path, monkeypatch, rows, responses=()):
-    import haenv.anchor as _anchor
+    import haenv.provenance.anchor as _anchor
     monkeypatch.setattr(_anchor, "judging_fp_cached", lambda: FP_NOW)
     d = tmp_path / "batch-synthetic-a"
     d.mkdir()
@@ -84,7 +84,7 @@ def test_budget_abort_without_the_recorded_reason_is_an_error(tmp_path, monkeypa
 
 
 def test_live_gated_path_uses_the_same_predicate(monkeypatch):
-    from haenv import gated as _g
+    import haenv.interaction.gated as _g
 
     class _Tr:
         leak = None
@@ -124,7 +124,7 @@ def _rerun(d, *flags):
 
 def test_recompute_conflicts_reflects_the_latest_restamp(tmp_path, monkeypatch):
     """`recompute_conflicts` names this run's dropped fields; a later conflict-free restamp clears it."""
-    import haenv.anchor as _anchor
+    import haenv.provenance.anchor as _anchor
     monkeypatch.setattr(_anchor, "judging_fp_cached", lambda: FP_NOW)
     d = tmp_path / "batch-synthetic-b"
     d.mkdir()

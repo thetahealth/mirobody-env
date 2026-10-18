@@ -25,8 +25,13 @@ from pathlib import Path
 
 import pytest
 
-from haenv.physio import apply as physio_apply
-from haenv.physio import audit, bounds, coupling, kernel, noise, superpose
+from haenv.world.physio import apply as physio_apply
+from haenv.world.physio import audit
+from haenv.world.physio import bounds
+from haenv.world.physio import coupling
+from haenv.world.physio import kernel
+from haenv.world.physio import noise
+from haenv.world.physio import superpose
 
 REPO = Path(__file__).resolve().parents[1]
 KERNEL_TABLE = REPO / "registry" / "physio_kernels.yaml"

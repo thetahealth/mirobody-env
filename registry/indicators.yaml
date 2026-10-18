@@ -946,7 +946,16 @@ indicators:
   resting_hr:
     kind: monitoring
     unit: "bpm"
-    ndigits: 0
+    # Two decimals (world 1.4 wearable calibration): the wearable's resting HR is a float, as in the
+    # real Fitbit export, not the app's integer display. LifeSnaps calibration split (55 people,
+    # 3,468 days, CC BY 4.0): 99.6% non-integer, 13-15 decimals. Rounding the real series to d
+    # decimals and comparing with the unrounded one (W3 noise features, grouped C2ST, 4 CV seeds):
+    # d=0 C2ST 0.912, tail ratio q95/median IQR [2.0, 2.8], same-value adjacent days 0.31; d=1
+    # 0.519, but 0.037 of adjacent days repeat (real 0); d=2 0.506, tail [2.068, 2.556, 3.131]
+    # against the unrounded [2.065, 2.565, 3.108], no repeats. d=2 is the least that keeps both.
+    # Basis: rounding-resolution comparison on the LifeSnaps calibration split; review pending.
+    # Integer rounding pinned the world's tail ratio near 2.0 in calibration trials.
+    ndigits: 2
     migrated_from: haenv/events.py::METRICS
     reference_range: {low: null, high: null, note: "日采可穿戴流,findings.yaml 无参考区间"}
     payload_range: {low: 30.0, high: 140.0, migrated_from: registry/physio_streams.yaml}
@@ -1182,7 +1191,7 @@ indicators:
     relation_role: "orphan —— 唯一关系 R5 TSH↔FT4 因 FT4 不在面板而不触发"
 
   # === Derived wearable streams ===============================
-  # Computed from a parent stream by `haenv/wearable.py`; listed only so their precision is
+  # Computed from a parent stream by `haenv/world/observations/wearable.py`; listed only so their precision is
   # declared here. No cohorts (a derived quantity has no distribution of its own).
   active_burn:
     kind: monitoring

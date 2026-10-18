@@ -259,7 +259,7 @@ family is not in the headline score. Labels come from the maintainers, so indepe
 incomplete; model labelers need a human-labeled calibration subset.
 
 **`provisional`**: a scoring dimension without blind-review validity; never used on an externally
-published leaderboard (`haenv/scoring.py`).
+published leaderboard (`src/haenv/scoring/legacy.py`).
 
 ---
 
@@ -281,7 +281,7 @@ The last shape is the hardest to see and more cases never fix it. Before conclud
 
 | Term | What it is |
 |---|---|
-| **batch** | one run's artifacts: `results/<task>/<job>/<YYYYmmdd-HHMMSS>/` |
+| **batch** | one run's artifacts: `artifacts/results/<task>/<job>/<YYYYmmdd-HHMMSS>/` |
 | `cases.jsonl` | the emitted cases (with ground truth); `run`/`report` read only this |
 | `responses.jsonl` | raw model responses; a judge change is a recompute, not a rerun |
 | `recompute_judges.py` | recomputes from stored responses: gold-free judges by default, all HAEnv judges with `--full`, the kernel's five tracks with `--tracks`; offline-baseline rows are kept as-is |
@@ -300,12 +300,12 @@ row of `eval.jsonl`.
 | Term | What it is |
 |---|---|
 | **`W`** (World Truth) | world ground truth: outcome, true driver, adjudication, reversal points, causal chain |
-| **`Q`** (Question Truth) | question ground truth: framing, distractor primitives, `gold.derivation`; references `W` via `world_ref`, never embeds it (`haenv/wq.py`) |
+| **`Q`** (Question Truth) | question ground truth: framing, distractor primitives, `gold.derivation`; references `W` via `world_ref`, never embeds it (`src/haenv/world/wq.py`) |
 | `world_ref` | `Q.world_ref = {world_id, world_truth_hash}` is a case→world reference; the per-row field in §7 is provenance |
 | **`D_case`** | prompt difficulty, a four-tier ladder: `C0 clean` / `C1 noisy` (irrelevant streams, device artifacts, non-random missingness) / `C2 confounded` (a fork to resolve first, e.g. non-adherence vs. non-response) / `C3 overloaded` (information overload, multi-system presentation) |
-| **`D_probe`** | framing difficulty, declared per probe in `probes/*.yaml` |
+| **`D_probe`** | framing difficulty, declared per probe in `benchmarks/probes/*.yaml` |
 | **`ProbeSpec`** | one framing's declaration (mode / framing / answer_space / hint_level / budget) |
-| **frozen segment** | the file lists `JUDGING` and `GENERATION` in `tools/make_freeze.py`. A judging change moves `judging_sha16` and stored scores must be recomputed; a generation change moves `world_sha` and packs must be regenerated. Comments and docstrings enter neither fingerprint |
+| **frozen segment** | the file lists `JUDGING` and `GENERATION` in `tools/release/make_freeze.py`. A judging change moves `judging_sha16` and stored scores must be recomputed; a generation change moves `world_sha` and packs must be regenerated. Comments and docstrings enter neither fingerprint |
 | **N2** | every track needs at least one baseline that actually loses points on it |
 | **six tracks** | Tools / Repair / Alternative / Coherence / Evidence / Scope — the process-verifier tracks |
 

@@ -25,8 +25,8 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from haenv import events as E                                    # noqa: E402
-from haenv import wearable as wear                               # noqa: E402
+import haenv.world.observations.events as E                                    # noqa: E402
+import haenv.world.observations.wearable as wear                               # noqa: E402
 
 
 def _raw(ld: dict, distractors: list[str]) -> types.SimpleNamespace:
@@ -53,9 +53,9 @@ def test_rule_without_distractors_is_the_old_rule():
 
 
 def _build(case_id: str):
-    from haenv import build as B
-    from haenv.job import load_job
-    job = load_job(ROOT / "inputs" / "ddx-timeline.job.yaml")
+    import haenv.world.generation.build as B
+    from haenv.app.job import load_job
+    job = load_job(ROOT / 'benchmarks' / 'inputs' / 'ddx-timeline.job.yaml')
     cs = next(c for c in job.cases if c.case_id == case_id)
     return B.build_case(cs)
 

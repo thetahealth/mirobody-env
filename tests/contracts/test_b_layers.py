@@ -51,7 +51,7 @@ def test_b1_ground_truth_excludes_observation_artifacts(job, cid, cls, week):
 
 def test_b1_negative_control_truth_shift_is_seen(monkeypatch):
     """Negative control: shifting the truth series by hand must be reported."""
-    from haenv import build as B
+    import haenv.world.generation.build as B
     orig = B._inject_events_verified
 
     def shifted(raw, *a, **k):
@@ -85,7 +85,7 @@ def _b2_changes(b) -> list[str]:
     # The home scale shows 0.1 kg, and `apply_post_injection` puts the observed weight on that grid
     # before any reading is copied forward. A reading may therefore equal its own artifact-layer
     # value on the 0.1 kg grid, or the reading before it; nothing else.
-    from haenv.physio.noise import weight_on_scale_grid
+    from haenv.world.physio.noise import weight_on_scale_grid
     ar = sorted(C.series(b.layers["artifacts"]["longitudinal_data"], "weight").items())
     po = sorted(C.series(b.layers["post_inject"]["longitudinal_data"], "weight").items())
     if [d for d, _ in ar] != [d for d, _ in po]:
@@ -113,7 +113,7 @@ def test_b2_post_injection_only_copies_readings(job, cid, noise):
 
 def test_b2_negative_control_revalued_reading(monkeypatch):
     """Negative control: a post-injection layer that adds 1 kg to one reading must be caught."""
-    from haenv import post_inject as PI
+    import haenv.world.clinical.post_inject as PI
     orig = PI.apply_post_injection
 
     def bump(raw, **k):
@@ -135,7 +135,7 @@ def test_b2_negative_control_coarser_scale_grid(monkeypatch):
     """Negative control for the grid allowance: a post-injection layer that rounds weight to
     0.5 kg (not the registered 0.1 kg) must be caught, so the allowance is the grid itself and
     not any rounding."""
-    from haenv import post_inject as PI
+    import haenv.world.clinical.post_inject as PI
     orig = PI.apply_post_injection
 
     def coarse(raw, **k):
@@ -266,7 +266,7 @@ def test_b4_stream_order_does_not_reveal_the_artifact_tier(job, cid, cls, week):
 def test_b4_negative_control_artifacts_before_events(monkeypatch):
     """Negative control: with every noise class applied before the events layer, a spike
     case must list `weight_ref` somewhere else than the same case without it."""
-    from haenv import build as B
+    import haenv.world.generation.build as B
     import haenv_kernel.noise as N
     job, cid = COHORT[0]
     base = C.spec_of(job, cid)
@@ -297,7 +297,7 @@ def _ref(b):
 def _b5_mismatch(clean, noisy, cid) -> list[str]:
     """The artifact case's clinic-scale reference against the clean case's, and against the
     clean truth plus the clinic-scale offset (the reference rounds to 0.01 kg)."""
-    from haenv import post_inject as PI
+    import haenv.world.clinical.post_inject as PI
     if "post_inject" not in clean.layers or "post_inject" not in noisy.layers:
         return ["post-injection not reached"]
     ref, cref = _ref(noisy), _ref(clean)
@@ -335,7 +335,7 @@ def test_b5_negative_control_kernel_reference_kept(monkeypatch):
     from the observed series before the artifact must be reported by both halves of B5."""
     import copy
 
-    from haenv import build as B
+    import haenv.world.generation.build as B
     import haenv_kernel.noise as N
     orig = B._inject_observation_artifacts
 

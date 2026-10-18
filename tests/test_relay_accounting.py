@@ -4,9 +4,10 @@ import json
 
 import pytest
 
-from haenv.paid_completion import AccountedCompletion
-from haenv.relay_accounting import RelayPrices, RelayBilling
-from haenv.semantic_budget import BudgetLedger, BudgetExceeded
+from haenv.runtime.completion import AccountedCompletion
+from haenv.runtime.relay_accounting import RelayPrices, RelayBilling
+from haenv.scoring.semantic.budget import BudgetLedger
+from haenv.scoring.semantic.budget import BudgetExceeded
 
 
 def metadata():
@@ -90,15 +91,15 @@ def test_billing_lookup_failure_does_not_erase_completion(tmp_path):
     def fail(_):raise OSError("secret URL must not be logged")
     p.cost_reader = fail
     assert p.request("r1", "q", settings, lambda _: response()) == response()
-    assert "secret" not in (tmp_path / "budget.json").read_text()
+    assert b"secret" not in (tmp_path / "budget.json.sqlite").read_bytes()
     assert ledger.snapshot()["requests"]["r1"]["status"] == "unknown_capped"
     saved = json.loads(next((tmp_path / "receipts").glob("*.json")).read_text())
     assert saved["response"] == response()
 
 
 def test_budgeted_stream_keeps_cost_even_when_no_answer(tmp_path, monkeypatch):
-    from haenv.evaluate import OpenAICompatSolver
-    from haenv.solver_accounting import SolverRequestAccountant
+    from haenv.app.evaluate import OpenAICompatSolver
+    from haenv.runtime.solver_accounting import SolverRequestAccountant
     import threading
     p, ledger, _ = make(tmp_path, [logrow()])
     solver = OpenAICompatSolver("s", "kimi-k3", "secret", 10, max_tokens=72000,
@@ -117,9 +118,10 @@ def test_budgeted_stream_keeps_cost_even_when_no_answer(tmp_path, monkeypatch):
 
 
 def test_preflight_and_bind_relay_use_its_verified_receipt_reader(tmp_path, monkeypatch):
-    from haenv.evaluate import OpenAICompatSolver, _const
-    from haenv.solver_accounting import prepare_accounting
-    import haenv.relay_accounting as relay
+    from haenv.app.evaluate import OpenAICompatSolver
+    from haenv.app.evaluate import _const
+    from haenv.runtime.solver_accounting import prepare_accounting
+    import haenv.runtime.relay_accounting as relay
     solver = OpenAICompatSolver("s", "kimi-k3", "secret", 10, max_tokens=72000, backend="relay")
     solver.pool = object()
     monkeypatch.setattr(relay, "fetch_metadata", lambda *a: metadata())

@@ -34,9 +34,10 @@ def scan(batch_dir: Path) -> dict:
     pipeline's own loaders, kernel JSON extractor and `evaluate._to_output`.
     """
     import haenv_llm_judge_demo as P
-    from haenv.evaluate import _to_output
-    from haenv.payloads import load_payloads, payload_source
-    from haenv.store import load_cases
+    from haenv.app.evaluate import _to_output
+    from haenv.app.artifacts.payloads import load_payloads
+    from haenv.app.artifacts.payloads import payload_source
+    from haenv.app.artifacts.store import load_cases
 
     resp_p, cases_p = batch_dir / "responses.jsonl", batch_dir / "cases.jsonl"
     for p in (resp_p, cases_p):

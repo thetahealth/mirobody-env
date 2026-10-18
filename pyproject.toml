@@ -2,13 +2,13 @@
 
 [project]
 name = "haenv"
-version = "1.2.2"
+version = "1.4.0.dev0"
 description = "A health-agent evaluation harness: author cases with hidden control variables, run models, get a report"
 requires-python = ">=3.10"
 dependencies = ["pyyaml>=6.0", "pydantic>=2.6"]
 readme = "README.md"
 license = "MIT"
-license-files = ["LICENSE", "LICENSE-DATA", "haenv_kernel/LICENSE"]
+license-files = ["LICENSE", "LICENSE-DATA", "src/haenv_kernel/LICENSE"]
 classifiers = ["Development Status :: 3 - Alpha", "Intended Audience :: Science/Research", "License :: OSI Approved :: MIT License", "Programming Language :: Python :: 3", "Topic :: Scientific/Engineering :: Artificial Intelligence"]
 
 [project.urls]
@@ -31,6 +31,16 @@ p4 = "haenv.p4.plugin:judges"
 [project.entry-points."haenv.pack2"]
 pack2 = "haenv.pack2.plugin:judges"
 
+[project.entry-points."haenv.p2"]
+p2 = "haenv.p2.plugin:judges"
+
+[project.entry-points."haenv.pack_readouts"]
+pack2 = "haenv.pack2.readout:pack"
+p2 = "haenv.p2.readout:pack"
+p3 = "haenv.p3.readout:pack"
+p4 = "haenv.p4.readout:pack"
+m2 = "haenv.m2.readout:pack"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
@@ -39,22 +49,23 @@ markers = ["world: world-layer contract tests (`tests/contracts/`): single-varia
 addopts = "-m 'not disk and not internal and not world'"
 
 [tool.hatch.build.targets.wheel]
-packages = ["haenv", "haenv_kernel", "verifier_core"]
+packages = ["src/haenv", "src/haenv_kernel", "src/verifier_core"]
 core-metadata-version = "2.3"
 exclude = ["**/__pycache__", "**/*.pyc"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "config.yaml" = "haenv/_data/config.yaml"
 "registry" = "haenv/_data/registry"
-"inputs" = "haenv/_data/inputs"
-"docs/anchor" = "haenv/_data/docs/anchor"
-"tools/make_freeze.py" = "haenv/_data/tools/make_freeze.py"
-"tools/attribute_failures.py" = "haenv/_data/tools/attribute_failures.py"
-"tools/relay_quota.py" = "haenv/_data/tools/relay_quota.py"
+"benchmarks/inputs" = "haenv/_data/benchmarks/inputs"
+"benchmarks/probes" = "haenv/_data/benchmarks/probes"
+"examples/extract-replay" = "haenv/_data/examples/extract-replay"
+"tools/generation/p3_gen_job.py" = "haenv/_data/tools/generation/p3_gen_job.py"
+"tools/generation/p4_gen_job.py" = "haenv/_data/tools/generation/p4_gen_job.py"
+"tools/validation/invariant_gates.py" = "haenv/_data/tools/validation/invariant_gates.py"
 
 [tool.hatch.build.targets.sdist]
 core-metadata-version = "2.3"
-exclude = ["/frozen/*.cases.jsonl", "/frozen/*.W.jsonl", "/results/", "/reports/", "/docs/figures/", "/tests/", "/config.local.yaml", "/docs/anchor/*", "!/docs/anchor/freeze-*.json", "!/docs/anchor/extract-replay/", "!/docs/anchor/clinician-placeholder/", "!/docs/anchor/CANARY.txt", "/.pytest_cache/", "**/__pycache__", "**/*.pyc"]
+exclude = ["/benchmarks/frozen/*.cases.jsonl", "/benchmarks/frozen/*.W.jsonl", "/results/", "/reports/", "/artifacts/", "/docs/figures/", "/tests/", "/config.local.yaml", "/.pytest_cache/", "**/__pycache__", "**/*.pyc"]
 
 [tool.uv.sources.haenv-plugin-demo]
 path = "examples/plugin_demo"

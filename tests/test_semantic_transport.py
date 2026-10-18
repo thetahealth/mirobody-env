@@ -3,9 +3,11 @@ from decimal import Decimal
 
 import pytest
 
-from haenv.semantic_budget import BudgetExceeded, BudgetLedger
-from haenv.semantic_judge import JudgeRequest
-from haenv.semantic_transport import PricedJudge, PriceSchedule
+from haenv.scoring.semantic.budget import BudgetExceeded
+from haenv.scoring.semantic.budget import BudgetLedger
+from haenv.scoring.semantic.judge import JudgeRequest
+from haenv.scoring.semantic.transport import PricedJudge
+from haenv.scoring.semantic.transport import PriceSchedule
 
 
 def metadata():
@@ -103,7 +105,7 @@ def test_durable_receipt_recovers_same_vote_without_another_charge(tmp_path):
 
 
 def test_crash_without_receipt_never_retries_a_reserved_vote(tmp_path):
-    from haenv.semantic_transport import ReconciledCallFailure
+    from haenv.scoring.semantic.transport import ReconciledCallFailure
     ledger = BudgetLedger(tmp_path / "budget.json", limit_usd="100")
     ledger.reserve("same", ".1")
     solver = Solver({"cost": .001})

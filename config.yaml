@@ -1,7 +1,7 @@
 # haenv configuration: models, backends, concurrency, timeouts and generation settings.
 # config.yaml is not covered by the freeze anchor; changing a model's settings changes the
 # measurement conditions of its readings without moving any fingerprint.
-# Schema, defaults and each field's role: haenv/settings.py (a misspelt key in a section is
+# Schema, defaults and each field's role: haenv/app/settings.py (a misspelt key in a section is
 # refused). `haenv <cmd> --set eval.workers=4` overrides one value for one run; every run
 # appends the resolved configuration and its layers to <batch>/config_runs.jsonl.
 
@@ -9,7 +9,7 @@
 kernel_path: haenv_kernel
 
 # Models under test. `vendor` is explicit because one vendor can route through several backends.
-# max_tokens follows the budget rule in haenv/llm.py (budget_for / recommended_budgets) and is
+# max_tokens follows the budget rule in haenv/runtime/llm.py (budget_for / recommended_budgets) and is
 # not silently lowered. Explicit provider-cap corrections define new run conditions;
 # historical responses retain their original declared budgets.
 #
@@ -115,17 +115,20 @@ backend_limits:
   _cli: 2
   _offline: 8
 
-# Evaluation scheduling (haenv/run_scheduler.py). Throughput only.
+# Evaluation scheduling (haenv/runtime/scheduler.py). Throughput only.
 #   workers: cells in flight per model; each model gets min(workers, its backend's cap,
 #            its cell count) threads. --workers N overrides it; 1 runs serially.
 #   model_workers: per-model pool sizes that replace `workers` for the named models.
-#   pooling: model = one pool per model, longest expected cell first (from a timing table
-#            when one is present); elastic = model pools sized to min(elastic_max, backend cap)
-#            with the backend slot going to the model with the most expected work left (the
-#            pools no longer starve the shared paid lanes once the fast models finish);
+#   pooling: elastic (default) = model pools sized to min(elastic_max, backend cap) with the
+#            backend slot going to the model with the most expected work left, so the threads a
+#            fast model frees go to the slow ones; model = one fixed pool of `workers` per model,
+#            longest expected cell first (from a timing table when one is present);
 #            backend = one pool per backend in task order.
 #   elastic_max: pool size of a model under `elastic` (a model named in model_workers keeps its
 #            own size). 16 = the largest single-model concurrency the backend probe exercised.
+#   model_caps: the most cells of a named model in flight under every pooling (a provider's
+#            per-model limit). Values: `haenv probe concurrency` (safe = 0.7 x the last step
+#            that passed; docs/design/concurrency-caps.md). Each process holds its own caps.
 #   model_wall_budget_s: seconds per model ("*" = every model not named), counted from the
 #            model's first cell; past it the model starts no further cell and the board
 #            reads its unstarted cells as timed out. Empty = no budget.
@@ -133,17 +136,38 @@ eval:
   workers: 8
   model_workers: {}
   model_wall_budget_s: {}
-  pooling: model
+  pooling: elastic
   elastic_max: 16
+  model_caps: {gemini-3.1-pro: 44, gemini-3.7-flash: 22, qwen3.7-flash: 44, deepseek-v4-pro: 5,
+               deepseek-v4-flash: 22, gpt-6-sol: 44, gpt-6-luna: 44, kimi-k3: 44,
+               minimax-m3: 44, glm-5.3-flash: 44}
 
 # Paid requests in flight across every process that shares one budget ledger, and the part
-# of that ceiling solver requests may not take (kept for judge requests). A ledger records
-# the ceiling it runs under; change it explicitly with `paid_slots.set_capacity` while no
-# paid request is in flight.
+# of each pool solver requests may not take (kept for judge requests). A backend named in
+# backend_request_limits has its own pool of that size, so a queue on one provider does not
+# hold back requests to another; every other backend shares global_request_limit. Change a
+# ceiling live with `paid_slots.set_capacity` (`--backend` for one backend's pool).
+# Throughput only: every request still reserves its upper bound on the ledger first.
 paid:
   require_upstream_pin: true   # refuse a billed run with an unpinned OpenRouter solver
   global_request_limit: 48
   judge_reserved_lanes: 3
+  # 44 = 0.7 x 64: past 64 in flight, dropped connections on the network path stopped every
+  # proxied model in `haenv probe concurrency` (docs/design/concurrency-caps.md).
+  backend_request_limits:
+    openrouter: 44
+    google: 44
+    dashscope: 44
+    relay: 16
+    openai: 16
+
+# `haenv probe concurrency`: tiny requests ramped per model to find the concurrency each
+# provider accepts (schema and defaults: haenv/app/settings.py ProbeSection). `extra_body` asks for
+# the least reasoning each route allows.
+probe:
+  extra_body:
+    google: {thinkingConfig: {thinkingLevel: low}}
+    dashscope: {enable_thinking: false}
 
 ai_dispatcher: ~/.local/bin/ai
 # KEY=VALUE file with backend API keys, injected into subprocesses only and never logged.
@@ -153,6 +177,10 @@ env_file: ${HAENV_ENV_FILE}
 # its model's stall deadline (run_scheduler.stall_deadline_s) is closed and retried.
 timeout_s: 900
 max_retries: 2
+# Seconds a thread keeps the interpreter lock before another may take it (Python's default is
+# 0.005). Hundreds of cell threads share a process: a short interval keeps the lock holder of a
+# ledger transaction from convoying every other writer (docs/design/paid-ledger.md).
+thread_switch_interval_s: 0.0005
 # New connections per process: paced by a token bucket, and a failure while connecting
 # (TCP, proxy CONNECT tunnel, TLS handshake; nothing sent yet) is retried with backoff.
 transport:
@@ -170,6 +198,7 @@ synth:
   gen_model: gemini-3.8-flash  # which config.models key generates cases
   gen_workers: 8        # results are collected in input order, identical to a serial run
   gen_timeout_s: 900    # per-call timeout for case generation (a reasoning model is slower to produce long JSON)
+  background: true      # pack 3's background layer; false = the pack as built before it existed (byte-identical)
   gen_cache: true       # caches prompt -> response (cases/_llm_cache/) so a re-run doesn't pay twice; --regen forces regeneration
 report:
   sample_cases: 5       # cases sampled into the report (3-10)

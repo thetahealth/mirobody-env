@@ -44,3 +44,46 @@ threads:
   HD-UNI-04:   {name: 肉芽肿线,       why: authored}
   HD-UNI-05:   {name: 胰岛素分泌线,    why: authored}
   HD-UNI-06:   {name: 胰腺外分泌线,    why: authored}
+
+  HD-UNI-07:
+    name: 心脏容量线
+    why: authored
+  HD-UNI-08:
+    name: 心律线
+    why: authored
+  HD-UNI-09:
+    name: 急性肾功能线
+    why: authored
+  HD-UNI-10:
+    name: 慢性肾功能线
+    why: authored
+  HD-UNI-11:
+    name: 胆道线
+    why: authored
+  HD-UNI-12:
+    name: 急性胰腺线
+    why: authored
+  HD-UNI-13:
+    name: 肝纤维化评估线
+    why: authored
+  HD-UNI-14:
+    name: 缺铁与失血线
+    why: authored
+  HD-UNI-15:
+    name: 尿路感染线
+    why: authored
+  HD-UNI-16:
+    name: 肺部感染线
+    why: authored
+  HD-UNI-17:
+    name: 慢性气流受限线
+    why: authored
+  HD-UNI-18:
+    name: 情绪与功能线
+    why: authored
+  HD-UNI-19:
+    name: 药物与肌肉线
+    why: authored
+  HD-UNI-20:
+    name: 胃排空线
+    why: authored

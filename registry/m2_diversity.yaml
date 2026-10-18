@@ -1,0 +1,100 @@
+# SYNTHETIC evaluation data; illustrative values are not diagnostic thresholds.
+version: 1
+allocation:
+  bridge_share:
+    value: 0.04
+    ours: true
+    source: docs/spec/spec.md
+    reason: Reduce the saturated legacy bridge from 10% to 4%; retain the 30% independent controls and assign the released slots to clinical frames. The 14 acute/chronic expansion diagnoses remain mandatory; prospective test-count tiers are profiles, not quotas. Coverage allocation, not prevalence.
+  comorbidity_share:
+    value: 0.30
+    ours: true
+    source: https://pubmed.ncbi.nlm.nih.gov/22579043/
+    scope: Barnett et al., Lancet 2012; 1,751,841 primary-care patients, 40 morbidities; multimorbidity in most patients aged at least 65, 23.2% overall.
+    reason: Enrich concurrent diagnostic lines from 20% to 30% while retaining the existing age/base-disease population and mandatory atomic-diagnosis coverage. This is a benchmark allocation, not an estimate of two simultaneously undiagnosed diseases; known background diseases also count in the cited study.
+  independent_share:
+    value: 0.30
+    ours: true
+    source: docs/spec/spec.md
+    reason: Retain the existing control share. No sourced primary-care denominator was found for unrelated benign complaints conditional on this selected cardiometabolic population; multimorbidity prevalence cannot supply it.
+  history_share:
+    value: 0.25
+    ours: true
+    source: registry/difficulty_r2.yaml#difficulty_r2.m2.historical_reuse_sources
+    reason: Upper end of the approved benchmark 20-25% benchmark range; reusable antibody/genetic/chronicity evidence only. This is not a measured visit-history prevalence.
+  classic_additional_share: {value: 0.02, ours: true, source: ours, reason: "Retain frozen bridges plus one additional classic case per N50; rare diagnoses remain available inside sourced comorbidity associations. Coverage allocation, not population prevalence."}
+incidental:
+  occurrence_share: {value: 1.0, ours: true, source: ours, reason: A matched clinical-content intervention on the M2 cohort; report separately from population prevalence.}
+  acting_share: {value: 0.5, ours: true, source: ours, reason: Same factor and source distribution on acting and inactive sides; timing and repeat results determine applicability.}
+  day_before_T: [85, 155]
+  repeat_days: [42, 63]
+  supplementary_encounters: [2, 3, 4, 5]
+  supplementary_encounters_source: {source: ours, ours: true, reason: Seeded sample of actual patient-reported events as supplemental encounter documentation; the count draw never reads a diagnosis or factor role.}
+  timing_source: {source: https://www.nice.org.uk/guidance/ng145/chapter/recommendations, scope: 1.2.10; thyroid retesting no sooner than six weeks, ours: true, reason: Common illustrative scheduling range; not a universal retest interval for other analytes.}
+  factors:
+    - id: exercise_alt
+      finding: ALT
+      source: https://pmc.ncbi.nlm.nih.gov/articles/PMC2291230/
+      scope: Controlled weightlifting study; aminotransferases can rise from muscle injury and normalize after exercise cessation. Exercise alone is not proof of the cause.
+      factor_text:
+        - 最近开始负重训练，训练后大腿和肩背酸痛。
+        - 平时很少运动，这次连续做了力量训练，次日肌肉酸胀。
+      active_context: 抽血前两天有上述训练，暂停训练后肌肉酸痛消退；同实验室复查见下。
+      inactive_context: 上述训练在第一次抽血之后才开始；第一次抽血前并未运动。该次采血前有短期胃肠不适，后已恢复；同实验室复查见下，原异常原因未完全确定。
+      high_ratio: [1.25, 1.85]
+      normal_ratio: [0.45, 0.85]
+      values_source: {source: registry/findings.yaml#findings.ALT, ours: true, reason: Illustrative mild abnormality and normal repeat within the printed sex-specific reference range; no new disease threshold.}
+      repeat_note: 胆红素、碱性磷酸酶正常，无黄疸；复查前已停止剧烈训练和临时保健品。单次转氨酶异常仍须核对用药与代谢背景。
+    - id: illness_tsh
+      finding: TSH
+      source: https://www.nice.org.uk/guidance/ng145/chapter/recommendations
+      scope: 1.2.6, 1.2.8, 1.2.10; acute illness can affect thyroid tests, elevated TSH requires FT4, repeat after at least six weeks.
+      factor_text:
+        - 那段时间有咽痛和低热，同住者也生病了，几天后退热。
+        - 当时短期腹泻、吃得少，休息补水后症状消退。
+      active_context: 第一次采血在病后恢复期，未开始甲状腺药物；恢复后同方法复查见下。
+      inactive_context: 这次不适发生在复查之后，第一次采血时没有急性病。此前外院一次读数偏高，未开始甲状腺药物，同方法复查见下。
+      high_value: [5.1, 7.4]
+      normal_value: [1.4, 3.2]
+      values_source: {source: registry/findings.yaml#findings.TSH, ours: true, reason: "Illustrative mild TSH rise and normal repeat, well away from a treatment decision boundary."}
+      repeat_note: 两次 FT4 均在本实验室参考范围内；没有使用生物素补充剂。一次轻度 TSH 升高不能确认持续的甲状腺功能异常。
+    - id: meal_glucose
+      finding: FBG
+      source: https://pmc.ncbi.nlm.nih.gov/articles/PMC11635041/
+      scope: ADA Standards of Care 2025, diagnosis section; fasting means no caloric intake for at least eight hours, and absent unequivocal hyperglycemia diagnosis requires confirmation.
+      factor_text:
+        - 那阵子早晨常吃面包，有时配含糖饮料。
+        - 工作日早餐一般是面包和牛奶。
+      active_context: 第一次标本并非空腹，原单沿用了空腹参考区间；后来按空腹要求重采，见下。
+      inactive_context: 上述进食是在复查采血之后，不能解释之前的读数。第一次标本的登记注明急性胃肠不适恢复期；恢复后空腹重采见下。
+      high_value: [6.4, 7.8]
+      normal_value: [4.5, 5.4]
+      values_source: {source: registry/findings.yaml#findings.FBG, ours: true, reason: "Illustrative isolated result and repeat, not a new diabetes diagnostic cutoff; retain existing diabetes/background treatment separately."}
+      repeat_note: 复查注明至少八小时没有热量摄入；应结合原有慢病和治疗核对，单次非空腹或病中读数不足以判断当前病情。
+presentations:
+  source: {cite: Existing condition findings and rival catalogue; Buzzetti et al. 2020; Endocrine Society PAI 2016; NICE NG145, urls: [https://pmc.ncbi.nlm.nih.gov/articles/PMC7809717/, https://www.endocrine.org/clinical-practice-guidelines/primary-adrenal-insufficiency, https://www.nice.org.uk/guidance/ng145/chapter/recommendations], ours: true, reason: Authored overlapping patient language; objective confirmation requirements are the existing sourced profiles, not new scoring rules.}
+  groups:
+    glycemic:
+      components: [JD-LADA, JD-IR]
+      competing: 血糖相关症状需结合原治疗、饮食与胰岛功能评估；仅凭体型或体重变化不能判断病因。
+      complaints:
+        - [最近口干，喝水比以前多，也更常去厕所。, 最近总想喝水，夜里也会起来上厕所。]
+        - [这阵子体重和食欲都有变化，但没有详细记每天吃多少。, 衣服松紧变了，自己也说不清是不是饭量变了。]
+        - [有些天很乏力，看东西也没以前清楚。, 下午容易累，偶尔看字发糊。]
+        - [调整生活习惯后还有不舒服，想再查查。, 饮食已经注意了一段时间，还是觉得身体状态不对。]
+    adrenal:
+      components: [JD-ADDISON]
+      competing: 乏力和胃肠不适可伴睡眠情绪问题、短期胃肠病或内分泌异常；须按病程和检查综合判断。
+      complaints:
+        - [这段时间没精神，食欲不如以前。, 容易累，饭吃得少了些。]
+        - [站起来有时头晕，坐一会儿能好些。, 早晨起身时发晕，喝水后稍好。]
+        - [最近肤色看起来和过去不一样，家人也注意到了。, 手背和嘴边的颜色似乎深了些。]
+        - [胃口不好，时不时恶心，吃饭没有以前规律。, 最近有恶心和腹部不适，怀疑是不是胃的问题。]
+    thyroid:
+      components: [JD-HYPO, JD-GRAVES]
+      competing: 体重、精力和排便变化也可能随睡眠、饮食、药物或其他甲状腺病因出现；需甲功及必要的病因检查。
+      complaints:
+        - [体重最近变了，吃饭和活动也不太规律。, 近来裤腰松紧变了，想不明白是哪件事影响的。]
+        - [感觉容易累，睡觉也不踏实。, 白天没精神，有时夜里睡不好。]
+        - [最近排便习惯和以前不一样。, 上厕所的次数有变化，自己也说不准是什么原因。]
+        - [身体对冷热的感觉变了，想看看是否需要检查。, 最近出汗和精神状态都与以前不一样。]

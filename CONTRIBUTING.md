@@ -10,17 +10,17 @@ uv run haenv --help                 # uv sets up the environment on first run; t
 Four commands run the whole pipeline (zero model calls, no cost):
 
 ```bash
-uv run haenv build  inputs/example-ew.job.yaml --gen deterministic --fresh   # generate the cases in a new batch
-uv run haenv verify inputs/example-ew.job.yaml --gen deterministic   # check every item
-uv run haenv run    inputs/example-ew.job.yaml --offline             # answer with the offline stub
-uv run haenv report inputs/example-ew.job.yaml                       # score and render the report
+uv run haenv build  benchmarks/inputs/example-ew.job.yaml --gen deterministic --fresh   # generate the cases in a new batch
+uv run haenv verify benchmarks/inputs/example-ew.job.yaml --gen deterministic   # check every item
+uv run haenv run    benchmarks/inputs/example-ew.job.yaml --offline             # answer with the offline stub
+uv run haenv report benchmarks/inputs/example-ew.job.yaml                       # score and render the report
 ```
 
 Two self-checks feed every check a deliberately broken input and require it to be caught:
 
 ```bash
-uv run python tools/verify_selftest.py
-uv run python tools/leak_probe_selftest.py
+uv run python tools/testing/verify_selftest.py
+uv run python tools/testing/leak_probe_selftest.py
 ```
 
 CI runs these on Python 3.10 and 3.12, plus the tests below, a wheel install into a clean environment and
@@ -61,7 +61,7 @@ shown to stay quiet when it should, has not been tested. When you add a check, a
 
 ## 3. After you change scoring or generation code
 
-`docs/anchor/freeze-2026-09-02.json` records which version of the code the frozen question packs were
+`registry/anchors/freeze-2026-09-02.json` records which version of the code the frozen question packs were
 produced under. Files in `haenv/` and parts of `registry/` fall into two segments (`generation` and
 `judging`); changing either one moves that segment's fingerprint. Report which behavior changed
 and rerun the relevant self-checks or offline example.
@@ -70,12 +70,12 @@ When intentionally recording a new source version, the snapshot can be refreshed
 evaluation artifacts:
 
 ```bash
-uv run python tools/make_freeze.py --revision <current+1> --segments-only \
+uv run python tools/release/make_freeze.py --revision <current+1> --segments-only \
   --supersedes <current> --why "one sentence describing what you changed"
 ```
 
 Current revision:
-`python -c "import json,pathlib;print(json.loads(pathlib.Path('docs/anchor/freeze-2026-09-02.json').read_text())['revision'])"`
+`python -c "import json,pathlib;print(json.loads(pathlib.Path('registry/anchors/freeze-2026-09-02.json').read_text())['revision'])"`
 
 It only recomputes the source fingerprints; the question packs do not change by one byte.
 

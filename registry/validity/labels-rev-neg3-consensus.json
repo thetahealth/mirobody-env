@@ -1,0 +1,627 @@
+{
+ "models": [
+  "gemini-3.1-pro",
+  "gpt-5.4"
+ ],
+ "backends": [
+  "google",
+  "openai"
+ ],
+ "note": "跨厂共识标注,**人类锚的代理不是替代**;不一致一律 undetermined,依赖它的判据点记缺席(不进分母、不折 0、不折满分)",
+ "per_model": {
+  "R3beec4878d6": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R35493b4fcb7": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R3cc2271e316": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R3e40b64964e": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R329f0e69850": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R39ea2e0b99f": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R39a38d5614a": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R3118f498139": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R3849d7bec0c": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R3f06bf3c597": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R33a294b6e47": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R3e745f066ba": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": false,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": false,
+    "anchor_should_change": true
+   }
+  },
+  "R3ee5d3718bd": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R3a265edd98d": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R35380e62d30": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R39ba85e5257": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": false,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R30fac4ce0b8": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R377c748960c": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R34df17106b4": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R3aa91205fe7": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R331ebc455c9": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": false,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R35de2f8fc43": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": false,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": false,
+    "anchor_should_change": true
+   }
+  },
+  "R36d38d10869": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R36983be2507": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R3ea588eb412": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R3cb667b6589": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R36b696338c4": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R3a8ba8cf1c6": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R39882a43142": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R30591917b3a": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R3dd1bc49361": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R337d623d958": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R367d1429ae5": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R337b542ce15": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": false
+   }
+  },
+  "R3cbbe4a3c58": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": true,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  },
+  "R3dcfd1472ec": {
+   "gemini-3.1-pro": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   },
+   "gpt-5.4": {
+    "anchor_changed_enum": false,
+    "anchor_changed_list": true,
+    "anchor_should_change": true
+   }
+  }
+ },
+ "labels": {
+  "R3beec4878d6": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R35493b4fcb7": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R3cc2271e316": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": false
+  },
+  "R3e40b64964e": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R329f0e69850": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": true,
+   "anchor_should_change": null
+  },
+  "R39ea2e0b99f": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": true,
+   "anchor_should_change": null
+  },
+  "R39a38d5614a": {
+   "anchor_changed_enum": null,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R3118f498139": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R3849d7bec0c": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": false
+  },
+  "R3f06bf3c597": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": false
+  },
+  "R33a294b6e47": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": null
+  },
+  "R3e745f066ba": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": false,
+   "anchor_should_change": null
+  },
+  "R3ee5d3718bd": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R3a265edd98d": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R35380e62d30": {
+   "anchor_changed_enum": null,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R39ba85e5257": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": null,
+   "anchor_should_change": true
+  },
+  "R30fac4ce0b8": {
+   "anchor_changed_enum": null,
+   "anchor_changed_list": true,
+   "anchor_should_change": null
+  },
+  "R377c748960c": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": false
+  },
+  "R34df17106b4": {
+   "anchor_changed_enum": null,
+   "anchor_changed_list": true,
+   "anchor_should_change": null
+  },
+  "R3aa91205fe7": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": null
+  },
+  "R331ebc455c9": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": null,
+   "anchor_should_change": true
+  },
+  "R35de2f8fc43": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": false,
+   "anchor_should_change": true
+  },
+  "R36d38d10869": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R36983be2507": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R3ea588eb412": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R3cb667b6589": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R36b696338c4": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R3a8ba8cf1c6": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": false
+  },
+  "R39882a43142": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R30591917b3a": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": null
+  },
+  "R3dd1bc49361": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R337d623d958": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R367d1429ae5": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": true,
+   "anchor_should_change": false
+  },
+  "R337b542ce15": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": null
+  },
+  "R3cbbe4a3c58": {
+   "anchor_changed_enum": true,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  },
+  "R3dcfd1472ec": {
+   "anchor_changed_enum": false,
+   "anchor_changed_list": true,
+   "anchor_should_change": true
+  }
+ }
+}

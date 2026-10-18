@@ -25,7 +25,7 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from haenv.evaluate import load_env_file                             # noqa: E402
+from haenv.app.evaluate import load_env_file                             # noqa: E402
 
 
 def _write(text: str) -> str:

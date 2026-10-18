@@ -39,8 +39,8 @@ _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
 from haenv import judges as J                        # noqa: E402
-from haenv import mount_table as MT                  # noqa: E402
-from haenv import mount_coverage as MC                  # noqa: E402
+import haenv.scoring.mounts.table as MT                  # noqa: E402
+import haenv.scoring.mounts.coverage as MC                  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -352,7 +352,7 @@ def test_multi_column_coverage_is_reported_honestly():
     #    control takes the side that can go red: remove a `profile`, and it must
     #    be counted back immediately.
     import dataclasses
-    from haenv import mounting as _MG
+    import haenv.scoring.mounts.dispatch as _MG
     _before = _MG.BY_GEOMETRY["slices"]
     _MG.BY_GEOMETRY["slices"] = dataclasses.replace(_before, profile="")
     try:

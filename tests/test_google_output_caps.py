@@ -1,10 +1,10 @@
 """A configured Google budget never exceeds the provider's published output cap."""
-from haenv.cli import load_cfg
+from haenv.app.cli import load_cfg
 
 
 def test_every_native_google_model_fits_its_official_output_cap():
     """A configured budget above the provider's maximum output is refused by native accounting."""
-    from haenv.native_accounting import NativePrices
+    from haenv.runtime.native_accounting import NativePrices
     models = load_cfg()["models"]
     seen = 0
     for key, spec in models.items():

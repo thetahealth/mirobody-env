@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Association clusters: pairs of diseases that share susceptibility and are diagnosed and treated separately,
 # so the gold stays `comorbidity` (two work-ups). Kept apart from `causal_clusters.yaml` (one causal chain, gold
-# unified, pairing forbidden). `haenv/registry.py:load_association_pairs()` reads this file.
+# unified, pairing forbidden). `haenv/resources/registry.py:load_association_pairs()` reads this file.
 #
 #   or / measure   literature effect size (OR unless `measure` says RR); null = no figure found
 #   overrides_causal_cluster   the pair sits in a causal cluster too; this entry lets it be composed anyway

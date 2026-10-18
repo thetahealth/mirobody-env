@@ -36,9 +36,11 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import gates  # noqa: E402
-from haenv.build import (CLINICAL_SPEC, _clinical_baselines,  # noqa: E402
-                         clinical_cohort, clinical_plan)
+import haenv.scoring.gates as gates  # noqa: E402
+from haenv.world.generation.build import CLINICAL_SPEC
+from haenv.world.generation.build import _clinical_baselines
+from haenv.world.generation.build import clinical_cohort
+from haenv.world.generation.build import clinical_plan
 
 DEVICES = ["smart_scale", "lab_panel", "wearable", "cgm", "bp_cuff"]
 
@@ -127,7 +129,7 @@ def test_declared_diabetes_keeps_the_calibrated_baseline():
     """
     import statistics
 
-    from haenv import indicators as I
+    import haenv.world.clinical.indicators as I
     # The registered T2D median is 8.0, the measured per-patient p50. A median of 7.4 taken
     # from a different calibration than `p_abnormal` (0.926) would solve to sigma = 0.145,
     # below the measured between-patient sigma of 0.215, which is impossible.
@@ -165,7 +167,7 @@ def test_missing_cohort_raises_instead_of_falling_back():
     not the absence of one particular cell, and a real cell can be filled in at any time --
     which would silently turn this negative control green.
     """
-    from haenv import indicators as I
+    import haenv.world.clinical.indicators as I
     with pytest.raises(I.IndicatorUnregistered, match="cohort"):
         I.baseline("HbA1c", "__never_registered_disease__")
 

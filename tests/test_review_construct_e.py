@@ -22,7 +22,8 @@ for _p in (str(_ROOT), str(_ROOT / "core")):
         sys.path.insert(0, _p)
 
 import haenv_kernel.verifier as V                                        # noqa: E402
-from haenv.analytics import gate_multiplier, review_macro_of            # noqa: E402
+from haenv.scoring.analysis.gates import gate_multiplier
+from haenv.scoring.analysis.decisions import review_macro_of            # noqa: E402
 from haenv.judges import judge_slices_review_flag, judge_slices_safety_gates  # noqa: E402
 
 RG, PC = "missing_clinician_review_flag", "premature_closure"

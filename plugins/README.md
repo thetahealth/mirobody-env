@@ -1,24 +1,29 @@
-# plugins/
+# Plugins
 
-Entry-point shims for judge groups whose code lives in this repo. `haenv/job.py` loads a job's
-`plugins:` groups through `importlib.metadata.entry_points`, which only sees installed
-distributions; a `*.dist-info` directory on `sys.path` is one, so putting this directory on
-`PYTHONPATH` makes the group discoverable without installing anything into a shared venv.
+The main distribution registers its built-in M2/P2/P3/P4 judge entry points when installed.
+`src/haenv/app/job.py` discovers a job's `plugins:` groups through
+`importlib.metadata.entry_points`. The distribution shims in this directory support explicit
+checkout integration; an editable installation supplies the source namespaces without putting
+the repository root on `PYTHONPATH`.
 
-| group | entry point | used by |
+| Group | Entry point | Example job |
 |---|---|---|
-| `haenv.m2` | `haenv.m2.plugin:judges` | `inputs/m2-core.job.yaml`, `inputs/m2-pack1.job.yaml` |
-| `haenv.pack2` | `haenv.pack2.plugin:judges` | `inputs/pack2-triage.job.yaml` |
-| `haenv.p3` | `haenv.p3.plugin:judges` | `inputs/p3-meds.job.yaml` |
-| `haenv.p4` | `haenv.p4.plugin:judges` | `inputs/p4-followup.job.yaml` |
+| `haenv.m2` | `haenv.m2.plugin:judges` | `benchmarks/inputs/m2-pack1.job.yaml` |
+| `haenv.pack2` | `haenv.pack2.plugin:judges` | `benchmarks/inputs/pack2-triage.job.yaml` |
+| `haenv.p2` | `haenv.p2.plugin:judges` | The registered P2 contract. |
+| `haenv.p3` | `haenv.p3.plugin:judges` | `benchmarks/inputs/p3-meds.job.yaml` |
+| `haenv.p4` | `haenv.p4.plugin:judges` | `benchmarks/inputs/p4-followup.job.yaml` |
 
-    PYTHONPATH=<repo>:<repo>/plugins python -m haenv build inputs/m2-core.job.yaml --gen deterministic --fresh
+From an installed checkout, use the public command for a deterministic build:
 
-Each group registers through the shared skeleton (`haenv/pack_skeleton.py:register_pack`) and its
-emission gate is the shared one (`haenv/shared_audit.py`, SA-1 + SA-8) on the pack's declaration. An
-emitted batch is published only after the shared batch audit passes, which writes the audit marker
-that `haenv run` requires on a pack's cells:
+```sh
+uv run haenv build benchmarks/inputs/m2-core.job.yaml --gen deterministic --fresh
+```
 
-    PYTHONPATH=<repo> python tools/pack_audit.py --pack p4 --batch <batch> --out <dir>
-    ... --pack pack2 --job inputs/pack2-triage.job.yaml
-    ... --pack m2 --job inputs/m2-pack1.job.yaml --ref <v1.0.1 deterministic ddx-workup batch>
+Pack and view declarations live in `src/haenv/contracts/pack.py`; registration and explicit
+application hooks live in `src/haenv/app/packs.py`. The shared emission and batch audit is in
+`src/haenv/world/validation/shared_audit.py`. A batch's passing audit marker remains required
+before evaluation; the command is `tools/validation/pack_audit.py`.
+
+The [documentation index](../docs/README.md) explains package responsibilities and the
+[external task contract](../docs/design/external-task-contract.md) describes extensions.

@@ -105,8 +105,8 @@ def _judge(out, vp, ctx):
 
 
 def _ensure_registered():
-    from haenv import gold_kinds as GK
-    from haenv import mount_table as MT
+    import haenv.scoring.gold_kinds as GK
+    import haenv.scoring.mounts.table as MT
     from haenv.judges import Judge, register_judge
 
     if NAME not in {r.name for r in GK.RULES}:
@@ -169,7 +169,7 @@ def _load_from_pool(ref: dict):
                  if x.strip() and json.loads(x).get("item_id") == iid), None)
     # The gold rows carry the canary strings under `canary.FIELD`; drop them before
     # the row becomes `adjudication.attrib`.
-    from haenv import canary as _canary
+    import haenv.provenance.canary as _canary
     gold = next((_canary.strip_row(json.loads(x)) for x in gp.read_text(encoding="utf-8").splitlines()
                  if x.strip() and json.loads(x).get("item_id") == iid), None)
     if item is None or gold is None:
@@ -181,7 +181,7 @@ def _gold_block(spec: dict):
     """`external_gold` block factory: spec -> `adjudication.attrib`, or `None` if the case declares
     no `attrib_payload`.
     """
-    from haenv import external_gold as EG
+    import haenv.contracts.external_gold as EG
     ref = (spec.get(EG.SLOT) or {}).get(LATENT_KEY)
     if not isinstance(ref, dict):
         return None
@@ -190,7 +190,7 @@ def _gold_block(spec: dict):
 
 
 def _ensure_gold_block():
-    from haenv import external_gold as EG
+    import haenv.contracts.external_gold as EG
     if "attrib" in EG.BLOCKS:
         return
     EG.register_gold_block(
@@ -234,7 +234,7 @@ def _probe_block(spec: dict):
     """Prompt side: the pool item is handed to the solver as-is (items were filtered at export and
     never contain `gold`).
     """
-    from haenv import external_gold as EG
+    import haenv.contracts.external_gold as EG
     ref = (spec.get(EG.SLOT) or {}).get(LATENT_KEY)
     if not isinstance(ref, dict):
         return None
@@ -257,13 +257,13 @@ PROBE = {
 
 
 def _ensure_probe():
-    from haenv import external_gold as EG
+    import haenv.contracts.external_gold as EG
     if PROBE["probe_id"] not in EG.PROBES:
         EG.register_probe(PROBE, source="haenv_attrib_demo")
 
 
 def _ensure_framing():
-    from haenv import external_gold as EG
+    import haenv.contracts.external_gold as EG
     if FRAMING in EG.FRAMINGS:
         return
     EG.register_framing(

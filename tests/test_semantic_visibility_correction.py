@@ -6,12 +6,15 @@ from pathlib import Path
 
 import pytest
 
-from haenv.semantic_inputs import anonymous_prompt
-from haenv.semantic_judge import JudgeTask
-from haenv.semantic_rubric import load_policy, make_rubric
-from haenv.semantic_pipeline import _reference, digest
-from haenv.semantic_corrections import prepare_correction, validate_correction
-from haenv.semantic_visibility import correct_reference
+from haenv.scoring.semantic.inputs import anonymous_prompt
+from haenv.scoring.semantic.judge import JudgeTask
+from haenv.scoring.semantic.rubric import load_policy
+from haenv.scoring.semantic.rubric import make_rubric
+from haenv.scoring.semantic.pipeline import _reference
+from haenv.scoring.semantic.pipeline import digest
+from haenv.scoring.semantic.corrections import prepare_correction
+from haenv.scoring.semantic.corrections import validate_correction
+from haenv.scoring.semantic.visibility import correct_reference
 
 
 def reference(visible, truth=True):
@@ -28,7 +31,7 @@ def base_run(tmp_path):
         answer={'answer_text':'No data','differential':[{'diagnosis':'A'}]}
         criteria,rubric=make_rubric(ref,answer,policy)
         prompt,txt=anonymous_prompt(criteria,ref,answer,evidence_ids=True)
-        from haenv.judge_evidence import evidence_catalogue
+        from haenv.scoring.judge_evidence import evidence_catalogue
         task=JudgeTask('base',tuple(criteria),prompt,txt,policy['judge']['model_id'],policy['version'],
                        evidence_catalog=evidence_catalogue(txt)[0])
         rows.append({'key':str(i),'status':'ready','task':asdict(task),'rubric':rubric,
@@ -52,7 +55,7 @@ def test_fix_uses_delivered_window_but_preserves_original_reference():
 
 def test_default_reference_uses_real_delivered_data(monkeypatch):
     from types import SimpleNamespace
-    import haenv.semantic_pipeline as p
+    import haenv.scoring.semantic.pipeline as p
     import haenv.judges._helpers as h
     monkeypatch.setattr(p,'asdict',lambda sp:{'case_id':'c','longitudinal_data':{}})
     monkeypatch.setattr(h,'_gold',lambda vp,key,default=None: 'A' if key=='diagnosis' else default)
@@ -97,8 +100,9 @@ def test_changed_correction_answer_is_rejected_even_if_rehashed(tmp_path):
 
 
 def _votes(out, row):
-    from haenv.semantic_judge import JudgeReply, evaluate_consensus
-    from haenv.semantic_rubric import summarize_verdicts
+    from haenv.scoring.semantic.judge import JudgeReply
+    from haenv.scoring.semantic.judge import evaluate_consensus
+    from haenv.scoring.semantic.rubric import summarize_verdicts
     task=JudgeTask(**{**row['task'],'item_ids':tuple(row['task']['item_ids'])})
     reply=json.dumps({'verdicts':{item:{'label':'yes','reason':'test','evidence_ids':[]}
                                   for item in task.item_ids}})
@@ -115,7 +119,7 @@ def _with_sources(base,tmp_path):
 
 
 def test_old_report_masks_known_wrong_gold_without_altering_votes(tmp_path):
-    from haenv.semantic_report import read_run
+    from haenv.scoring.semantic.report import read_run
     base,rows=base_run(tmp_path);_with_sources(base,tmp_path)
     for row in rows:_votes(base,row)
     before=digest(base/'results/0.json')
@@ -127,7 +131,7 @@ def test_old_report_masks_known_wrong_gold_without_altering_votes(tmp_path):
 
 
 def test_pending_correction_cannot_use_old_score_and_complete_overlay_preserves_unaffected(tmp_path):
-    from haenv.semantic_report import view_for_batch
+    from haenv.scoring.semantic.report import view_for_batch
     base,records=base_run(tmp_path);_with_sources(base,tmp_path)
     for row in records:_votes(base,row)
     out=tmp_path/'correction';prepare_correction(base,out,run_id='correct')

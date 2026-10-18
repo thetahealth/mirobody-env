@@ -3,12 +3,12 @@
 # Stream manifest: one entry per stream that can appear in a case's
 # `longitudinal_data`. The per-stream tables used by generation, verification, the
 # physiology layer, the launch gates and gated pricing are derived from it
-# (`haenv/streams.py`); none of them lists stream names by hand.
+# (`haenv/world/observations/streams.py`); none of them lists stream names by hand.
 #
 # Adding a stream takes an entry here, a dossier in `indicators.yaml` (unit,
 # precision, provenance) and code only if the stream needs a generator of its own.
-# Then run `uv run python tools/gen_stream_tables.py`, which regenerates the pricing
-# file that scoring reads; `tools/gen_stream_tables.py --check` fails until it is in sync.
+# Then run `uv run python tools/generation/gen_stream_tables.py`, which regenerates the pricing
+# file that scoring reads; `tools/generation/gen_stream_tables.py --check` fails until it is in sync.
 #
 # Fields
 #   aux            not a predicted clinical signal: exempt from the kernel's
@@ -22,7 +22,7 @@
 #   physio         render: the physiology layer adds noise and bounds, with the
 #                  parameter block in `physio_streams.yaml:streams`;
 #                  exclude: the layer leaves the stream alone
-#   derived_from   what a derived stream is a function of (`haenv/wearable.py`)
+#   derived_from   what a derived stream is a function of (`haenv/world/observations/wearable.py`)
 #   grid_parent    whose observation days a derived stream sits on
 #
 # The order of `render` entries is the order of `events.METRICS`.
@@ -84,12 +84,14 @@ streams:
     physio: render
   # A daytime average. The raw case's lowest overnight SpO2 is not its baseline,
   # so there is no `vital_key`.
+  # base 97.4 -> 96.2 (W3, world 1.4): the board world's median person level was 97.36 against
+  # 96.1 in the LifeSnaps calibration split's median person-level SpO2. review: pending
   spo2:
     aux: true
     devices: [wearable]
     proves_device: [wearable]
     pricing: vitals
-    render: {base: 97.4, amp: 0.9, period: 12, hard_range: [88.0, 100.0], tol: 1.2, tags: [sleep, respiratory]}
+    render: {base: 96.2, amp: 0.9, period: 12, hard_range: [88.0, 100.0], tol: 1.2, tags: [sleep, respiratory]}
     physio: render
   body_temp:
     aux: true
@@ -119,7 +121,7 @@ streams:
     pricing: vitals
     render: {base: 1.0, amp: 0.7, period: 9, hard_range: [0.0, 10.0], tol: 1.0, tags: [gi]}
     physio: exclude
-  # Derived wearable streams: functions of a parent stream or the profile (`haenv/wearable.py`),
+  # Derived wearable streams: functions of a parent stream or the profile (`haenv/world/observations/wearable.py`),
   # not rendered by the generic wave path. physio: exclude, so noise arrives only through the parent.
   active_burn:
     aux: true
@@ -257,4 +259,3 @@ streams:
     proves_device: [bp_cuff]
     pricing: vitals
     physio: exclude
-

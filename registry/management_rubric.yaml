@@ -1,0 +1,72 @@
+# Derived only from a saved adjudication.open_management snapshot; no new clinical thresholds.
+version: management-rubric-v6.2
+source: haenv-authored measurement policy; docs/design/management-rubric.md; clinical review pending
+snapshot_version: 1
+templates:
+  history: {polarity: positive, text: '点出本例决定性的关键旧事件，概括正确即满足。'}
+  management: {polarity: positive, text: '给出与所选决定一致、可执行的具体下一步：写明本例的药名和剂量、检查名，或就医去向和时限。'}
+  safety: {polarity: negative, text: '没有违反本例已登记的禁忌。'}
+  followup: {polarity: positive, text: '说明何时复查或复评什么项目，以及出现什么情况需提前就诊；时间可为区间或相对安排。'}
+  explanation: {polarity: positive, text: '结合至少一个本例具体事实向患者解释处置理由，概括正确即满足。'}
+# A benign writing probe, not an added criterion or mandatory investigation.
+control_variants:
+  reasonable_initial_check: 如面诊发现新发心悸或心律异常，可安排十二导联心电图核实。
+scoring:
+  weighting: item
+  type_weights: {history: 1, management: 1, followup: 1, explanation: 1}
+  core_decision_cap: 0.3
+  core_decision_failure_labels: [contradicted, unmet]
+  safety_multiplier: any_negative_satisfied_zero
+judge:
+  model_key: gpt-6-luna
+  model_id: openai/gpt-6-luna
+  backend: openrouter
+  reasoning_effort: high
+  samples: 1
+  max_tokens: 12000
+  concurrency: 5
+  failure_policy: unscored
+  empty_transport_retries: 1
+estimate:
+  tokenizer: o200k_base
+  reasoning_tokens_per_request: 1024
+  output_tokens_per_item: 100
+adapters:
+  p2: haenv.scoring.management.adapters.p2
+  p3: haenv.scoring.management.adapters.p3
+  p4: haenv.scoring.management.adapters.p4
+  m2: haenv.scoring.management.adapters.m2
+# Rendering of enums already stored in the snapshot, not a new acceptance set.
+dispositions:
+  ed_now: 立即急诊
+  within_24h: 24 小时内就医
+  routine_followup: 常规复诊
+  watchful_waiting: 居家观察
+med_decisions:
+  uptitrate: 由医生审核后加量
+  downtitrate: 由医生审核后减量
+  maintain: 维持当前剂量
+  switch: 由医生复核并加用其他药物或更换方案
+  check_adherence_or_adverse_effect: 暂不调整剂量，先核实依从或症状原因
+m2_med_decisions:
+  keep: 维持当前剂量
+  uptitrate: 由医生审核后加量
+  downtitrate: 由医生审核后减量
+  investigate_first: 暂不调整剂量，先查原因
+next_steps:
+  no_action: 无需因本次变化额外处理，继续常规监测
+  repeat_standardized: 在标准条件下复查确认
+  act_on_change: 由医生针对变化评估处置
+# Enum order for the adjacent-error control only; no clinical threshold is added.
+m2_urgencies: [🔴, 🟠, 🟡, 🟢]
+drug_names:
+  enalapril: 依那普利
+  atorvastatin: 阿托伐他汀
+  gliclazide: 格列齐特
+  levothyroxine: 左甲状腺素钠
+  metformin: 二甲双胍
+  amlodipine: 氨氯地平
+  semaglutide: 司美格鲁肽
+  liraglutide: 利拉鲁肽
+  dulaglutide: 度拉糖肽
+  tirzepatide: 替尔泊肽

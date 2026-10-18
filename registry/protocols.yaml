@@ -1,0 +1,764 @@
+# Sourced hospital procedures; SYNTHETIC data, evaluation only.
+version: 2
+status: provisional
+review: pending
+priority: 跨规程仍按条款 R0、R1、R2、R3a、R3b、R3c、R3、R4、R5、R6、R7a、R7、R8、R9、R10、R11、R12、R13、R14 顺序，第一条符合者决定。
+triage:
+- key: triage-infection
+  name: 家庭监测感染与 NEWS2 分诊
+  topics:
+  - 家庭监测
+  - 分诊
+  keywords:
+  - 家庭监测感染与 NEWS2 分诊
+  - NEWS2
+  applies: 成人线上家庭监测分诊，有本次生命体征及症状问诊。
+  excludes:
+  - 儿童、妊娠不套用；夜间手表最低血氧不替代本次指夹读数。
+  exceptions:
+  - 按原条款顺序逐项核对，第一条符合者生效；已确诊情况须查原病历。
+  rules:
+  - R1
+  - R2
+  - R3a
+  - R3b
+  - R3c
+  - R3
+  - R10
+  - R13
+  scoring: true
+  history: false
+  protocol_id: HP-C24C6A7A
+- key: triage-glucose
+  name: 家庭 CGM 低血糖分诊
+  topics:
+  - 家庭监测
+  - 分诊
+  keywords:
+  - 家庭 CGM 低血糖分诊
+  applies: 糖尿病成人线上咨询，有夜间 CGM 记录及是否需要他人协助的问诊。
+  excludes:
+  - 本条不作诊室内即时补糖；传感器假低值需核实；严重症状先看急性条款。
+  exceptions:
+  - 按原条款顺序逐项核对，第一条符合者生效；已确诊情况须查原病历。
+  rules:
+  - R4
+  - R5
+  - R11
+  scoring: false
+  history: false
+  protocol_id: HP-38632D9F
+- key: triage-pressure
+  name: 家庭血压异常分诊
+  topics:
+  - 家庭监测
+  - 分诊
+  keywords:
+  - 家庭血压异常分诊
+  applies: 成人线上家庭血压咨询，已完成今天重复测量与症状筛查。
+  excludes:
+  - 未确诊心衰不能套用心衰合并高血压条款；单个手表估计值不作袖带测量。
+  exceptions:
+  - 按原条款顺序逐项核对，第一条符合者生效；已确诊情况须查原病历。
+  rules:
+  - R6
+  - R7a
+  - R7
+  - R12
+  scoring: false
+  history: false
+  protocol_id: HP-737B008A
+- key: triage-heart
+  name: 心衰晨重与心律提示复核
+  topics:
+  - 家庭监测
+  - 分诊
+  keywords:
+  - 心衰晨重与心律提示复核
+  applies: 成人线上咨询，连续晨重或可穿戴心律提示需要复核。
+  excludes:
+  - 未确诊心衰者不单凭体重走心衰路径；已有心电图确诊房颤且本次症状无变化者不按新发提示处理。
+  exceptions:
+  - 按原条款顺序逐项核对，第一条符合者生效；已确诊情况须查原病历。
+  rules:
+  - R8
+  - R9
+  scoring: false
+  history: true
+  protocol_id: HP-AD54DC4D
+- key: triage-acute
+  name: 家庭急性症状与无异常处理
+  topics:
+  - 家庭监测
+  - 分诊
+  keywords:
+  - 家庭急性症状与无异常处理
+  applies: 成人线上咨询，已完成急性症状筛查及本次监测核查。
+  excludes:
+  - 未完成问诊不能视为否认；不能跳过其余条款直接给兜底去向。
+  exceptions:
+  - 按原条款顺序逐项核对，第一条符合者生效；已确诊情况须查原病历。
+  rules:
+  - R0
+  - R14
+  scoring: false
+  history: false
+  protocol_id: HP-E9F35D2B
+medication:
+- key: med-review
+  name: 慢病用药剂量与复评间隔
+  topics:
+  - 慢病复诊
+  - 用药
+  keywords:
+  - 慢病用药剂量与复评间隔
+  applies: 成人慢病用药复诊，复评药为格列齐特、阿托伐他汀、依那普利或左甲状腺素。
+  excludes:
+  - 本病人其它药不属本次调整范围；本次需查原处方及最近一次起用或加量时间。
+  exceptions:
+  - 核对本例目标及有效医嘱；本次建议由医生审核后执行。
+  generator: review
+  protocol_id: HP-E06055F6
+- key: med-adverse
+  name: 慢病用药不良反应归因
+  topics:
+  - 慢病复诊
+  - 用药
+  keywords:
+  - 慢病用药不良反应归因
+  applies: 上述四药复评，有症状、起病日期和处方剂量变化记录。
+  excludes:
+  - 已有明确其它原因的症状不机械归因于药；开始用药前症状不能归因于本药。
+  exceptions:
+  - 核对本例目标及有效医嘱；本次建议由医生审核后执行。
+  generator: adverse
+  protocol_id: HP-764A0B32
+- key: med-adherence
+  name: 慢病复评服药覆盖核查
+  topics:
+  - 慢病复诊
+  - 用药
+  keywords:
+  - 慢病复评服药覆盖核查
+  applies: 上述四药复评，需要连续取药记录与今天药盒计数。先查原处方起始日、各次取药数量及日期、规格变化与今天剩余天数；取药日期本身不能证明已服用。
+  excludes:
+  - 未取得实际取药或计数记录时不能假定完全服药；其它药取药不能当作本药覆盖。
+  - 使用本病人最近观察窗口的取药记录，不用其它患者、其它药物或今天之后的记录；提前取药余量与换规格时点都应按本条计算。
+  exceptions:
+  - 核对本例目标及有效医嘱；本次建议由医生审核后执行。
+  generator: adherence
+  protocol_id: HP-06325807
+- key: med-statin
+  name: 他汀既往最大耐受剂量复评
+  topics:
+  - 慢病复诊
+  - 用药
+  keywords:
+  - 他汀既往最大耐受剂量复评
+  applies: 成人本次复评阿托伐他汀，需查既往肌痛、CK、撤药与再用经过。须查同药更高剂量的旧处方、当时症状与 CK 原报告、停药后的变化、继发原因排查及是否再激发。
+  excludes:
+  - 症状有明确其它原因或再用耐受者不据此限制剂量；一次肌痛主诉不足以确认不耐受。
+  - 普通肌痛、未查 CK 的主诉或从未实际用过的剂量不能当作已确诊最大耐受剂量；复评同时核对目前低剂量已耐受及本次控制目标。
+  exceptions:
+  - 核对本例目标及有效医嘱；本次建议由医生审核后执行。
+  generator: statin
+  protocol_id: HP-36D6404A
+- key: med-renal
+  name: 白蛋白尿性肾脏病降压复评
+  topics:
+  - 慢病复诊
+  - 用药
+  keywords:
+  - 白蛋白尿性肾脏病降压复评
+  applies: 成人本次复评依那普利，病历确诊慢性肾脏病及白蛋白尿。须在病历核实慢性肾脏病、白蛋白尿及在用药，再读本次家庭血压目标、重复读数、血钾、肌酐与处方。
+  excludes:
+  - 未确诊 CKD 或白蛋白尿者不套用；需查原肾脏专科记录和实际血压目标。
+  - 单次低 eGFR 或仅有高血压名称不能代替已确诊的慢性肾脏病合并白蛋白尿；本条不用于其它药、其它肾病场景或未授权的处方调整。
+  exceptions:
+  - 核对本例目标及有效医嘱；本次建议由医生审核后执行。
+  generator: renal
+  protocol_id: HP-DFF060BC
+other:
+- key: LIB-FEVER
+  name: 成人发热的预检分诊
+  topics: &id001
+  - 发热
+  - 预检
+  - 感染
+  keywords: *id001
+  applies: 到院预检台，成人（16 岁及以上），测得体温 ≥ 38.0 ℃，尚未明确感染部位。
+  excludes:
+  - text: 16 岁以下者不适用。
+    needs_chart: false
+  - text: 正在化疗、中性粒细胞减少或长期使用免疫抑制剂者不适用，走肿瘤发热规程。
+    needs_chart: true
+  steps:
+  - 休息 15 分钟后在同一部位复测体温，确认 ≥ 38.0 ℃。
+  - 问诊：咳嗽气促、尿频尿痛、腹泻、皮疹、颈部僵硬、新出现的意识改变；有颈部僵硬或新出现的意识改变 → 转急诊处理。
+  - 发热 ≤ 3 天、无上述症状、生命体征平稳 → 居家补液与退热，72 小时内复测。
+  - 发热 > 3 天，或体温 ≥ 39.5 ℃ → 当日门诊评估。
+  - 有局灶症状（咳嗽伴气促、尿路刺激症状）→ 转对应规程。
+  exceptions:
+  - 体温在腋下测得的，读数加 0.5 ℃ 后再按本表判断。
+  source:
+    cite: NHS, High temperature (fever) in adults (nhs.uk/conditions/fever-in-adults)
+    url: https://www.nhs.uk/conditions/fever-in-adults/
+    locator: 页面首段与「When to get medical help」
+    verified: 页面存在；定义 38 ℃ 及以上为发热；「持续不退或加重」应就医。页面没有天数与更高体温的分档。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 3 天、39.5 ℃ 与腋温加 0.5 ℃ 为我们取的分档；来源只给发热定义与「加重应就医」。
+  overlap: 与家庭监测分诊的感染类题目同主题；本条限定到院预检台，不读家庭监测数据。
+  protocol_id: HP-B20737A0
+- key: LIB-FALL
+  name: 老年人跌倒后的评估
+  topics: &id002
+  - 跌倒
+  - 老年
+  - 用药审查
+  keywords: *id002
+  applies: 50 岁及以上（或衰弱者）近 1 年内跌倒、因跌倒就诊，头部未受外伤。
+  excludes:
+  - text: 本次跌倒伴头部外伤，且在服用抗凝药或抗血小板药（阿司匹林单药除外）者，改走头外伤规程。
+    needs_chart: true
+  - text: 已在跌倒预防专科门诊随访、有综合评估记录者不适用。
+    needs_chart: true
+  - text: 处于临终关怀阶段者不适用。
+    needs_chart: true
+  steps:
+  - 问清跌倒经过、受伤部位，以及能否自行起身；有骨折或畸形体征先做影像。
+  - 测卧位与站立 3 分钟血压。
+  - 收缩压降 ≥ 20 mmHg 或舒张压降 ≥ 10 mmHg 记为体位性低血压。
+  - 问头晕性质；有旋转性眩晕的做 Dix–Hallpike 手法。
+  - 结构化用药审查：降压药、利尿剂、镇静催眠药、降糖药，评估能否减量或停用。
+  - 检查视力、足部与鞋、认知情绪、尿失禁、饮酒，并评估骨质疏松风险。
+  - 1 年内跌倒 ≥ 2 次、受伤需就医、无法自行起身、跌倒时意识丧失或衰弱者，转综合跌倒评估。
+  exceptions:
+  - 跌倒时有短暂意识丧失者，同时按晕厥规程评估心律与直立性血压，不只做跌倒评估。
+  source:
+    cite: 'NICE NG249 (2025), Falls: assessment and prevention in older people and in people 50 and over at higher
+      risk, recommendations 1.1.3, 1.2.2, 1.3.2'
+    url: https://www.nice.org.uk/guidance/ng249/chapter/Recommendations
+    locator: 1.1.3；1.2.2；1.3.2
+    verified: 1.1.3 列出需做综合评估的人群（衰弱、受伤就医、意识丧失、不能自行起身、1 年内 ≥ 2 次跌倒）；1.2.2 含卧立位血压、头晕/Dix–Hallpike、用药审查；1.3.2 结构化用药审查。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 体位性低血压的 20/10 mmHg 取传统定义，来源页没有数值，为我们取的。
+  overlap: 无。
+  protocol_id: HP-68D0205A
+- key: LIB-HYPO-TX
+  name: 清醒患者低血糖的现场处理
+  topics: &id003
+  - 低血糖
+  - 糖尿病
+  - 诊室处置
+  keywords: *id003
+  applies: 诊室内清醒、能吞咽的成人，指尖血糖 < 3.9 mmol/L。
+  excludes:
+  - text: 意识不清或不能吞咽者不适用，改走静脉葡萄糖或胰高血糖素。
+    needs_chart: false
+  steps:
+  - 测指尖血糖确认 < 3.9 mmol/L，并记录症状与最近一次进食、用药时间。 给约 15–20 g 速效碳水（5 片葡萄糖片，或小半杯果汁），不给巧克力等含脂食物。
+  - 10–15 分钟后复测；仍 < 4.0 mmol/L 则再给一份，最多重复 3 轮；3 轮后仍未恢复，或再次变得迟钝 → 按严重低血糖转急诊。
+  - 血糖 ≥ 4.0 mmol/L 且症状缓解后，补充一份可持续升糖的食物（饼干、三明治）；记录诱因，并通知开具降糖药的医生复核方案。
+  exceptions:
+  - 正在使用阿卡波糖的患者必须用葡萄糖片或果汁，不可用蔗糖或糕点。
+  source:
+    cite: NHS, Low blood sugar (hypoglycaemia) (nhs.uk/conditions/low-blood-sugar-hypoglycaemia)
+    url: https://www.nhs.uk/conditions/low-blood-sugar-hypoglycaemia/
+    locator: 「How to treat a hypo」
+    verified: 页面存在；速效糖（果汁、5 片葡萄糖片、4 颗软糖、2 管葡萄糖凝胶）、10–15 分钟复测、仍低于 4 mmol/L 再给一份、好转后补持久性碳水、昏迷者给胰高血糖素。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 触发线取 3.9（与本院监测的 1 级线一致），15–20 g、最多 3 轮、阿卡波糖例外为我们取的；NHS 页面写的是复测线 4 mmol/L，没给克数。
+  overlap: 与家庭监测分诊的低血糖规则同主题；本条只管诊室现场处理，不含是否就医的分档。
+  protocol_id: HP-40953374
+- key: LIB-HTN-STEP2
+  name: 钙通道阻滞剂单药后血压未达标的加药
+  topics: &id004
+  - 高血压
+  - 降压药
+  - 加药
+  keywords: *id004
+  applies: 成人高血压，目前仅用一种钙通道阻滞剂（CCB），诊室血压持续超过目标，且动态或家庭血压确认。
+  excludes:
+  - text: 已在使用 ACE 抑制剂或 ARB，或已用 2 种及以上降压药者不适用。
+    needs_chart: true
+  - text: 2 型糖尿病患者不适用，起始药应为 ACE 抑制剂或 ARB。
+    needs_chart: true
+  - text: 妊娠或备孕者不适用。
+    needs_chart: true
+  - text: 近 3 个月 eGFR < 30 或血钾 > 5.5 mmol/L 者不适用。
+    needs_chart: true
+  steps:
+  - 先核对是否按医嘱服药，询问漏服与自行停药，未解决依从性前不加药。
+  - 用动态或家庭血压确认：日间均值 ≥ 135/85 mmHg 才算未控制。
+  - 80 岁以下诊室目标 < 140/90 mmHg，80 岁及以上 < 150/90 mmHg。
+  - 在 CCB 基础上加 ACE 抑制剂、ARB 或噻嗪样利尿剂中的一种。
+  - 加药前查肌酐、eGFR 与血钾；加药后 2–4 周复测血压与肾功能。
+  - 三种药物仍不达标，转专科评估继发性高血压。
+  exceptions:
+  - 80 岁以上、有直立性低血压史者，加药前先测站立血压，收缩压低于 110 mmHg 暂不加药。
+  source:
+    cite: 'NICE NG136 (2019, updated 2022), Hypertension in adults: diagnosis and management, recommendations 1.2.8,
+      1.4.20, 1.4.40–1.4.42'
+    url: https://www.nice.org.uk/guidance/ng136/chapter/Recommendations
+    locator: 1.2.8；Table 1–2（1.4.20）；1.4.40；1.4.41；1.4.42
+    verified: 1.4.40 先讨论依从性；1.4.42 CCB 单药未控制时可加 ACE 抑制剂、ARB 或噻嗪样利尿剂；ABPM 日间或 HBPM 均值 135/85 mmHg 及以上为诊断线；80 岁以下
+      < 140/90。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 加药后 2–4 周复测、血钾 5.5 与站立收缩压 110 为我们取的；NG136 给了药物选择与目标，没给这些数值。
+  overlap: 与慢病用药复评的依那普利题同主题（降压药）；已排除正在用 ACE 抑制剂者，且不给任何剂量规则。
+  protocol_id: HP-A3A82647
+- key: LIB-STATIN-INTOL
+  name: 确诊他汀不耐受后的降脂方案
+  topics: &id005
+  - 血脂
+  - 他汀
+  - 不耐受
+  keywords: *id005
+  applies: 病历已确诊他汀不耐受，LDL-C 仍未达标，需要选择非他汀降脂药。
+  excludes:
+  - text: 病历中没有他汀不耐受确诊记录者不适用（仅一次肌肉酸痛不算）。
+    needs_chart: true
+  - text: 肌肉症状已查明有其他原因（甲减、剧烈运动、药物相互作用）者不适用。
+    needs_chart: true
+  - text: 尚未试过降低剂量或换用另一种他汀者不适用。
+    needs_chart: true
+  steps:
+  - 复核不耐受证据：肌肉症状的时间、CK 值、TSH、维生素 D 与相互作用药物；持续全身性肌肉症状且 CK > 5 倍正常上限，7 天后复查；仍 > 5 倍则不再用他汀。 CK 升高但不足 5 倍的，可从低剂量或隔日给药再试一次。
+  - 确定不耐受 → 用依折麦布（二级预防可直接替代他汀）；二级预防 LDL-C > 2.0 mmol/L 仍未达标 → 加贝派地酸，或转专科评估 PCSK9 抑制剂。
+  - 起始或调整后 3 个月复查血脂。
+  exceptions:
+  - 肝酶超过正常上限 3 倍的，先查肝病原因，再决定是否使用依折麦布。
+  source:
+    cite: 'NICE NG238 (2023, updated 2023-12), Cardiovascular disease: risk assessment and reduction, including
+      lipid modification, recommendations 1.5.7, 1.7.1, 1.10.1–1.10.3'
+    url: https://www.nice.org.uk/guidance/ng238/chapter/Recommendations
+    locator: 1.5.7；1.7.1；1.10.1；1.10.2；1.10.3
+    verified: 1.5.7（肌肉症状、CK > 5 倍上限 7 天后复查，仍 > 5 倍不启动他汀，< 5 倍低剂量起始）；1.10.1 依折麦布；1.10.2 贝派地酸联合依折麦布；1.10.3 二级预防以依折麦布替代他汀；1.7.1
+      二级预防 LDL-C ≤ 2.0 mmol/L。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 3 个月复查、肝酶 3 倍与隔日给药为我们取的；其余数值来自 NG238。
+  overlap: 与慢病用药复评的他汀题同主题；限定「病历已确诊不耐受」，本院他汀复评规则的适用对象不含此类患者，本条不给加量或减量规则。
+  protocol_id: HP-7675E91D
+- key: LIB-METFORMIN-EGFR
+  name: 二甲双胍与肾功能的用药规则
+  topics: &id006
+  - 二甲双胍
+  - eGFR
+  - 肾功能
+  keywords: *id006
+  applies: 2 型糖尿病成人，正在使用或拟开始二甲双胍。
+  excludes:
+  - text: 1 型糖尿病患者不适用。
+    needs_chart: true
+  - text: 近 7 天内有急性肾损伤（肌酐较基线升高 ≥ 50%）者不适用，先处理肾损伤。
+    needs_chart: true
+  - text: 病历有慢性酸中毒或酮症酸中毒史者不适用。
+    needs_chart: true
+  steps:
+  - 取最近 3 个月内的 eGFR；没有就当日加查肌酐；eGFR ≥ 45 mL/min/1.73 m² → 可开始或继续，常规用药。
+  - eGFR 30–44 → 不新开始；已在用者评估获益风险，剂量减半后继续；eGFR < 30 → 停用，改用其他降糖药。
+  - 静脉注射碘造影剂前 eGFR 30–60 者停药，48 小时后复查肾功能再恢复；每年至少查 1 次 eGFR；有肾病或高龄者每 6 个月查 1 次。
+  exceptions:
+  - 急性腹泻、呕吐或严重脱水期间暂停用药，恢复进食 48 小时后再服。
+  source:
+    cite: FDA-approved metformin hydrochloride tablets label (DailyMed set id 0448c618-2f0d-4ed3-866f-74b413cf902d),
+      section 2.3 Dosage in renal impairment; NICE NG28, recommendation 1.18.1
+    url: https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=0448c618-2f0d-4ed3-866f-74b413cf902d ; https://www.nice.org.uk/guidance/ng28/chapter/Initial-medicines
+    locator: 标签 2.3；NG28 1.18.1
+    verified: 标签（经 openFDA 取回，该 set id 有效）原文：eGFR < 30 不用；30–45 不建议开始；降到 45 以下评估继续的获益风险；降到 30 以下停用；碘造影前后另有规定。NG28
+      1.18.1：eGFR ≥ 30 时可用缓释二甲双胍。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 「30–44 剂量减半」「6 个月复查」「急性病期暂停」为我们取的；标签只说评估获益风险，没给减半与复查频率。
+  overlap: 与慢病用药复评的格列齐特题同主题（降糖药）；本条只含二甲双胍，不含磺脲类规则。
+  protocol_id: HP-988268F3
+- key: LIB-SUBCLIN-HYPOTHYROID
+  name: 未用药的亚临床甲减随访
+  topics: &id007
+  - 甲状腺
+  - 甲减
+  - 随访
+  keywords: *id007
+  applies: 成人 TSH 高于参考范围、游离 T4 正常，且尚未使用左甲状腺素。
+  excludes:
+  - text: 已在使用左甲状腺素者不适用，走已治疗甲减的监测规程。
+    needs_chart: true
+  - text: 妊娠或备孕者不适用。
+    needs_chart: true
+  - text: 病历有甲状腺手术或放射性碘治疗史者不适用。
+    needs_chart: true
+  - text: 近 3 个月内有急性疾病住院者，先在恢复后复测，不适用本表。
+    needs_chart: true
+  steps:
+  - 首次 TSH 升高后 3 个月复测 TSH 与游离 T4，排除一过性升高；可查一次甲状腺过氧化物酶抗体（TPOAb），不重复查。
+  - 两次间隔 3 个月 TSH 均 ≥ 10 mIU/L → 考虑开始左甲状腺素。
+  - 65 岁以下，TSH 高于参考值但 < 10 mIU/L 两次，且有甲减症状 → 可试用 6 个月，症状无改善则停。
+  - 65 岁及以上、TSH < 10 mIU/L 者不常规治疗，只随访。
+  - 不治疗者每年复查 TSH，出现症状时随时复查。
+  exceptions:
+  - TPOAb 阳性者复查间隔缩短为每 6 个月 1 次。
+  source:
+    cite: 'NICE NG145 (2019), Thyroid disease: assessment and management, recommendations 1.5.1–1.5.4, 1.5.7'
+    url: https://www.nice.org.uk/guidance/ng145/chapter/Recommendations
+    locator: 1.5.1；1.5.3；1.5.4；1.5.7
+    verified: 1.5.1 考虑查 TPOAb 不重复；1.5.3 TSH ≥ 10 两次相隔 3 个月考虑左甲状腺素；1.5.4 65 岁以下 TSH 高于参考值但 < 10 两次加症状可试 6 个月；1.5.7
+      未治疗者的监测。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: TPOAb 阳性缩短到 6 个月为我们取的；其余来自 NG145。
+  overlap: 与慢病用药复评的左甲状腺素题同主题；限定「未用药」，已治疗者明确排除，不给剂量调整规则。
+  protocol_id: HP-5569D5E3
+- key: LIB-ANTICOAG-FU
+  name: 长期口服抗凝治疗的随访
+  topics: &id008
+  - 抗凝
+  - 华法林
+  - DOAC
+  - 随访
+  keywords: *id008
+  applies: 房颤等适应证下长期口服华法林或直接口服抗凝药（DOAC）的门诊随访。
+  excludes:
+  - text: 病历有机械瓣膜或中重度二尖瓣狭窄者不适用 DOAC 部分。
+    needs_chart: true
+  - text: 近 7 天有活动性出血者不适用，走出血处理。
+    needs_chart: false
+  - text: 妊娠者不适用。
+    needs_chart: true
+  steps:
+  - 华法林：查 INR，多数适应证目标 2.0–3.0，对照病历里的目标范围。
+  - 近 6 个月 INR 有 2 次 > 5 或 1 次 > 8，或 2 次 < 1.5 → 重新评估抗凝方案。
+  - 近 6 个月 INR 达标时间比例（TTR）< 65% → 同样重新评估抗凝方案。
+  - DOAC：每年至少查肾功能、血红蛋白与肝功能。
+  - eGFR < 60 者每 6 个月查 1 次肾功能。
+  - 核对合并用药与饮酒：抗血小板药、NSAID、SSRI、过量饮酒都增加出血风险。
+  - 询问出血、黑便、跌倒与漏服；高血压控制不佳者同步处理。
+  - 至少每年评估一次抗凝的必要性与质量，并写入病历。
+  exceptions:
+  - 近期更换过抗菌药或抗真菌药的华法林患者，在换药后 3–5 天加查一次 INR。
+  source:
+    cite: 'NICE NG196 (2021), Atrial fibrillation: diagnosis and management, recommendations 1.6.10–1.6.12, 1.6.17'
+    url: https://www.nice.org.uk/guidance/ng196/chapter/Recommendations
+    locator: 1.6.10；1.6.11；1.6.12；1.6.17
+    verified: 1.6.11 重新评估条件（2 次 INR > 5 或 1 次 > 8；2 次 < 1.5；TTR < 65%）；1.6.17 至少每年评估抗凝必要性与质量，并参考 MHRA 关于 DOAC 出血风险与肾功能监测的建议；出血风险因素含
+      INR 控制不良、抗血小板药、SSRI、NSAID、酗酒。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: eGFR < 60 每 6 个月查、换抗菌药后 3–5 天加查 INR 为我们取的。
+  overlap: 无。
+  protocol_id: HP-DB3527A3
+- key: LIB-CHEST-PAIN
+  name: 门诊疑似心源性急性胸痛的处置
+  topics: &id009
+  - 胸痛
+  - 心电图
+  - 急症
+  keywords: *id009
+  applies: 已到诊室的成人，当前胸痛，或 72 小时内有过疑似心源性的胸痛。
+  excludes:
+  - text: 胸痛明确由外伤或带状疱疹引起者不适用。
+    needs_chart: false
+  steps:
+  - 立即做 12 导联静息心电图，目标 10 分钟内完成；问疼痛特点：持续 > 15 分钟、伴恶心出汗气短、向手臂背部下颌放射、血流动力学不稳。
+  - 当前仍痛，或 12 小时内痛过且心电图异常或无法做 → 急救转送。
+  - 12 小时内痛过但已缓解且心电图正常，或末次疼痛在 12–72 小时前 → 当日评估。
+  - 疼痛在 72 小时前且无并发症 → 详细评估，并查心电图与肌钙蛋白。
+  - 无明确过敏时给阿司匹林 300 mg 负荷量，转送时随病人附书面记录。
+  exceptions:
+  - 已在服用抗凝药或有消化道出血史者，阿司匹林由接诊医生决定，不自动给。
+  source:
+    cite: 'NICE CG95 (2010, updated 2016), Recent-onset chest pain of suspected cardiac origin: assessment and diagnosis,
+      recommendations 1.2.1.3, 1.2.1.7–1.2.1.10, 1.2.3.2'
+    url: https://www.nice.org.uk/guidance/cg95/chapter/Recommendations
+    locator: 1.2.1.3；1.2.1.7；1.2.1.8；1.2.1.10；1.2.3.2
+    verified: 1.2.1.7 当前胸痛或 12 小时内痛过且心电图异常/无法做 → 急诊转送；1.2.1.8 12 小时内痛过但已缓解且心电图正常，或 12–72 小时前 → 当日评估；1.2.1.10 超过
+      72 小时 → 详细评估、心电图与肌钙蛋白；1.2.3.2 300 mg 阿司匹林负荷量。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 心电图 10 分钟目标与抗凝药例外为我们取的。
+  overlap: 与家庭监测分诊的红旗规则（胸痛 → 急诊）方向一致；本条限定「已到诊室」且给的是诊室内动作，不含是否就医的分档。
+  protocol_id: HP-C5CED021
+- key: LIB-HEADACHE-RF
+  name: 头痛的红旗筛查与转诊
+  topics: &id010
+  - 头痛
+  - 红旗
+  - 转诊
+  keywords: *id010
+  applies: 12 岁及以上，以头痛为主诉就诊。
+  excludes:
+  - text: 病历确诊偏头痛，且本次发作与既往头痛日记中的发作性质相同者不适用。
+    needs_chart: true
+  - text: 已确诊颅内占位或脑血管病、正在专科随访者不适用。
+    needs_chart: true
+  - text: 妊娠或产后 6 周内者不适用，走产科头痛规程。
+    needs_chart: true
+  steps:
+  - 问红旗：发热伴头痛加重、5 分钟内达到最痛、新出现的神经功能缺损、认知或人格改变、意识受损、3 个月内头部外伤。
+  - 另问：咳嗽或用力时诱发、体位性头痛、50 岁后新发并有颞部压痛、急性闭角型青光眼表现。
+  - 5 分钟内达峰的雷击样头痛，或有新神经功能缺损、意识受损 → 转急诊。
+  - 其余任一红旗 → 当日做进一步检查或转专科。
+  - 新发头痛且有免疫低下、HIV 或恶性肿瘤史 → 同样进一步检查。
+  - 无红旗 → 按原发性头痛处理，记录头痛日记，排查止痛药过度使用。
+  exceptions:
+  - 头痛同时有剧烈眼痛、视力下降、恶心呕吐者，先按青光眼处理，当日眼科会诊。
+  source:
+    cite: 'NICE CG150 (2012, updated 2021), Headaches in over 12s: diagnosis and management, recommendations 1.1.1–1.1.2;
+      NHS, Headaches (nhs.uk/conditions/headaches)'
+    url: https://www.nice.org.uk/guidance/cg150/chapter/Recommendations ; https://www.nhs.uk/conditions/headaches/
+    locator: CG150 1.1.1；1.1.2；NHS「Immediate action required」
+    verified: CG150 1.1.1 列出红旗（发热伴加重、5 分钟内达峰、新神经缺损、认知改变、人格改变、意识受损、近 3 个月头部外伤、咳嗽用力诱发、体位性、巨细胞动脉炎、闭角型青光眼）；1.1.2 免疫低下等新发头痛。NHS
+      页面：突然极痛、肢体无力、头部外伤、意识模糊等 → 999 或急诊。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 「红旗分流到急诊还是当日」的分档为我们取的；CG150 只写「评估并考虑进一步检查或转诊」。
+  overlap: 与家庭监测分诊的高血压急症规则（剧烈头痛）同症状；本条限定到院、不读血压读数，也不含血压阈值。
+  protocol_id: HP-1CB36092
+- key: LIB-UTI-LOWER
+  name: 非妊娠成年女性下尿路感染的处理
+  topics: &id011
+  - 尿路感染
+  - 抗生素
+  - 门诊
+  keywords: *id011
+  applies: 非妊娠成年女性，有尿频、尿痛症状，无发热、腰痛。
+  excludes:
+  - text: 妊娠者不适用。
+    needs_chart: true
+  - text: 男性或留置导尿管者不适用。
+    needs_chart: true
+  - text: 近 3 个月 eGFR < 45 者不适用呋喃妥因部分，改用其他一线药。
+    needs_chart: true
+  steps:
+  - 先排除上尿路：发热、寒战、腰痛或恶心呕吐 → 转肾盂肾炎规程；尿试纸查白细胞酯酶与亚硝酸盐，两项均阴性则不太可能是细菌性尿路感染。
+  - 一线：呋喃妥因缓释 100 mg，每日 2 次，共 3 天（要求 eGFR ≥ 45）；一线备选：甲氧苄啶 200 mg，每日 2 次，共 3 天（仅限耐药风险低者）。
+  - 用药 48 小时症状无改善 → 送尿培养，换用二线药。
+  - 6 个月内 ≥ 2 次或 12 个月内 ≥ 3 次发作 → 送尿培养并评估诱因。
+  exceptions:
+  - 近 3 个月用过甲氧苄啶或有耐药史者，不选甲氧苄啶，改用呋喃妥因。
+  source:
+    cite: 'NICE NG109 (2018), Urinary tract infection (lower): antimicrobial prescribing, first-choice antibiotics
+      for non-pregnant women; NG111 for pyelonephritis'
+    url: https://www.nice.org.uk/guidance/ng109/chapter/Recommendations
+    locator: 「Choice of antibiotic」表；Pyelonephritis 指向 NG111
+    verified: 非妊娠女性一线为呋喃妥因（eGFR ≥ 45）100 mg 缓释每日 2 次共 3 天，或甲氧苄啶（低耐药风险）200 mg 每日 2 次共 3 天；用药至少 48 小时无改善换二线；有肾盂肾炎症状或复杂性感染转看肾盂肾炎指南。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 试纸判读与复发次数（6 个月 2 次/12 个月 3 次）为我们取的；药物、剂量、疗程来自 NG109。
+  overlap: 无。
+  protocol_id: HP-7246871A
+- key: LIB-COPD-EXAC
+  name: 慢阻肺急性加重的门诊处理
+  topics: &id012
+  - 慢阻肺
+  - 急性加重
+  - 口服激素
+  keywords: *id012
+  applies: 病历确诊慢阻肺的成人，气促、咳嗽或痰量较平时明显加重，能在门诊处理。
+  excludes:
+  - text: 病历同时确诊哮喘者不适用，按哮喘加重处理。
+    needs_chart: true
+  - text: 4 周内已用过口服激素疗程、或长期口服激素者不适用。
+    needs_chart: true
+  - text: 静息气促严重、发绀、意识受损、新出现外周水肿或独居无法自理者不适用，直接转院。
+    needs_chart: false
+  steps:
+  - 对照住院指征：呼吸困难程度、整体状况、活动水平、发绀、意识、外周水肿、是否已在长期氧疗。
+  - 有严重呼吸困难或意识受损，或 SpO2 < 90% → 转院治疗。
+  - 门诊处理：泼尼松龙 30 mg 每日 1 次，共 5 天，尽早开始。
+  - 痰量增多且变脓，或呼吸困难加重 → 同时用抗生素，按本院抗菌药物处方规程选药。
+  - 短效支气管扩张剂按需加量，教会患者使用间隔装置。
+  - 48–72 小时内复诊；一年需多个激素疗程者评估骨质疏松预防。
+  exceptions:
+  - 哮喘发作按 NHS 的发作处理页：蓝色吸入剂每 30–60 秒 1 喷，最多 10 喷，仍无好转拨打 999。
+  source:
+    cite: NICE NG115 (2018, updated 2026), Chronic obstructive pulmonary disease in over 16s, recommendations 1.3.1,
+      Table 7, 1.3.15–1.3.18; NHS, Asthma attack
+    url: https://www.nice.org.uk/guidance/ng115/chapter/Recommendations ; https://www.nhs.uk/conditions/asthma/asthma-attack/
+    locator: NG115 1.3.1 与 Table 7；1.3.15；1.3.16；1.3.18；NHS 哮喘发作页
+    verified: Table 7 列出住院与居家的判断因素；1.3.16 泼尼松龙 30 mg 每日 5 天；1.3.18 频繁用激素考虑骨质疏松预防；NHS 页面：蓝色吸入剂每 30–60 秒 1 喷、最多 10
+      喷、无好转拨 999。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: SpO2 < 90% 与 48–72 小时复诊为我们取的；NG115 Table 7 没有具体 SpO2 数值。
+  overlap: 与家庭监测分诊中的低血氧规则同类指标（SpO2）；本条只处理已确诊慢阻肺的治疗，不含 SpO2 到分诊的映射。
+  protocol_id: HP-D22CC0EE
+- key: LIB-GOUT-FLARE
+  name: 急性痛风发作的首选治疗
+  topics: &id013
+  - 痛风
+  - 急性发作
+  - 抗炎
+  keywords: *id013
+  applies: 已诊断痛风或表现典型（单关节红肿热痛，常见于第一跖趾关节）的急性发作。
+  excludes:
+  - text: 发热合并单个关节红肿，怀疑化脓性关节炎者不适用，先做关节穿刺。
+    needs_chart: false
+  steps:
+  - 确认是发作期：关节红肿热痛，起病在 24 小时内达高峰；一线三选一：NSAID、秋水仙碱或短程口服糖皮质激素，按合并症与合用药物选择。
+  - 选 NSAID 的，同时加用质子泵抑制剂保护胃；NSAID、秋水仙碱、口服激素都不能用或无效 → 关节腔或肌肉注射糖皮质激素。
+  - 患处冰敷，作为药物治疗的补充；已在用的降尿酸药不停；发作期间不新开始降尿酸药，缓解后再评估。
+  exceptions:
+  - 秋水仙碱用于 eGFR 30–59 者，剂量减半，并只用 1 个疗程。
+  source:
+    cite: 'NICE NG219 (2022), Gout: diagnosis and management, recommendations 1.3.1–1.3.3, 1.3.5'
+    url: https://www.nice.org.uk/guidance/ng219/chapter/Recommendations
+    locator: 1.3.1；1.3.2；1.3.3；1.3.5
+    verified: 1.3.1 NSAID、秋水仙碱或短程口服激素为一线；1.3.2 用 NSAID 者考虑加 PPI；1.3.3 均禁忌/无效时关节腔或肌注激素；1.3.5 冰敷。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 「发作期不新开始降尿酸药」「秋水仙碱 eGFR 30–59 减半」为我们取的。
+  overlap: 无。
+  protocol_id: HP-B8FDD67C
+- key: LIB-DRUG-RASH
+  name: 新药后皮疹的分级处理
+  topics: &id014
+  - 皮疹
+  - 药疹
+  - 过敏
+  keywords: *id014
+  applies: 开始新药 1–6 周内出现皮疹的成人。
+  excludes:
+  - text: 病历中已记录对该药确认过敏者不适用，按既有过敏记录处理。
+    needs_chart: true
+  - text: 病历有慢性荨麻疹或湿疹，且本次皮疹形态与既往相同者不适用。
+    needs_chart: true
+  - text: 皮疹出现在 3 周内接种疫苗之后者不适用。
+    needs_chart: true
+  steps:
+  - 记录皮疹形态、分布、起病距新药的天数，以及有无发热、黏膜受累、水疱。
+  - 皮肤疼痛、水疱、脱皮、口眼黏膜受累、面唇肿胀或喘鸣 → 立即转急诊。
+  - 局限性斑丘疹、无全身症状 → 暂停最近 6 周内新加的药，抗组胺药对症；同时有发热、淋巴结肿大或嗜酸性粒细胞升高 → 当日查肝肾功能并转专科。
+  - 48–72 小时复评，皮疹进展则按上一步升级。
+  - 把可疑药物、反应的症状与严重程度、发生日期写入药物过敏记录。
+  exceptions:
+  - 服用别嘌醇、卡马西平或磺胺类药物者，出现任何皮疹都按急症处理。
+  source:
+    cite: 'NICE CG183 (2014), Drug allergy: diagnosis and management, recommendations 1.1.1–1.1.3, 1.2.1–1.2.3;
+      NHS, Stevens-Johnson syndrome'
+    url: https://www.nice.org.uk/guidance/cg183/chapter/Recommendations ; https://www.nhs.uk/conditions/stevens-johnson-syndrome/
+    locator: CG183 1.1.1；1.1.2；1.1.3；1.2.1–1.2.3；NHS「Immediate action required」
+    verified: CG183 1.1.2–1.1.3 用药后发生且既往同药反应时更可能为药物过敏；1.2.1–1.2.3 记录过敏状态（药名、症状与严重程度、日期）。NHS 页面：新用药后皮疹扩散、皮肤疼痛/水疱/脱皮、喘鸣、口眼面肿
+      → 999 或急诊。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 「6 周内新药」「48–72 小时复评」与高危药物例外为我们取的。
+  overlap: 无。
+  protocol_id: HP-C84ABBE0
+- key: LIB-DIARRHOEA
+  name: 成人急性腹泻的脱水评估
+  topics: &id015
+  - 腹泻
+  - 脱水
+  - 补液
+  keywords: *id015
+  applies: 成人急性腹泻，病程 ≤ 14 天，能口服进食饮水。
+  excludes:
+  - text: 病历有炎症性肠病、乳糜泻或已确诊肠易激综合征者不适用。
+    needs_chart: true
+  - text: 正在化疗或使用免疫抑制剂者不适用。
+    needs_chart: true
+  steps:
+  - 评估脱水：口干、尿少色深、站立头晕，站立收缩压较卧位降 ≥ 20 mmHg；便血、体温 ≥ 38.5 ℃、剧烈腹痛或病程 > 7 天 → 当日就诊并送粪便检查。 轻度脱水：口服补液盐，每次稀便后补 200–250 mL，少量多次。
+  - 无尿、意识改变或收缩压 < 90 mmHg → 转急诊静脉补液；正在使用利尿剂、ACE 抑制剂、ARB、二甲双胍或 SGLT2 抑制剂者，病期暂停这些药并 24 小时内联系医生。
+  - 症状缓解后逐步恢复饮食；有发热或便血时不用止泻药。
+  exceptions:
+  - 近 2 周有境外旅行史者，病程 > 3 天即送粪便检查。
+  source:
+    cite: NHS, Diarrhoea and vomiting in adults (nhs.uk/conditions/diarrhoea)
+    url: https://www.nhs.uk/conditions/diarrhoea/
+    locator: 「How to treat diarrhoea and vomiting yourself」，「Speak to a pharmacist if」
+    verified: 页面存在；首要是大量饮水防脱水；老年、免疫低下或有其他易脱水疾病者、尿少色深者应咨询药师或就医。页面没有 mmHg 或 mL 数值。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 所有数值（站立收缩压降 20、38.5 ℃、7 天、200–250 mL、90 mmHg、境外旅行 3 天）与停药清单为我们取的；NHS 页面只给定性建议。
+  overlap: 与二甲双胍规程同引停药情形，方向一致。
+  protocol_id: HP-21E9183D
+- key: LIB-SLEEP-ANXIETY
+  name: 失眠与焦虑的筛查及转介
+  topics: &id016
+  - 失眠
+  - 焦虑
+  - 转介
+  keywords: *id016
+  applies: 成人主诉持续睡眠困难 ≥ 3 个月，或自述长期过度担忧。
+  excludes:
+  - text: 近 2 周有自伤或自杀想法者不适用，当日转精神科急诊评估。
+    needs_chart: false
+  steps:
+  - 用 GAD-2 筛查焦虑，总分 ≥ 3 分 → 继续做 GAD-7；GAD-7 ≥ 10 分 → 转心理治疗（认知行为治疗），不首选药物。
+  - 失眠 ≥ 3 个月且影响日间功能 → 提供睡眠卫生建议，转失眠的认知行为治疗（CBT-I）；询问咖啡因、酒精、轮班、夜间疼痛与夜尿，并核对用药（β 受体阻滞剂、糖皮质激素、利尿剂）。
+  - 避免长期使用苯二氮䓬类，单次处方不超过 2 周；4 周后复评 GAD-7 与睡眠日记；无改善再转精神科。
+  exceptions:
+  - 症状在近 3 个月内由亲人去世或重大事件诱发的，先随访 4 周，不立即转介。
+  source:
+    cite: 'NICE CG113 (2011, updated 2020), Generalised anxiety disorder and panic disorder in adults: management,
+      recommendations 1.2.1–1.2.2 (stepped care, GAD-2); NHS, Insomnia'
+    url: https://www.nice.org.uk/guidance/cg113/chapter/Recommendations ; https://www.nhs.uk/conditions/insomnia/
+    locator: CG113 1.2.1；1.2.2；NHS「See a GP if」
+    verified: CG113 1.2.1 阶梯式照护、从干预最轻者起；1.2.2 用 GAD-2 询问焦虑感受。NHS 失眠页：改睡眠习惯无效、持续数月或影响日常 → 就医；医生可提供 CBT。
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: GAD-2 ≥ 3、GAD-7 ≥ 10 的切点、苯二氮䓬 2 周与 4 周复评为我们取的；CG113 没写这些分数。
+  overlap: 无。
+  protocol_id: HP-F4D32E8E
+distribution_gate:
+  length_edges:
+    value:
+    - 512
+    - 1024
+    - 2048
+    ours: true
+    source: 'ours: fixed doubling bins for complete hospital documents; no padding or truncation'
+    metric: unicode characters of rendered full protocol including sources
+  length_tv_max:
+    value: 0.3
+    ours: true
+    source: 'ours: screen for gross role separation in the heterogeneous catalog'
+  step_edges:
+    value:
+    - 3
+    - 6
+    - 10
+    ours: true
+    source: 'ours: short, ordinary and longer clinical workflows'
+    metric: number of displayed action steps; clause splits preserve original text
+  step_tv_max:
+    value: 0.3
+    ours: true
+    source: 'ours: same gross separation screen'
+  format_tv_max:
+    value: 0.0
+    ours: true
+    source: 'ours: identical output schema and source format'
+followup:
+  key: followup-next-step
+  protocol_id: HP-461CC110
+  name: 随访复查变化的下一步处置
+  topics:
+  - 随访复查
+  - 检验解读
+  keywords:
+  - 随访复查
+  - next_step
+  - ACEI
+  - 肌酐
+  - 标准复查
+  applies: 成人随访复查，已经核对比较的两次报告、方法、标本处理及用药记录，并确定变化来源。
+  excludes:
+  - 尚不能判定变化来源时先补齐记录；本条不授权患者自主开药、停药或改剂量。
+  exceptions:
+  - 标准复查包括肾功能及血钾，时机按适应证与风险由医生确定，不统一套用慢性肾病的间隔。
+  - ACEI 起用前均值取最近一次 ACEI 事件之后至上次比较采血日的停药期读数，无可用读数时以上次读数为基线。
+  source:
+    cite: KDIGO 2024 CKD PP 3.6.2/3.6.4；NICE NG203 1.6.15/1.6.21/1.6.22；NHS SPS ACEI/ARB monitoring
+    url: https://kdigo.org/guidelines/ckd-evaluation-and-management/ ; https://www.nice.org.uk/guidance/ng203/chapter/Recommendations
+      ; https://www.sps.nhs.uk/monitorings/ace-inhibitors-and-angiotensin-ii-receptor-blockers-monitoring/
+    locator: 同既有 haenv/p4/gold.py next_step 的出处注释
+    verified_on: '2026-10-12'
+  ours: true
+  ours_reason: 30% 为指南阈值；不同来源、失真侧别的首选及接受集合为原有本院映射，待检验科复核；从既有代码生成，不新增判分规则。

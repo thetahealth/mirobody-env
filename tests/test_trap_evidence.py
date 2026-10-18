@@ -33,8 +33,8 @@ sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
 import haenv_kernel.noise as N                                           # noqa: E402
 import haenv_kernel.verifier as V                                        # noqa: E402
-from haenv import gates as G                                             # noqa: E402
-from haenv import post_inject as PI                          # noqa: E402
+import haenv.scoring.gates as G                                             # noqa: E402
+import haenv.world.clinical.post_inject as PI                          # noqa: E402
 
 
 def _series(days, spike_day=None, delta=3.6):

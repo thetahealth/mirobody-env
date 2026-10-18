@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools import reliability_passk as run
+import haenv.reporting.tools.reliability_passk as run
 
 
 def test_paid_repeats_fail_before_launch_without_shared_budget(monkeypatch):
@@ -51,6 +51,7 @@ def test_two_nonempty_runs_out_of_three_cannot_produce_a_noise_floor(monkeypatch
     source = tmp_path / "results/joint_dx/j/source"
     source.mkdir(parents=True)
     monkeypatch.setattr(run, "ROOT", tmp_path)
+    monkeypatch.setenv("HAENV_OUTPUT_ROOT", str(tmp_path))
     monkeypatch.setattr(run, "pick_source_batch", lambda *a: source)
     monkeypatch.setattr(run, "_assert_samples_distinct", lambda dirs: dirs)
     monkeypatch.setattr(run, "_load", lambda path, models, **kw:

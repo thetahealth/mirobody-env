@@ -25,27 +25,28 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "frozen"))
+sys.path.insert(0, str(ROOT / 'benchmarks' / 'frozen'))
 
-from haenv import canary as C                        # noqa: E402
+import haenv.provenance.canary as C                        # noqa: E402
 
-split_wq = importlib.import_module("split_wq")
+split_wq = importlib.import_module('tools.generation.split_frozen_wq')
 
 
 def _copy(dst: pathlib.Path) -> pathlib.Path:
     """A throwaway root holding MANIFEST, the Q packs and the job files they name."""
-    (dst / "frozen").mkdir(parents=True)
-    shutil.copy2(ROOT / "frozen" / "MANIFEST.json", dst / "frozen" / "MANIFEST.json")
+    (dst / 'benchmarks' / 'frozen').mkdir(parents=True)
+    shutil.copy2(ROOT / 'benchmarks' / 'frozen' / 'MANIFEST.json', dst / 'benchmarks' / 'frozen' / 'MANIFEST.json')
     for p in C.jsonl_packs(ROOT):
-        shutil.copy2(p, dst / "frozen" / p.name)
+        shutil.copy2(p, dst / 'benchmarks' / 'frozen' / p.name)
     for e in split_wq.pack_entries().values():
-        (dst / e["job"]).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / e["job"], dst / e["job"])
+        current = "benchmarks/" + e["job"] if e["job"].startswith("inputs/") else e["job"]
+        (dst / current).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / current, dst / current)
     return dst
 
 
 def _edit_manifest(root: pathlib.Path, fn) -> None:
-    mp = root / "frozen" / "MANIFEST.json"
+    mp = root / 'benchmarks' / 'frozen' / 'MANIFEST.json'
     man = json.loads(mp.read_text(encoding="utf-8"))
     fn(man)
     mp.write_text(json.dumps(man, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -89,7 +90,7 @@ def test_a_q_file_without_an_entry_is_reported(tmp_path):
 def test_an_edited_job_file_is_reported(tmp_path):
     root = _copy(tmp_path)
     e = sorted(split_wq.pack_entries().items())[0][1]
-    jy = root / e["job"]
+    jy = root / ("benchmarks/" + e["job"] if e["job"].startswith("inputs/") else e["job"])
     jy.write_text(jy.read_text(encoding="utf-8") + "\n# planted\n", encoding="utf-8")
     got = split_wq.entry_problems(root)
     assert any("job_yaml_sha256" in g for g in got), got
@@ -104,7 +105,7 @@ def test_a_manifest_without_entries_is_a_problem(tmp_path):
 def test_the_pack_list_is_manifest_not_a_glob(tmp_path, monkeypatch):
     """A `*.cases.jsonl` left on disk that no entry names is not a pack."""
     (tmp_path / "MANIFEST.json").write_text(
-        (ROOT / "frozen" / "MANIFEST.json").read_text(encoding="utf-8"), encoding="utf-8")
+        (ROOT / 'benchmarks' / 'frozen' / 'MANIFEST.json').read_text(encoding="utf-8"), encoding="utf-8")
     (tmp_path / "stale-local.cases.jsonl").write_text("{}\n", encoding="utf-8")
     monkeypatch.setattr(split_wq, "HERE", tmp_path)
     names = {p.name for p in split_wq._packs()}

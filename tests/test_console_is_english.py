@@ -19,6 +19,7 @@ It turns red when someone adds a Chinese log message or relation detail.
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import ast
 import pathlib
@@ -59,7 +60,7 @@ def test_scanner_catches_a_cjk_log_call():
 
 def test_haenv_console_text_has_no_cjk():
     found = []
-    for p in sorted((ROOT / "haenv").rglob("*.py")):
+    for p in sorted((_haenv_source_path('haenv', root=ROOT)).rglob("*.py")):
         for line, seg in _console_calls(p.read_text(encoding="utf-8")):
             found.append(f"{p.relative_to(ROOT)}:{line}: {seg}")
     assert not found, "console text with CJK characters:\n" + "\n".join(found)

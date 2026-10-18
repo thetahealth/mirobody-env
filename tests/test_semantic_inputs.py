@@ -3,7 +3,8 @@ import json
 
 import pytest
 
-from haenv.semantic_inputs import anonymous_prompt, select_responses
+from haenv.scoring.semantic.inputs import anonymous_prompt
+from haenv.scoring.semantic.inputs import select_responses
 
 
 def test_last_slice_is_selected_even_when_file_order_differs():

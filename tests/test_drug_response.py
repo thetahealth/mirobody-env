@@ -14,7 +14,7 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from haenv import drug_effects as D  # noqa: E402
+import haenv.world.clinical.drug_effects as D  # noqa: E402
 
 WIRED = ("semaglutide", "tirzepatide", "dulaglutide", "liraglutide")
 KW = dict(per_kg=0.06, atten=0.75, cohort="T2D")
@@ -107,8 +107,8 @@ def test_an_adherence_drop_moves_glucose_before_hba1c():
 
 
 def test_job_load_refuses_a_contradictory_declared_response(tmp_path):
-    from haenv.job import load_job
-    base = (ROOT / "inputs" / "example-ew.job.yaml").read_text(encoding="utf-8")
+    from haenv.app.job import load_job
+    base = (ROOT / 'benchmarks' / 'inputs' / 'example-ew.job.yaml').read_text(encoding="utf-8")
     import yaml
     doc = yaml.safe_load(base)
     case = doc["cases"][0]

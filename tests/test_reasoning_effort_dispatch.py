@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from haenv.evaluate import OpenAICompatSolver
+from haenv.app.evaluate import OpenAICompatSolver
 
 
 class Response(io.BytesIO):

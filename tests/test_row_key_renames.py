@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import json
 
-from haenv.evaluate import RENAMED_ROW_KEYS, load_rows
+from haenv.app.evaluate import RENAMED_ROW_KEYS
+from haenv.app.evaluate import load_rows
 
 
 def test_old_key_comes_back_under_the_new_name(tmp_path):

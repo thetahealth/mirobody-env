@@ -2,41 +2,130 @@
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-The package version (`pyproject.toml`) versions the code. Scores are versioned separately: every
-score row carries the judging fingerprint of the code that produced it, and boards produced under
-different fingerprints are not comparable (see `LICENSE-DATA`, ATTRIBUTION).
+The package version (`pyproject.toml`) versions the code. Scores are versioned separately:
+per-criterion fingerprints identify which result columns remain comparable, and an aggregate
+fingerprint identifies the complete set of criteria. Combined scores also require matching
+aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
 ## [Unreleased]
 
 ### Added
+- `haenv twin`: one-fact twin records of a built batch (operations `drop-reagent-note`,
+  `drop-planted-symptoms`, `unname-explainer`), built through the normal build path and checked against the
+  original field by field. Fingerprints are unchanged.
 
-- Select environment proxies or direct connections per model, with backend defaults and
-  receipt-level route records.
-- Record interrupted cells, prioritize them on resume, and report recovered and pending cells.
+## [1.4.0] - Unreleased
 
-### Fixed
-
-- Retry transient price-catalog failures with backoff and share locked, expiring catalogs
-  across solver and default judge preflights in the same ledger directory.
-- Attribute an unparseable HTTP 200 response envelope to infrastructure failure.
-- Resend infrastructure failures with bounded, distinct request identities while preserving
-  earlier counted costs and replaying successful answers.
-- Read an existing ledger's budget limit when the run omits a limit, and reject mismatched
-  explicit limits before starting paid work.
-
-## [1.2.2] - 2026-10-09
-
-Documentation-only release. Runtime code, dependencies, scoring and generation rules,
-frozen packs and leaderboard data are unchanged from 1.2.1.
+The release candidate remains `1.4.0.dev0`. This board uses four tasks with 100 questions
+per task and three answers per question. Eight models have complete four-task results.
 
 ### Changed
 
-- Replace the English and Chinese README's multi-task paragraph with a concise explanation
-  of composing synthesis capabilities and applicable shared checks with task-specific verification.
-- Add a bilingual rare-disease case study covering reused components, verification failures
-  and the batch-gate exception, linked from the README and documentation index.
-- Clarify that the example lives on `rare-code-bench` and is not included in the main-branch
-  package; it uses the existing `haenv-synth` and `haenv-extend` skills.
+- The main score averages `S = G * D * (1 + Q) / 2` over the three answers to each
+  question, then averages the four task scores equally. The original first-answer
+  aggregation is retained as a supplementary result. Paired question-cluster bootstrap
+  intervals separate six of seven adjacent model pairs on the main board.
+- The lab-change task now requires observable non-noise changes to exceed the paired
+  reference change value. Its repaired question set replaces the earlier lab set in the
+  N100 board. A reader using only the printed values and the reference-change table
+  reaches about 0.5 decision accuracy; this baseline is reported with the results.
+- The README, bilingual interactive demo and figures use the same final N100 readings.
+  The evaluated question sets ship as frozen pack files; regenerating at each batch's recorded
+  generation commit reproduces them byte for byte. The bundled job files use current defaults.
+- Full-record prompts include the protocol library. The stored N50 access comparison
+  uses the earlier lab set and is documented separately from the final N100 board.
+- GPT-6 Sol's diagnosis answers complete its four-task results; it ranks first, and the other
+  rows are unchanged. The diagnosis task's core decision is graded by code (alias matching of the
+  listed diagnoses, no model call); the LLM judge scores only management-plan quality.
+
+### Added
+
+- Management-plan rubric scoring, repeat judgments, per-criterion provenance, and
+  snapshot-checked judge routes across configured endpoints.
+- Centralized deployment concurrency settings, effective-limit diagnostics, graceful
+  stopping, provider-scoped budget accounting, and recovery of interrupted cells.
+- A cross-family judge check: all 6,937 responses with G * D = 1 re-judged by a Gemini judge
+  (requested gemini-3.7-flash, served as gemini-3.8-flash) keep the model order;
+  gpt-6-sol leads gemini-3.8-flash by +0.031 [+0.010, +0.052], and model-mean Q
+  correlates with the primary judge at r = .968.
+
+### Fixed
+
+- Shared price-catalog caching and retries avoid redundant startup requests.
+- Infrastructure failures receive bounded resends under fresh request identities;
+  successful answers are replayed and previous charges are retained.
+- Model-level and backend-default proxy selection share the same transport path.
+
+## [1.3.0] - Unreleased
+
+Boards of 1.3.0 and 1.2.x are not comparable: the four packs ask different questions and score
+them differently, and the world renders different patients. The judging fingerprint moves from
+`950578a687aacc5e` to `a44341f58a8b78f2` and the world fingerprint from `633cb0576e0472f0` to
+`0283ea9ca28d58ae`. The two diagnosis tracks of the 1.x board (`ddx-timeline`, `ddx-workup`) are
+unchanged.
+
+The 1.3.0 board ranks ten models on the four packs, 100 items each, every item answered three times.
+The overall score is the equal-weight mean of the chance-corrected pack scores: gpt-6-sol 0.712 leads and
+is separable from every other model; gemini-3.1-pro 0.648, gemini-3.7-flash 0.640 and gpt-6-luna 0.609
+share ranks 2-4 and are not separable from one another. Ranks are reported as bootstrap intervals.
+
+### Changed
+
+- Packs are nested: for one seed the 50-item pack is a subset of the 100-item pack with
+  byte-identical cases, so a 50-item run is extended to 100 by running only the new items. Every
+  generator emits at least four times N candidate items, the audit's shortcut gates read the whole
+  pool, and the published pack is picked from it. The four shipped job files are regenerated with
+  the public seed at N = 50 and carry their pool.
+- Pack ① scores which key signals a model bought and reports review utility as its own column.
+  Pack ② draws symptom sentences from shared pools, and a marked symptom sentence escalates the
+  gold disposition one step in every band. Pack ③ follows the cited levothyroxine and CKD rules,
+  apportions classes by how much each one separates models, and prints the clinic's policy on the
+  item. Pack ④ reads the next step against a set of acceptable answers and drops the kernel gates
+  that read action fields; its composite is the class score.
+- World: a pack patient's age band follows the prevalence of the patient's conditions; women who
+  can become pregnant are not given ACE inhibitors, ARBs or statins unless indicated; a visit's
+  acute vital signs enter the same-day wearable readings; a pack declares the payload fields its
+  frame reads, and the case file and the prompt carry that view; laboratory variation is split by
+  analytical method, and reference intervals depend on sex and age.
+- Scoring: a hard-gate penalty is the gate rate times the magnitude of the chance-corrected score,
+  so a failed gate never raises a below-chance composite and the composite is not floored (packs
+  ① and ③). A medication-change marker counts unless its clause negates it or its sentence makes
+  it conditional. A gated tool call that names no usable target is a no-op observation instead of
+  an abort of the whole batch.
+- Audit: `SA-0` checks that the pool holds at least four times the published items; `SA-10` reports
+  a character n-gram text classifier per text source (report only); the prior stub blocks at the
+  shortcut line like the other evidence-free stubs; the batch-level shortcut check (A5) refuses
+  only above the shared 0.99 quantile of label shuffles.
+- The paid-request ledger is a SQLite database. A request reserves a quantile of its model's
+  observed cost instead of its worst case, and requests queue fairly for lanes; the interpreter
+  switch interval is short while a ledger transaction runs, so concurrent writers do not convoy.
+  A job that only adds cases resumes its batch in paid mode. Request pools are per backend, with
+  per-model caps (`eval.model_caps`) and a measured timing table. A ledger file that a compaction
+  replaced is read again from the start. Scores do not change.
+- The demo page shows the 1.3.0 board with rank intervals and the sample items of the four new packs.
+- Native Gemini and DashScope tariffs were re-read from the providers' pricing pages; prices, tiers
+  and cache rates are unchanged.
+
+### Added
+
+- `tools/evaluation/board_readout.py` and `tools/evaluation/rank_rule.py`: the per-pack boards (chance-corrected,
+  case × round bootstrap), the overall board under equal and SD-equalized weights, pairwise
+  separability and a rank-stability table from stored batches, with no model call. A pack on which
+  every model scores the same gets weight 0 under SD-equalized weights. See
+  [`docs/REPRODUCE.md`](docs/REPRODUCE.md#reading-the-board).
+- `haenv probe concurrency` measures how many requests each model's route accepts and writes caps
+  ready to paste; `haenv loadtest` rehearses a paid run offline against a fake provider and reads
+  a speed report ([`docs/design/loadtest.md`](docs/design/loadtest.md),
+  [`docs/design/concurrency-caps.md`](docs/design/concurrency-caps.md),
+  [`docs/design/paid-ledger.md`](docs/design/paid-ledger.md)).
+- `tools/evaluation/recompute_judges.py` attaches the judge plugins a batch's job declares.
+- The batches, model answers and judge verdicts of the 1.3.0 board, and the board's seed, are attached to the
+  GitHub release (`haenv-board-1.3.0-*`); `verify_seed.py` rebuilds the packs from the seed; `tools/evaluation/board_readout.py` reads a pack run in several batches, writes every
+  model pair's separability, and `web/demo/export_board.py` builds the demo's `board.json` from its readout.
+
+### Fixed
+
+- Paid runs on `google` / `dashscope` stopped a week after the built-in tariff check; they now warn once per backend. `paid.tariff_checked_on` records your own check, `paid.tariff_expiry: refuse` (official boards) keeps the refusal.
 
 ## [1.2.1] - 2026-10-05
 
@@ -57,7 +146,7 @@ fingerprint is unchanged.
   score with the 0.20 line and the 0.99 quantile of label shuffles, and draw those shuffles only
   when the score reaches the line. The permutation p readings are a profile: not computed by
   default (`null` in the audit record, marked "not computed"), computed with `--profile` on
-  `tools/pack_audit.py` and `tools/make_pack.py`.
+  `tools/validation/pack_audit.py` and `tools/generation/make_pack.py`.
 - A resumed run resends only the aborts that originate on our side: harness errors, and
   `ABORT(no_response)` / `ABORT(unparseable)` whose final failed attempt is a network, timeout,
   5xx, 429 or key-pool failure. An empty body, broken JSON, a reply cut at `max_tokens` and an
@@ -84,10 +173,10 @@ bridge items of pack ① are the only link between the two.
   adjustment (five decisions) and ④ follow-up interpretation (true change, noise, pre-analytical
   artefact or method difference, and the size of the true change). Packs ②–④ are scored by code
   against the world's truth; pack ① uses one LLM judge for free-text diagnoses and tests.
-- `tools/make_pack.py`: one command from pack, size and seed to a built and audited pack, with no
+- `tools/generation/make_pack.py`: one command from pack, size and seed to a built and audited pack, with no
   model call. Jobs carry `pack: {n_items, seed_sha256}`; batches record the seed's hash, never the
   seed. The shipped jobs are the public sample packs; official boards use a private seed.
-- `tools/pack_audit.py`: the generation-time audit every pack shares; `haenv run` refuses a pack's
+- `tools/validation/pack_audit.py`: the generation-time audit every pack shares; `haenv run` refuses a pack's
   items without a passing audit.
 - Chance-corrected decision scores (`cc = (m · BA − 1) / (m − 1)`): a random or constant answer
   scores 0.
@@ -222,7 +311,7 @@ belong to the infra segment.
 - A judge run given no lane count uses 10 lanes; the policy files no longer carry one (they
   carried 64 or 4).
 - The budget ledger (`budget.json`) is append-only with periodic compaction: after its first line
-  it holds one change per line, so read it with `haenv.semantic_budget.read_state`, not
+  it holds one change per line, so read it with `haenv.semantic.budget.read_state`, not
   `json.load`.
 - `eval.model_wall_budget_s` (off by default) bounds a model's total wall clock: once it is spent,
   no new cell of that model is started, and the cells left unstarted are recorded in the batch's
@@ -260,7 +349,7 @@ First public release.
 - `verifier_core`: domain-independent verifier primitives, usable without the rest of the package.
 - Task specifications (`inputs/`), registries (`registry/`), question framings (`probes/`) and the
   solver-visible half of the frozen reference packs (`frozen/*.Q.jsonl`).
-- Self-checks with negative controls: `tools/verify_selftest.py`, `tools/leak_probe_selftest.py`.
+- Self-checks with negative controls: `tools/testing/verify_selftest.py`, `tools/testing/leak_probe_selftest.py`.
 - Two frozen question packs, `ddx-timeline` and `ddx-workup`, on the same 145 cases (64 conditions),
   and a ten-model board with tiers from a case-level bootstrap (see `docs/DATA_CARD.md`).
 - Semantic judging for `noop_ok`, `tests_recall` and `tests_precision` with one judge model and

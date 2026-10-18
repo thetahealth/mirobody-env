@@ -36,11 +36,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
-sys.path.insert(0, str(ROOT / "frozen"))
+sys.path.insert(0, str(ROOT / 'benchmarks' / 'frozen'))
 
-from haenv import canary as C                        # noqa: E402
+import haenv.provenance.canary as C                        # noqa: E402
 
-split_wq = importlib.import_module("split_wq")
+split_wq = importlib.import_module('tools.generation.split_frozen_wq')
 
 PACKS = C.jsonl_packs(ROOT)
 
@@ -61,13 +61,13 @@ def _write_rows(p: pathlib.Path, rows: list[dict]) -> None:
 def _copy_frozen(dst: pathlib.Path, with_w: bool = False) -> pathlib.Path:
     """A throwaway repo root holding the published half of `frozen/` (and the
     W half when asked). Planted defects go here, never into the real tree."""
-    (dst / "frozen").mkdir(parents=True)
-    shutil.copy2(ROOT / "frozen" / "MANIFEST.json", dst / "frozen" / "MANIFEST.json")
+    (dst / 'benchmarks' / 'frozen').mkdir(parents=True)
+    shutil.copy2(ROOT / 'benchmarks' / 'frozen' / 'MANIFEST.json', dst / 'benchmarks' / 'frozen' / 'MANIFEST.json')
     for p in PACKS:
-        shutil.copy2(p, dst / "frozen" / p.name)
+        shutil.copy2(p, dst / 'benchmarks' / 'frozen' / p.name)
         if with_w:
             w = p.with_name(p.name.replace(".Q.jsonl", ".W.jsonl"))
-            shutil.copy2(w, dst / "frozen" / w.name)
+            shutil.copy2(w, dst / 'benchmarks' / 'frozen' / w.name)
     return dst
 
 
@@ -152,7 +152,7 @@ def test_q_rows_are_what_the_solver_sees_at_T():
 
 def test_manifest_block_agrees_with_disk():
     assert C.manifest_problems(ROOT) == []
-    man = json.loads((ROOT / "frozen" / "MANIFEST.json").read_text(encoding="utf-8"))
+    man = json.loads((ROOT / 'benchmarks' / 'frozen' / 'MANIFEST.json').read_text(encoding="utf-8"))
     rec = man[C.MANIFEST_KEY]["packs"]
     assert set(rec) == {p.name for p in PACKS}
     for p in PACKS:
@@ -162,7 +162,7 @@ def test_manifest_block_agrees_with_disk():
 def test_manifest_block_catches_an_edited_pack(tmp_path):
     """Negative control: one changed value in one row of a copy must be reported."""
     root = _copy_frozen(tmp_path)
-    q = root / "frozen" / PACKS[0].name
+    q = root / 'benchmarks' / 'frozen' / PACKS[0].name
     rows = _rows(q)
     rows[0]["case"]["user_profile"]["age_range"] = "99-99"
     _write_rows(q, rows)
@@ -173,7 +173,7 @@ def test_manifest_block_catches_an_edited_pack(tmp_path):
 def test_manifest_block_catches_a_missing_block(tmp_path):
     """Negative control: no block is a failure, not a pass."""
     root = _copy_frozen(tmp_path)
-    mp = root / "frozen" / "MANIFEST.json"
+    mp = root / 'benchmarks' / 'frozen' / 'MANIFEST.json'
     man = json.loads(mp.read_text(encoding="utf-8"))
     man.pop(C.MANIFEST_KEY)
     mp.write_text(json.dumps(man, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -197,26 +197,26 @@ _W_SKIP = ("W half not on disk (normal on a clean clone): join has nothing to re
 def test_join_rebuilds_manifest_bytes(tmp_path, monkeypatch):
     """Positive side, on a copy so the check never writes into `frozen/`."""
     root = _copy_frozen(tmp_path, with_w=True)
-    monkeypatch.setattr(split_wq, "HERE", root / "frozen")
+    monkeypatch.setattr(split_wq, "HERE", root / 'benchmarks' / 'frozen')
     man = split_wq.manifest_sha()
     assert man
     for name, want in man.items():
-        assert _sha(split_wq.join(root / "frozen" / name)) == want, name
+        assert _sha(split_wq.join(root / 'benchmarks' / 'frozen' / name)) == want, name
 
 
 @pytest.mark.skipif(not _HAVE_W, reason=_W_SKIP)
 def test_join_catches_a_lost_post_T_point(tmp_path, monkeypatch):
     """Negative control: drop one post-T point from W and join must not match."""
     root = _copy_frozen(tmp_path, with_w=True)
-    monkeypatch.setattr(split_wq, "HERE", root / "frozen")
+    monkeypatch.setattr(split_wq, "HERE", root / 'benchmarks' / 'frozen')
     name, want = next(iter(split_wq.manifest_sha().items()))
-    w = root / "frozen" / name.replace(".cases.jsonl", ".W.jsonl")
+    w = root / 'benchmarks' / 'frozen' / name.replace('.cases.jsonl', '.W.jsonl')
     rows = _rows(w)
     r = next(x for x in rows if x.get(split_wq.POST_T_SERIES_KEY))
     sig = next(iter(r[split_wq.POST_T_SERIES_KEY]))
     r[split_wq.POST_T_SERIES_KEY][sig].pop()
     _write_rows(w, rows)
-    assert _sha(split_wq.join(root / "frozen" / name)) != want
+    assert _sha(split_wq.join(root / 'benchmarks' / 'frozen' / name)) != want
 
 
 _HAVE_CASES = all(p.with_name(p.name.replace(".Q.jsonl", ".cases.jsonl")).is_file()
@@ -227,13 +227,13 @@ _HAVE_CASES = all(p.with_name(p.name.replace(".Q.jsonl", ".cases.jsonl")).is_fil
 def test_split_reproduces_the_tracked_q_bytes(tmp_path, monkeypatch):
     """The tracked Q half is exactly what `--split` writes today. A hand edit, or a
     split rule that changed without re-splitting, shows up here."""
-    (tmp_path / "frozen").mkdir()
+    (tmp_path / 'benchmarks' / 'frozen').mkdir()
     for p in PACKS:
         c = p.with_name(p.name.replace(".Q.jsonl", ".cases.jsonl"))
-        shutil.copy2(c, tmp_path / "frozen" / c.name)
-    monkeypatch.setattr(split_wq, "HERE", tmp_path / "frozen")
+        shutil.copy2(c, tmp_path / 'benchmarks' / 'frozen' / c.name)
+    monkeypatch.setattr(split_wq, "HERE", tmp_path / 'benchmarks' / 'frozen')
     for p in PACKS:
-        c = tmp_path / "frozen" / p.name.replace(".Q.jsonl", ".cases.jsonl")
+        c = tmp_path / 'benchmarks' / 'frozen' / p.name.replace('.Q.jsonl', '.cases.jsonl')
         q, _w, _n, _k = split_wq.split(c)
         assert q.read_bytes() == p.read_bytes(), p.name
 
@@ -253,7 +253,9 @@ def _raw_case(cid: str = "CAN-01"):
 
 
 def test_save_cases_stamps_without_moving_the_digest(tmp_path):
-    from haenv.store import digest_of, load_cases, save_cases
+    from haenv.app.artifacts.store import digest_of
+    from haenv.app.artifacts.store import load_cases
+    from haenv.app.artifacts.store import save_cases
     built = {"CAN-01": _raw_case("CAN-01"), "CAN-02": _raw_case("CAN-02")}
     path, digests = save_cases(tmp_path / "cases.jsonl", built)
     rows = _rows(path)
@@ -270,7 +272,7 @@ def test_save_cases_stamps_without_moving_the_digest(tmp_path):
 
 
 def test_save_payloads_stamps_without_moving_the_digest(tmp_path):
-    from haenv import payloads as P
+    import haenv.app.artifacts.payloads as P
     built = {"CAN-01": _raw_case("CAN-01")}
     path, digests = P.save_payloads(tmp_path / P.FILENAME, built)
     line = path.read_text(encoding="utf-8").splitlines()[0]
@@ -287,7 +289,8 @@ def test_canary_never_reaches_the_solver_payload(tmp_path):
     """Read back a stamped batch the way `run` does and build the solver view:
     none of the strings may be in it."""
     from haenv_kernel.build import build_instance                   # kernel
-    from haenv.store import load_cases, save_cases
+    from haenv.app.artifacts.store import load_cases
+    from haenv.app.artifacts.store import save_cases
     path, _ = save_cases(tmp_path / "cases.jsonl", {"CAN-01": _raw_case()})
     assert C.HAENV_GUID in path.read_text(encoding="utf-8")
     raw = load_cases(path)["CAN-01"]
@@ -303,7 +306,7 @@ def _asks_not_to_train(paths) -> list[str]:
 def test_only_the_haenv_detection_marker_ships():
     """The shipped canary is haenv's own GUID with detection-only wording: every carrier line
     names the GUID, and no shipped carrier asks readers not to train."""
-    from haenv import canary
+    import haenv.provenance.canary as canary
     assert canary.LINES and all(canary.HAENV_GUID in ln for ln in canary.LINES)
     assert not any("NEVER APPEAR IN TRAINING" in ln.upper() for ln in canary.LINES)
     carriers = [ROOT / p for p in canary.surface(ROOT)] + canary.jsonl_packs(ROOT) + canary.extra_row_files(ROOT)

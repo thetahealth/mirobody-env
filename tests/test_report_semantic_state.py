@@ -1,5 +1,6 @@
 """`haenv report` semantic state: offline stub rows are not a failed judgment."""
-from haenv.cli import _report_semantic_state, _semantic_exit_code
+from haenv.app.cli import _report_semantic_state
+from haenv.app.cli import _semantic_exit_code
 
 
 def row(solver, status):

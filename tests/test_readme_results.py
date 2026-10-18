@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("readme_results", ROOT / "docs/scripts/make_readme_results.py")
+SPEC = importlib.util.spec_from_file_location("readme_results", ROOT / 'tools/presentation/make_readme_results.py')
 FIGURE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(FIGURE)
 

@@ -19,11 +19,13 @@ sides are pinned:
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import ast
 import pathlib
 
-from haenv.store import AUDIT_FILENAME, merge_recorded_audits
+from haenv.app.artifacts.store import AUDIT_FILENAME
+from haenv.app.artifacts.store import merge_recorded_audits
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -64,7 +66,7 @@ def test_rows_follow_the_job_order():
 
 
 def test_cli_calls_the_merge():
-    tree = ast.parse((ROOT / "haenv" / "cli.py").read_text(encoding="utf-8"))
+    tree = ast.parse((_haenv_source_path('haenv/app/cli.py', root=ROOT)).read_text(encoding="utf-8"))
     called = {n.func.id for n in ast.walk(tree)
               if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
     assert "merge_recorded_audits" in called, "cli.py no longer merges the recorded audit"

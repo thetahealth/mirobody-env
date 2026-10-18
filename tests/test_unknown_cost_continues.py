@@ -10,10 +10,16 @@ import logging
 
 import pytest
 
-from haenv.paid_completion import AccountedCompletion, ReconciledRequestFailure
-from haenv.semantic_budget import BudgetExceeded, BudgetLedger, cost_summary
-from haenv.semantic_judge import JudgeRequest, JudgeTask, evaluate_consensus
-from haenv.semantic_transport import PricedJudge, PriceSchedule, ReconciledCallFailure
+from haenv.runtime.completion import AccountedCompletion, ReconciledRequestFailure
+from haenv.scoring.semantic.budget import BudgetExceeded
+from haenv.scoring.semantic.budget import BudgetLedger
+from haenv.scoring.semantic.budget import cost_summary
+from haenv.scoring.semantic.judge import JudgeRequest
+from haenv.scoring.semantic.judge import JudgeTask
+from haenv.scoring.semantic.judge import evaluate_consensus
+from haenv.scoring.semantic.transport import PricedJudge
+from haenv.scoring.semantic.transport import PriceSchedule
+from haenv.scoring.semantic.transport import ReconciledCallFailure
 
 
 # ---------------------------------------------------------------- ledger
@@ -80,10 +86,10 @@ def test_cost_summary_names_paid_and_unknown_separately(tmp_path):
 def test_legacy_unknown_record_is_closed_on_encounter(tmp_path):
     ledger = BudgetLedger(tmp_path / "b.json", limit_usd="1")
     ledger.reserve("old", ".2")
-    with ledger._locked() as state:                # a ledger carrying a halted "unknown" record
-        state["requests"]["old"]["status"] = "unknown"
-        state["halt_reason"] = "A billed request has unknown cost; reconciliation required"
-        ledger._write(state)
+    with ledger._txn() as txn:                     # a ledger carrying a halted "unknown" record
+        old = txn.get("old")
+        txn.put("old", dict(old, status="unknown"), old)
+        txn.meta["halt_reason"] = "A billed request has unknown cost; reconciliation required"
     ledger.record_unknown("old", reason="legacy_unknown_carried")
     snap = ledger.snapshot()
     assert snap["requests"]["old"]["status"] == "unknown_capped" and snap["halt_reason"] is None
@@ -146,6 +152,7 @@ def test_judge_failed_call_is_an_ordinary_failure_and_is_not_rebought(tmp_path):
 def test_judge_reservation_without_receipt_closes_at_bound_and_continues(tmp_path):
     judge, ledger, solver = _judge(tmp_path, [_ok(usage={"cost": .0001})])
     ledger.reserve("s:1", ".1")                         # issuing process died in flight
+    _sent(tmp_path, "s:1")
     with pytest.raises(ReconciledCallFailure):
         judge(JudgeRequest("s:1", 1, "p"))
     assert solver.calls == 0
@@ -181,6 +188,14 @@ def test_consensus_continues_past_a_failed_unknown_cost_call(tmp_path):
 
 # ---------------------------------------------------------------- solver path
 
+def _sent(tmp_path, request_id):
+    """The marker a request leaves on disk just before it is sent."""
+    import hashlib
+    from haenv.runtime.completion import mark_sent
+    mark_sent(tmp_path / "receipts" / (hashlib.sha256(request_id.encode()).hexdigest() + ".json"),
+              request_id=request_id)
+
+
 def _adapter(tmp_path, limit="1"):
     ledger = BudgetLedger(tmp_path / "ledger.json", limit_usd=limit)
     prices = PriceSchedule("model", Decimal(".000001"), Decimal(".000002"), Decimal(0), 100000)
@@ -205,7 +220,7 @@ def test_solver_failed_dispatch_is_an_ordinary_failed_attempt(tmp_path):
     with pytest.raises(Exception) as error:
         paid.request("r1", "p", settings, fail)
     assert not isinstance(error.value, BudgetExceeded) and "secret-token" not in str(error.value)
-    assert "secret-token" not in (tmp_path / "ledger.json").read_text()
+    assert b"secret-token" not in (tmp_path / "ledger.json.sqlite").read_bytes()
     assert ledger.snapshot()["requests"]["r1"]["status"] == "unknown_capped"
     with pytest.raises(ReconciledRequestFailure):
         paid.request("r1", "p", settings, lambda p: pytest.fail("re-bought"))
@@ -215,6 +230,7 @@ def test_solver_failed_dispatch_is_an_ordinary_failed_attempt(tmp_path):
 def test_solver_reservation_without_receipt_closes_at_bound(tmp_path):
     paid, ledger, settings = _adapter(tmp_path)
     ledger.reserve("r1", ".1")
+    _sent(tmp_path, "r1")
     with pytest.raises(ReconciledRequestFailure):
         paid.request("r1", "p", settings, lambda p: pytest.fail("lost request duplicated"))
     assert ledger.snapshot()["requests"]["r1"]["status"] == "unknown_capped"
@@ -222,12 +238,12 @@ def test_solver_reservation_without_receipt_closes_at_bound(tmp_path):
 
 def test_solver_retry_loop_continues_under_a_new_request_id(tmp_path):
     import threading
-    from haenv.solver_accounting import SolverRequestAccountant
+    from haenv.runtime.solver_accounting import SolverRequestAccountant
     paid, ledger, settings = _adapter(tmp_path)
     stop = threading.Event()
     cursor = SolverRequestAccountant(paid, "cell", stop)
     class S: pool = None
-    import haenv.solver_accounting as sa
+    import haenv.runtime.solver_accounting as sa
     original = sa.wire_settings
     sa.wire_settings = lambda solver: settings
     try:
@@ -247,3 +263,10 @@ def test_solver_cap_is_the_only_stop(tmp_path):
     with pytest.raises(BudgetExceeded) as error:
         paid.request("r2", "p" * 2000, settings, lambda p: pytest.fail("over the cap"))
     assert "budget" in str(error.value).lower()
+
+
+def test_a_judge_reservation_whose_request_never_left_is_sent_on_resume(tmp_path):
+    judge, ledger, solver = _judge(tmp_path, [_ok(usage={"cost": .0001})])
+    ledger.reserve("s:1", ".1")                         # reserved, then died waiting for a lane
+    judge(JudgeRequest("s:1", 1, "p"))
+    assert solver.calls == 1 and ledger.snapshot()["requests"]["s:1"]["status"] == "settled"

@@ -40,7 +40,7 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-import haenv.gated as G  # noqa: E402
+import haenv.interaction.gated as G  # noqa: E402
 from haenv_kernel.gatekeeper import COST  # noqa: E402
 
 
@@ -77,7 +77,7 @@ def test_monitoring_signals_are_all_vitals():
     """Planning convention: **monitoring signals are always vitals**. Daily
     streams are produced by the patient themself, consuming no extra
     resources."""
-    from haenv import streams
+    import haenv.world.observations.streams as streams
     daily = [n for n, e in streams.manifest().items() if e["aux"]]
     assert len(daily) >= 20, daily
     for t in daily:
@@ -118,7 +118,9 @@ def test_the_eighteen_silent_vitals_are_gone():
     into the cheapest tier for "matching no keyword"."""
     cat = G.test_catalogue()
     old_default = [t for t in cat if _old_kind(t) == "vitals"]
-    assert len(old_default) == 18, f"负对照失效:旧实现落默认的应为 18 项,实得 {len(old_default)}"
+    # Freeze the original negative-control items, not the size of a growing catalogue.
+    historical = {'排除TSH/PRL/17-OHP', 'ANA', 'NT-proBNP/心超', 'TRAb/TSI', 'TPOAb', 'IGF-1', 'PTH', '同型半胱氨酸/甲基丙二酸(MMA)', 'MIBG(必要时)', '25-OH-VitD', 'TSH', '午夜唾液皮质醇', 'FT4', '无需系统性排查;针对各自症状对症/观察即可', '补体C3/C4', '抗dsDNA/抗Sm', 'FT4/FT3', 'C肽'}
+    assert historical <= set(old_default), historical - set(old_default)
     still_cheap = [t for t in old_default if G.kind_of(t) == "vitals"]
     assert not still_cheap, f"这些项仍是 vitals(1.0):{still_cheap}"
 
@@ -141,7 +143,7 @@ def test_every_critical_signal_is_affordable():
     **structurally** True across the whole column; that dim would then be
     measuring our own pricing, not model behavior.
     """
-    from haenv.build import GOLD_EVIDENCE
+    from haenv.world.generation.build import GOLD_EVIDENCE
     b = _budget_from(G.kind_of)
     bad = []
     for drv, ge in GOLD_EVIDENCE.items():
@@ -227,7 +229,7 @@ def test_gated_probe_repeats_the_kind_from_its_first_menu():
     import json
     from types import SimpleNamespace
 
-    from haenv.baselines import GatedProbeSolver
+    from haenv.world.generation.baselines import GatedProbeSolver
 
     payload = SimpleNamespace(evidence_ledger=[],
                               prediction_context={"target_event_type": "event"})

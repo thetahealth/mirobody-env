@@ -15,6 +15,7 @@ constant-negative).
 SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import pathlib
 import sys
@@ -176,7 +177,7 @@ def test_noop_reading_separates_global_flag_from_fabrication():
 
 
 def test_polarity_prose_is_counted_not_hard_coded():
-    src = (ROOT / "haenv" / "report.py").read_text(encoding="utf-8")
+    src = (_haenv_source_path('haenv/report.py', root=ROOT)).read_text(encoding="utf-8")
     assert "极性 3 不存在 : 2 存在" not in src and "极性 3 假 : 2 真" not in src
     # and the prose does not name the global flag as something the judge reads
     assert "判据只读结构化枚举(`data_quality.data_sufficiency` / `signal_quality`)" not in src
@@ -184,13 +185,13 @@ def test_polarity_prose_is_counted_not_hard_coded():
 
 # ------------------------------------------------------------ (d) disputed gold
 def test_disputed_gold_register_loads_and_matches_cases():
-    from haenv.registry import load_disputed_gold
+    from haenv.resources.registry import load_disputed_gold
     ids = {e["id"]: e["status"] for e in load_disputed_gold()}
-    assert ids.get("DG-001") == "open"
+    assert ids.get("DG-001") == "accept-both"           # no longer open: both join readings are credited
     ckm = SimpleNamespace(adjudication={"ddx": {"spec_id": "JD-CKM"}})
     other = SimpleNamespace(adjudication={"ddx": {"spec_id": "JD-PCOS"}})
     hit = A.disputed_gold_hits({"JD-16": ckm, "JD-01": other})
-    assert hit["ok"] and [h["cases"] for h in hit["hits"] if h["id"] == "DG-001"] == [["JD-16"]]
+    assert hit["ok"] and not [h for h in hit["hits"] if h["id"] == "DG-001"]
     miss = A.disputed_gold_hits({"JD-01": other})
     assert miss["ok"] and all(not h["cases"] for h in miss["hits"])
 
@@ -207,8 +208,8 @@ AUDIT_12 = {
 
 def test_alias_supplements_cover_the_audited_twelve():
     import haenv_kernel.joint_scenarios as JS
-    from haenv.events import alias_hit
-    from haenv.overlay import apply_alias_supplements
+    from haenv.world.observations.events import alias_hit
+    from haenv.world.overlay import apply_alias_supplements
     sup = apply_alias_supplements(JS.DDX_SPECS)
     assert sum(len(v) for v in AUDIT_12.values()) == 12
     for sid, terms in AUDIT_12.items():
@@ -221,9 +222,9 @@ def test_alias_supplements_cover_the_audited_twelve():
 
 def test_alias_supplements_do_not_hit_unrelated_words():
     import haenv_kernel.joint_scenarios as JS
-    from haenv.events import alias_hit
-    from haenv.overlay import apply_alias_supplements
-    from haenv.overlay import rivals_for
+    from haenv.world.observations.events import alias_hit
+    from haenv.world.overlay import apply_alias_supplements
+    from haenv.world.overlay import rivals_for
     sup = apply_alias_supplements(JS.DDX_SPECS)
     for sid in AUDIT_12:
         added = [a for a in sup[sid]["aliases"] if a not in JS.DDX_SPECS[sid]["aliases"]]

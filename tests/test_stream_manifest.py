@@ -26,14 +26,19 @@ sys.path.insert(0, str(haenv.kernel_path()))
 import haenv_kernel.synth as synth                                       # noqa: E402
 from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN, KNOWN_DEVICES    # noqa: E402
 
-from haenv import events, gated, gates, indicators, streams, wearable   # noqa: E402
-from haenv.physio import apply as physio_apply                      # noqa: E402
-from haenv.regpath import registry_dir_override                     # noqa: E402
+import haenv.world.observations.events as events
+import haenv.interaction.gated as gated
+import haenv.scoring.gates as gates
+import haenv.world.clinical.indicators as indicators
+import haenv.world.observations.streams as streams
+import haenv.world.observations.wearable as wearable   # noqa: E402
+from haenv.world.physio import apply as physio_apply                      # noqa: E402
+from haenv.resources.regpath import registry_dir_override                     # noqa: E402
 
 
 def _gen_tool():
     spec = importlib.util.spec_from_file_location(
-        "gen_stream_tables", ROOT / "tools" / "gen_stream_tables.py")
+        "gen_stream_tables", ROOT / 'tools/generation/gen_stream_tables.py')
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -43,7 +48,7 @@ def test_pricing_file_is_in_sync_with_the_manifest():
     tool = _gen_tool()
     assert tool.OUT.read_text(encoding="utf-8") == tool.render(), (
         "registry/gated_pricing_streams.yaml is stale: run "
-        "`uv run python tools/gen_stream_tables.py`")
+        "`uv run python tools/generation/gen_stream_tables.py`")
 
 
 def test_every_stream_is_priced_through_the_production_path():

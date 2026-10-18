@@ -17,10 +17,11 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from haenv import job as J                                          # noqa: E402
-from haenv.store import AUDIT_FILENAME, load_audits                 # noqa: E402
+import haenv.app.job as J                                          # noqa: E402
+from haenv.app.artifacts.store import AUDIT_FILENAME
+from haenv.app.artifacts.store import load_audits                 # noqa: E402
 
-JOB = ROOT / "inputs" / "example-ew.job.yaml"
+JOB = ROOT / 'benchmarks' / 'inputs' / 'example-ew.job.yaml'
 
 
 def test_build_writes_one_audit_row_per_input_case(tmp_path):

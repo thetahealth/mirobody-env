@@ -3,7 +3,7 @@
 # Control targets of the chronic-medication pack (pack 3): the control axis each managed drug is
 # judged on, its print format, its per-reading total CV and the clinic's target.
 #
-# Read only by `haenv/labworld/meds.py` and `haenv/p3/` (segment `tools/make_freeze.py:P3_WORLD`).
+# Read only by `haenv/world/labworld/meds.py` and `haenv/p3/` (segment `tools/release/make_freeze.py:P3_WORLD`).
 # A job that does not declare the `haenv.p3` group never reads this file. Every number is
 # provisional (design doc K4), awaiting clinical sign-off.
 #

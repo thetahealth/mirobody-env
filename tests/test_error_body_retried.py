@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from haenv import evaluate as ev
+import haenv.app.evaluate as ev
 
 
 class _Resp(io.BytesIO):

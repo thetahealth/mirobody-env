@@ -41,6 +41,7 @@ differently:
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import pathlib
 import sys
@@ -53,10 +54,10 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import build as B                                  # noqa: E402
-from haenv import job as J                                    # noqa: E402
+import haenv.world.generation.build as B                                  # noqa: E402
+import haenv.app.job as J                                    # noqa: E402
 
-_JOB = ROOT / "inputs" / "example-ew.job.yaml"
+_JOB = ROOT / 'benchmarks' / 'inputs' / 'example-ew.job.yaml'
 
 
 def _first_case():
@@ -106,7 +107,7 @@ def _readback_stubs() -> dict[bool, set[str]]:
     """
     import ast
     out: dict[bool, set[str]] = {}
-    for node in ast.walk(ast.parse((ROOT / "haenv" / "cli.py").read_text(encoding="utf-8"))):
+    for node in ast.walk(ast.parse((_haenv_source_path('haenv/app/cli.py', root=ROOT)).read_text(encoding="utf-8"))):
         if not isinstance(node, ast.Dict):
             continue
         pairs = {k.value: v for k, v in zip(node.keys, node.values)
@@ -189,7 +190,8 @@ def test_renderer_row_uses_the_three_state_cell():
     form is caught.
     """
     import ast
-    src = (ROOT / "haenv" / "report.py").read_text(encoding="utf-8")
+    from haenv.reporting import generation
+    src = pathlib.Path(generation.__file__).read_text(encoding="utf-8")
     tree = ast.parse(src)
     keys: set[str] = set()
     for node in ast.walk(tree):

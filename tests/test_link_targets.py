@@ -1,6 +1,6 @@
 """Every link in the documentation must resolve inside the tree it ships in.
 
-The scan is `tools/doc_links.py`, which also backs the maintainers' release gate. This file
+The scan is `tools/validation/doc_links.py`, which also backs the maintainers' release gate. This file
 ships with the public tree, so a broken link there -- including a README link written as
 an absolute GitHub URL, which no other check reads -- turns the public test run red.
 """
@@ -8,7 +8,7 @@ import importlib.util
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("doc_links", ROOT / "tools/doc_links.py")
+SPEC = importlib.util.spec_from_file_location("doc_links", ROOT / 'tools/validation/doc_links.py')
 DL = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(DL)
 
@@ -47,3 +47,13 @@ def test_other_sites_and_code_are_not_links(tmp_path):
     r = _tree(tmp_path, "[x](https://example.org/a.md) `[y](nope.md)`\n"
                         "```\n[z](nope.md)\n```\n[w](#anchor)\n")
     assert (r["total"], r["broken"]) == (0, [])
+
+
+def test_quarter_archives_do_not_hide_broken_current_links(tmp_path):
+    (tmp_path / 'progress-log-archive').mkdir()
+    (tmp_path / 'progress-log-archive/2026-Q4.md').write_text('[old](original.md)\n')
+    (tmp_path / 'README.md').write_text('[current](missing.md)\n')
+    r = DL.scan(tmp_path)
+    assert r['archived'] == 1
+    assert r['broken'] == [('README.md', 'missing.md')]
+    assert r['total'] == 2

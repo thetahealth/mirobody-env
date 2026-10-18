@@ -51,7 +51,7 @@ def _ensure_mounted() -> None:
     reason for each unmounted geometry; `multi` is covered by the table's
     wildcard reason.
     """
-    from haenv import mount_table as mt
+    import haenv.scoring.mounts.table as mt
     if NAME in mt.MOUNT:
         return
     mt.mount(NAME, {"single": mt.OUT}, why_not={

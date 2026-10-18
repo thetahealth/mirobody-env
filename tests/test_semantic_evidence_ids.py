@@ -4,8 +4,12 @@ import json
 
 import pytest
 
-from haenv.semantic_judge import JudgeTask, JudgeReply, evaluate_consensus, parse_verdicts, _request
-from haenv.judge_evidence import evidence_catalogue
+from haenv.scoring.semantic.judge import JudgeTask
+from haenv.scoring.semantic.judge import JudgeReply
+from haenv.scoring.semantic.judge import evaluate_consensus
+from haenv.scoring.semantic.judge import parse_verdicts
+from haenv.scoring.semantic.judge import _request
+from haenv.scoring.judge_evidence import evidence_catalogue
 
 
 def task():

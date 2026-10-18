@@ -7,37 +7,59 @@ up first.
 ## 0. One minute to see that it is alive (free, no model calls)
 
 ```bash
-uv run python -c 'import haenv.report; print("kernel ok")'   # (1) does the kernel mount? (seconds)
-uv run haenv run inputs/example-ew.job.yaml --offline --fresh # (2) end to end
+uv run python -c 'import haenv_kernel,haenv.report; print("kernel ok")'   # (1) does the kernel mount? (seconds)
+uv run haenv run benchmarks/inputs/example-ew.job.yaml --offline --fresh # (2) end to end
 ```
 
-(1) is the cheapest possible check: `haenv/report.py` imports the L0 kernel at module level, so a
-mount failure surfaces here instead of halfway through a run.
+(1) imports the installed simulation kernel and supported reporting interface. An import
+failure surfaces before a run; an editable install resolves the namespaces from `src/`.
 
 (2) `--offline` uses formula-driven generation and deterministic baseline stubs: reproducible and
-free. Exit code 0 means it passed. Artifacts land in `results/<task_type>/<job_id>/<timestamp>/`
-and reports in `reports/`.
+free. Exit code 0 means it passed. Artifacts land in
+`artifacts/results/<task_type>/<job_id>/<timestamp>/` and reports in `artifacts/reports/`
+under the default output policy.
 
 ## 1. Prerequisites
 
 | What | Notes |
 |---|---|
-| Python ≥ 3.10 and [`uv`](https://docs.astral.sh/uv/) | `uv` manages dependencies and the environment. The only runtime dependency is `pyyaml` |
-| L0 kernel | `core/`, part of this repository. Its path comes from `config.yaml:kernel_path` and is resolved by `haenv.kernel_path()`. To point at another checkout: `HAENV_KERNEL_PATH=/path/to/kernel uv run haenv ...` |
+| Python ≥ 3.10 and [`uv`](https://docs.astral.sh/uv/) | `uv` manages dependencies and the environment. Runtime dependencies are declared in `pyproject.toml` |
+| L0 kernel | The `haenv_kernel` simulation package, part of this distribution. The executing package is imported normally from `src/haenv_kernel/` or the installed distribution. `haenv.kernel_path()` locates source for inspection; it does not switch the executing code. |
 | API key (model runs only) | Read as `KEY=VALUE` from `config.yaml:env_file` and injected into the subprocess environment; never logged, never written to an artifact. Point it at your own file with `HAENV_ENV_FILE=/path/to/env` |
 | An OpenAI-compatible relay (optional) | Models declared with `backend: relay` need the gateway's url, set as `backends.relay.url` in a `config.local.yaml` next to `config.yaml` (merged over it, ignored by git; see the comment above `backends:` in `config.yaml`). Without it those models are skipped, and naming one with `--models` fails |
 
+### Code, resources and output
+
+Source execution, read-only resources and writable artifacts have separate locators. The
+checkout default is `<checkout>/artifacts/`; the wheel default is `<cwd>/artifacts/`.
+`HAENV_OUTPUT_ROOT` explicitly selects the writable root. `HAENV_DATA_ROOT` selects resources
+and retains its historical combined output redirect for compatibility; prefer the output
+variable for new configuration.
+
+Fixed jobs and source data are under `benchmarks/`, with policies and references in `registry/`.
+New runtime files go under the output root's `results/`, `reports/`, `cases/` and `derived/`.
+Bundled benchmark jobs loaded without an explicit job root use `output_root()`; external job
+files preserve their legacy root convention. A saved job or manifest path remains historical
+identity, not permission to rewrite the source record.
+
+The default kernel is the `haenv_kernel` namespace imported from the executing source or
+installation, independently of resource overrides. An explicit comparison path must exist;
+it never selects another path when missing and does not switch the executing implementation.
+
 ## 2. What can be reproduced for free
 
-Stored responses can be re-judged. A change to the judges is one recompute, not a re-run of
-every model:
+Saved reports and receipts can be replayed without new model calls. Explicit legacy
+recomputation is a new identified measurement: retain the original artifacts before running
+a command that writes new evaluation rows. It does not replace historical criterion identity.
+The following legacy restamp workflow uses stored responses and deterministic judges; it is
+not the current semantic-vote or management-Q pipeline:
 
 ```bash
 # Re-judge a batch under the current judging code and prove it passes the publish gate
-uv run python tools/restamp_batch.py results/joint_dx/ddx-timeline/<batch>
+uv run python tools/evaluation/restamp_batch.py artifacts/results/joint_dx/ddx-timeline/<batch>
 
 # Re-render the report (reads existing JSONL only; no regeneration, no model calls)
-uv run haenv report inputs/ddx-timeline.job.yaml --batch <batch>
+uv run haenv report benchmarks/inputs/ddx-timeline.job.yaml --batch <batch>
 ```
 
 `restamp_batch` drops the stubs, recomputes from the stored responses, re-runs the stubs offline,
@@ -45,15 +67,134 @@ and then proves the batch passes the publish gate. A failed gate exits non-zero.
 
 ### The judging version is part of the citation
 
-Changing the scoring code invalidates every stored leaderboard at once. A cited reading must
-carry its `judging_sha16` and the freeze revision; see [`DATA_CARD.md`](DATA_CARD.md).
+A result records the identity of each criterion and of the complete criterion set.
+Unchanged criterion columns remain comparable when another criterion changes; combined
+scores also require matching aggregation rules and task weights. Legacy results retain
+their `judging_sha16` and freeze revision; see [`DATA_CARD.md`](DATA_CARD.md).
+
+### Recomputing the 1.4 overall board
+
+Given an archived 1.4 answer tree and its per-answer Q JSONL file, recompute the
+main board without calling a model:
+
+```bash
+uv run python tools/evaluation/board_score.py --tree . \
+  --work /path/to/answers --q /path/to/q.jsonl \
+  --aggregation k3 --boot 2000 --out /path/to/readout-k3
+```
+
+Use `--aggregation pk1` for the original first-answer result. Each answer root
+contains provider/pack directories with the stored `-pk1`, `-pk2` and `-pk3`
+batches. Multiple roots can be supplied as a comma-separated `--work` value.
+The script reads stored decision and gate results; it does not regenerate
+questions, rerun agents or obtain new rubric judgments. It reports missing Q
+explicitly when it prevents a score. The main result averages each question's
+three answer scores and gives the four tasks equal weight.
+
+### Historical 1.3 board
+
+This subsection retains the commands and paths of the original release checkout.
+
+`tools/evaluation/board_readout.py` reads the stored batches of the four packs and makes no model call:
+
+```bash
+python tools/evaluation/board_readout.py --out board/ \
+    --pack m2=<batch prefix> --pack pack2=<batch prefix> --pack p3=<batch prefix> --pack p4=<batch prefix>
+```
+
+A batch prefix `<dir>/<stamp>` reads the rounds `<stamp>-pk1` to `<stamp>-pk3`. The batches must pass the
+publish gate (restamp them as above when the judging code has moved).
+
+The following commands describe the historical 1.3.0 archive layout, not the 1.4 overall-score format.
+Historical bundles are named `haenv-board-1.3.0-common.tar.gz` (README, `MANIFEST.tsv`, `rebuild.sh`, the board's job files, the readout),
+`haenv-board-1.3.0-m2.tar.gz`, `-pack2.tar.gz`, `-p3.tar.gz`, `-p4.tar.gz` (one pack each) and
+`haenv-board-1.3.0.SHA256SUMS`. Download them into one directory, check them and unpack, then rebuild the
+board with the script of the bundle, which runs the two commands below with the bundle's batch names and
+compares `board.json` with the published one:
+
+```bash
+sha256sum -c haenv-board-1.3.0.SHA256SUMS && for f in haenv-board-1.3.0-*.tar.gz; do tar xzf "$f"; done
+haenv-board-1.3.0/rebuild.sh <haenv 1.3.0 checkout> board-rebuilt      # then: sha256sum -c MANIFEST.tsv inside the bundle
+```
+
+A pack whose items were run in two batches (the 1.3.0 board: the first 50 items, then the other 50 on a
+byte copy of the batch) is given as `--pack <pack>=<prefix A>+<prefix B>`, with `--items <prefix>=<job file>`
+naming the items each batch owns, and the pack ① random-menu stub rows run on the same 100 items:
+
+```bash
+python tools/evaluation/board_readout.py --out <out> --m2-stub-rows <stub rows of the 100 items> \
+  --pack m2=<m2 A>+<m2 B> --pack pack2=<pack2 A>+<pack2 B> --pack p3=<p3 A>+<p3 B> --pack p4=<p4 A>+<p4 B> \
+  --items <m2 A>=<job of its 50 items> --items <m2 B>=<job of its 50 items> \
+  --items <pack2 A>=<job of its 50 items> --items <pack2 B>=<job of its 50 items> \
+  --items <p3 A>=<job of its 50 items> --items <p3 B>=<job of its 50 items> \
+  --items <p4 A>=<job of its 50 items> --items <p4 B>=<job of its 50 items>
+```
+
+The readout the command writes equals the bundled one in every value (only its `inputs` paths differ). The
+demo's `board.json` is rebuilt from it byte for byte with the same batches and items:
+
+```bash
+python web/demo/export_board.py --readout <out>/readout.json --results <bundle>/results \
+  --batch <pack>=<job>/<A>+<job>/<B> (for each pack) --items <job>/<A>=<job of its 50 items> (for each batch) \
+  --out web/demo/board.json
+```
+
+Any other board is read with one batch prefix per pack: `--pack <pack>=<batch prefix>` for each pack.
+
+### Regenerating the board's packs from its seed
+
+An official board draws its packs with a private seed; the jobs and batches record only the seed's sha256. The
+seed is published once the board retires: for the 1.3.0 board that is with the release `v1.3.0` (the release notes
+and the asset `haenv-board-1.3.0-seed.txt`). The bundle's `verify_seed.py` then rebuilds the four packs from it with
+the code of a haenv 1.3.0 checkout and compares them with the bundle:
+
+```bash
+cd haenv-board-1.3.0 && python verify_seed.py --haenv <haenv 1.3.0 checkout> --seed-file <seed file>
+```
+
+It checks that the sha256 of the seed equals the hash the jobs record, builds each pack at N = 50 and N = 100
+with `tools/generation/make_pack.py` (the seed reaches the child processes through the environment only and is never printed
+or written), and compares the published pack jobs byte for byte and, at N = 100, every case and every payload of
+the rebuilt batch with the bundle's. It exits 0 when everything is identical and needs scikit-learn and joblib for
+the audit, like `make_pack.py`.
+
+The parts' item sets must be disjoint and hold the same models and rounds; their rows are read as one pack.
+The readout holds:
+
+- **Pack scores** from the production scorers. Packs ② to ④ are chance-corrected balanced accuracies. Pack ①
+  is mapped onto the same scale with the random-menu stub measured on the same items:
+  `cc = (score − stub) / (1 − stub)`.
+- **The overall board**: the equal-weight mean of the four pack scores, a case × round bootstrap
+  (independent per-pack draws combined draw by draw), each model's rank interval (2.5th to 97.5th
+  percentile of its rank) and every model pair's paired difference. A pair is separable when its
+  difference exceeds 2 paired standard errors; models whose rank intervals overlap are not
+  separable.
+- **A sensitivity analysis.** The SD-equalized total divides each pack's chance-corrected score by
+  that pack's between-model standard deviation before averaging, so a pack that separates the models more
+  weighs less. On the 1.3.0 board this makes the effective pack weights 12% (①), 39% (②), 34% (③) and
+  15% (④). The ten ranks are the same under both weightings. The readout writes both totals; the
+  published board shows the equal-weight total.
+- **Unresolved semantic fields in pack ①.** The semantic judge needs two votes, a third on disagreement,
+  and at least two agreeing labels; a field without that is unresolved, and no further votes are bought when
+  the board is read. The pack ① scorer uses the code value `m2_tests_precision` for F1–F3 items and 0 for F0
+  items. On the 1.3.0 board 302 of the 3,000 pack ① cells have an unresolved semantic field; in 271 of them
+  it is the tests precision (218 cells F1–F3, 53 cells F0). Leaving the F0 zeros out moves a model's pack ①
+  score by 0.000 to 0.039 and swaps only the pack ① order of gpt-6-luna and gemini-3.7-flash. The scores of
+  packs ② to ④ read no semantic field, so a field left unresolved there does not enter a score.
+- **How the board was extended.** The board packs were drawn once at 100 items per pack. Pack ① was run on
+  all 100 items. For packs ② to ④ the first 50 items (the nested 50-item pack) were run first, and the other
+  50 items were run on a byte copy of the batch. The board reads the 100 items of a pack as one pack: the rows
+  of the two parts are pooled by item, and pack ①'s random-menu stub is run on the same 100 items.
+  `tools/evaluation/board_readout.py` reads the two parts as one pack (command above) and writes every model pair's
+  separability (`all_pairs`, the matrix the demo page shows); `web/demo/export_board.py` builds `board.json` from
+  that readout, taking the two parts as `--batch <pack>=<partA>+<partB>` with the same `--items` option.
 
 ## 3. The step that costs money
 
 ```bash
-uv run haenv run inputs/ddx-timeline.job.yaml --models <model> --limit 1   # one cell first
-uv run haenv run inputs/ddx-timeline.job.yaml                              # full run; resumes the latest batch
-uv run haenv run inputs/ddx-timeline.job.yaml --fresh                      # starts a new batch
+uv run haenv run benchmarks/inputs/ddx-timeline.job.yaml --models <model> --limit 1   # one cell first
+uv run haenv run benchmarks/inputs/ddx-timeline.job.yaml                              # full run; resumes the latest batch
+uv run haenv run benchmarks/inputs/ddx-timeline.job.yaml --fresh                      # starts a new batch
 ```
 
 * Resuming is the default: a re-run fills only the cells that have not been run.
@@ -67,8 +208,8 @@ uv run haenv run inputs/ddx-timeline.job.yaml --fresh                      # sta
 
 ### Tokens and caching
 
-* **Generation cache.** `--gen llm` caches every model response in `cases/_llm_cache/`, keyed by
-  sha256 of the model and the prompt (`haenv/llm.py`). Rebuilding a pack from an unchanged job is
+* **Generation cache.** `--gen llm` caches every model response in `artifacts/cases/_llm_cache/`, keyed by
+  sha256 of the model and the prompt (`src/haenv/runtime/llm.py`). Rebuilding a pack from an unchanged job is
   answered from the cache; `batch.json:gen_usage` then reads `absent:cache_only` with `n_calls: 0`
   and the number of hits. `--regen` forces fresh calls.
 * **Answer budget.** For models with a measured basis, `max_tokens` in `config.yaml` must be at
@@ -104,14 +245,14 @@ inspect `eval_usage.status` and each model's `missing` counts; the following ave
 measured rows and are undefined if none were measured:
 
 ```bash
-uv run python -c "import json,sys; u=json.load(open(sys.argv[1]))['eval_usage']; by=u.get('by_solver',{}); m=[v for v in by.values() if v.get('n_measured')]; n=sum(v['n_measured'] for v in m); print('status:', u['status'], 'unmeasured:', {k:v['missing'] for k,v in by.items() if v.get('missing') and any(not s.startswith('absent:') for s in v['missing'])}); n or sys.exit('no measured rows'); print(len(m), 'models', n, 'rows', sum(v['in_total'] for v in m)//n, 'in/row', sum(v['out'] for v in m)//n, 'out/row')" results/joint_dx/ddx-workup/<batch>/batch.json
+uv run python -c "import json,sys; u=json.load(open(sys.argv[1]))['eval_usage']; by=u.get('by_solver',{}); m=[v for v in by.values() if v.get('n_measured')]; n=sum(v['n_measured'] for v in m); print('status:', u['status'], 'unmeasured:', {k:v['missing'] for k,v in by.items() if v.get('missing') and any(not s.startswith('absent:') for s in v['missing'])}); n or sys.exit('no measured rows'); print(len(m), 'models', n, 'rows', sum(v['in_total'] for v in m)//n, 'in/row', sum(v['out'] for v in m)//n, 'out/row')" artifacts/results/joint_dx/ddx-workup/<batch>/batch.json
 ```
 
 ## 4. Self-checks
 
 ```bash
-uv run python tools/verify_selftest.py        # item-verifier negative and positive controls
-uv run python tools/leak_probe_selftest.py    # kernel leak-gate controls
+uv run python tools/testing/verify_selftest.py        # item-verifier negative and positive controls
+uv run python tools/testing/leak_probe_selftest.py    # kernel leak-gate controls
 ```
 
 Each feeds deliberately broken inputs and requires every one of them to be caught, plus clean
@@ -128,15 +269,23 @@ What each check shows, and what to look for:
 
 | Check | Command | Expected |
 |---|---|---|
-| The item verifier catches deliberately broken streams and events | `uv run python tools/verify_selftest.py` | `68 checks, 0 missed.` (45 negative controls, 23 positive controls) |
-| The kernel leak gate fires on every field it scans | `uv run python tools/leak_probe_selftest.py` | `30 checks, 0 missed.` |
+| The item verifier catches deliberately broken streams and events | `uv run python tools/testing/verify_selftest.py` | `68 checks, 0 missed.` (45 negative controls, 23 positive controls) |
+| The kernel leak gate fires on every field it scans | `uv run python tools/testing/leak_probe_selftest.py` | `30 checks, 0 missed.` |
 | The emission gate withholds a case whose declaration does not hold and names the reason | the Quick Start in the repository README | 3 of the 4 bundled cases emitted; `EWX-04` refused with `event_density_mismatch` |
-| `verifier_core/` imports nothing from the clinical layer | `grep -rnE "^\s*(from\|import) haenv" verifier_core/` | no output |
-| A judging change makes stored scores unpublishable | after the Quick Start, add one line of code to any file in `haenv/judges/`, then run `uv run haenv report inputs/example-ew.job.yaml` and `uv run python tools/restamp_batch.py <batch-dir> --dry` | `report` warns that all 72 stored rows carry the old judging stamp; the publish gate refuses the batch (`NotPublishable`). Revert the line and it passes |
-| A scoring fix is a recompute | `uv run python tools/recompute_judges.py <batch-dir> --full` | rows with a stored model response are re-scored under the current code and the changed fields are listed. An offline batch has no model responses and reports `0/72 rows recomputed` |
-| A score difference has a noise floor | `uv run python tools/reliability_passk.py inputs/example-ew.job.yaml --k 3 --offline` | offline stubs are deterministic, so identical samples are dropped and the tool exits 1 with `only 1 comparable samples left (<3) -- no noise floor below k=3`. With `--models <name>` it reports the per-dimension floor and `pass^k` (this calls a model). It reads its source batch from, and creates its sample directories under, `results/` in the repository, while the `haenv run` calls it launches honour `HAENV_OUTPUT_ROOT`: run it with `HAENV_OUTPUT_ROOT` unset, or it finds no samples |
+| `src/verifier_core/` imports nothing from the clinical layer | `grep -rnE "^\s*(from\|import) haenv" src/verifier_core/` | no output |
+| A judging change makes stored scores unpublishable | after the Quick Start, add one line of code to any file in `src/haenv/judges/`, then run `uv run haenv report benchmarks/inputs/example-ew.job.yaml` and `uv run python tools/evaluation/restamp_batch.py <batch-dir> --dry` | `report` warns that all 72 stored rows carry the old judging stamp; the publish gate refuses the batch (`NotPublishable`). Revert the line and it passes |
+| A scoring fix is a recompute | `uv run python tools/evaluation/recompute_judges.py <batch-dir> --full` | rows with a stored model response are re-scored under the current code and the changed fields are listed. An offline batch has no model responses and reports `0/72 rows recomputed` |
+| A score difference has a noise floor | `uv run python tools/evaluation/reliability_passk.py benchmarks/inputs/example-ew.job.yaml --k 3 --offline` | offline stubs are deterministic, so identical samples are dropped and the tool exits 1 with `only 1 comparable samples left (<3) -- no noise floor below k=3`. With `--models <name>` it reports the per-dimension floor and `pass^k` (this calls a model). Historical rerun helpers require their original compatible artifact tree; a new default directory does not supply missing samples. Check the selected output root before attempting a repeat |
 
 `verify_selftest.py` and `leak_probe_selftest.py` also run in CI on every pull request.
+
+Disk census guards read local evaluation artifacts, which are absent on a clean clone.
+Maintainers may reuse historical artifacts through the explicitly registered `results/`
+symlinks; those artifacts and their measured usage belong to the original runs. Adding a
+generation batch does not supply model responses or measured evaluation usage. A private
+scratch surface may combine those historical artifacts with current generation batches,
+with each origin recorded separately. Passing that local census does not make its data
+available in a clone; missing objects remain unmeasured there.
 
 > Do not pipe these through `tail` or similar: a pipe can turn a crash into exit code 0;
 > redirect to a file and read the file.
@@ -152,8 +301,9 @@ What each check shows, and what to look for:
 
 * [`ETHICS.md`](ETHICS.md): the data is synthetic, and exactly where real EMR entered.
 * Noise floor. Before reading any difference between two scores, measure `pass^k` with
-  k ≥ 3. The noise level changes sharply with the number of cells. The published board ran once
-  per cell (k = 1): its tiers cover case sampling only.
+  k ≥ 3. The noise level changes sharply with the number of cells. The original 1.x board ran once
+  per cell (k = 1): its tiers cover case sampling only. The 1.4 main board averages three
+  responses per question and resamples question clusters.
 
 **Source and wheel provenance.** Fingerprints resolve code and resources in either installation
 layout using the same canonical file labels. With identical scoring/world files and registered

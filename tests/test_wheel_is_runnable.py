@@ -40,6 +40,7 @@ path in a real wheel.
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import ast
 import pathlib
@@ -106,7 +107,7 @@ def _kernel_modules_haenv_imports() -> dict[str, pathlib.Path]:
     src = _kernel_package_dir()
     by_name = {p.stem: p for p in src.rglob("*.py")}
     found: dict[str, pathlib.Path] = {}
-    for p in sorted((ROOT / "haenv").rglob("*.py")):
+    for p in sorted((_haenv_source_path('haenv', root=ROOT)).rglob("*.py")):
         for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
             if isinstance(n, ast.ImportFrom):
                 mod = n.module or ""
@@ -154,7 +155,7 @@ def test_kernel_package_is_declared_and_sits_beside_haenv():
     assert (kp / "__init__.py").is_file(), (
         f"🔴 {kp} 里没有 `__init__.py` —— 它不是包,装到 site-packages 后 import 不到")
     declared = _declared_packages()
-    assert "haenv_kernel" in declared, (
+    assert kp.relative_to(ROOT).as_posix() in declared, (
         f"🔴 `pyproject.toml` 的 wheel `packages` 里没有 `haenv_kernel`(实为 {sorted(declared)})—— "
         f"源码树跑得动,轮子装完 import 不到")
     mods = _kernel_modules_haenv_imports()
@@ -214,6 +215,21 @@ def test_wheel_kernel_is_importable_where_the_constant_points():
             f"🔴 从轮子里 import `{pkg}` 失败:\n{p.stdout}{p.stderr}")
 
 
+def _in_place_root_lines(source: str, label: str) -> list[int]:
+    pat = re.compile(r"(?:Path|_P|_Path|pathlib\.Path|_pathlib\.Path)"
+                     r"\(__file__\)\.resolve\(\)\.parent\.parent")
+    allowed = set()
+    if label == "haenv/locations.py":
+        expected = ast.parse("return Path(__file__).resolve().parent.parent").body[0]
+        for node in ast.parse(source).body:
+            if isinstance(node, ast.FunctionDef) and node.name == "source_root":
+                body = node.body[1:] if ast.get_docstring(node) is not None else node.body
+                assert len(body) == 1 and ast.dump(body[0]) == ast.dump(expected)
+                allowed.add(body[0].lineno)
+    return [i for i, line in enumerate(source.splitlines(), 1)
+            if not line.lstrip().startswith("#") and pat.search(line) and i not in allowed]
+
+
 def test_data_root_is_the_single_entry():
     """`haenv/` must have no in-place repo-root computation left -- that's exactly the root cause of `pip install` not running.
 
@@ -222,19 +238,23 @@ def test_data_root_is_the_single_entry():
     grant immunity to a differently-spelled version of the same thing
     (scanning only for `ROOT /` misses 16 occurrences).
     """
-    pat = re.compile(r"(?:Path|_P|_Path|pathlib\.Path|_pathlib\.Path)"
-                     r"\(__file__\)\.resolve\(\)\.parent\.parent")
     bad = []
-    for p in sorted((ROOT / "haenv").rglob("*.py")):
+    for p in sorted((_haenv_source_path('haenv', root=ROOT)).rglob("*.py")):
         if p.name == "__init__.py":         # `data_root()` itself lives here
             continue
-        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
-            if line.lstrip().startswith("#"):
-                continue
-            if pat.search(line):
-                bad.append(f"{p.relative_to(ROOT)}:{i}")
+        label = p.relative_to(_haenv_source_path("haenv", root=ROOT).parent).as_posix()
+        bad.extend(f"{p.relative_to(ROOT)}:{i}"
+                   for i in _in_place_root_lines(p.read_text(encoding="utf-8"), label))
     assert not bad, ("这些地方还在就地算仓根,轮子安装下它们指向 site-packages:\n  "
                      + "\n  ".join(bad) + "\n⇒ 改用 `from haenv import data_root as _dr`")
+
+
+def test_source_locator_exception_does_not_exempt_other_root_computations():
+    source = _haenv_source_path("haenv/locations.py", root=ROOT).read_text()
+    assert not _in_place_root_lines(source, "haenv/locations.py")
+    injected = "\nROOT = Path(__file__).resolve().parent.parent\n"
+    assert _in_place_root_lines(source + injected, "haenv/locations.py")
+    assert _in_place_root_lines(injected, "haenv/other.py")
 
 
 def test_every_runtime_tools_module_is_shipped():
@@ -243,12 +263,12 @@ def test_every_runtime_tools_module_is_shipped():
     Scanned live, not read off a list -- a hand-written list would
     silently go stale when another module is imported, and the symptom is a
     `FileNotFoundError` partway through a run after install (packaging only
-    `make_freeze` leaves out `tools/attribute_failures.py`).
+    `make_freeze` leaves out `tools/evaluation/attribute_failures.py`).
     """
     want: set[str] = set()
     pat_path = re.compile(r'"tools"\s*/\s*"([a-z_]+\.py)"')
-    pat_imp = re.compile(r'from\s+tools\.([a-z_]+)|import\s+tools\.([a-z_]+)')
-    for p in (ROOT / "haenv").rglob("*.py"):
+    pat_imp = re.compile(r'from\s+tools\.([a-z_][a-z0-9_]*)|import\s+tools\.([a-z_][a-z0-9_]*)')
+    for p in (_haenv_source_path('haenv', root=ROOT)).rglob("*.py"):
         s = p.read_text(encoding="utf-8")
         want |= {m for m in pat_path.findall(s)}
         for a, b in pat_imp.findall(s):
@@ -266,7 +286,7 @@ def test_resources_the_code_reads_are_shipped():
     """
     pat = re.compile(r'_dr\(\)\s*/\s*"([a-zA-Z_]+)"')
     want = set()
-    for p in (ROOT / "haenv").rglob("*.py"):
+    for p in (_haenv_source_path('haenv', root=ROOT)).rglob("*.py"):
         want |= set(pat.findall(p.read_text(encoding="utf-8")))
     want |= {"config.yaml"}                  # `__init__` and `cli` go through ROOT / "config.yaml"
     shipped = set()
@@ -284,16 +304,10 @@ def test_data_root_honours_explicit_override(tmp_path, monkeypatch):
     named should appear in the error message; silently substituting
     something else is harder to debug.
     """
-    import importlib
-
     import haenv
     monkeypatch.setenv("HAENV_DATA_ROOT", str(tmp_path / "nowhere"))
-    importlib.reload(haenv)
-    try:
-        assert haenv.data_root() == (tmp_path / "nowhere").resolve()
-    finally:
-        monkeypatch.delenv("HAENV_DATA_ROOT", raising=False)
-        importlib.reload(haenv)
+    assert haenv.data_root() == (tmp_path / "nowhere").resolve()
+    assert not (tmp_path / "nowhere").exists()
 
 
 def test_data_root_falls_back_by_content_not_by_path_shape(tmp_path, monkeypatch):
@@ -368,24 +382,26 @@ def test_output_root_never_writes_into_the_package(tmp_path, monkeypatch):
     point, an install would start writing into the package again.
     """
     import haenv
+    from haenv import locations
 
-    # (1) source tree (in-repo): read root == write root, behavior unchanged byte for byte
-    assert haenv.output_root() == haenv.data_root(), \
-        "仓内两者必须相等 —— 不相等说明这次改动动了源码树上的行为"
+    monkeypatch.delenv("HAENV_OUTPUT_ROOT", raising=False)
+    monkeypatch.delenv("HAENV_DATA_ROOT", raising=False)
+    # (1) The approved source layout keeps new output under artifacts/.
+    assert haenv.output_root() == haenv.data_root() / "artifacts"
 
     # (2) wheel layout: `data_root()` lands inside the package => `output_root()` must leave the package directory
     pkg = tmp_path / "site-packages" / "haenv"
     (pkg / "_data").mkdir(parents=True)
     (pkg / "_data" / "config.yaml").write_text("models: {}\n", encoding="utf-8")
-    monkeypatch.setattr(haenv, "_WHEEL_DATA", pkg / "_data")
-    monkeypatch.setattr(haenv, "data_root", lambda: pkg / "_data")
+    monkeypatch.setattr(locations, "source_root", lambda: pkg.parent)
     monkeypatch.delenv("HAENV_OUTPUT_ROOT", raising=False)
     monkeypatch.delenv("HAENV_DATA_ROOT", raising=False)
     work = tmp_path / "workdir"
     work.mkdir()
     monkeypatch.chdir(work)
     got = haenv.output_root()
-    assert got == work, f"wheel 布局下产物根必须是 CWD,实际 {got}"
+    assert haenv.data_root() == pkg / "_data"
+    assert got == work / "artifacts", f"wheel 布局下产物根必须是 CWD/artifacts,实际 {got}"
     assert pkg not in got.parents and got != pkg, "🔴 产物根落在包目录里"
 
     # (3) an explicit override wins (both variables are honored; `HAENV_OUTPUT_ROOT` is more specific)
@@ -405,7 +421,7 @@ def test_cli_passes_output_root_not_data_root():
     comment happens to contain the word `ROOT`.
     """
     import ast
-    src = (pathlib.Path(__file__).resolve().parent.parent / "haenv" / "cli.py").read_text("utf-8")
+    src = (_haenv_source_path('haenv/app/cli.py', root=pathlib.Path(__file__).resolve().parent.parent)).read_text("utf-8")
     calls = [n for n in ast.walk(ast.parse(src))
              if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "load_job"]
     assert calls, "`cli.py` 里找不到 `load_job(...)` 调用 —— 扫描面塌了,不是通过"
@@ -449,7 +465,7 @@ def test_cli_never_hands_the_read_root_to_something_that_writes():
     that passes `ROOT` has to state what it reads.
     """
     import ast
-    src = (pathlib.Path(__file__).resolve().parent.parent / "haenv" / "cli.py").read_text("utf-8")
+    src = (_haenv_source_path('haenv/app/cli.py', root=pathlib.Path(__file__).resolve().parent.parent)).read_text("utf-8")
     tree = ast.parse(src)
 
     # a non-empty scan surface is a precondition: if the name `ROOT` were ever renamed, the loop below would become vacuously true.

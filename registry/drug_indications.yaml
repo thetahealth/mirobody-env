@@ -86,7 +86,8 @@ pairs:
     amlodipine:
       status: approved
       dose_steps: [5.0, 10.0]
-      source: "二氢吡啶类钙拮抗剂,一线降压。阶梯方向有广泛共识,未核到说明书原文 ⇒ pending。
+      source: "NORVASC美国官方说明书2.1:通常起始5 mg每日一次,成人最大10 mg每日一次;
+        https://labeling.pfizer.com/ShowLabeling.aspx?id=562 (2026-10-10核对)。登记阶梯不变,不代表个体处方建议。
         内核 `DRUG_PKPD` 无此条目 ⇒ 梯级只受本表约束(与 liraglutide 同)。
         `drug_effects.yaml` 无效应量 ⇒ 列入 `drugs_without_effect_data`。"
     semaglutide:

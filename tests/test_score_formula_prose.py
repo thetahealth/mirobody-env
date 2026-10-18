@@ -23,6 +23,7 @@ own sources.
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import pathlib
 import re
@@ -32,8 +33,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # implemented in `analytics.py` (a pure computation layer) and rendered in
 # `report.py`. Reading only one of them would leave the assertions below
 # scanning an empty surface.
-_SRC = "\n".join((ROOT / "haenv" / f"{m}.py").read_text(encoding="utf-8")
-                 for m in ("report", "analytics"))
+_SRC = "\n".join((_haenv_source_path('haenv', root=ROOT) / f'{m}.py').read_text(encoding="utf-8")
+                 for m in ("reporting/diagnosis", "scoring/analysis/ranking"))
 
 
 def test_prose_does_not_assert_the_false_identity():

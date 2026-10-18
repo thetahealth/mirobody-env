@@ -20,15 +20,15 @@ been run.
 ## 1. Running it
 
 ```bash
-uv run haenv run inputs/example-ew.job.yaml --offline        # smoke test: only offline deterministic stubs, zero cost
-uv run haenv run inputs/example-ew.job.yaml --models A --limit 1   # real model, verify one cell first
-uv run haenv run inputs/example-ew.job.yaml                  # full run (config.default_models x every case)
+uv run haenv run benchmarks/inputs/example-ew.job.yaml --offline        # smoke test: only offline deterministic stubs, zero cost
+uv run haenv run benchmarks/inputs/example-ew.job.yaml --models A --limit 1   # real model, verify one cell first
+uv run haenv run benchmarks/inputs/example-ew.job.yaml                  # full run (config.default_models x every case)
 ```
 
 Don't leave a long run attached to your session:
 
 ```bash
-nohup uv run haenv run inputs/example-ew.job.yaml > /tmp/haenv.out 2>&1 &
+nohup uv run haenv run benchmarks/inputs/example-ew.job.yaml > /tmp/haenv.out 2>&1 &
 ```
 
 **Resumable runs are the default** -- re-running only backfills the (case x model) cells that haven't run yet.
@@ -38,21 +38,25 @@ regenerates the report for a given batch · `--models A,B` backfills a different
 
 ## 2. Artifacts (`<B>` = the batch timestamp, also printed at the top of the report)
 
+The paths below use the default `artifacts/` output root. `HAENV_OUTPUT_ROOT` selects another
+root; bundled jobs use it, while external job files retain their legacy root convention.
+Fixed `benchmarks/` inputs and saved source labels remain separate.
+
 | file | what it is |
 |---|---|
-| `reports/<job>/<B>/eval-<job>.md` | the report (see section 4) |
-| `results/<task>/<job>/<B>/eval.jsonl` | per-cell scoring detail, one row per cell; the report can be traced back to a row |
-| `results/<task>/<job>/<B>/responses.jsonl` | the model's raw responses (including the full text of failed retries) |
-| `results/<task>/<job>/<B>/trace.jsonl` | the trace event log (see section 3) |
-| `results/<task>/<job>/<B>/cases.jsonl` | the questions themselves (including ground truth) + per-case sha256, logged into `batch.json` |
-| `results/<task>/<job>/<B>/batch.json` | batch metadata: model set / kernel path / usage / world and scoring fingerprints |
+| `artifacts/reports/<job>/<B>/eval-<job>.md` | the report (see section 4) |
+| `artifacts/results/<task>/<job>/<B>/eval.jsonl` | per-cell scoring detail, one row per cell; the report can be traced back to a row |
+| `artifacts/results/<task>/<job>/<B>/responses.jsonl` | the model's raw responses (including the full text of failed retries) |
+| `artifacts/results/<task>/<job>/<B>/trace.jsonl` | the trace event log (see section 3) |
+| `artifacts/results/<task>/<job>/<B>/cases.jsonl` | the questions themselves (including ground truth) + per-case sha256, logged into `batch.json` |
+| `artifacts/results/<task>/<job>/<B>/batch.json` | batch metadata: model set / kernel path / usage / world and scoring fingerprints |
 
 ### Important: don't confuse the two caches
 
 | | what it is | who bypasses it |
 |---|---|---|
 | `cases.jsonl` | the assembled question, past the emission gate | `--rebuild` (regenerate questions within the batch) |
-| `cases/_llm_cache/` | the question-generation LLM's prompt->response cache | `--regen` (force a fresh model call) |
+| `artifacts/cases/_llm_cache/` | the question-generation LLM's prompt->response cache | `--regen` (force a fresh model call) |
 
 **A cache hit is not the same question**: change a judge or `job.yaml`, and the same model output assembles
 into a different question. So `run`/`report` always read the batch's own `cases.jsonl` (comparing fingerprints
@@ -69,7 +73,7 @@ solver" section can't prove it's the same thing that was actually evaluated.
  "step":2,"type":"tool/result","data":{"call_id":"2.1","observation":[...],"cost":5.0}}
 ```
 
-`haenv.trace.KNOWN_EVENT_TYPES` lists every event type (`read_trace` refuses an unregistered one); the four
+`haenv.interaction.trace.KNOWN_EVENT_TYPES` lists every event type (`read_trace` refuses an unregistered one); the four
 most relevant here:
 
 | event | what it records |
@@ -125,12 +129,12 @@ The report opens with the item-generation and emission-gate summary, before the 
 
 ## 7. After a run finishes
 
-* if a judge changes, recompute, don't re-run: `uv run python tools/recompute_judges.py <batch dir> --full`
+* if a judge changes, recompute, don't re-run: `uv run python tools/evaluation/recompute_judges.py <batch dir> --full`
   (re-judges from the responses already on disk, calls no model), and it reports which fields changed;
 * to make a batch publishable (a single, consistent judging convention): `uv run python
-  tools/restamp_batch.py <batch dir>` -- it strips stubs, recomputes, prints the commands to re-run the
+  tools/evaluation/restamp_batch.py <batch dir>` -- it strips stubs, recomputes, prints the commands to re-run the
   stubs, and finally verifies itself against the gate.
-  Important: don't hand-roll these four steps: stubs are identified via `haenv.baselines.BASELINE_NAMES`;
+  Important: don't hand-roll these four steps: stubs are identified via `haenv.world.generation.baselines.BASELINE_NAMES`;
   hand-writing a second list will delete the wrong rows.
 
 *SYNTHETIC data, for evaluation only, not medical advice.*

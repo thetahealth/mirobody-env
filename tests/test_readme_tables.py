@@ -7,6 +7,7 @@ score, interval, tier or answered count in the README passes every other test.
 import copy
 import json
 import re
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 import pytest
@@ -77,12 +78,13 @@ def test_a_changed_snapshot_is_caught(data):
     assert got != want
 
 
-# ── the 1.2.0 board: both READMEs against `web/demo/board.json` (the demo's board data) ──
-BOARD_HEADINGS = {"README.md": ("### 1.2.0 overall", "### 1.2.0 by pack"),
-                  "README.zh-CN.md": ("### 1.2.0 总分", "### 1.2.0 分包")}
-OVERALL_ROW = re.compile(r"^\|\s*(\d+)\s*\|\s*(\S+)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)–([\d.]+)\s*\|\s*$", re.M)
-PACK_ROW = re.compile(r"^\|\s*(\S+)\s*\|((?:\s*[\d.]+ \([\d.]+–[\d.]+\)\s*\|){4})\s*$", re.M)
-CELL = re.compile(r"([\d.]+) \(([\d.]+)–([\d.]+)\)")
+# ── the current board: both READMEs against `web/demo/board.json` (the demo's board data) ──
+BOARD_HEADINGS = {"README.md": ("overall", "by pack"), "README.zh-CN.md": ("总分", "分包")}
+VERSION = r"\d+\.\d+\.\d+"
+NUM = r"-?[\d.]+"
+OVERALL_ROW = re.compile(rf"^\|\s*(\d+(?:–\d+)?)\s*\|\s*(\S+)\s*\|\s*({NUM})\s*\|\s*({NUM})–({NUM})\s*\|\s*$", re.M)
+PACK_ROW = re.compile(rf"^\|\s*(\S+)\s*\|((?:\s*{NUM} \({NUM}–{NUM}\)\s*\|){{4}})\s*$", re.M)
+CELL = re.compile(rf"({NUM}) \(({NUM})–({NUM})\)")
 PACKS = ("m2", "pack2", "p3", "p4")
 
 
@@ -91,46 +93,79 @@ def board():
     return json.loads((ROOT / "web/demo/board.json").read_text(encoding="utf-8"))
 
 
-def _section(text, heading):
-    return text.split(heading, 1)[1].split("\n###", 1)[0].split("\n## ", 1)[0]
+def _section(text, name):
+    """The body under the heading `### <version> <name>`, up to the next heading."""
+    m = re.search(rf"^### {VERSION} {re.escape(name)}\s*$", text, re.M)
+    assert m, f"no `### <version> {name}` heading"
+    return text[m.end():].split("\n###", 1)[0].split("\n## ", 1)[0]
+
+
+def _rank(x):
+    lo, hi = x["rank_ci95"]
+    return str(lo) if lo == hi else f"{lo}–{hi}"
+
+
+def _half_up3(x):
+    """Three decimals, half up on the stored decimal: the rule the README table and the demo use."""
+    return float(Decimal(str(x)).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP))
 
 
 def board_expected(board):
-    r3 = lambda v: round(v, 3)  # noqa: E731
-    overall = [(x["rank"], x["model"], r3(x["score"]), r3(x["ci95"][0]), r3(x["ci95"][1])) for x in board["overall"]["board"]]
-    by = {k: {x["model"]: (r3(x["score"]), r3(x["ci95"][0]), r3(x["ci95"][1])) for x in board["packs"][k]["board"]} for k in PACKS}
-    packs = [(x["model"], tuple(by[k][x["model"]] for k in PACKS)) for x in board["overall"]["board"]]
-    return overall, packs
+    rows = []
+    for r in board["overall"]["board"]:
+        scores = tuple(_half_up3(next(x["score"] for x in board["packs"][k]["board"] if x["model"] == r["model"])) for k in PACKS)
+        rows.append((_rank(r), r["model"], _half_up3(r["score"]), _half_up3(r["ci95"][0]), _half_up3(r["ci95"][1]),
+                     scores + (_half_up3(r["pass3"]),)))
+    return rows
 
 
 def board_shown(text, doc):
-    h1, h2 = BOARD_HEADINGS[doc]
-    overall = [(int(r), m, float(s), float(lo), float(hi)) for r, m, s, lo, hi in OVERALL_ROW.findall(_section(text, h1))]
-    packs = [(m, tuple(tuple(float(v) for v in c) for c in CELL.findall(cells))) for m, cells in PACK_ROW.findall(_section(text, h2))]
-    return overall, packs
+    section = _section(text, BOARD_HEADINGS[doc][0])
+    pattern = re.compile(rf"^\|\s*(\d+(?:–\d+)?)\s*\|\s*(\S+)\s*\|\s*({NUM}) \(({NUM})–({NUM})\)\s*\|((?:\s*{NUM}\s*\|){{5}})\s*$", re.M)
+    return [(r,m,float(score),float(lo),float(hi),tuple(float(v.strip()) for v in cells.strip().strip("|").split("|")))
+            for r,m,score,lo,hi,cells in pattern.findall(section)]
 
 
 @pytest.mark.parametrize("doc", sorted(BOARD_HEADINGS))
-def test_readme_1_2_0_board_matches_the_demo_board(board, doc):
+def test_readme_board_matches_the_demo_board(board, doc):
     text = (ROOT / doc).read_text(encoding="utf-8")
     assert all(p["status"] == "final" for p in board["packs"].values()) and board["overall"]["status"] == "final"
-    want_o, want_p = board_expected(board)
-    got_o, got_p = board_shown(text, doc)
-    assert len(got_o) == len(want_o) > 0 and got_o == want_o, doc
-    assert len(got_p) == len(want_p) and got_p == want_p, doc
-    assert board["source"]["pack_seed_sha256"] in text, f"{doc} does not show the board's pack-seed hash"
+    assert board_shown(text, doc) == board_expected(board)
+    assert len(board_expected(board)) == len(board["models"]) > 0
+    assert board["source"]["aggregation"] == "k3"
+    assert "k3" in text and "pk1" in text and "N100" in text
+    assert all(p["n_cases"] == 100 and p["n_rounds"] == 3 for p in board["packs"].values())
     assert f"{board['source']['boot']:,}" in text, f"{doc} does not state the bootstrap draw count"
+    assert "All-3" in text
 
 
-def test_a_changed_1_2_0_reading_is_caught(board):
-    """Negative control on both sides: a README rendered from the board reads back exactly; moving one
-    reading in the board breaks the match with the committed README."""
-    want_o, want_p = board_expected(board)
-    h1, h2 = BOARD_HEADINGS["README.md"]
-    o = "".join(f"| {r} | {m} | {s:.3f} | {lo:.3f}–{hi:.3f} |\n" for r, m, s, lo, hi in want_o)
-    p = "".join(f"| {m} | " + " | ".join(f"{s:.3f} ({lo:.3f}–{hi:.3f})" for s, lo, hi in cells) + " |\n" for m, cells in want_p)
-    text = f"{h1}\n\n| a |\n|---|\n{o}\n{h2}\n\n| a |\n|---|\n{p}\n## next\n"
-    assert board_shown(text, "README.md") == (want_o, want_p)
+def test_pass3_is_the_equal_weight_mean_of_the_pack_profiles(board):
+    """The pass^3 column is a profile copied from the score readout, not a ranking input."""
+    for r in board["overall"]["board"]:
+        packs = [board["profile"][p][r["model"]] for p in board["profile"]]
+        assert all(x["k"] == 3 for x in packs)
+        assert abs(r["pass3"] - sum(x["pass_k"] for x in packs) / len(packs)) < 1e-6
+
+
+def test_the_board_carries_no_alternative_weighting(board):
+    """The published board shows the equal-weight total only; the SD-equalized variant is a
+    sensitivity analysis in the reproduction notes."""
+    blob = json.dumps(board)
+    assert "sd_equal" not in blob and "holds" not in blob
+
+
+def test_a_changed_reading_in_the_board_is_caught(board):
+    """Moving any displayed score, interval, pack value or rank breaks the match."""
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert board_shown(text, "README.md") == board_expected(board)
+    for field in ("score", "ci95", "rank_ci95"):
+        moved = copy.deepcopy(board)
+        row = moved["overall"]["board"][0]
+        if isinstance(row[field], list):
+            row[field][1] += .01 if field == "ci95" else 1
+        else:
+            row[field] += .01
+        assert board_expected(moved) != board_shown(text, "README.md")
     moved = copy.deepcopy(board)
-    moved["packs"]["p4"]["board"][0]["ci95"][1] += 0.01
-    assert board_expected(moved)[1] != board_shown((ROOT / "README.md").read_text(encoding="utf-8"), "README.md")[1]
+    moved["packs"]["p4"]["board"][0]["score"] += .01
+    assert board_expected(moved) != board_shown(text, "README.md")

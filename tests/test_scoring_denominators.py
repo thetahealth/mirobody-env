@@ -29,6 +29,7 @@ and "the scan surface collapsed" look identical.
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import ast
 import importlib.util
@@ -43,10 +44,10 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import job as JB                                     # noqa: E402
+import haenv.app.job as JB                                     # noqa: E402
 from haenv import report as RP                                  # noqa: E402
 
-_spec = importlib.util.spec_from_file_location("_mkfreeze2", ROOT / "tools" / "make_freeze.py")
+_spec = importlib.util.spec_from_file_location("_mkfreeze2", ROOT / 'tools/release/make_freeze.py')
 MF = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(MF)
 
@@ -74,7 +75,7 @@ def _generation_fork_driver() -> str:
     Read this from the AST, not with grep: `grep` would be fooled by the same
     string appearing in comments (this file's own header has several).
     """
-    tree = ast.parse((ROOT / "haenv" / "build.py").read_text(encoding="utf-8"))
+    tree = ast.parse((_haenv_source_path('haenv/world/generation/build.py', root=ROOT)).read_text(encoding="utf-8"))
     found: list[str] = []
     for n in ast.walk(tree):
         if not isinstance(n, ast.If) or not isinstance(n.test, ast.BoolOp):
@@ -164,7 +165,7 @@ def test_driver_table_is_actually_exercised_by_the_job_files():
     """
     n_cases = n_via_table = 0
     for sub in ("inputs", "derived"):
-        for f in sorted((ROOT / sub).glob("*.job.yaml")):
+        for f in sorted((ROOT / 'benchmarks' / sub).glob("*.job.yaml")):
             d = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
             for c in (d.get("cases") or []):
                 if not isinstance(c, dict):
@@ -453,7 +454,7 @@ def test_the_two_thresholds_are_not_the_same_object():
     cells ("constant value" doesn't require pairing).
     """
     assert hasattr(RP, "MIN_ITEMS_FOR_EXERCISE") and hasattr(RP, "MIN_CELLS_FOR_EXERCISE")
-    src = (ROOT / "haenv" / "report.py").read_text(encoding="utf-8")
+    src = (_haenv_source_path('haenv/report.py', root=ROOT)).read_text(encoding="utf-8")
     assert "MIN_CELLS_FOR_EXERCISE" in src
     # `dimension_health` must report both denominators — reporting only one
     # would leave downstream code no choice but to treat that one as the judge.
@@ -569,7 +570,7 @@ def test_process_dims_direction_is_behaviourally_honoured():
     around that raise would mean this is no longer testing the production
     path.
     """
-    from haenv import separation as SP
+    import haenv.scoring.separation as SP
     solo = {d: s for d, s in SP.PROCESS_DIMS.items() if not s.paired_with}
     lower = [d for d, s in solo.items() if s.direction == "lower"]
     higher = [d for d, s in solo.items() if s.direction == "higher"]
@@ -599,7 +600,7 @@ def test_process_dims_registration_is_fail_closed():
     paired-dimension case: computing one side alone must raise, it must not
     quietly return a number with no construct-level meaning.
     """
-    from haenv import separation as SP
+    import haenv.scoring.separation as SP
     with pytest.raises(SP.SeparationError) as e:
         SP.separation(_sep_rows("__x__", 0.1, 0.9, 0.5), "__not_registered__",
                       baseline_names=["__stub__"], geometry="gated")

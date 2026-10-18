@@ -45,8 +45,8 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv.physio import apply as A  # noqa: E402
-from haenv.physio import noise as N  # noqa: E402
+from haenv.world.physio import apply as A  # noqa: E402
+from haenv.world.physio import noise as N  # noqa: E402
 
 REG = A.load_stream_registry(ROOT / "registry" / "physio_streams.yaml")
 SPEC = REG.specs["weight"].noise
@@ -155,7 +155,7 @@ def test_registry_is_the_only_source_of_phi():
     between them would weld two different things together, and they each
     come from a different source.
     """
-    from haenv import events as E
+    import haenv.world.observations.events as E
     assert E._AR_PHI != REG.ar_phi["weight"], (
         "观测噪声的 φ 与主信号的 _AR_PHI 取了同一个值 —— 两者出处不同,不该被焊在一起")
 

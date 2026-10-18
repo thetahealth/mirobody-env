@@ -4,9 +4,10 @@ import threading
 
 import pytest
 
-from haenv.judge_compaction import pack_reference, unpack_reference
-from haenv.judge_scheduler import run_bounded
-from haenv.semantic_parallel import MAX_JUDGE_LANES
+from haenv.scoring.judge_compaction import pack_reference
+from haenv.scoring.judge_compaction import unpack_reference
+from haenv.runtime.judge_scheduler import run_bounded
+from haenv.scoring.semantic.parallel import MAX_JUDGE_LANES
 
 
 def reference():
@@ -61,7 +62,7 @@ def test_invalid_concurrency_rejected_before_dispatch(n):
 
 
 def test_scheduler_and_cell_runner_share_one_lane_ceiling():
-    import haenv.judge_scheduler as scheduler, haenv.semantic_parallel as parallel
+    import haenv.runtime.judge_scheduler as scheduler, haenv.scoring.semantic.parallel as parallel
     assert scheduler.MAX_JUDGE_LANES is parallel.MAX_JUDGE_LANES == MAX_JUDGE_LANES == 64
     assert run_bounded([], lambda x: x, concurrency=MAX_JUDGE_LANES) == []
 
@@ -78,7 +79,7 @@ def test_max_lanes_really_run_at_once():
 
 
 def test_live_prompt_uses_lossless_tables_and_shared_reference_prefix():
-    from haenv.semantic_inputs import anonymous_prompt
+    from haenv.scoring.semantic.inputs import anonymous_prompt
     ref = reference()
     first, body = anonymous_prompt({"dx": "first rule"}, ref, {"differential": [{"diagnosis": "A"}]})
     second, _ = anonymous_prompt({"dx": "second rule"}, ref, {"differential": [{"diagnosis": "B"}]})

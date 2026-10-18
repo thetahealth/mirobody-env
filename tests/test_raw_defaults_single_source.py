@@ -25,6 +25,7 @@ defect come right back.
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import ast
 import pathlib
@@ -38,11 +39,12 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv.job import CaseSpec, raw_field  # noqa: E402
+from haenv.app.job import CaseSpec
+from haenv.app.job import raw_field  # noqa: E402
 
 MANAGED = set(CaseSpec.RAW_DEFAULTS) | set(CaseSpec.RAW_DERIVED_DEFAULTS)
 #: `job.py` itself is the single source of truth; `extract.py` only mentions these names in a docstring.
-_OWNER = "haenv/job.py"
+_OWNER = 'haenv/app/job.py'
 
 
 def test_the_two_old_values_cannot_both_survive():
@@ -129,7 +131,7 @@ def test_no_module_inlines_a_raw_default():
     `gold_drivers` and `drug`.
     """
     bad: list[str] = []
-    for p in sorted((ROOT / "haenv").glob("*.py")):
+    for p in sorted((_haenv_source_path('haenv', root=ROOT)).glob("*.py")):
         if p.relative_to(ROOT).as_posix() == _OWNER:
             continue
         bad += _inline_raw_defaults(p)

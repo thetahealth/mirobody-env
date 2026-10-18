@@ -35,7 +35,8 @@ for _p in (str(ROOT), str((ROOT / _cfg["kernel_path"]).resolve()),
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from haenv import judges as J, mount_table as MT              # noqa: E402
+from haenv import judges as J
+import haenv.scoring.mounts.table as MT              # noqa: E402
 
 
 @pytest.fixture

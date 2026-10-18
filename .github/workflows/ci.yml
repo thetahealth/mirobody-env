@@ -32,19 +32,19 @@ jobs:
           python -m pip install -q -e .
 
       - name: Compile on this interpreter
-        run: python -m compileall -q haenv verifier_core
+        run: python -m compileall -q src/haenv src/haenv_kernel src/verifier_core
 
       - name: Negative-control self-checks (every deliberately broken input must be caught)
         run: |
-          python tools/verify_selftest.py
-          python tools/leak_probe_selftest.py
+          python tools/testing/verify_selftest.py
+          python tools/testing/leak_probe_selftest.py
 
       - name: Offline end to end (generate -> verify -> answer with a stub -> report; zero model calls)
         run: |
-          python -m haenv.cli build  inputs/example-ew.job.yaml --gen deterministic --fresh
-          python -m haenv.cli verify inputs/example-ew.job.yaml --gen deterministic
-          python -m haenv.cli run    inputs/example-ew.job.yaml --offline
-          python -m haenv.cli report inputs/example-ew.job.yaml
+          python -m haenv build  benchmarks/inputs/example-ew.job.yaml --gen deterministic --fresh
+          python -m haenv verify benchmarks/inputs/example-ew.job.yaml --gen deterministic
+          python -m haenv run    benchmarks/inputs/example-ew.job.yaml --offline
+          python -m haenv report benchmarks/inputs/example-ew.job.yaml --offline
 
   examples:
     # The five plugin packages under examples/, each run next to its negative control
@@ -87,7 +87,7 @@ jobs:
           python -m venv /tmp/cleanvenv
           /tmp/cleanvenv/bin/pip install -q dist/*.whl
           mkdir -p /tmp/wkdir && cd /tmp/wkdir
-          JOBS=$(/tmp/cleanvenv/bin/python -c "import haenv,pathlib;print(pathlib.Path(haenv.__file__).parent/'_data'/'inputs')")
+          JOBS=$(/tmp/cleanvenv/bin/python -c "from haenv import data_root;print(data_root()/'benchmarks'/'inputs')")
           SP=$(/tmp/cleanvenv/bin/python -c "import haenv,pathlib;print(pathlib.Path(haenv.__file__).parent)")
           touch /tmp/MARKER && sleep 1
           /tmp/cleanvenv/bin/haenv build  "$JOBS/example-ew.job.yaml" --gen deterministic

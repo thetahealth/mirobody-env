@@ -23,7 +23,7 @@ sys.path.insert(0, str(haenv.kernel_path()))
 
 from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN                            # noqa: E402
 
-from haenv.build import _register_comorbid_domain                   # noqa: E402
+from haenv.world.generation.build import _register_comorbid_domain                   # noqa: E402
 
 
 def test_scope_is_invisible_to_other_threads_and_leaves_no_trace():
@@ -56,8 +56,14 @@ def test_scope_is_invisible_to_other_threads_and_leaves_no_trace():
     assert dict(DISEASE_SIGNAL_DOMAIN.get("dyslipidemia") or {}) == before
 
 
-def test_base_domain_wins_over_scoped_additions():
+def test_scoped_entries_override_the_base_for_this_thread_only():
     base = dict(DISEASE_SIGNAL_DOMAIN["obesity"])
     key = next(iter(base))
+    seen = {}
     with DISEASE_SIGNAL_DOMAIN.scoped("obesity", {key: {"unit": "overridden"}}):
-        assert DISEASE_SIGNAL_DOMAIN["obesity"][key] == base[key]
+        seen["here"] = DISEASE_SIGNAL_DOMAIN["obesity"][key]
+        t = threading.Thread(target=lambda: seen.update(other=DISEASE_SIGNAL_DOMAIN["obesity"][key]))
+        t.start(); t.join()
+    assert seen["here"] == {"unit": "overridden"}
+    assert seen["other"] == base[key]
+    assert DISEASE_SIGNAL_DOMAIN["obesity"] == base

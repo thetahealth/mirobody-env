@@ -26,6 +26,7 @@ through" would let through exactly the one case meant to be blocked.
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import ast
 import json
@@ -40,7 +41,7 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-CLI = ROOT / "haenv" / "cli.py"
+CLI = _haenv_source_path('haenv/app/cli.py', root=ROOT)
 
 
 def _tree():
@@ -160,7 +161,7 @@ def test_forged_blocked_batch_is_refused(tmp_path, monkeypatch):
     only proves "it's written in the code"; only this one proves it
     actually blocks.
     """
-    from haenv import cli as C
+    import haenv.app.cli as C
 
     job_dir = tmp_path / "results"
     job_dir.mkdir()

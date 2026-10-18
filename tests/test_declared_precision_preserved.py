@@ -34,7 +34,7 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import events as E  # noqa: E402
+import haenv.world.observations.events as E  # noqa: E402
 
 
 def _digits(v) -> int:
@@ -79,7 +79,10 @@ def test_catches_the_four_decimal_defect():
 
 @pytest.mark.parametrize("name,nd", [("steps", 0), ("sleep_hours", 1),
                                      ("skin_temp", 2), ("spo2", 1),
-                                     ("body_temp", 1), ("resting_hr", 0)])
+                                     ("body_temp", 1),
+                                     # 2, not 0, since world 1.4 wearable calibration: the real Fitbit
+                                     # export carries a float; registry/indicators.yaml:resting_hr
+                                     ("resting_hr", 2)])
 def test_each_stream_gets_its_own_declared_digits(name, nd):
     """Each stream gets its own precision — flattening everything to one digit
     count is also wrong (steps should have no decimals, skin_temp should have

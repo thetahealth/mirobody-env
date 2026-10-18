@@ -1,0 +1,290 @@
+{
+ "R35de2f8fc43": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-03",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R3dd1bc49361": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-02",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R35493b4fcb7": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-02",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R367d1429ae5": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-04",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R3a265edd98d": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-05",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R36983be2507": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-01",
+  "solver": "terra",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R3e40b64964e": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-08",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R30591917b3a": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-10",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R3cc2271e316": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-12",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R331ebc455c9": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-12",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R337d623d958": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-11",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R36b696338c4": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-11",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R3ea588eb412": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-13",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R337b542ce15": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-13",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R3aa91205fe7": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-17",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R3dcfd1472ec": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-21",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R3ee5d3718bd": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-21",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R3beec4878d6": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-21",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R34df17106b4": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-22",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R3f06bf3c597": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-22",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R33a294b6e47": {
+  "mutation": "force_flip",
+  "tier": "neutral",
+  "case": "JD-32",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R329f0e69850": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-38",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R39ea2e0b99f": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-38",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R377c748960c": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-38",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R3cbbe4a3c58": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-34",
+  "solver": "gpt-5.4",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R3a8ba8cf1c6": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-19",
+  "solver": "gemini-3.1-pro",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R36d38d10869": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-19",
+  "solver": "gemini-3.1-pro",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R39ba85e5257": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-23",
+  "solver": "gemini-3.1-pro",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R3118f498139": {
+  "mutation": "force_flip",
+  "tier": "substantive",
+  "case": "JD-27",
+  "solver": "gemini-3.1-pro",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R3849d7bec0c": {
+  "mutation": "original",
+  "tier": "neutral",
+  "case": "JD-37",
+  "solver": "gemini-3.1-pro",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R3cb667b6589": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-35",
+  "solver": "gemini-3.1-pro",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ },
+ "R3e745f066ba": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-24",
+  "solver": "terra",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R39a38d5614a": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-25",
+  "solver": "terra",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R35380e62d30": {
+  "mutation": "force_hold",
+  "tier": "substantive",
+  "case": "JD-25",
+  "solver": "terra",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R30fac4ce0b8": {
+  "mutation": "force_hold",
+  "tier": "neutral",
+  "case": "JD-25",
+  "solver": "terra",
+  "judge_changed_enum": false,
+  "judge_changed_list": true
+ },
+ "R39882a43142": {
+  "mutation": "original",
+  "tier": "substantive",
+  "case": "JD-31",
+  "solver": "terra",
+  "judge_changed_enum": true,
+  "judge_changed_list": true
+ }
+}

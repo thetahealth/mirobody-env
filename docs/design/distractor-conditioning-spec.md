@@ -1,7 +1,7 @@
 # Conditioning Distractor Events on the Patient
 
 > **Scope**: which benign and life distractor events are selected for a case — `BENIGN_EVENTS` /
-> `LIFE_EVENTS` / `_event_ok` / `event_prior` / `plan_benign_evs` in `haenv/events.py`, with the
+> `LIFE_EVENTS` / `_event_ok` / `event_prior` / `plan_benign_evs` in `src/haenv/world/observations/events.py`, with the
 > event pools in `registry/benign_events.yaml`. Injection timing, density tiers and daily metric
 > streams are out of scope.
 >

@@ -20,7 +20,7 @@ import pytest
 pytestmark = pytest.mark.slow          # two builds per test, about 7 s per test
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-JOB = ROOT / "inputs" / "example-ew.job.yaml"
+JOB = ROOT / 'benchmarks' / 'inputs' / 'example-ew.job.yaml'
 
 
 def _build(out: pathlib.Path) -> subprocess.CompletedProcess:

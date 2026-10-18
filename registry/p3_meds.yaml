@@ -4,7 +4,7 @@
 # effect on the control axis, per-case response range, untreated range, time constants, the
 # registered adverse effect and how it is attributed, and what makes a case ineligible.
 #
-# Read only by `haenv/labworld/meds.py` and `haenv/p3/` (segment `tools/make_freeze.py:P3_WORLD`).
+# Read only by `haenv/world/labworld/meds.py` and `haenv/p3/` (segment `tools/release/make_freeze.py:P3_WORLD`).
 # Every number is provisional (design doc K4). "自拟" marks a value written for this pack without
 # a literature source; the others name the source they were checked against.
 #
@@ -12,6 +12,7 @@
 # (1 - exp(-(t - t_k) / tau_truth_days)); `model: log` -> ln y = ln y_u - r X;
 # `model: additive` -> y = y_u - r X. `tau_rule_days` is the reassessment interval the gold
 # rule reads ("stepped up less than tau ago and still off target: the effect has not arrived").
+# `ae_display` (p3-fixes b): the adverse effect as the item's printed attribution rule names it (`render.clinic_protocol`).
 # `attribution`: timing -- the registered adverse effect is dose-related when it starts 3-28 days
 # after the last increase (or the start), unattributed when it starts >= 56 days after the last
 # change (自拟 windows; EAS 2015: statin muscle symptoms "typically occur early (within 4-6 weeks
@@ -40,6 +41,8 @@
 # `off_min_rung` (A22): an `add` drug is added to only from this rung (its usual dose) on.
 # `same_class`: medicines of the drug's class; the world's own medication must hold none of them.
 # `renal_labs`: the visits show creatinine and potassium (normal; the gold does not read them).
+# `self_measured`: the control axis is the patient's home record, so a renewal visit shows it; a
+# laboratory axis is not rechecked at a renewal (it comes before the recheck is due).
 #
 # SYNTHETIC data, evaluation only, not medical advice.
 
@@ -58,16 +61,20 @@ drugs:
     response: [0.6, 1.6]            # 自拟
     untreated: [7.2, 10.5]          # 自拟
     tau_truth_days: 30              # HbA1c reflects ~3 months of glycaemia (自拟 time constant)
-    tau_rule_days: 84               # ADA 2026 6.1: A1C about every 3 months when therapy changed or not at goal
+    tau_rule_days: 84               # ADA 2026 6.2: "more frequently (e.g., every 3 months)" with recent treatment changes or not at goal
     start_rungs: [0, 1]
     pre_visits_max: 1               # A19: an A1C before the start (自拟)
+    pre_visits_max_long: 2          # with the background layer: two (ADA: repeat the A1C to confirm, then lifestyle with a recheck; real EMR records span a median 7 years with 21 lab dates per patient; 自拟 count)
     attribution: exposure
     switch: true
-    when_off: titrate               # A23: below the top registered dose, a dose increase (SmPC 30-120 mg); at the top, add another class (ADA Standards 2025 9.18) (暂定)
+    when_off: titrate               # A23 (restored 2026-10-07, p3-fixes a): below the top registered dose, a dose increase (SmPC 30-120 mg); at the top, add another class (ADA Standards 2025 9.18) (暂定). The `add` table (74e08913) gave gold switch below the top from a rule the item did not print: 0/240 board cells answered it
     uptitrate_items: false          # A23: the pack's table keeps one dose-change class per drug; this drug's carries switch-or-add at the top (a below-top miss is gold uptitrate, not dealt)
-    titration_history: [1, 2]       # A23: increases on record before today in every class, each on a reading above target (as levothyroxine, A21)
+    titration_history: [2]          # A21/A23: increases on record before today in every class, each on a reading above target. Two in every class: a switch item climbs from the start rung 1 to the top (start_rungs [0, 1]) in two steps, so a [1, 2] deal left the switch class the only one always at 2 (SA-6 read the increase-row count, p3-fixes)
+    early_items: false              # audit P6: A1C is rechecked about 3 months after a change (`followup_days`), so no `early` item
+    followup_days: [84, 105]        # A1C about every 3 months after starting (ADA 2026 6.2; 自拟 spread)
     flat: true                      # flat dose-response: an at-target item starts at its current rung (no increase)
     same_class: [gliclazide, glimepiride, glipizide, glibenclamide, glyburide, gliquidone]
+    ae_display: 低血糖（心慌、手抖、出冷汗，进食后缓解）   # p3-fixes b: the registered adverse effect as the printed attribution rule names it
     ae_symptoms: [低血糖发作（心慌、出汗，进食后缓解）, 饭前心慌手抖、出冷汗，吃点东西就好, 下午突然发虚冒汗、手抖，喝了糖水缓解]   # the patient's wording varies (A17)
     predating_contexts: []          # a pre-treatment hypoglycaemia is a risk factor, not an irrelevant fact
     decision_facts: [低血糖, 心慌, 手抖, 冷汗, 饥饿感]
@@ -93,12 +100,14 @@ drugs:
     tau_rule_days: 28               # 2026 ACC/AHA: recheck LDL-C 4-12 weeks after starting or changing therapy
     start_rungs: [0, 1]
     pre_visits_max: 2               # A19: lipid checks during a lifestyle period before a primary-prevention statin (2026 ACC/AHA: risk discussion and lifestyle first; 自拟 count)
+    pre_visits_max_long: 4          # with the background layer: up to four (a longer history, real EMR median 21 lab dates per patient; 自拟 count)
     attribution: timing
     titration_history: [0]          # A23: no increase on record in any class (a normal responder misses only on 10 mg)
     check_subtypes: [adh_low]       # A23: no unattributed-myalgia item (onset time alone does not separate it from a dose effect in practice)
     same_class: [atorvastatin, rosuvastatin, simvastatin, pravastatin, pitavastatin, lovastatin, fluvastatin]
     switch: true                    # add another agent (2026 ACC/AHA: ezetimibe); the item reads it as switch-or-add
     when_off: titrate               # 2026 ACC/AHA: goal not met below maximally tolerated statin -> increase intensity; at the top -> add ezetimibe (暂定)
+    ae_display: 肌肉酸痛、乏力   # p3-fixes b
     ae_symptoms: [双侧大腿肌肉酸痛, 两条大腿肌肉酸胀、没力气, 大腿和小腿肌肉酸痛、上楼费劲]
     predating_contexts: [连续两天爬山后, 搬家扛了一天箱子后, 第一次去健身房练腿后, 跑完半程马拉松后]
     decision_facts: [肌痛, 肌肉酸痛, 肌肉痛, 肌无力, 腿软, 抽筋, 痉挛]
@@ -120,11 +129,12 @@ drugs:
     tau_rule_days: 28               # full antihypertensive effect within 2-4 weeks (自拟 reading)
     start_rungs: [0, 1]             # A22: starts low, 5-10 mg (FDA label: initial 5 mg, usual 10-40 mg)
     pre_visits_max: 0               # A22: started at the visit that shows the raised home BP (no observation period)
+    self_measured: true             # the control axis is the patient's own home record, read at every visit (a renewal visit too)
     attribution: exposure
     switch: true
     when_off: titrate               # A23: below the top registered dose, a dose increase (FDA label 10-40 mg); at the top, a second drug (ESH 2023) (暂定)
-    uptitrate_items: false          # A23: as gliclazide
-    titration_history: [1, 2]       # A23: as gliclazide
+    uptitrate_items: true           # finalization: cover the existing FDA-label titration rule without CKD too; G3 already raises a below-top miss. The old sampling-only exclusion made CKD's short monitoring cadence a proxy for this class
+    titration_history: [1, 2]       # A23: increases on record before today in every class, each on a reading above target (as levothyroxine, A21)
     flat: true
     min_reaches_target: false       # 5 mg lowers at most 8 x 1.6 mmHg: no at-target item on the lowest rung (A9)
     same_class: [enalapril, lisinopril, ramipril, perindopril, benazepril, captopril, fosinopril, losartan, valsartan, irbesartan, telmisartan, olmesartan, candesartan]   # RAS blockade (ESH 2023: no ACEI + ARB)
@@ -135,10 +145,21 @@ drugs:
     #: top it is raised on target too, and the clinic raises it at every visit below the top. BP,
     #: creatinine and potassium are rechecked 2-4 weeks after a start or an increase (practice
     #: point 3.6.2): the next visit comes 28-30 days after a change (28 = this pack's tau).
+    #: `titrate_on_target_min` (review: pending, 暂定): -- no further raise when the printed home
+    #: SBP is below 120 mmHg (an on-target reading under it; no guideline gives the figure, the pack takes
+    #: the conservative side of the 2025 AHA/ACC lower bound for further intensification); the clinic's
+    #: wording is `clinic_policy`, printed on the item so the rule is read, not guessed.
     if_known:
-      CKD: {on_target: titrate, uptitrate_items: true, flat: false, followup_days: [28, 30]}
+      CKD: {on_target: titrate, uptitrate_items: true, flat: false, followup_days: [28, 30],
+            titrate_on_target_min: 120,
+            clinic_policy: 本院对慢性肾脏病合并白蛋白尿的降压方案：肾素-血管紧张素系统抑制剂加至最高批准且可耐受剂量；家庭收缩压 7 日均值低于 120 mmHg 时不再加量。}
+    ae_display: 体位性头晕（起身、站起时头晕、眼前发黑）   # p3-fixes b
     ae_symptoms: [起身时头晕、眼前发黑, 蹲下站起来眼前发黑、要扶一下, 早上起床时头晕、站一会儿才好]
-    predating_contexts: [献血后, 发烧拉肚子那两天, 天热在外面晒了一下午后, 空腹爬山时]
+    predating_contexts:             # a situation with `fits` is told only with those wordings (a morning-rise dizziness is not told during an afternoon or a climb)
+      - 献血后
+      - 发烧拉肚子那两天
+      - {context: 天热在外面晒了一下午后, fits: [起身时头晕、眼前发黑, 蹲下站起来眼前发黑、要扶一下]}
+      - {context: 空腹爬山时, fits: [起身时头晕、眼前发黑, 蹲下站起来眼前发黑、要扶一下]}
     decision_facts: [头晕, 眼前发黑, 黑朦, 晕厥, 干咳, 咳嗽]
     allowed_dx: [彼此独立的良性事件, 多囊卵巢综合征, 强直性脊柱炎, 早期2型糖尿病]   # no secondary hypertension, volume loss, autonomic or renal disease, cough cause (暂定)
     background_deny: [头晕, 晕, 眼前发黑, 喉咙, 嗓, 咳]
@@ -164,8 +185,11 @@ drugs:
     attribution: timing
     same_class: [levothyroxine, liothyronine]
     switch: false
+    early_items: false              # TSH is rechecked 6-8 weeks after a change (`followup_days`); a TSH 10-20 days after a dose change is not a clinical visit, so no `early` item
+    ae_dose_decision: false         # ATA 2014 doses by TSH; a palpitation / tremor with TSH in range is not a reason to lower the dose (look for another cause), so a dose-related symptom lowers it only when TSH is suppressed (`over`)
     when_off: titrate               # ATA 2014: LT4 dose adjusted 12.5-25 ug up or down by TSH, TSH repeated in 4-6 weeks (暂定)
                                     # switch false: no drug to switch to (ATA 2014: LT3 / combination not for routine use)
+    ae_display: 心悸、手抖   # p3-fixes b
     ae_symptoms: [心悸、手抖, 心慌、手发抖, 心跳快、手抖、睡不踏实]
     predating_contexts: [连喝两杯浓咖啡后, 熬夜赶工两天后, 喝了一大杯奶茶后, 吃了含伪麻黄碱的感冒药后]
     decision_facts: [心悸, 心慌, 手抖, 怕热, 失眠, 入睡困难]
@@ -184,13 +208,15 @@ comorbidities:
     display: 慢性肾脏病
     drugs: [enalapril]
     egfr: [30, 59]                  # mL/min/1.73 m2, G3a-G3b
-    uacr_mg_g: [320, 900]           # A3 (> 300 mg/g)
+    uacr_mg_g: [520, 1100]          # at the first visit; A3 (> 300 mg/g) still holds after the fall below (x0.6 at most)
+    uacr_ratio: [1.0, 0.6]          # today's / the first visit's urine ACR, from no response to the full response of the top dose (RAS blockade lowers albuminuria, KDIGO 2024 3.6; 自拟 size)
     potassium: [4.2, 4.9]           # mmol/L
     cr_rise_on_start: [0.05, 0.15]  # 自拟, within the KDIGO 30% line
     #: already on an SGLT2 inhibitor from the nephrology clinic (KDIGO 2024 recommendation 3.7.2:
     #: CKD with eGFR >= 20 and urine ACR >= 200 mg/g), so the kidney-protection add-on is not the
     #: open question at this visit
     co_medication: 达格列净 10 mg 每日（肾内科处方）
+    co_medication_world: {drug: dapagliflozin, dose: 10}   # the same medicine in the world's medication record
 
 #: Gold-rule constants (design 3.2, K4; provisional).
 rule:
@@ -200,8 +226,10 @@ rule:
   ae_dose_window: [3, 28]           # timing attribution: onset days after the last increase (or start)
   ae_unattributed_min: 56           # timing attribution: onset at least this long after the last change
   early_max_frac: 0.5               # "just stepped up": T - s <= frac x tau_rule (read only off target)
-  control_gray_rcv: 1.0
+  control_gray_rcv: 0.7071          # the RCV (1.96 x sqrt 2 x CV) bounds the difference of two readings; one reading against a fixed threshold is 1.96 x CV = RCV x 0.7071 off it. The gray band and the placement of the item's readings (1.1-2.0 bands beyond the target) use this width
   start_gray_days: 14               # a symptom starting within 14 days of the drug's start is neither predating nor on the drug (A15)
+  edge_margin_onset_days: 5         # w14-bg-p3: a patient-reported onset lies this far from every line the clinic chose (3 / 28 / 56 days, the start gray band)
+  edge_margin_date_days: 3          # w14-bg-p3: a recorded date interval (T - s) lies this far from 0.5 tau and tau
 
 #: Unrelated, self-limited complaints of the symptom diary (A14). The diary takes them from the
 #: case's own evidence ledger (same day), so diary and ledger have one source; the sentence is one of
@@ -301,3 +329,52 @@ benign_complaints:
     days: 2
   "口罩戴了一整天,耳朵后面压得疼":
     days: 3
+
+#: Background factors that are conspicuous and do not act on the decision (w14-bg-p3). Each is dealt by a
+#: per-case hash at its real-world frequency (never by the item's decision) and is read by G3 only through
+#: `gold.confounder_why`: a factor that could act is refused and the realizer draws another attempt. Sources
+#: are named per entry; a factor without a source is not registered.
+#:
+#: `other_drug`: a common adverse effect of another medicine on the patient's visible list, in words disjoint
+#: from the managed drug's `decision_facts`; it is ongoing, with the onset range of a true adverse effect
+#: (`realize.AE_AGO`). `rate` is the probability the patient has logged it (a list of [dose, rate] pairs takes
+#: the last pair whose dose the patient's dose reaches).
+#: `intercurrent`: a self-limited acute illness (a cold, 2-4 episodes per adult-year: Cochrane CD002190;
+#: Heikkinen & Jarvinen, Lancet 2003;361:51; 1 - exp(-2.5 x 90 / 365) = 0.46 of a 90-day window). Its status
+#: follows its registered duration (`days`: ongoing while onset + days >= today). A clinic visit for it: 14% of
+#: episodes (Ontario 1998 adult survey of URTI in the previous two weeks) to 25% (Tecumseh respiratory-illness
+#: study); the item uses 14%.
+#: `background_symptom`: the drug's own registered adverse-effect wording, after a documented non-drug setting
+#: (the drug's `predating_contexts` or an `intercurrent` setting), after the start. Its rate is the background
+#: muscle-symptom rate of the placebo arms of the statin trials (26.6% over a median 4.7 years, CTT
+#: Collaboration, Lancet 2022;400:832, i.e. 6.4% a year, 3.2% in a half-year window); `days` (3, ours) is how
+#: long such an episode lasts, so the entry is ongoing only inside it. A drug without such a source has no
+#: entry. The setting in the `context` field is the visible evidence that separates it from a true adverse
+#: effect, whose context is "无明显诱因"; the wording, severity and placement come from the same distributions.
+#: Dose-window margin: `rule.edge_margin_onset_days` / `edge_margin_date_days` keep an item off the rule lines
+#: (3 / 28 / 56 days after the last increase, 0.5 tau, tau, the start gray band) that the clinic itself chose.
+confounders:
+  other_drug:
+    amlodipine:
+      rate: [[0, 0.018], [5, 0.03], [10, 0.108]]    # peripheral oedema 1.8% / 3.0% / 10.8% at 2.5 / 5 / 10 mg vs 0.6% placebo (Norvasc label, dose-related; read through label reproductions)
+      symptoms: [傍晚脚踝发胀、鞋子变紧, 两侧小腿下端按下去有个坑, 下班后脚背肿、睡一觉消一些]
+    metformin:
+      rate: 0.15                                     # diarrhoea 10% and nausea/vomiting 7% on the extended-release label (vs 3% / 2% placebo)
+      symptoms: [饭后肚子胀、大便不成形, 吃完饭就想去厕所、有点恶心, 一天拉两三次稀的]
+    semaglutide: &glp1
+      rate: 0.25                                     # Ozempic label pooled placebo-controlled trials: nausea ~20% and diarrhoea ~9% at 1 mg
+      symptoms: [打针后两三天一直恶心、没胃口, 吃一点就饱、饭后反酸想吐, 隔天拉稀、肚子隐隐胀]
+    liraglutide: *glp1                               # GLP-1 receptor agonist class gastro-intestinal effects, by analogy with the semaglutide label
+    dulaglutide: *glp1
+    tirzepatide: *glp1
+  intercurrent:
+    window_days: 90
+    episodes_per_year: 2.5
+    visit_share: 0.14
+    settings: [着凉后, 换季降温后, 家里人感冒之后, 感冒发烧那几天]
+    illnesses:
+      - {symptom: "感冒了,鼻塞流涕、嗓子痛,有点低烧", days: 7}
+      - {symptom: "受凉后打喷嚏、流清涕、嗓子疼,没发烧", days: 6}
+      - {symptom: "感冒后头重、没精神,吃了几天感冒药就好了", days: 8}
+  background_symptom:
+    atorvastatin: {rate: 0.032, days: 3}

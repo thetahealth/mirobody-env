@@ -1,7 +1,11 @@
 """Board rule for a semantic track: R0 on common complete cases, R1 fill bounds, tiers by paired bootstrap."""
 import pytest
 
-from haenv.semantic_report import BOARD_RULE, PRIMARY, holm, phase5_composite_allowed, track_board
+from haenv.scoring.semantic.report import BOARD_RULE
+from haenv.scoring.semantic.report import PRIMARY
+from haenv.scoring.semantic.report import holm
+from haenv.scoring.semantic.report import phase5_composite_allowed
+from haenv.scoring.semantic.report import track_board
 
 MODELS = ("m-a", "m-b", "m-c", "m-d", "m-e")
 

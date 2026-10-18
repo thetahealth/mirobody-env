@@ -1,7 +1,8 @@
 """Semantic atoms are grounded and applicability is explicit before model calls."""
 import json
 
-from haenv.semantic_rubric import make_rubric, summarize_verdicts
+from haenv.scoring.semantic.rubric import make_rubric
+from haenv.scoring.semantic.rubric import summarize_verdicts
 
 
 def reference():

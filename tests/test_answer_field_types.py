@@ -1,8 +1,8 @@
 """A model answer whose `action` / `forecast` / `data_quality` is not an object, or whose
 `drivers` holds non-objects, is graded with those fields treated as omitted; it never
 crashes the cell."""
-from haenv import evaluate as ev
-from haenv.tracks import _answer_text
+import haenv.app.evaluate as ev
+from haenv.scoring.tracks import _answer_text
 
 
 def _payload():

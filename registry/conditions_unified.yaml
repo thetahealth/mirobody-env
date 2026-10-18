@@ -14,7 +14,7 @@
 # Timepoints use the uniform (14, 35, 56, 77); per-case jitter comes from
 # `ddx.jitter_symptom_days`, so the emission gate's arithmetic-progression check is not triggered.
 #
-# Validated at load time by haenv/registry.py (default-deny). SYNTHETIC, for evaluation only, not medical advice.
+# Validated at load time by haenv/resources/registry.py (default-deny). SYNTHETIC, for evaluation only, not medical advice.
 # ---------------------------------------------------------------------------
 conditions:
 
@@ -186,8 +186,10 @@ conditions:
     aliases: [胰腺癌相关糖尿病, 胰腺外分泌肿瘤, pancreatic cancer associated diabetes, 3c型糖尿病]
     join_gold: unified
     outcome_label: event_occurred
-    urgency: 🔴
-    red_flag: true
+    # NICE NG12 1.2.4/1.2.5: jaundice -> suspected cancer pathway; weight loss + new-onset diabetes
+    # (age >= 60) -> urgent direct-access CT. No jaundice, obstruction or bleeding here.
+    urgency: 🟠
+    red_flag: false
     clinician_warranted: true
     weight: [down, 72.0, 66.0]
     # The prompt presents as ordinary new-onset type 2 diabetes (thirst/polyuria + high glucose),
@@ -204,3 +206,536 @@ conditions:
       - [35, "同期体重掉了六公斤,没有刻意减重也没加运动", ""]
       - [56, "上腹持续隐痛,偶尔向后背窜,弯腰蜷着能轻一些", "以为是胃不好"]
       - [77, "大便油腻、马桶水面有油花,冲不太干净", "换过几种益生菌没用"]
+
+  HD-UNI-07:
+    # The record carries no heart-failure history, so the name does not presume one (new-onset or
+    # worsening); the earlier name stays an alias.
+    diagnosis: 心力衰竭(新发或加重)
+    aliases:
+    - 心衰加重
+    - 心力衰竭加重
+    - 急性失代偿性心力衰竭
+    - decompensated heart failure
+    - 心力衰竭
+    - 心衰
+    - 新发心力衰竭
+    - 急性心力衰竭
+    - heart failure
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🟠
+    red_flag: false
+    clinician_warranted: true
+    weight:
+    - up
+    - 92.0
+    - 94.5
+    tests:
+    - NT-proBNP/心超
+    - 十二导联心电图
+    - 胸部X线
+    - eGFR/血肌酐
+    - 电解质(低钠高钾)
+    specialty:
+    - 心内科
+    symptoms:
+    - - 1
+      - 走一小段路就喘,比平时明显
+      - ''
+    - - 2
+      - 晚上躺平后觉得气不够,坐起来稍好
+      - ''
+    - - 3
+      - 两边脚踝都肿了,鞋子比以前紧
+      - ''
+    - - 4
+      - 肚子觉得胀,裤腰比平时紧
+      - ''
+    clinical_review: pending
+  HD-UNI-08:
+    diagnosis: 新发房颤
+    aliases:
+    - 新发房颤
+    - 心房颤动
+    - 房颤
+    - atrial fibrillation
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🟠
+    red_flag: false
+    clinician_warranted: true
+    weight:
+    - up
+    - 92.0
+    - 92.2
+    tests:
+    - 十二导联心电图
+    - 动态心电图
+    - 电解质(低钠高钾)
+    specialty:
+    - 心内科
+    symptoms:
+    - - 1
+      - 静坐时突然觉得心跳乱,一阵快一阵慢
+      - ''
+    - - 2
+      - 同样的路走起来更累,需要停下来歇
+      - ''
+    - - 3
+      - 摸着手腕的脉搏,快慢不太规律
+      - ''
+    - - 4
+      - 心慌时有些头晕,坐下来能缓一点
+      - ''
+    clinical_review: pending
+  HD-UNI-09:
+    diagnosis: 急性肾损伤（脱水）
+    aliases:
+    - 脱水相关急性肾损伤
+    - 容量不足相关急性肾损伤
+    - volume depletion associated acute kidney injury
+    join_gold: unified
+    outcome_label: event_occurred
+    # Every presentation: cannot keep fluids down, orthostatic dizziness, oliguria, KDIGO AKI;
+    # oral rehydration has failed, so volume replacement is intravenous and same-day.
+    urgency: 🔴
+    red_flag: true
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 90.5
+    tests:
+    - eGFR/血肌酐
+    - 电解质(低钠高钾)
+    - 尿常规
+    - 基线及48小时/7天血肌酐复核
+    specialty:
+    - 肾内科
+    symptoms:
+    - - 1
+      - 吐了几次,喝进去的水也留不住
+      - ''
+    - - 2
+      - 吃喝都少,嘴里很干
+      - ''
+    - - 3
+      - 站起来时发晕,坐着会好一些
+      - ''
+    - - 4
+      - 今天小便比平时少很多
+      - ''
+    clinical_review: pending
+  HD-UNI-10:
+    diagnosis: CKD 进展
+    aliases:
+    - 慢性肾脏病进展
+    - chronic kidney disease progression
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    weight:
+    - up
+    - 92.0
+    - 93.0
+    tests:
+    - eGFR/血肌酐
+    - 尿白蛋白/肌酐(UACR)
+    - 尿常规
+    - 既往及复查肾功能和UACR
+    specialty:
+    - 肾内科
+    symptoms:
+    - - 14
+      - 最近容易累,做原来的家务要多歇几次
+      - ''
+    - - 49
+      - 这阵子小便泡沫多,过一会儿还没散
+      - ''
+    - - 91
+      - 傍晚两边脚踝有些肿,袜口勒出印子
+      - ''
+    - - 126
+      - 这几个月散步比以前费力,走得越来越少
+      - ''
+    clinical_review: pending
+  HD-UNI-11:
+    diagnosis: 胆石症或急性胆囊炎
+    aliases:
+    - 胆石症
+    - 胆囊结石
+    - 急性胆囊炎
+    - cholelithiasis
+    - acute cholecystitis
+    join_gold: unified
+    outcome_label: event_occurred
+    # Every presentation meets TG18/TG13 definite acute cholecystitis (RUQ tenderness + fever/CRP/WBC
+    # + ultrasound); management is admission and early cholecystectomy.
+    urgency: 🔴
+    red_flag: true
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 91.6
+    tests:
+    - 胆囊及胆道超声
+    - 肝胆生化(ALP/GGT/总胆红素)
+    - 白细胞计数(WBC)
+    - C反应蛋白(CRP)
+    - 血清脂肪酶
+    specialty:
+    - 消化内科
+    - 普通外科
+    symptoms:
+    - - 1
+      - 吃完饭后右上腹痛了一阵
+      - ''
+    - - 2
+      - 右上腹的痛持续了好几个小时
+      - ''
+    - - 3
+      - 有些发热,碰右上腹会更痛
+      - ''
+    - - 4
+      - 觉得恶心,不太想吃东西
+      - ''
+    clinical_review: pending
+  HD-UNI-12:
+    diagnosis: 急性胰腺炎
+    aliases:
+    - 急性胰腺炎
+    - acute pancreatitis
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🔴
+    red_flag: true
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 91.5
+    tests:
+    - 血清脂肪酶
+    - 肝胆生化(ALP/GGT/总胆红素)
+    - 胆囊及胆道超声
+    - 血甘油三酯(TG)
+    - 必要时胰腺CT/MRI
+    specialty:
+    - 消化内科
+    symptoms:
+    - - 1
+      - 上腹突然持续疼痛,休息也没缓解
+      - ''
+    - - 2
+      - 上腹的痛牵到背部
+      - ''
+    - - 3
+      - 吐了好几次,仍觉得恶心
+      - ''
+    - - 4
+      - 腹痛一直没有停,喝水也很难受
+      - ''
+    clinical_review: pending
+  HD-UNI-13:
+    diagnosis: 代谢相关进展期肝纤维化
+    aliases:
+    - masld伴进展期纤维化
+    - 脂肪性肝病伴进展期纤维化
+    - advanced fibrosis in masld
+    - advanced fibrosis in nafld
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 91.0
+    tests:
+    - AST/ALT/血小板并计算FIB-4
+    - 肝脏弹性成像(VCTE/必要时MRE)
+    specialty:
+    - 肝病科
+    symptoms:
+    - - 14
+      - 过去几个月容易疲倦,休息后也不完全好
+      - ''
+    - - 49
+      - 右上腹偶尔发闷,没有持续剧痛
+      - ''
+    - - 91
+      - 做平常的活动更费力,需要多休息
+      - ''
+    - - 126
+      - 这几个月胃口差一些,吃得比以前少
+      - ''
+    clinical_review: pending
+  HD-UNI-14:
+    diagnosis: 缺铁性贫血（消化道慢性失血）
+    aliases:
+    - 缺铁性贫血
+    - iron deficiency anemia
+    - iron deficiency anaemia
+    join_gold: unified
+    outcome_label: event_occurred
+    # With melena shown: Glasgow-Blatchford >= 2 (Hb below 120 g/L in women or 130 g/L in men, plus
+    # melena), outside the score-0/1 outpatient band => same-day assessment. Without melena shown by T
+    # the case is 🟠 (`ddx.URGENCY_NEEDS`).
+    urgency: 🔴
+    red_flag: true
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 91.0
+    tests:
+    - 血常规MCV
+    - 血清铁蛋白
+    - 转铁蛋白饱和度
+    - 组织转谷氨酰胺酶IgA抗体(tTG-IgA)
+    - 尿常规
+    - 胃镜+结肠镜
+    specialty:
+    - 消化内科
+    - 血液科
+    symptoms:
+    - - 14
+      - 这几周特别容易累,平常的路走不远
+      - ''
+    - - 35
+      - 爬楼梯会心慌,停下来才缓一点
+      - ''
+    - - 56
+      - 这阵子脸色比平常淡
+      - ''
+    - - 77
+      - 最近有几次大便发黑,当时没有吃补铁药
+      - ''
+    clinical_review: pending
+  HD-UNI-15:
+    diagnosis: 尿路感染或肾盂肾炎
+    aliases:
+    - 尿路感染
+    - 肾盂肾炎
+    - urinary tract infection
+    - pyelonephritis
+    join_gold: unified
+    outcome_label: event_occurred
+    # Every presentation has fever, chills and unilateral flank pain (EAU 3.6.1 pyelonephritis) with
+    # nausea and reduced intake; treatment starts the same day.
+    urgency: 🔴
+    red_flag: true
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 91.6
+    tests:
+    - 尿常规
+    - 尿培养及药敏
+    - C反应蛋白(CRP)
+    - eGFR/血肌酐
+    - 肾脏超声
+    specialty:
+    - 肾内科
+    - 内科
+    - 泌尿外科
+    symptoms:
+    - - 1
+      - 总想小便,每次只尿一点
+      - ''
+    - - 2
+      - 小便时有刺痛感
+      - ''
+    - - 3
+      - 发热发冷,一侧腰背有些痛
+      - ''
+    - - 4
+      - 觉得恶心,吃东西比平时少
+      - ''
+    clinical_review: pending
+  HD-UNI-16:
+    diagnosis: 社区获得性肺炎
+    aliases:
+    - 社区获得性肺炎
+    - community acquired pneumonia
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🟠
+    red_flag: false
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 91.7
+    tests:
+    - 胸部X线
+    - 白细胞计数(WBC)
+    - C反应蛋白(CRP)
+    specialty:
+    - 呼吸内科
+    symptoms:
+    - - 1
+      - 开始咳嗽,还有些发热
+      - ''
+    - - 2
+      - 咳嗽比之前多,带少量痰
+      - ''
+    - - 3
+      - 走动时气促,比平时更明显
+      - ''
+    - - 4
+      - 深呼吸时胸口有些痛
+      - ''
+    clinical_review: pending
+  HD-UNI-17:
+    diagnosis: 未确诊的 COPD
+    aliases:
+    - 慢性阻塞性肺疾病
+    - 慢阻肺
+    - copd
+    - chronic obstructive pulmonary disease
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 91.8
+    tests:
+    - 支气管舒张后肺功能
+    - 胸部X线
+    specialty:
+    - 呼吸内科
+    symptoms:
+    - - 14
+      - 咳嗽咳痰反复了好几个月
+      - ''
+    - - 42
+      - 走快一点就气喘,歇下来好些
+      - ''
+    - - 70
+      - 有时呼吸带响声,在胸里听得见
+      - ''
+    - - 98
+      - 最近上同样的楼梯要多停几次
+      - ''
+    clinical_review: pending
+  HD-UNI-18:
+    diagnosis: 抑郁
+    aliases:
+    - 单相抑郁障碍
+    - 重性抑郁障碍
+    - major depressive disorder
+    - unipolar depressive disorder
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 91.3
+    tests:
+    - 临床心理状态及功能评估
+    - 血常规MCV
+    specialty:
+    - 全科
+    - 内科
+    symptoms:
+    - - 14
+      - 两周来大多数日子情绪低落
+      - ''
+    - - 21
+      - 原来喜欢做的事现在提不起兴趣
+      - ''
+    - - 28
+      - 最近睡不好,白天没有精神
+      - ''
+    - - 35
+      - 连平常的小事都难开始,事情做得少了
+      - ''
+    clinical_review: pending
+  HD-UNI-19:
+    diagnosis: 他汀相关肌肉症状
+    aliases:
+    - 他汀相关肌病
+    - 他汀相关肌肉症状
+    - statin associated muscle symptoms
+    - statin associated myopathy
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 91.8
+    tests:
+    - 肌酸激酶(CK)
+    - TSH
+    - eGFR/血肌酐
+    - 尿常规
+    specialty:
+    - 内科
+    symptoms:
+    - - 7
+      - 两边大腿酸痛,没有明显外伤
+      - ''
+    - - 14
+      - 两侧肩臂也酸,活动时更明显
+      - ''
+    - - 21
+      - 从椅子站起来比以前费力
+      - ''
+    - - 28
+      - 因为酸痛,最近走路比平时少
+      - ''
+    clinical_review: pending
+  HD-UNI-20:
+    # The name is shown for every patient drawn on this spec, including those not on a GLP-1
+    # agonist, so it does not presume the drug; the earlier name stays an alias so scoring is unchanged.
+    diagnosis: 胃轻瘫(胃排空延迟)
+    aliases:
+    - 胃轻瘫或 GLP-1 相关胃排空延迟
+    - 胃轻瘫
+    - 胃排空延迟
+    - gastroparesis
+    - delayed gastric emptying
+    join_gold: unified
+    outcome_label: event_occurred
+    urgency: 🟡
+    red_flag: false
+    clinician_warranted: true
+    weight:
+    - down
+    - 92.0
+    - 90.5
+    tests:
+    - 固体餐胃排空显像(至少3小时,优选4小时)
+    - 排除机械性梗阻的胃镜或相关影像
+    - 血糖评估
+    specialty:
+    - 消化内科
+    symptoms:
+    - - 7
+      - 吃一点就觉得饱,饭后撑着不舒服
+      - ''
+    - - 21
+      - 饭后恶心反复出现
+      - ''
+    - - 35
+      - 有几次饭后很久仍吐出吃过的东西
+      - ''
+    - - 49
+      - 这种不适持续了几周,吃得越来越少
+      - ''
+    clinical_review: pending

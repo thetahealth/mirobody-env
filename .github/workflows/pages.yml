@@ -5,7 +5,7 @@
 # publishes it at https://thetahealth.github.io/mirobody-env/.
 #
 # The page recomputes patients in the browser (`web/demo/gen.mjs`) and compares them point
-# for point with golden vectors from `haenv/build.py`. Two checks gate every publish:
+# for point with golden vectors from `src/haenv/world/generation/build.py`. Two checks gate every publish:
 #
 #   1. `check_page_data.py` recomputes the golden vectors, kernel constants and random-layer
 #      tables with production code and requires the page data to match them exactly;
@@ -20,7 +20,7 @@
 #
 # Check 1 without check 2 would pass a page whose generator drifted; check 2 without check 1
 # would pass a generator that agrees with stale vectors. The workflow also runs when
-# `haenv/` or `registry/` changes, so a production change that the page no longer matches
+# `src/` or `registry/` changes, so a production change that the page no longer matches
 # fails here instead of leaving a stale page online.
 #
 # No step uses `|| true`: a failing check means no publish, and the site keeps its last good
@@ -33,7 +33,8 @@ on:
     branches: [main]
     paths:
       - "web/demo/**"
-      - "haenv/**"
+      - "src/**"
+      - "benchmarks/**"
       - "registry/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:

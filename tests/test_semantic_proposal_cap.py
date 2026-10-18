@@ -2,11 +2,14 @@
 from dataclasses import asdict
 import json
 
-from haenv.judge_evidence import evidence_catalogue
-from haenv.semantic_inputs import anonymous_prompt
-from haenv.semantic_judge import JudgeReply, JudgeTask, evaluate_consensus
-from haenv.semantic_report import apply_proposal_cap
-from haenv.semantic_rubric import load_policy, make_rubric
+from haenv.scoring.judge_evidence import evidence_catalogue
+from haenv.scoring.semantic.inputs import anonymous_prompt
+from haenv.scoring.semantic.judge import JudgeReply
+from haenv.scoring.semantic.judge import JudgeTask
+from haenv.scoring.semantic.judge import evaluate_consensus
+from haenv.scoring.semantic.report import apply_proposal_cap
+from haenv.scoring.semantic.rubric import load_policy
+from haenv.scoring.semantic.rubric import make_rubric
 
 
 def _task():

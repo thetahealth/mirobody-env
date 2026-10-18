@@ -90,6 +90,11 @@ condition_findings:
       n: 1
       penetrance: 0.72
       penetrance_source: "[abstract] summary-level: Graves 诊断时 TPOAb 阳性 98/136 (72%), 综述区间 72-85%; Eur Thyroid J 2023, PMC10762548 (检索摘要, 原文未核对)"
+    - id: ThyroidUptakeUS
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: TRAb 是把 Graves 与其它甲亢病因(毒性结节 / 亚急性甲状腺炎)分开的那一项; 只看 TSH↓FT4↑ 只能到'甲状腺毒症',到不了 Graves。
   JD-ADDISON:
     review: pending
@@ -121,6 +126,11 @@ condition_findings:
       magnitude: marked
       role: confirmatory
       trajectory: progressive
+      n: 1
+    - id: ACTHStim
+      direction: positive
+      role: supportive
+      trajectory: stable
       n: 1
     note: ACTH 升高是'原发(肾上腺本身)'的判别项 —— 继发性(垂体)时 ACTH 低。 只测皮质醇分不出层面,这正是要 confirmatory 成对的原因。
   JD-CUSH:
@@ -176,18 +186,23 @@ condition_findings:
       n: 1
       penetrance: 0.9
       penetrance_source: "[expert_estimate] summary-level: Nieman LK et al, J Clin Endocrinol Metab, 2008, PMID 19107223 (Endocrine Society 库欣诊断指南: 24h UFC / 午夜唾液皮质醇为一线检查, UFC > 3-4 倍 ULN 高度提示, 唾液敏感切点 > 4 nmol/L; 指南原文未核对, 引自检索摘要)"
+    - id: PitAdrenalImaging
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: 单次晨皮质醇对库欣敏感性有限(真正的筛查是节律消失/抑制试验), 故标 fluctuating 且 n=2 —— 一次正常不构成排除。这是有意保留的难点。
   JD-ALDO:
     review: pending
     findings:
     - id: K
       direction: low
-      magnitude: moderate
+      magnitude: mild
       role: screening
       trajectory: stable
       n: 2
       penetrance: 0.30
-      penetrance_source: "[expert_estimate] 临床估计; 背景文献 Funder JW et al, J Clin Endocrinol Metab, 2016 (Endocrine Society PA guideline), PMID 26934393(低钾仅为少数患者, 具体百分比未核对原文)"
+      penetrance_source: "[expert_estimate] 临床估计; 低钾者多在 3.0-3.5、<2.5 少见(凭记忆, 未核原文), 故 mild; 背景文献 Funder JW et al, J Clin Endocrinol Metab, 2016 (Endocrine Society PA guideline), PMID 26934393(低钾仅为少数患者, 具体百分比未核对原文)"
     - id: Aldosterone
       direction: high
       magnitude: marked
@@ -208,6 +223,16 @@ condition_findings:
       n: 2
       penetrance: 0.12
       penetrance_source: "[expert_estimate] expert_estimate: PA 血钠多在正常高值, 越过参考上限者少; 无直接文献比例"
+    - id: AdrenalImaging
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: SalineSuppression
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: 醛固酮与肾素必须成对:比值(ARR)才是筛查量。只给其一无法解读 —— 装载期校验这一对同时存在(`registry.PAIRED_FINDINGS`)。
   JD-PHEO:
     review: pending
@@ -226,6 +251,16 @@ condition_findings:
       n: 2
       penetrance: 0.35
       penetrance_source: "[expert_estimate] expert_estimate: 嗜铬细胞瘤糖代谢异常/糖尿病约 25-50%(临床综述区间); 背景指南 Lenders JWM et al, J Clin Endocrinol Metab, 2014, PMID 24893135(具体数字未核对原文)"
+    - id: MIBGScan
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: AbdominalImaging
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: 本病是 `episodic` 这一档的样板:非发作期甲氧基肾上腺素可完全正常, 所以 n=2 的两次采样里可能有一次是正常的。 '查了一次正常 ⇒ 已排除嗜铬细胞瘤'是真实临床错误,而在本层它变成可机械判定的伪排除。
   JD-PHPT:
     review: pending
@@ -257,6 +292,11 @@ condition_findings:
       n: 2
       penetrance: 0.15
       penetrance_source: "[expert_estimate] expert_estimate: PHPT 初诊肌酐超参考上限/ eGFR<60 约 10-20%; 背景指南 Bilezikian JP et al, J Clin Endocrinol Metab, 2014, PMID 25162665(数字未核对原文)"
+    - id: KidneyUSCalcium
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: VitD25 正常是判别项而不是背景项:维D缺乏会引起继发性甲旁亢(PTH 高但钙不高), 所以'高钙 + PTH 高 + 维D 正常'才指向原发。declared
       normal 与未声明必须区分。
   JD-HEMO:
@@ -294,6 +334,16 @@ condition_findings:
       n: 2
       penetrance: 0.20
       penetrance_source: "[expert_estimate] expert_estimate: 遗传性血色病合并糖尿病约 13-23%(临床记忆值); 无直接文献核对"
+    - id: HFEGene
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: LiverIronMRI
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: 铁蛋白是急性时相反应物,炎症时假性升高 —— 所以它只是 screening; 转铁蛋白饱和度才是判别项。这一对是'表现 vs 病因'的典型。
   JD-B12:
     review: pending
@@ -328,6 +378,17 @@ condition_findings:
       n: 1
       penetrance: 0.98
       penetrance_source: "[expert_estimate] summary-level: Stabler SP, N Engl J Med, 2013, PMID 23301732 (同上; 诊断表 MMA > 400 nmol/L, tHcy > 21 umol/L; 原文未核对)"
+    - id: IntrinsicFactorAb
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: MCV
+      direction: high
+      magnitude: mild
+      role: supportive
+      trajectory: stable
+      n: 1
     note: B12 在 200–300 有灰区,单值判读不稳 —— 故 n=2 且取 marked 档以避开灰区; 复核时若要保留灰区难度,应改为 moderate 并补甲基丙二酸。
   JD-SLE:
     review: pending
@@ -424,7 +485,7 @@ condition_findings:
       n: 1
     - id: Insulin
       direction: low
-      magnitude: moderate
+      magnitude: mild
       role: confirmatory
       trajectory: progressive
       n: 2
@@ -495,6 +556,12 @@ condition_findings:
       n: 1
       penetrance: 0.5
       penetrance_source: "[expert_estimate] summary-level: KDIGO CKD 分期以 UACR >= 30 mg/g 为 A2 起点; 本病已声明 Cr high; 未核对原文"
+    - id: CKDPersistence
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+      # CKD progression presupposes kidney abnormality present >= 3 months (KDIGO 2024 Table 1)
     note: 本条件是两条病线(糖尿病 + 肾病),n=3 让'进展'看得出来 —— 它是题包里唯一一个把'轨迹本身'当考点的条件。
   JD-PCOS:
     review: pending
@@ -570,6 +637,16 @@ condition_findings:
       n: 2
       penetrance: 0.35
       penetrance_source: "[expert_estimate] expert_estimate: 同上, HbA1c 越界略低于 FBG"
+    - id: PituitaryMRI
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: GHSuppression
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: IGF-1 的参考区间强随年龄变 —— 词表里已标注,渲染器须按年龄取, 否则会把 60 岁的正常值判成升高。这是本层最容易出假阳性的一处。
   JD-OSA:
     review: pending
@@ -658,6 +735,16 @@ condition_findings:
       role: screening
       trajectory: stable
       n: 1
+    - id: EMA
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: DuodenalBiopsy
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: 吸收不良的下游(铁、维D)先于血清学被注意到 —— 所以 Ferritin/VitD25 标 progressive、tTG_IgA 只有 1 次。tTG-IgA 判读依赖总 IgA,本层不渲染总
       IgA,故它不足以单独定诊(`single_finding_solvable` 应保持不报警)。
   HD-UNI-02:
@@ -686,6 +773,16 @@ condition_findings:
       role: screening
       trajectory: fluctuating
       n: 2
+    - id: Capillaroscopy
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: EsophagealStudy
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: 'CRP 正常而 ESR 轻升是刻意的:局限型硬化症通常没有显著急性期反应,这一对可以把它与感染/炎性关节病拉开,而单看任一个都拉不开。'
   HD-UNI-03:
     review: pending
@@ -711,6 +808,11 @@ condition_findings:
       n: 3
       penetrance: 0.40
       penetrance_source: "[expert_estimate] expert_estimate: 同上, ESR 升高约 35-45%"
+    - id: SIJMRI
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
     note: HLA-B27 既非必要也非充分(见词表注)。炎性指标标 fluctuating × 3 次 —— 一次正常不排除,这正是与机械性腰背痛要靠多次才分得开的地方。
   HD-UNI-04:
     review: pending
@@ -750,6 +852,35 @@ condition_findings:
       n: 2
       penetrance: 0.35
       penetrance_source: "[expert_estimate] expert_estimate: 结节病 ESR 升高约 30-60%(临床记忆值), 无直接文献核对"
+    - id: ChestHRCT
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: SarcoidMarkers
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: BronchoBiopsy
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: UrineCa24h
+      direction: high
+      magnitude: mild
+      role: supportive
+      trajectory: stable
+      n: 1
+      penetrance: 0.4
+      penetrance_source: "[expert_estimate] 结节病高尿钙约 40%(教科书常引值,未核原文)"
+    - id: Calcitriol
+      direction: high
+      magnitude: mild
+      role: supportive
+      trajectory: stable
+      n: 1
     note: '高钙 + PTH 受抑是这条题的核心对子(结节病的高钙由 1,25-(OH)2D 驱动)。单看高钙会指向甲旁亢 —— 判据要抓的正是「只看一个数就定诊」这种错。'
   HD-UNI-05:
     review: pending
@@ -773,7 +904,337 @@ condition_findings:
       - {id: CA199, direction: high, magnitude: moderate, role: confirmatory, trajectory: progressive, n: 2}
       - {id: FecalElastase, direction: low, magnitude: moderate, role: confirmatory, trajectory: stable, n: 1}
       - {id: TSH, direction: normal, role: screening, trajectory: stable, n: 1}
+      - {id: PancreaticMassImaging, direction: positive, role: supportive, trajectory: progressive, n: 1}
     note: >-
       表面读数(FBG/HbA1c 高)与一例普通新发 2 型糖尿病完全一样 —— 这是刻意的。
       分开两者的是外分泌功能(粪弹性蛋白酶低),而那一项只有开了单才看得到。
       因此"不开单直接开药"在这道题上是结构上可判的错。
+
+  HD-UNI-07:
+    review: pending
+    findings:
+    - id: NTproBNP
+      direction: high
+      role: supportive
+      trajectory: stable
+      n: 1
+      magnitude: moderate
+    - id: EchoCongestion
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    - id: Cr
+      direction: normal
+      role: screening
+      trajectory: stable
+      n: 1
+    note: 需症状/体征与客观心功能/充血证据综合确认;NT-proBNP 升高不能单独确诊,保留射血分数不作前提
+  HD-UNI-08:
+    review: pending
+    findings:
+    - id: ECGAtrialPattern
+      direction: positive
+      role: confirmatory
+      trajectory: episodic
+      n: 1
+    - id: TSH
+      direction: normal
+      role: screening
+      trajectory: stable
+      n: 1
+    - id: K
+      direction: normal
+      role: screening
+      trajectory: stable
+      n: 1
+    note: 须医生复核真实心电图记录;PPG、HRV 或设备提示只能提出候选,短时阴性记录不排除阵发性发作
+  HD-UNI-09:
+    review: pending
+    findings:
+    - id: Cr
+      direction: high
+      role: screening
+      trajectory: progressive
+      n: 2
+      magnitude: moderate
+    - id: AKICreatinineChange
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    - id: K
+      direction: normal
+      role: screening
+      trajectory: stable
+      n: 1
+    note: 血肌酐48小时增加≥26.5 μmol/L,或7天内≥基线1.5倍,或尿量<0.5 mL/kg/h持续6小时之一可支持AKI;脱水病因仍须容量、用药、尿液和梗阻评估
+  HD-UNI-10:
+    review: pending
+    findings:
+    - id: Cr
+      direction: high
+      role: screening
+      trajectory: progressive
+      n: 3
+      magnitude: moderate
+    - id: UACR
+      direction: high
+      role: screening
+      trajectory: progressive
+      n: 3
+      magnitude: moderate
+    - id: CKDPersistence
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    note: 肾损伤标志或eGFR<60 mL/min/1.73m²持续≥3个月支持CKD;进展还需可靠纵向下降/白蛋白尿变化超出变异并排除急性因素
+  HD-UNI-11:
+    review: pending
+    findings:
+    - id: CRP
+      direction: high
+      role: screening
+      trajectory: stable
+      n: 1
+      magnitude: moderate
+    - id: WBC
+      direction: high
+      role: supportive
+      trajectory: stable
+      n: 1
+      magnitude: mild
+    - id: ALP
+      direction: high
+      role: supportive
+      trajectory: stable
+      n: 1
+      magnitude: mild
+    - id: GGT
+      direction: high
+      role: supportive
+      trajectory: stable
+      n: 1
+      magnitude: mild
+    - id: TBil
+      direction: normal
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: BiliaryUltrasound
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    note: 此模板是伴局部疼痛及炎症的候选急性胆囊炎:局部表现+全身炎症为疑诊,再加相符影像为确诊;仅结石不能证明胆囊炎
+  HD-UNI-12:
+    review: pending
+    findings:
+    - id: Lipase
+      direction: high
+      role: confirmatory
+      trajectory: stable
+      n: 1
+      magnitude: marked
+    - id: CRP
+      direction: high
+      role: supportive
+      trajectory: stable
+      n: 1
+      magnitude: moderate
+    - id: TG
+      direction: high
+      role: supportive
+      trajectory: stable
+      n: 1
+      magnitude: mild
+    - id: PancreaticImaging
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    note: 确诊须三项中至少两项:相符腹痛、脂肪酶或淀粉酶≥3×当地ULN、相符影像;未满足时仅候选。marked与参考带生成不能保证≥3×ULN,消费方必须检查实际值
+  HD-UNI-13:
+    review: pending
+    # Explicit synthetic secondary-report design, not measurements from patients.
+    # AASLD 2023 Table 5; EASL 2024 Table 6. Quality: EASL-ALEH 2015 pp.5-6.
+    secondary_assessment:
+      # This limited template cannot certify exclusions in a different/unknown
+      # background. Absence of a condition in the input is NOT a negative test.
+      compatible_background_conditions: [obesity, hypertension, dyslipidemia, T2D, MASLD, CKD, hypothyroidism]
+      vcte_lsm_kpa: [14.0, 18.0]
+      mre_lsm_kpa: [3.8, 4.2]
+      mri_pdff_percent: [12.0, 20.0]
+      vcte_iqr_over_median: [0.12, 0.20]
+      valid_measurements: 12
+      attempted_measurements: 12
+      fasting_hours: 4
+      probe: XL
+      skin_to_capsule_mm: 28
+      experienced_operator: true
+      mre_quality: adequate_wave_propagation_no_major_artifact
+      confounders:
+        acute_hepatitis: false
+        extrahepatic_cholestasis: false
+        hepatic_congestion: false
+      etiology_review:
+        alcohol_g_per_day: 0
+        hepatitis_b_surface_antigen: negative
+        hepatitis_c_antibody: negative
+        competing_drug_or_secondary_cause_identified: false
+    findings:
+    - id: ALT
+      direction: high
+      role: screening
+      trajectory: fluctuating
+      n: 2
+      magnitude: mild
+    - id: AST
+      direction: high
+      role: screening
+      trajectory: fluctuating
+      n: 2
+      magnitude: mild
+    - id: FibrosisAssessment
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    note: FIB-4为风险分层,须二级无创检查与肝病专科判断,有指征时活检;不能单凭FIB-4、ALT/AST诊断纤维化。未有既往分期只称首次识别进展期候选,不证明126天内进展
+  HD-UNI-14:
+    review: pending
+    findings:
+    - id: Hb
+      direction: low
+      role: screening
+      trajectory: progressive
+      n: 2
+      magnitude: moderate
+    - id: Ferritin
+      direction: low
+      role: confirmatory
+      trajectory: stable
+      n: 1
+      magnitude: moderate
+    - id: TSAT
+      direction: low
+      role: confirmatory
+      trajectory: stable
+      n: 1
+      magnitude: moderate
+    - id: GIEndoscopy
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: MCV
+      direction: low
+      magnitude: mild
+      role: supportive
+      trajectory: stable
+      n: 1
+    note: Hb降低结合铁研究确认缺铁;慢性消化道失血为需查明的候选病因,检查消化道并评估其他失血、摄入或吸收异常后才可归因
+  HD-UNI-15:
+    review: pending
+    findings:
+    - id: UrineDip
+      direction: positive
+      role: supportive
+      trajectory: stable
+      n: 1
+    - id: UrineCulture
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    - id: CRP
+      direction: high
+      role: screening
+      trajectory: stable
+      n: 1
+      magnitude: moderate
+    note: 本例发热+腰背痛选择上尿路感染候选,须尿检、尿培养/药敏及梗阻风险评估;单纯膀胱炎为另一无系统症状变体,不是本例确定结论
+  HD-UNI-16:
+    review: pending
+    findings:
+    - id: CRP
+      direction: high
+      role: screening
+      trajectory: stable
+      n: 1
+      magnitude: moderate
+    - id: WBC
+      direction: high
+      role: supportive
+      trajectory: stable
+      n: 1
+      magnitude: mild
+    - id: ChestFocalOpacity
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    note: 相符症状结合影像学新浸润支持CAP,白细胞和CRP不作单独确诊;评估生命体征及就医场所,不从手表血氧直接确定重症
+  HD-UNI-17:
+    review: pending
+    findings:
+    - id: PostBDObstruction
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    note: 有症状或暴露的适当背景下,舒张后FEV1/FVC<0.7支持确诊;0.6-0.8应择日复查。一次正常或单次异常都结合质量、年龄与鉴别判断
+  HD-UNI-18:
+    review: pending
+    findings:
+    - id: DepressionAssessment
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    - id: TSH
+      direction: normal
+      role: screening
+      trajectory: stable
+      n: 1
+    - id: Hb
+      direction: normal
+      role: screening
+      trajectory: stable
+      n: 1
+    note: 经有能力的临床人员综合评估持续心境/兴趣、病程与功能及竞争病因;PHQ-9用于筛查/随访,可穿戴睡眠步数不能确诊
+  HD-UNI-19:
+    review: pending
+    findings:
+    - id: CK
+      direction: high
+      role: supportive
+      trajectory: stable
+      n: 1
+      magnitude: mild
+    - id: TSH
+      direction: normal
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    - id: Cr
+      direction: normal
+      role: screening
+      trajectory: stable
+      n: 1
+    note: 此黄色模板选择轻度CK高的SAMS候选,不是已确诊严重肌病;需用药时序、相互作用、运动及甲状腺等竞争因素与临床随访判断关联
+  HD-UNI-20:
+    review: pending
+    findings:
+    - id: GastricRetention
+      direction: positive
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    - id: GastricObstruction
+      direction: negative
+      role: confirmatory
+      trajectory: stable
+      n: 1
+    note: 须排除机械梗阻并有客观固体餐胃排空延迟;单凭早饱、恶心或药物暴露不得诊断胃轻瘫,药物相关与糖尿病等病因另行评估

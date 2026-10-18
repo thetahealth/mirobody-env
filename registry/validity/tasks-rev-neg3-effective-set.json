@@ -1,0 +1,14 @@
+{
+ "force_flip": {
+  "trivial": true,
+  "why": "三元组被整体改掉,凭表面就能判 —— 白送"
+ },
+ "original": {
+  "trivial": false,
+  "why": "真实作答,要读内容"
+ },
+ "force_hold": {
+  "trivial": false,
+  "why": "三元组被强制拉平,改判信息只可能在正文里 —— 最难的一档"
+ }
+}

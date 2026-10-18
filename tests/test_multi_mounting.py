@@ -50,9 +50,9 @@ _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
 from haenv import judges as J                        # noqa: E402
-from haenv import mount_table as MT                  # noqa: E402
-from haenv import mount_coverage as MC                  # noqa: E402
-from haenv import mounting as MG                     # noqa: E402
+import haenv.scoring.mounts.table as MT                  # noqa: E402
+import haenv.scoring.mounts.coverage as MC                  # noqa: E402
+import haenv.scoring.mounts.dispatch as MG                     # noqa: E402
 
 #: The slice-only judge list is hard-coded here, not derived from `MOUNT`.
 #: Deriving it ("anything not mounted on multi is the slices family") would

@@ -1,0 +1,100 @@
+# Rendering and selection over saved facts; no clinical thresholds or acceptance sets.
+version: 1
+source: saved open_management protocols and visible records
+p2:
+  trigger_sections:
+    R0: intake_checklist
+    R0a: intake_checklist
+    R0b: intake_checklist
+    R4: intake_checklist
+    R5: cgm_nightly
+    R11: cgm_nightly
+    R6: home_bp_log
+    R7: home_bp_log
+    R7a: home_bp_log
+    R8: morning_weight
+    R9: wearable_daily
+    R12: home_bp_log
+    R13: intake_checklist
+    R14: home_check_today
+  history_exceptions:
+    R0a:
+      match: {medication_class: anticoagulant}
+      current_fields: [head_injury_today, current_prescriptions_reconciled, following_current_prescriptions]
+      link: 当前确有头部外伤，并经本次核对仍按现行抗凝处方服药；旧处方须覆盖今天且没有停药证据
+    R0b:
+      match: {treatment_class: systemic_anticancer}
+      current_fields: [systemically_unwell_today, patient_statement]
+      link: 对照实际抗癌给药日期和本次新发全身不适，落实规程的治疗时间窗；不能以低NEWS2或没有高热排除该急性条款
+    R10a:
+      match: {condition: sinus_bradycardia}
+      current_fields: [rate_medication_changed_recently, dizziness, urgent_symptoms]
+      link: 当前心率落在已评估的长期无症状基线内，本次用药核对无近期相关药物变化，并排除新症状和更早的急性条款
+p4:
+  symbols: {tsh: TSH, ck: CK, alt: ALT}
+  comparison_percent_definition: 患者标本比对的patient_sample_difference_pct为所列方法、平台或试剂批相对reference_method、reference_platform或reference_lot的百分比差；正数表示所列条件的读数较参照高，负数表示较参照低。仅项目相符、实际条件匹配及文件在该采血日适用时才使用，不能把其它批次的比对套到本次。
+  notice_identity_fields: [method, platform, reagent_lot, lab]
+  notice_end_fields: [valid_to, valid_until]
+  notice_limits:
+    - {limit: free_hemoglobin_limit_g_L, field: free_hemoglobin_g_L, label: 游离血红蛋白, unit: g/L}
+  context_sections: [medication_record, outpatient_record, diet_record]
+  exceptions:
+    - id: companion
+      contains: 标准复查包括肾功能及血钾
+      scopes: [creatinine]
+      item_id: checks.potassium
+      safety_id: safety.omit_potassium
+      requirement: 肾功能和血钾
+    - id: timing
+      contains: 时机按适应证与风险由医生确定
+      scopes: all
+      requirement: 时机按适应证与风险由医生确定
+  excludes:
+    - contains: 不授权患者
+      item_id: safety.self_adjust
+  source_labels:
+    meat_meal: 采血前熟肉摄入
+    infusion_sampling: 同侧输液近心侧采血
+    hemolysis: 本次标本溶血
+    edta_contamination: 有转移和低钙支持的EDTA污染
+    cold_delayed_separation: 未分离标本冷藏并延迟分离
+    nonfasting: 两次采血前进食条件不同
+    glucose_glycolysis: 未分离全血延迟处理的糖酵解
+    recent_exercise: 采血前近期高强度抗阻运动
+    sampling_time: 两次TSH采样时段不同
+    platform_calibration: 报告平台差异及适用患者标本比对偏移
+    reagent_lot: 试剂批号差异及适用患者标本比对偏移
+    jaffe_enzymatic_switch: 肌酐方法切换及适用患者标本比对差异
+    biotin_tsh: 近期生物素摄入与本次敏感测定方法
+    acei_start_or_stop: 两次采血之间的ACEI起用或停用
+    dehydration: 两次采血之间的容量不足病程
+    thiazide: 两次采血之间的噻嗪用药变化
+    gastrointestinal_loss: 两次采血之间的胃肠道丢失病程
+    glucocorticoid: 两次采血之间的全身糖皮质激素用药变化
+    acute_illness: 两次采血之间的新发感染病程
+    thyroiditis: 有伴随结果支持的甲状腺炎病程
+    thyroxine_adherence: 持续甲状腺素服药覆盖改变
+    hepatotoxic_drug: 有病程及排除记录支持的药物相关肝酶变化
+    alcohol_change: 数周持续饮酒量变化
+    statin_myopathy: 有时间关系及肌症状支持的他汀相关变化
+    muscle_injury: 持续肌肉损伤病程
+    fibrate_adherence: 数周贝特类服药覆盖改变
+  class_labels:
+    analytic_biological_noise: 分析与个体内生物学波动
+    preanalytical: 采血前状态或标本条件改变
+    method_difference: 检测方法或平台批号差异
+    true_change: 体内水平真实变化
+  source_links:
+    analytic_biological_noise: 两次方法及有效采样条件可比，所列暴露须按实际日期、适用项目及条件核对，没有支持本次新来源的相符记录，故先按波动解释；复查用于核实差异是否持续，而非凭单次数值调整治疗
+    preanalytical: 相符因素作用于标注的采血日，影响的是该次采样条件；仅上次受影响而今天标准时无需因旧失真加治，本次受影响时须避开该条件重新采样确认
+    method_difference: 两份原报告所用方法、平台或批号有区别，适用患者标本比对文件支持同向差异，故须先用可比检测条件复核，不能将检测条件差异当作患者疾病加重
+    true_change: 两次报告之间有相符的用药覆盖或新发病程改变，时间与读数方向一致，标本或方法记录不能替代解释这一病程，故由医生结合该经过评估处置
+m2:
+  response_window_not_applicable: [systolic_bp]
+  constraint_streams: {floor: fasting_glucose, fib4: FIB4}
+  evidence_sections: [archived_laboratory_record, outpatient_laboratory_record, outpatient_encounter_record, event_history_record]
+  urgency_implementation:
+    🔴: 立即安排急诊评估并携带已有记录
+    🟠: 在题面所列数日内安排医疗评估并携带已有记录
+    🟡: 在题面所列数周内安排医疗评估并携带已有记录
+    🟢: 联系门诊预约常规随访，携带原报告及本次症状记录供复评

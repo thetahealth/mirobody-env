@@ -1,13 +1,17 @@
 # Tracks: three different things with one name
 
+This page describes registered legacy kernel/process tracks. Current M2/P2/P3/P4 decisions
+and overall scoring are defined in [the product specification](../spec/spec.md#9-overall-score-and-reporting).
+The legacy track scores below are separate diagnostic or historical readings.
+
 "Track" refers to three different things in this repository. This page says which is which.
 For what each judge measures, see `docs/design/judge-inventory.md` (generated from code).
 
 | | Called | What it is | Defined by |
 |---|---|---|---|
-| ① | **kernel five tracks A–E** | final-state scores from `haenv_kernel/verifier.py`, in the `tracks` field of `eval.jsonl` | `haenv_kernel/verifier.py` |
+| ① | **kernel five tracks A–E** | final-state scores from `src/haenv_kernel/verifier.py`, in the `tracks` field of `eval.jsonl` | `src/haenv_kernel/verifier.py` |
 | ② | **six process labels** | Tools / Repair / Alternative / Coherence / Evidence / Scope | haenv's grouping of its process judges; a label is a heading, not a score |
-| ③ | **haenv process judges** | haenv's own process judges (`haenv/tracks.py`, `haenv/judges/`), grouped under ②'s labels | code + `mount_table.MOUNT` |
+| ③ | **haenv process judges** | haenv's own process judges (`src/haenv/scoring/tracks.py`, `src/haenv/judges/`), grouped under ②'s labels | code + `mount_table.MOUNT` |
 
 ## 1. Kernel five tracks A–E
 
@@ -52,11 +56,11 @@ non-empty, not what it says.
 * **Letters A/C/E**: kernel Track A (data quality), C (attribution) and E (retrospective loop) are
   unrelated to the Alternative, Coherence and Evidence labels, and to the action tiers `A0`–`A5`.
   The kernel's `score_track_E` is one of the Coherence judges.
-* **`T`**: `T1`–`T4` are the Tools judges; "T6" in `haenv_kernel/verifier.py` is the kernel's own capability
+* **`T`**: `T1`–`T4` are the Tools judges; "T6" in `src/haenv_kernel/verifier.py` is the kernel's own capability
   numbering; the `"T"` field in rows is the index time.
 * **`late_convergence`**: `judge_slices` defines it differently per gold kind (`unified`,
   `comorbidity`, `driver`). Split by `slice_kind` before aggregating.
-* **`tracks`**: `haenv/tracks.py` and the `tracks` field in `eval.jsonl` are different things. An
+* **`tracks`**: `src/haenv/scoring/tracks.py` and the `tracks` field in `eval.jsonl` are different things. An
   offline recompute that runs the `single` column's judges on slice rows can leave keys such as
   `a1` on them; check for that before reading `a1` on a slice batch.
 * **`verifier_core`** is a set of domain-agnostic judging primitives, not the kernel's
@@ -72,9 +76,9 @@ non-empty, not what it says.
 ## 5. How to check
 
 ```bash
-grep -n "^def _track_\|^def score_track_E" haenv_kernel/verifier.py
+grep -n "^def _track_\|^def score_track_E" src/haenv_kernel/verifier.py
 uv run python -c "from haenv import mount_table as M; print(M.holes()); print(M.coverage())"
-grep -rn "oscillation_penalty\|flipback_penalty" haenv/ | grep -v "^haenv/tracks.py"   # expect nothing
+grep -rn "oscillation_penalty\|flipback_penalty" src/haenv/ | grep -v "^src/haenv/scoring/tracks.py"   # expect nothing
 ```
 
 *SYNTHETIC, evaluation-only, not medical advice.*

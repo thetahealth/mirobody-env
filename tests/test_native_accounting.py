@@ -1,21 +1,38 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 import json
+import logging
 
 import pytest
 
-from haenv.native_accounting import NativePrices
-from haenv.paid_completion import AccountedCompletion
-from haenv.semantic_budget import BudgetLedger, BudgetExceeded
+import haenv.runtime.native_accounting as native_accounting
+from haenv.runtime.native_accounting import CACHE_VERIFIED_ON, NativePrices, VERIFIED_ON
+from haenv.runtime.completion import AccountedCompletion
+from haenv.scoring.semantic.budget import BudgetLedger
+from haenv.scoring.semantic.budget import BudgetExceeded
+
+
+VERIFIED = date.fromisoformat(VERIFIED_ON)
 
 
 @pytest.fixture(autouse=True)
 def verified_day(monkeypatch):
-    monkeypatch.setattr('haenv.native_accounting.utc_today',lambda:date(2026,9,29))
+    monkeypatch.setattr('haenv.runtime.native_accounting.utc_today',lambda:VERIFIED)
+
+
+@pytest.fixture(autouse=True)
+def default_policy():
+    native_accounting.configure({})
+    yield
+    native_accounting.configure({})
+
+
+def refuse():
+    native_accounting.configure({'paid':{'tariff_expiry':'refuse'}})
 
 
 def prices(model='gemini-3.1-pro-preview',backend='google'):
-    return NativePrices.verified(model,backend,today=date(2026,9,29))
+    return NativePrices.verified(model,backend,today=VERIFIED)
 
 
 def test_google_cache_hit_is_priced_at_the_cached_rate_and_declared():
@@ -27,7 +44,7 @@ def test_google_cache_hit_is_priced_at_the_cached_rate_and_declared():
     assert Decimal(bill['upper_bound_usd'])==Decimal('.00398')
     assert bill['output_tokens']==300 and bill['cache_discount_applied'] is True
     assert bill['cached_tokens']==900 and bill['cache_input_per_million']=='0.20'
-    assert bill['cache_verified_on']=='2026-09-29' and 'ai.google.dev' in bill['cache_source']
+    assert bill['cache_verified_on']==CACHE_VERIFIED_ON and 'ai.google.dev' in bill['cache_source']
 
 
 def test_google_without_cache_hit_is_full_price_and_says_so():
@@ -63,7 +80,8 @@ def test_qwen_implicit_cache_hit_is_priced_at_the_hit_rate():
 
 
 def test_google_usage_keeps_the_cached_token_field_on_disk_shape():
-    from haenv.evaluate import _google_usage, billed_tokens
+    from haenv.app.evaluate import _google_usage
+    from haenv.app.evaluate import billed_tokens
     u=_google_usage({'usageMetadata':{'promptTokenCount':1000,'candidatesTokenCount':100,
         'totalTokenCount':1100,'cachedContentTokenCount':900}})
     assert u['prompt_tokens_details']['cached_tokens']==900
@@ -79,8 +97,9 @@ def test_incomplete_or_impossible_google_usage_rejected(usage):
 
 
 def test_unknown_model_and_expired_schedule_fail_before_dispatch():
-    with pytest.raises(ValueError):NativePrices.verified('other','google',today=date(2026,9,29))
-    with pytest.raises(ValueError):NativePrices.verified('gemini-3.1-pro-preview','google',today=date(2026,10,6))
+    refuse()
+    with pytest.raises(ValueError):NativePrices.verified('other','google',today=VERIFIED)
+    with pytest.raises(ValueError):NativePrices.verified('gemini-3.1-pro-preview','google',today=VERIFIED+timedelta(days=7))
     with pytest.raises(ValueError):prices().upper_bound('q',72000)
 
 
@@ -105,9 +124,9 @@ def test_unknown_native_usage_counts_at_bound_instead_of_free_call(tmp_path):
 
 
 def test_google_actual_solver_http_is_accounted_before_dispatch(tmp_path,monkeypatch):
-    from haenv import evaluate as ev
-    from haenv.solver_accounting import prepare_accounting
-    import haenv.native_accounting as native
+    import haenv.app.evaluate as ev
+    from haenv.runtime.solver_accounting import prepare_accounting
+    import haenv.runtime.native_accounting as native
     s=ev.GoogleSolver('gemini-3.1-pro','gemini-3.1-pro-preview','secret',10,max_tokens=65536)
     monkeypatch.setattr(native,'preflight_native',lambda *a:prices())
     run=prepare_accounting([('gemini-3.1-pro',ev._const(s))],{},tmp_path,
@@ -123,9 +142,9 @@ def test_google_actual_solver_http_is_accounted_before_dispatch(tmp_path,monkeyp
 
 
 def test_dashscope_binding_counts_native_tariff_under_shared_cap(tmp_path,monkeypatch):
-    from haenv import evaluate as ev
-    from haenv.solver_accounting import prepare_accounting
-    import haenv.native_accounting as native
+    import haenv.app.evaluate as ev
+    from haenv.runtime.solver_accounting import prepare_accounting
+    import haenv.runtime.native_accounting as native
     s=ev.OpenAICompatSolver('qwen3.7-flash','qwen3.7-flash','secret',10,max_tokens=72000,
                             backend='dashscope',url='https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
     monkeypatch.setattr(native,'preflight_native',lambda *a:prices('qwen3.7-flash','dashscope'))
@@ -140,7 +159,7 @@ def test_dashscope_binding_counts_native_tariff_under_shared_cap(tmp_path,monkey
 
 def test_native_host_and_live_google_capacity_must_match(monkeypatch):
     from types import SimpleNamespace
-    from haenv.native_accounting import preflight_native
+    from haenv.runtime.native_accounting import preflight_native
     s=SimpleNamespace(model='gemini-3.1-pro-preview',api_key='secret',max_tokens=65536)
     with pytest.raises(ValueError,match='endpoint'):
         preflight_native(s,'google','https://different-provider.invalid')
@@ -156,8 +175,8 @@ def test_native_host_and_live_google_capacity_must_match(monkeypatch):
 def test_unverified_google_capacity_says_why_without_the_key(monkeypatch):
     import urllib.error
     from types import SimpleNamespace
-    from haenv.native_accounting import preflight_native
-    from haenv.transport import PreSendFailure
+    from haenv.runtime.native_accounting import preflight_native
+    from haenv.runtime.transport import PreSendFailure
     s=SimpleNamespace(model='gemini-3.1-pro-preview',api_key='secret-key',max_tokens=65536)
     url='https://generativelanguage.googleapis.com/v1beta/models'
     def refused(*a,**k):raise urllib.error.HTTPError(url,403,'Forbidden',{},None)
@@ -176,7 +195,7 @@ def test_google_capacity_check_is_bounded_as_a_whole(monkeypatch):
     # multiplies it, so the check has one deadline of its own.
     import threading,time
     from types import SimpleNamespace
-    from haenv import native_accounting as native
+    import haenv.runtime.native_accounting as native
     s=SimpleNamespace(model='gemini-3.1-pro-preview',api_key='k',max_tokens=65536)
     release=threading.Event()
     monkeypatch.setattr('urllib.request.urlopen',lambda *a,**k:release.wait(30))
@@ -191,7 +210,8 @@ def test_google_capacity_check_is_bounded_as_a_whole(monkeypatch):
 
 
 def test_google_normalized_usage_preserves_measured_cache_tokens():
-    from haenv.evaluate import _google_usage,billed_tokens
+    from haenv.app.evaluate import _google_usage
+    from haenv.app.evaluate import billed_tokens
     usage=_google_usage({'usageMetadata':{'promptTokenCount':1000,'candidatesTokenCount':100,
         'thoughtsTokenCount':200,'totalTokenCount':1300,'cachedContentTokenCount':900}})
     assert usage['prompt_tokens_details']['cached_tokens']==900
@@ -200,9 +220,10 @@ def test_google_normalized_usage_preserves_measured_cache_tokens():
 
 
 def test_request_after_verified_date_refuses_before_network(tmp_path,monkeypatch):
+    refuse()
     p=prices();ledger=BudgetLedger(tmp_path/'budget.json',limit_usd='1')
     paid=AccountedCompletion(p,ledger,tmp_path/'receipts',backend='google',cost_reader=p.cost_receipt)
-    monkeypatch.setattr('haenv.native_accounting.utc_today',lambda:date(2026,10,6))
+    monkeypatch.setattr('haenv.runtime.native_accounting.utc_today',lambda:VERIFIED+timedelta(days=7))
     with pytest.raises(BudgetExceeded,match='expired'):
         paid.request('r','q',{'backend':'google','model':p.model,'max_tokens':1000},lambda _:pytest.fail('expired tariff'))
     assert not ledger.snapshot()['requests']
@@ -211,16 +232,18 @@ def test_request_after_verified_date_refuses_before_network(tmp_path,monkeypatch
 def test_resume_after_the_verified_date_starts_but_native_dispatch_still_refuses(tmp_path,monkeypatch):
     # A resumed batch whose native models have finished must not be blocked at startup;
     # a new native request after the verified date is still refused before reserving.
-    from haenv import evaluate as ev
-    from haenv.solver_accounting import prepare_accounting
+    import haenv.app.evaluate as ev
+    from haenv.runtime.solver_accounting import prepare_accounting
+    refuse()
     s=ev.OpenAICompatSolver('qwen3.7-flash','qwen3.7-flash','secret',10,max_tokens=72000,
                             backend='dashscope',url='https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
     kw=dict(ledger_path=tmp_path/'budget.json',limit_usd='10',identity={})
-    prepare_accounting([('qwen3.7-flash',ev._const(s))],{},tmp_path,**kw)
-    monkeypatch.setattr('haenv.native_accounting.utc_today',lambda:date(2026,10,6))
+    cfg={'paid':{'tariff_expiry':'refuse'}}
+    prepare_accounting([('qwen3.7-flash',ev._const(s))],cfg,tmp_path,**kw)
+    monkeypatch.setattr('haenv.runtime.native_accounting.utc_today',lambda:VERIFIED+timedelta(days=7))
     with pytest.raises(ValueError,match='expired'):   # a new batch still needs a current tariff
-        prepare_accounting([('qwen3.7-flash',ev._const(s))],{},tmp_path/'fresh',**kw)
-    run=prepare_accounting([('qwen3.7-flash',ev._const(s))],{},tmp_path,**kw)
+        prepare_accounting([('qwen3.7-flash',ev._const(s))],cfg,tmp_path/'fresh',**kw)
+    run=prepare_accounting([('qwen3.7-flash',ev._const(s))],cfg,tmp_path,**kw)
     run.bind(s,'case','qwen3.7-flash')
     monkeypatch.setattr(s,'_post_wire',lambda _: pytest.fail('expired tariff dispatched'))
     with pytest.raises(BudgetExceeded,match='expired'):
@@ -229,10 +252,64 @@ def test_resume_after_the_verified_date_starts_but_native_dispatch_still_refuses
 
 
 def test_a_verified_schedule_is_valid_for_seven_days_and_not_before():
-    for day in (29, 30):
-        NativePrices.verified('gemini-3.1-pro-preview', 'google', today=date(2026, 9, day))
-    for day in range(1, 6):
-        NativePrices.verified('gemini-3.1-pro-preview', 'google', today=date(2026, 10, day))
-    for bad in (date(2026, 9, 28), date(2026, 10, 6), date(2026, 11, 1)):
+    refuse()
+    for day in range(7):
+        NativePrices.verified('gemini-3.1-pro-preview', 'google', today=VERIFIED + timedelta(days=day))
+    with pytest.raises(ValueError, match='after today'):
+        NativePrices.verified('gemini-3.1-pro-preview', 'google', today=VERIFIED - timedelta(days=1))
+    for bad in (VERIFIED + timedelta(days=7), VERIFIED + timedelta(days=40)):
         with pytest.raises(ValueError, match='expired'):
             NativePrices.verified('gemini-3.1-pro-preview', 'google', today=bad)
+
+
+def _expired_requests(tmp_path,monkeypatch,days=9,ids=('r',),cfg=None):
+    p=prices()
+    if cfg is not None:native_accounting.configure(cfg)
+    ledger=BudgetLedger(tmp_path/'budget.json',limit_usd='1')
+    paid=AccountedCompletion(p,ledger,tmp_path/'receipts',backend='google',cost_reader=p.cost_receipt)
+    monkeypatch.setattr('haenv.runtime.native_accounting.utc_today',lambda:VERIFIED+timedelta(days=days))
+    response={'usageMetadata':{'promptTokenCount':100,'candidatesTokenCount':50,'totalTokenCount':150}}
+    for request_id in ids:
+        paid.request(request_id,'q',{'backend':'google','model':p.model,'max_tokens':1000},lambda _:response)
+    return ledger
+
+
+def test_an_expired_check_warns_once_and_the_requests_go_through(tmp_path,monkeypatch,caplog):
+    caplog.set_level(logging.WARNING,logger='haenv.runtime.native_accounting')
+    ledger=_expired_requests(tmp_path,monkeypatch,ids=('r','r2'))
+    assert {ledger.snapshot()['requests'][i]['status'] for i in ('r','r2')}=={'tariff_capped'}
+    warnings=[r.getMessage() for r in caplog.records if r.name=='haenv.runtime.native_accounting']
+    assert len(warnings)==1
+    for part in ('google','9 days old',VERIFIED_ON,'https://ai.google.dev/gemini-api/docs/pricing',
+                 f'paid.tariff_checked_on: {(VERIFIED+timedelta(days=9)).isoformat()}','paid.tariff_expiry: refuse'):
+        assert part in warnings[0]
+
+
+def test_an_expired_check_refuses_when_the_run_asks_for_refusal(tmp_path,monkeypatch):
+    refuse()
+    with pytest.raises(BudgetExceeded,match='expired'):
+        _expired_requests(tmp_path,monkeypatch)
+
+
+def test_the_users_own_check_silences_the_warning_and_is_recorded_in_the_manifest(tmp_path,monkeypatch,caplog):
+    import haenv.app.evaluate as ev
+    from haenv.runtime.solver_accounting import prepare_accounting
+    caplog.set_level(logging.WARNING,logger='haenv.runtime.native_accounting')
+    mine=(VERIFIED+timedelta(days=7)).isoformat()
+    cfg={'paid':{'tariff_checked_on':mine}}
+    ledger=_expired_requests(tmp_path,monkeypatch,cfg=cfg)
+    assert ledger.snapshot()['requests']['r']['status']=='tariff_capped'
+    assert not [r for r in caplog.records if r.name=='haenv.runtime.native_accounting']
+    s=ev.OpenAICompatSolver('qwen3.7-flash','qwen3.7-flash','secret',10,max_tokens=72000,
+                            backend='dashscope',url='https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
+    prepare_accounting([('qwen3.7-flash',ev._const(s))],cfg,tmp_path/'b',ledger_path=tmp_path/'b.json',
+                       limit_usd='10',identity={})
+    saved=json.loads((tmp_path/'b'/'solver-accounting'/'manifest.json').read_text())
+    assert saved['price_metadata']['qwen3.7-flash']['tariff_check']=={
+        'checked_on':mine,'by':'user','expiry':'warn'}
+
+
+@pytest.mark.parametrize('mine',['last tuesday',(VERIFIED+timedelta(days=30)).isoformat()])
+def test_a_malformed_or_future_check_date_is_still_a_refusal(tmp_path,monkeypatch,mine):
+    with pytest.raises(BudgetExceeded,match='expired or invalid'):
+        _expired_requests(tmp_path,monkeypatch,cfg={'paid':{'tariff_checked_on':mine}})

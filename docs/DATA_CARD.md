@@ -1,9 +1,11 @@
 # Data card · HAEnv
 
 Read [`ETHICS.md`](ETHICS.md) before relying on any number derived from this data.
-The freeze anchor in [`anchor/`](anchor/) records the judging and world fingerprints of the
-current code and the question packs it lists; every board prints both fingerprints and every
-score row stores them. Packs ①–④ add a judging fingerprint of their own on each row.
+The generated freeze declaration in [`registry/anchors/`](../registry/anchors/) records source
+segments and the question packs it lists. Read its revision and inherited pack identities
+directly; its stable filename does not date the current code. Saved results retain their own
+world and judging identities, including per-criterion stamps where measured. See the
+[provenance contract](spec/spec.md#11-criterion-provenance-and-publication).
 
 ## What this is
 
@@ -24,7 +26,9 @@ It differs from question-and-answer medical benchmarks in two ways:
 
 ## The gold standard ships with the questions
 
-The task specifications in `inputs/*.job.yaml` contain the gold fields. This is deliberate.
+The task specifications in `benchmarks/inputs/*.job.yaml` contain the gold fields. This is deliberate.
+Synthetic regression fixtures in `tests/fixtures/invariants/` also include expected answers and
+row-level canaries. They use public-generation cases, not held-out evaluation cases.
 Contamination is addressed by construction, not by hiding answers:
 
 * the latent variables (outcome, true driver, reversal point, adherence gap, noise) are fixed first
@@ -33,7 +37,7 @@ Contamination is addressed by construction, not by hiding answers:
   patient and a new gold standard;
 * every answer-bearing file carries the canary string ([`../CANARY.md`](../CANARY.md)): hand-written
   YAML and Markdown as a comment block, and every row of the published question packs
-  (`frozen/*.Q.jsonl`) plus every batch file a run writes as a top-level `_canary` field. The
+  (`benchmarks/frozen/*.Q.jsonl`) plus every batch file a run writes as a top-level `_canary` field. The
   canary string marks this pack's text so its presence in a corpus can be detected; training on
   the public sample is permitted; the official board uses private seeds.
 
@@ -108,38 +112,66 @@ gate). The packs hold 145 of the 186 emitted cases, chosen with a fixed seed (20
 case that carries armed noise (9) is kept, every condition with an emitted case keeps at least one
 (64), and the remaining slots are filled across the strata join type × distractor level ×
 insufficient information in proportion to each stratum's share of the 186. The chosen `case_id`s
-are the cases of `inputs/ddx-timeline.job.yaml`; both packs build all 145 of them (145 of 145
+are the cases of `benchmarks/inputs/ddx-timeline.job.yaml`; both packs build all 145 of them (145 of 145
 emitted on each track).
+
+### Generated task packs
+
+The anchor also records four audited generation-pipeline outputs in `generated_packs`, each
+with 100 cases. These outputs are separate from the published Q packs in `packs`; their source
+fingerprints and case hashes are recorded, and model scores are recorded separately.
+Each output has a paired single-story control with the same patients, gold answers and decisive
+historical record dates. The 50-case sample nests within its 100-case counterpart with identical
+case and payload bytes.
+
+| Pack | What it tests | Cases |
+|---|---|---|
+| `m2-pack1` | Differential diagnosis and evidence acquisition | 100 |
+| `p2-triage` | Acute triage using current findings and relevant history | 100 |
+| `p3-meds` | Medication adjustment using the current course and documented tolerability | 100 |
+| `p4-followup` | Follow-up interpretation using the applicable earlier report | 100 |
+
+Historical evidence is an optional property of existing answer classes. Both effective and
+inactive older records use the same source types and date sampler; the record content determines
+whether it changes the decision. Decisive records belong to the gold layer and appear in both
+paired versions. The history-length switch controls surrounding background records.
+The default historical-evidence share applies within clinically eligible cases, rather than to
+all cases; it is an authored modeling choice awaiting clinical review.
+The four tasks contain 400 question rows; patient variants, framing and shared diagnostic
+templates require grouped analyses.
 
 ## Task packs and their generators
 
 Four task packs ship as generation pipelines: the job file, the generator that writes it, a judge
 group that registers the pack's gold and scoring, and a pack audit. Every gold answer is computed by
-code from the world's records. All four start from the patients of `inputs/ddx-workup.job.yaml`.
+code from the world's records. All four start from the patients of `benchmarks/inputs/ddx-workup.job.yaml`.
 Anyone can rebuild a pack, write a new one of any size with the generators, and train on the result.
 
 | Pack | Question | Answer classes | Job file | Generator | Judge group |
 |---|---|---|---|---|---|
-| ① differential diagnosis | which conditions explain the record, with tests bought on demand | a differential, tests, a review flag | `inputs/m2-pack1.job.yaml` | `tools/m2_gen_job.py` | `haenv.m2` |
-| ② acute triage | where the patient should go now | `ed_now`, `within_24h`, `routine_followup`, `watchful_waiting` | `inputs/pack2-triage.job.yaml` | `tools/pack2_gen_job.py` | `haenv.pack2` |
-| ③ chronic medication adjustment | what to do with the drug next | `uptitrate`, `downtitrate`, `maintain`, `switch`, `check_adherence_or_adverse_effect` | `inputs/p3-meds.job.yaml` | `tools/p3_gen_job.py` | `haenv.p3` |
-| ④ follow-up interpretation | whether the change since the last result is real, and its size | `true_change`, `analytic_biological_noise`, `preanalytical`, `method_difference` | `inputs/p4-followup.job.yaml` | `tools/p4_gen_job.py` | `haenv.p4` |
+| ① differential diagnosis | which conditions explain the record, with tests bought on demand | a differential, tests, a review flag | `benchmarks/inputs/m2-pack1.job.yaml` | `tools/generation/m2_gen_job.py` | `haenv.m2` |
+| ② acute triage | where the patient should go now | `ed_now`, `within_24h`, `routine_followup`, `watchful_waiting` | `benchmarks/inputs/pack2-triage.job.yaml` | `tools/generation/pack2_gen_job.py` | `haenv.pack2` |
+| ③ chronic medication adjustment | what to do with the drug next | `uptitrate`, `downtitrate`, `maintain`, `switch`, `check_adherence_or_adverse_effect` | `benchmarks/inputs/p3-meds.job.yaml` | `tools/generation/p3_gen_job.py` | `haenv.p3` |
+| ④ follow-up interpretation | whether the change since the last result is real, and its size | `true_change`, `analytic_biological_noise`, `preanalytical`, `method_difference` | `benchmarks/inputs/p4-followup.job.yaml` | `tools/generation/p4_gen_job.py` | `haenv.p4` |
 
-**Size and seed.** `tools/make_pack.py --pack {m2,pack2,p3,p4} --n N --out DIR [--seed S]` writes
+**Size and seed.** `tools/generation/make_pack.py --pack {m2,pack2,p3,p4} --n N --out DIR [--seed S]` writes
 the job for `N` items, builds it with the deterministic generator and runs the audit; it makes no
 model call. Class counts follow each pack's proportion table (largest-remainder apportionment, split
 evenly over the cases with and without a hidden condition). The job carries `pack: {n_items,
-seed_sha256}`; `batch.json` records `N`, the seed's hash and the job, never the seed. The shipped
-job files are the public sample packs at `N = 50`:
+seed_sha256}`; `batch.json` records `N`, the seed's hash and the job, never the seed. Packs of one seed are nested: the 50-item pack is a subset of the
+100-item pack with byte-identical cases, and the emitted pool holds at least four times `N` candidate
+items, which the audit's shortcut gates read. The shipped job files are example packs at the current
+defaults, `N = 50`; they are not the evaluated 1.4.0 question sets, which ship as frozen pack files
+and are reproduced byte for byte at the generation commit each batch records. Each job carries its pool:
 
 | Pack | Items at N = 50 | Drawn from | Answer classes |
 |---|---:|---|---|
-| ① | 50 | 34 new items and 16 bridge items from `ddx-workup` | hidden condition 24 · none 10 (new items) |
-| ② | 50 | 50 cases | `ed_now` 13 · `within_24h` 13 · `routine_followup` 12 · `watchful_waiting` 12 |
-| ③ | 50 | a pool of 196 emitted cases | `maintain` 12 · `downtitrate` 12 · `check_adherence_or_adverse_effect` 12 · `uptitrate` 8 · `switch` 6 |
-| ④ | 50 | a pool of 167 emitted cases | `true_change` 13 · `analytic_biological_noise` 13 · `preanalytical` 12 · `method_difference` 12 |
+| ① | 50 | 44 new items and 6 bridge items from `ddx-workup` | hidden condition 31 · none 13 (new items) |
+| ② | 50 | a pool of 400 emitted cases | `ed_now` 13 · `within_24h` 13 · `routine_followup` 12 · `watchful_waiting` 12 |
+| ③ | 50 | a pool of 471 emitted cases | `maintain` 12 · `check_adherence_or_adverse_effect` 12 · `downtitrate` 10 · `uptitrate` 8 · `switch` 8 |
+| ④ | 50 | a pool of 415 emitted cases | `true_change` 13 · `analytic_biological_noise` 13 · `preanalytical` 12 · `method_difference` 12 |
 
-**Audit.** `tools/pack_audit.py` checks the emitted batch: each cell of the composition the job
+**Audit.** `tools/validation/pack_audit.py` checks the emitted batch: each cell of the composition the job
 planned is present, gold re-derived from the records equals the stored gold, and question-blind
 stubs and surface features do not predict the answer. It needs `scikit-learn` and `joblib`. Permutation p readings are a profile (`--profile`), not a gate. When
 every gate passes it writes `pack.json` (the items that enter the pack) and a marker into the batch
@@ -291,7 +323,7 @@ Language: prompts and case content are in Chinese, both the instruction block an
 fields of the record (reported symptoms, context, events). Field names, stream names, enumerated
 answer values and identifiers are in English.
 
-Three classes of field, each with its own path (`haenv/provenance.py`):
+Three classes of field, each with its own path (`src/haenv/provenance/fields.py`):
 
 | Class | Count | Origin | Examples |
 |---|---|---|---|
@@ -321,7 +353,17 @@ The process track and the main board are separate boards and cannot be merged.
 
 ## Scoring
 
-### Pack scoring
+### 1.4.0 board
+
+Each answer scores `S = G·D·(1+Q)/2`. The hard gates `G` and the core decision `D` are graded by
+code in all four packs; in pack ① code matches the listed diagnoses to the gold through registered
+aliases (and reads the stated link for independent findings), with no model call. One LLM judge
+scores the management-plan quality `Q`. A pack's score is the item mean of `S` (k3: the mean over
+three answers per item), and the overall score gives the four packs equal weight.
+
+### Pack scoring (1.3.0 board)
+
+The rest of this subsection describes the pack composites of the 1.3.0 board.
 
 Each pack has its own board and composite; composites are not pooled across packs. A pack's
 decision is scored as chance-corrected balanced accuracy, `cc = (m · BA − 1) / (m − 1)`, where `BA`
@@ -354,7 +396,7 @@ only deduct).
 The kernel grades ten hard gates (`analytics.kernel_gate_kinds()` lists them). Seven are
 non-compensatory, among them an unauthorised medication change, fabricated evidence, a missed red
 flag, an unsafe action and premature closure. A trip zeroes the whole case. In `slices`
-the action-level gates (`_ACTION_GATES` in `haenv/judges/safety.py`) are also judged on every
+the action-level gates (`_ACTION_GATES` in `src/haenv/judges/safety.py`) are also judged on every
 slice and zero the slice where they fire. No other score buys it back. Three are graded and
 reported but left out of the multiplier (`analytics.NON_HARM_GATES`):
 `acted_on_unverified_signal` (escalating on a reading the gold marks as an artifact without
@@ -399,12 +441,12 @@ Where language models are used:
 | Free-text differential argument | opt-in plugin | Separating a real differential argument from boilerplate needs a model. The verdict set is closed and three-way, and the cost is computed before the run |
 
 Process track: 23 `trace_*` keys. Four tracks are exercised only partly; each score row carries
-`trace_unimplemented_status` with the exact tier, defined in `haenv/process.py:TRACK_GAPS`. An empty
+`trace_unimplemented_status` with the exact tier, defined in `src/haenv/scoring/process.py:TRACK_GAPS`. An empty
 value is neither a score of 0 nor evidence that the track does not exist.
 
 ## Citing
 
-    HAEnv benchmark (Theta Health, 2026), v1.2.1, <pack>,
+    HAEnv benchmark (Theta Health, 2026), v1.3.0, <pack>,
     judging fingerprint <judging_sha16>, world fingerprint <world_sha16>.
 
 Both fingerprints are printed on every board and stored in each `eval.jsonl` row; the values for
@@ -417,12 +459,21 @@ without its fingerprint is not reproducible. For a pack, also cite its `n_items`
 
 **Packs**
 
-* No board has been run on the packs yet; how well each separates models is not measured.
+* The 1.3.0 board ran 10 models on 100 items per pack, 3 rounds each. Among the six best models on
+  a pack, 11 of 15 pairs are separable on pack ①, 0 on pack ②, 4 on pack ③ and 10 on pack ④; on the
+  overall board gpt-6-sol is separable from every other model, and gemini-3.1-pro, gemini-3.7-flash and
+  gpt-6-luna are not separable from one another. A larger pool per pack would separate more pairs.
 * The rules behind pack ② (which findings send a patient to the emergency department) and pack ③
   (when a dose change is on target, when to check adherence first) and the lay-sentence registry
   carry `review: pending`; no practising clinician has signed them off.
-* Pack ① matches free-text diagnoses and tests with one LLM judge; its diagnosis dimensions have no
-  blind-human validity reading.
+* On the 1.3.0 board pack ① matched the proposed tests with one LLM judge; on the 1.4.0 board its
+  core decision is graded by code. Its diagnosis dimensions have no blind-human validity reading.
+* In pack ①, a semantic field the judges leave unresolved (two votes, a third on disagreement, and at
+  least two agreeing labels are required; no further votes are bought when the board is read) is scored
+  with the code value `m2_tests_precision` for F1–F3 items and as 0 for F0 items. On the 1.3.0 board the
+  judges left a semantic field unresolved in 302 of the 3,000 pack ① cells; in 271 of them it is the tests
+  precision (218 cells F1–F3, 53 cells F0). Leaving the F0 zeros out moves a model's pack ① score by at
+  most 0.039 and swaps only the pack ① order of gpt-6-luna and gemini-3.7-flash.
 
 **1.x board: scoring validity and repeatability**
 
@@ -461,11 +512,11 @@ corruption run as ordinary rejecting assertions. They exercise their listed corr
 passing them does not establish complete clinical validity.
 
 * Event-count agreement checks the delivered count. The density control corrupts the delivered
-  count: three families are rejected by [`check_event_density`](../haenv/gates.py), while changes
+  count: three families are rejected by [`check_event_density`](../src/haenv/world/validation/gates_case.py), while changes
   to a legal declaration pass.
-* [`check_rhythm_gap_feasible`](../haenv/gates.py) reads the CaseSpec declaration
+* [`check_rhythm_gap_feasible`](../src/haenv/world/validation/gates_case.py) reads the CaseSpec declaration
   `latent.rhythm_gap`, so an infeasible declared gap is rejected before generation.
-* The final static payload passes the full [`text scanner`](../haenv/verify.py) after item
+* The final static payload passes the full [`text scanner`](../src/haenv/scoring/verify.py) after item
   verification and post-injection. Its registered terms are a finite list; legitimate test names
   are not treated as leaked answers for containing disease words.
 * In the dynamic tool, an unrecognized test target returns explicit unavailability, and querying
@@ -508,7 +559,7 @@ The bundled [self-checks](REPRODUCE.md#4-self-checks) exercise their listed cont
   `skin_temp`, `spo2`) are measured on LifeSnaps (71 participants wearing a Fitbit Sense for more
   than four months, cut into 165 consecutive 28-day windows; CC BY 4.0,
   [doi:10.5281/zenodo.7229547](https://doi.org/10.5281/zenodo.7229547)) — see
-  [`../haenv/wearable.py`](../haenv/wearable.py) for the constants and
+  [`../src/haenv/world/observations/wearable.py`](../src/haenv/world/observations/wearable.py) for the constants and
   [`../NOTICE.md`](../NOTICE.md) for the attribution. Levels (medians) are deliberately not carried
   over: this is a metabolic-disease cohort, the reference is a healthy general population.
 * Two streams (`body_temp`, `activity_index`) have no empirical anchor; their parameters are

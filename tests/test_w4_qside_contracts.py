@@ -16,14 +16,14 @@ import sys
 import pytest
 
 import haenv                                              # noqa: F401  mounts the kernel
-from haenv import evaluate as E
-from haenv import wq
+import haenv.app.evaluate as E
+import haenv.world.wq as wq
 from haenv.judges import _quant_truth, judge_noop_probe, judge_quant_probe
-from haenv.quantities import resolve as _q
-from haenv.run_state import RunContext as _RunContext  # noqa: E402
+from haenv.scoring.quantities import resolve as _q
+from haenv.runtime.state import RunContext as _RunContext  # noqa: E402
 _CTX = _RunContext()   # the run these tests drive; monkeypatch restores its fields
 
-ROOT = pathlib.Path(haenv.__file__).resolve().parent.parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
 class _Raw:
@@ -81,7 +81,7 @@ def test_trend_is_built_on_the_answer_window_so_the_oracle_is_always_right():
          (60, 80.0), (70, 70.0)]
     raw = _Raw({"s": s}, T=70, cid="W4-AW")
     built = {"W4-AW": raw}
-    import haenv.qside as _ev                       # `assign_quant_probes` reads `_QUANT_KINDS` there
+    import haenv.interaction.qside as _ev                       # `assign_quant_probes` reads `_QUANT_KINDS` there
     # pin the rotation to trend for this id
     orig = _ev._QUANT_KINDS
     try:
@@ -98,7 +98,7 @@ def test_trend_is_built_on_the_answer_window_so_the_oracle_is_always_right():
 def test_answer_window_does_not_touch_other_quant_kinds():
     s = [(0, 1.0), (1, 5.0), (2, 2.0), (3, 3.0), (4, 2.5), (5, 1.0)]
     raw = _Raw({"s": s}, T=5, cid="W4-PK")
-    import haenv.qside as _ev                       # `assign_quant_probes` reads `_QUANT_KINDS` there
+    import haenv.interaction.qside as _ev                       # `assign_quant_probes` reads `_QUANT_KINDS` there
     orig = _ev._QUANT_KINDS
     try:
         _ev._QUANT_KINDS = ("peak_day",)
@@ -117,13 +117,13 @@ def test_run_and_recompute_share_one_assignment_that_avoids_the_noop_stream():
     tgt = (npr.get("W4-AV") or {}).get("target")
     if tgt and qpr.get("W4-AV"):
         assert qpr["W4-AV"]["signal"] != tgt
-    src = (ROOT / "tools" / "recompute_judges.py").read_text(encoding="utf-8")
+    src = (ROOT / 'tools/evaluation/recompute_judges.py').read_text(encoding="utf-8")
     assert "assign_qside_probes(" in src and "assign_quant_probes(_built)" not in src
 
 
 def test_recompute_reads_the_answer_window_from_the_rows(tmp_path):
     sys.path.insert(0, str(ROOT / "tools"))
-    import recompute_judges as RJ
+    import tools.evaluation.recompute_judges as RJ
     p = tmp_path / "eval.jsonl"
     p.write_text("\n".join(json.dumps(r) for r in (
         {"case": "A", "solver": "s", "overall": "ABORT(leak)"},
@@ -184,7 +184,7 @@ def test_noop_probe_carries_the_contract_and_the_question_lists_the_enum():
 
 
 def test_noop_oracle_stub_answers_the_enum_on_both_sides():
-    from haenv.baselines import OracleProbeSolver
+    from haenv.world.generation.baselines import OracleProbeSolver
     _CTX.noop_for.clear()
     _CTX.quant_for.clear()
     try:
@@ -228,7 +228,7 @@ def _register_join_case(cid, contract=True):
                {"evidence_id": f"EV-{cid}-05", "kind": "real_symptom", "day": 150}],
            "id_map": ids}
     if contract:
-        from haenv.framings import DDX_ANSWER_CONTRACT
+        from haenv.world.generation.framings import DDX_ANSWER_CONTRACT
         man["answer_contract"] = dict(DDX_ANSWER_CONTRACT)
     wq.register_injection(cid, man)
 
@@ -264,7 +264,7 @@ def test_join_evidence_not_applicable_without_the_contract():
 
 
 def test_join_evidence_is_mounted_like_join_type():
-    from haenv.mount_table import MOUNT
+    from haenv.scoring.mounts.table import MOUNT
     assert MOUNT["join_evidence"] == MOUNT["join_type"]
 
 
@@ -280,7 +280,7 @@ _LAB = [{"evidence_id": "EV-1", "source_type": "lab_result", "source_timestamp":
 
 
 def test_qualifier_without_confirming_evidence_is_not_required():
-    from haenv import qualifiers as QL
+    import haenv.world.clinical.qualifiers as QL
     core, recs = QL.qualifiers_for({"diagnosis": "原发性甲状腺功能减退(桥本)",
                                     "aliases": ["甲减", "桥本"]}, _SP(_LAB))
     assert core == "原发性甲状腺功能减退"
@@ -289,7 +289,7 @@ def test_qualifier_without_confirming_evidence_is_not_required():
 
 def test_qualifier_with_confirming_evidence_is_required():
     """Negative control of the derivability check: add a visible TPOAb result."""
-    from haenv import qualifiers as QL
+    import haenv.world.clinical.qualifiers as QL
     led = _LAB + [{"evidence_id": "EV-2", "source_type": "lab_result", "source_timestamp": 31,
                    "symptom": "抗甲状腺过氧化物酶抗体(TPOAb) 阳性"}]
     _, recs = QL.qualifiers_for({"diagnosis": "原发性甲状腺功能减退(桥本)"}, _SP(led))
@@ -298,7 +298,7 @@ def test_qualifier_with_confirming_evidence_is_required():
 
 @pytest.mark.parametrize("fbg,want", [(7.3, True), (6.6, False)])
 def test_glycemic_threshold_qualifier(fbg, want):
-    from haenv import qualifiers as QL
+    import haenv.world.clinical.qualifiers as QL
     led = [{"evidence_id": "EV-G", "source_type": "lab_result", "source_timestamp": 5,
             "symptom": f"空腹血糖 {fbg} mmol/L(参考 3.9–6.1)"}]
     core, recs = QL.qualifiers_for({"diagnosis": "早期2型糖尿病/胰岛素抵抗"}, _SP(led))
@@ -306,7 +306,7 @@ def test_glycemic_threshold_qualifier(fbg, want):
 
 
 def test_comorbid_qualifier_names_its_thread():
-    from haenv import qualifiers as QL
+    import haenv.world.clinical.qualifiers as QL
     ddx = {"diagnosis": "成人隐匿性自身免疫糖尿病(LADA) + 原发性甲状旁腺功能亢进(高钙血症)",
            "threads": [{"name": "胰岛自身免疫线", "aliases": ["lada", "自身免疫糖尿病"]},
                        {"name": "甲状旁腺线", "aliases": ["甲旁亢", "甲状旁腺"]}]}
@@ -316,7 +316,7 @@ def test_comorbid_qualifier_names_its_thread():
 
 
 def test_gold_without_a_family_is_left_untouched():
-    from haenv import qualifiers as QL
+    import haenv.world.clinical.qualifiers as QL
 
     class _R:
         adjudication = {"ddx": {"diagnosis": "多囊卵巢综合征(PCOS)", "aliases": ["多囊"]}}
@@ -328,7 +328,10 @@ def test_gold_without_a_family_is_left_untouched():
 
 # ---------------------------------------------------------------- certainty contract (diagnosis atoms)
 def test_ddx_framings_ask_for_certainty_and_join_evidence():
-    from haenv.framings import DDX_PROMPT, DDX_SCOPE_PROMPT, DDX_SCOPE2_PROMPT, DIFFERENTIAL_CERTAINTY
+    from haenv.world.generation.framings import DDX_PROMPT
+    from haenv.world.generation.framings import DDX_SCOPE_PROMPT
+    from haenv.world.generation.framings import DDX_SCOPE2_PROMPT
+    from haenv.world.generation.framings import DIFFERENTIAL_CERTAINTY
     assert DIFFERENTIAL_CERTAINTY == ("definite", "probable", "possible", "rule_out")
     for t in (DDX_PROMPT, DDX_SCOPE_PROMPT, DDX_SCOPE2_PROMPT):
         assert '"certainty":"definite|probable|possible|rule_out"' in t
@@ -342,7 +345,7 @@ def test_an_answer_with_certainty_survives_parsing():
     """Positive control for `dx_affirmed`: kernel `solver._extract_json` ->
     `evaluate._to_output` -> `tracks._differential` keep `certainty` on each candidate."""
     from haenv_kernel.solver import _extract_json
-    from haenv.tracks import _differential
+    from haenv.scoring.tracks import _differential
     txt = ('```json\n{"differential":[{"rank":1,"diagnosis":"甲减","certainty":"probable",'
            '"supporting_evidence":["EV-1"],"ruled_out_by":null},{"rank":2,"diagnosis":"亚临床甲减",'
            '"certainty":"rule_out","supporting_evidence":["EV-1"],"ruled_out_by":"EV-2"}],'
@@ -361,9 +364,9 @@ def test_build_records_the_answer_contract_on_the_question_side_only():
     """A diagnosis case built by the generator carries `answer_contract` in the Q-side ledger,
     never in `adjudication`; the `桥本` (Hashimoto) case gets a qualifier record, and the gold
     text is kept."""
-    from haenv import job as J
-    from haenv.build import build_case
-    cs = next(c for c in J.load_job(ROOT / "inputs" / "ddx-timeline.job.yaml").cases
+    import haenv.app.job as J
+    from haenv.world.generation.build import build_case
+    cs = next(c for c in J.load_job(ROOT / 'benchmarks' / 'inputs' / 'ddx-timeline.job.yaml').cases
               if c.case_id == "JD-03")
     raw, audit = build_case(cs)
     assert raw is not None, audit.get("post_noise_conflicts")
@@ -400,7 +403,7 @@ def test_a_probe_without_a_contract_is_judged_by_the_marker_rule(probe, value, w
 
 def _rj():
     sys.path.insert(0, str(ROOT / "tools"))
-    import recompute_judges as RJ
+    import tools.evaluation.recompute_judges as RJ
     return RJ
 
 

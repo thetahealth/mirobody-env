@@ -83,18 +83,18 @@ def _drug_fields() -> tuple[str, ...]:
     """Registry fields `drug_effects.total_effect` reads: every effect field plus the
     trial weight change."""
     sys.path.insert(0, str(ROOT))
-    from haenv import drug_effects as DE
+    import haenv.world.clinical.drug_effects as DE
     return tuple(sorted(set(DE.EFFECT_FIELDS.values()))) + ("trial_weight_kg",)
 
 
 def _kernel() -> dict:
     """Every constant the browser generator uses, read from the production modules."""
     sys.path.insert(0, str(ROOT))
-    from haenv import build as B
-    from haenv import events as E
-    from haenv import latent_rules as LR
-    from haenv import drug_effects as DE
-    from haenv import indicators as _ind
+    import haenv.world.generation.build as B
+    import haenv.world.observations.events as E
+    import haenv.world.clinical.latent_rules as LR
+    import haenv.world.clinical.drug_effects as DE
+    import haenv.world.clinical.indicators as _ind
     from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN as DOM          # kernel
 
     # The descent curvature is sampled per case; only the registered target and spread
@@ -134,7 +134,9 @@ def _kernel() -> dict:
         "domain": {d: {s: dict(c) for s, c in sig.items()} for d, sig in DOM.items()},
         # Drug registry. The browser derives `direct = total - per_kg x atten x dw_trial`
         # itself, so a change to `per_kg` cannot leave an exported direct term stale.
+        "baseline_normal_level": dict(DE._doc()["baseline_scaling"]["normal_level"]),
         "drugs": {n: {**{f: s.get(f) for f in drug_fields},
+                      "trial_baseline_hba1c": s.get("trial_baseline_hba1c"),
                       "dose_ladder": {str(k): {f: v.get(f) for f in drug_fields}
                                       for k, v in (s.get("dose_ladder") or {}).items()},
                       "source": _drug_source(n, s), "background": s.get("background")}
@@ -183,7 +185,7 @@ def _kernel() -> dict:
 
 def _indications() -> dict:
     """`registry/drug_indications.yaml` pairs, status and dose ladder only."""
-    from haenv.gates_case import _judging_registry
+    from haenv.world.validation.gates_case import _judging_registry
     pairs = _judging_registry("drug_indications.yaml").get("pairs") or {}
     return {dis: {drug: {"status": str(sp.get("status") or "unregistered"),
                          "dose_steps": [float(x) for x in (sp.get("dose_steps") or [])]}
@@ -192,7 +194,7 @@ def _indications() -> dict:
 
 
 def _doses_per_week() -> dict:
-    from haenv.gate_tables import DRUG_DOSES_PER_WEEK
+    from haenv.world.validation.gate_tables import DRUG_DOSES_PER_WEEK
     return {k: int(v) for k, v in sorted(DRUG_DOSES_PER_WEEK.items())}
 
 
@@ -206,9 +208,9 @@ def _med_draws(cid: str) -> dict:
     """The `rng.unit` draws `med_course.dose_course` reads for one case id, exact. The repeat
     records pick, per slot `j`, the first eligible day in the order of their draw, so that order
     (days 1..END) is exported instead of the draws."""
-    from haenv import build as B
-    from haenv import med_course as M
-    from haenv.rng import unit
+    import haenv.world.generation.build as B
+    import haenv.world.clinical.med_course as M
+    from haenv.world.generation.rng import unit
     n_rungs = max(len(sp["dose_steps"]) for drugs in _indications().values() for sp in drugs.values())
     ep = range(M.MAX_DOSE_DOWN_EPISODES)
     return {"titr": [unit(cid, "med", "titr", i) for i in range(1, n_rungs)],
@@ -222,7 +224,7 @@ def _med_draws(cid: str) -> dict:
 
 def _med_literals() -> dict:
     """Literals inside `dose_course` the page needs, read from its source; a changed form raises."""
-    from haenv import med_course as M
+    import haenv.world.clinical.med_course as M
     src = inspect.getsource(M.dose_course)
     pats = {"titr_jitter": r'"titr", i\) \* ([0-9.]+) \* mt',
             "confirm_gap": r"abs\(d - u\) >= ([0-9]+)",
@@ -239,7 +241,7 @@ def _med_literals() -> dict:
 
 
 def _med_consts() -> dict:
-    from haenv import med_course as M
+    import haenv.world.clinical.med_course as M
     return {**_med_literals(), "min_visible_points": M.MIN_VISIBLE_DOSE_POINTS,
             "episode_weights": list(M.DOSE_EPISODE_WEIGHTS),
             "max_down_episodes": M.MAX_DOSE_DOWN_EPISODES, "hold_share": M.HOLD_SHARE,
@@ -258,7 +260,7 @@ def _slope_tol() -> float:
 
 
 def _anchor_tol() -> float:
-    from haenv import gates_case
+    import haenv.world.validation.gates_case as gates_case
     return float(gates_case.ANCHOR_TOL_KG)
 
 
@@ -266,7 +268,7 @@ def _release() -> dict:
     """The current release: freeze revision from `docs/anchor`, and the world and judging
     fingerprints of the code as it is now."""
     sys.path.insert(0, str(ROOT))
-    from haenv import anchor
+    import haenv.provenance.anchor as anchor
     snap = anchor.load_freeze()
     return {"freeze_revision": snap.get("revision"), "world_sha": anchor.world_fingerprint(),
             "judging_sha16": anchor.judging_fingerprint()}
@@ -286,8 +288,8 @@ def _gate(cid: str, dis: str, drug: str, steps: list, start: float, nadir: float
     readings, GEN22 anchors and GEN13 outcome on the course, and GEN27 indication. Sorted,
     one entry per kind."""
     from types import SimpleNamespace
-    from haenv import gates as G
-    from haenv.gates_case import check_drug_indication
+    import haenv.scoring.gates as G
+    from haenv.world.validation.gates_case import check_drug_indication
     from haenv_kernel.latent import LatentPremise
     from haenv_kernel.schema import RawCase
     from haenv_kernel.synth import premise_conflicts
@@ -312,7 +314,7 @@ def _gate(cid: str, dis: str, drug: str, steps: list, start: float, nadir: float
 
 def _clinical_ref(sig: str) -> dict:
     """`reference_range`, `direction` and `diagnostic_for` of one indicator dossier."""
-    from haenv import indicators as _ind
+    import haenv.world.clinical.indicators as _ind
     d = _ind.of(sig)
     ref = d.get("reference_range") or {}
     return {"low": ref.get("low"), "high": ref.get("high"),
@@ -323,8 +325,8 @@ def _clinical_ref(sig: str) -> dict:
 
 def _cf_uniforms(cid: str) -> list[float]:
     """`post_inject._u01(<case>|weight|carried_forward, i)` for every point index."""
-    from haenv import build as B
-    from haenv.post_inject import _u01
+    import haenv.world.generation.build as B
+    from haenv.world.clinical.post_inject import _u01
     return [round(_u01(f"{cid}|weight|carried_forward", i), _CF_ND) for i in range(B.END + 1)]
 
 
@@ -333,8 +335,8 @@ def _weight_layer(cid: str) -> dict:
 
     `shock` starts at `k = -1` (the stationary start), so the browser reads `shock[k+1]`.
     """
-    from haenv import build as B
-    from haenv import events as E
+    import haenv.world.generation.build as B
+    import haenv.world.observations.events as E
     return {
         "shock": [round(E._det_shock(f"{cid}|weight|wobble", k), _SHOCK_ND)
                   for k in range(-1, B.END + 1)],
@@ -359,9 +361,9 @@ def _fan_personas() -> dict:
 def _personas() -> dict:
     """Each persona's random layer, computed by the production functions."""
     sys.path.insert(0, str(ROOT))
-    from haenv import build as B
-    from haenv import drug_effects as DE
-    from haenv import events as E
+    import haenv.world.generation.build as B
+    import haenv.world.clinical.drug_effects as DE
+    import haenv.world.observations.events as E
 
     out = {}
     for cid in PERSONAS:
@@ -401,11 +403,11 @@ def _wnoise() -> dict:
     sys.path.insert(0, str(ROOT))
     import hashlib
     import math
-    from haenv import build as B
-    from haenv import events as E
-    from haenv.events_pools import _declared_ndigits
-    from haenv.physio import apply as PA
-    from haenv.physio import noise as NZ
+    import haenv.world.generation.build as B
+    import haenv.world.observations.events as E
+    from haenv.world.observations.events_pools import _declared_ndigits
+    from haenv.world.physio import apply as PA
+    from haenv.world.physio import noise as NZ
     reg = PA.load_stream_registry(E._rp("physio_streams.yaml"))
     ws = reg.specs["weight"]
     if ws.bound.transform != "identity":
@@ -427,18 +429,16 @@ def _wnoise() -> dict:
                     "u": [round(NZ.correlated_noise(cid, d, [ws.noise])["weight"], _WNOISE_ND)
                           for d in range(0, B.END + 1)]}
     return {"consts": consts, "per": per,
-            "source": "haenv/physio/apply.py:apply_physio · haenv/physio/noise.py:weight_noise_shaped · "
-                      "haenv/physio/bounds.py:project · haenv/events_pools.py:_round_to_declared_digits · "
-                      "haenv/physio/noise.py:weight_on_scale_grid"}
+            "source": 'src/haenv/world/physio/apply.py:apply_physio · src/haenv/world/physio/noise.py:weight_noise_shaped · src/haenv/world/physio/bounds.py:project · src/haenv/world/observations/events_pools.py:_round_to_declared_digits · src/haenv/world/physio/noise.py:weight_on_scale_grid'}
 
 
 def _observed(cid: str, w: list[dict]) -> list[list]:
     """Production's recorded readings for the weight course `w`: the physiology layer on the
     weight stream (no symptom events), the declared rounding, then the scale's display grid."""
-    from haenv import events as E
-    from haenv.events_pools import _round_to_declared_digits
-    from haenv.physio import apply as PA
-    from haenv.physio.noise import weight_on_scale_grid
+    import haenv.world.observations.events as E
+    from haenv.world.observations.events_pools import _round_to_declared_digits
+    from haenv.world.physio import apply as PA
+    from haenv.world.physio.noise import weight_on_scale_grid
     reg = PA.load_stream_registry(E._rp("physio_streams.yaml"))
     ld, _ = PA.apply_physio(cid, {"weight": [dict(p) for p in w]}, reg)
     _round_to_declared_digits(ld)
@@ -527,12 +527,12 @@ def _golden() -> dict:
     `_GOLDEN_CASES`. The page and `gen_check.mjs` recompute them in JavaScript and compare
     values point for point."""
     sys.path.insert(0, str(ROOT))
-    from haenv import build as B
-    from haenv import drug_effects as DE
-    from haenv import gates as G
-    from haenv import indicators as IND
-    from haenv import post_inject as PI
-    from haenv import med_course as MC
+    import haenv.world.generation.build as B
+    import haenv.world.clinical.drug_effects as DE
+    import haenv.scoring.gates as G
+    import haenv.world.clinical.indicators as IND
+    import haenv.world.clinical.post_inject as PI
+    import haenv.world.clinical.med_course as MC
 
     out = []
     for (label, cid, dis, start, nadir, T, outcome, rw, slope, mpw, adh_low, driver,
@@ -593,8 +593,7 @@ def _golden() -> dict:
                 for r in _cf_rates()],
         })
     return {"cases": out, "overlay": _golden_overlay(), "tol": 0.005,
-            "source": "haenv/build.py:_weight_render · _weight_overlay · render_clinical · "
-                      "clinical_plan · haenv/gates.py:derive_outcome"}
+            "source": 'src/haenv/world/generation/build_weight.py:_weight_render · _weight_overlay · src/haenv/world/generation/build_clinical.py:render_clinical · clinical_plan · src/haenv/world/validation/gates_outcome.py:derive_outcome'}
 
 
 #: Decimals kept for the golden daily base; the page compares it within 1e-4.
@@ -603,14 +602,14 @@ _BASE_ND = 5
 
 def _cf_rates() -> tuple[float, ...]:
     """The registered carried-forward rate and a larger one, for the golden vectors."""
-    from haenv import post_inject as PI
+    import haenv.world.clinical.post_inject as PI
     rate = float((PI._rates().get("carried_forward") or {}).get("rate") or 0.0)
     return (rate, 0.3)
 
 
 def _rule() -> dict:
     """The label rule the build writes into every case."""
-    from haenv import latent_rules as LR
+    import haenv.world.clinical.latent_rules as LR
     return {"min_change_frac": LR.MIN_CHANGE_FRAC, "min_change_kg": LR.MIN_CHANGE_KG,
             "smoothing": LR.LABEL_SMOOTHING, "min_persist_days": LR.MIN_PERSIST_DAYS}
 
@@ -630,7 +629,7 @@ _GOLDEN_OVERLAY = (
 def _golden_overlay() -> list[dict]:
     """`build._weight_overlay` on model points taken from the golden weight series."""
     sys.path.insert(0, str(ROOT))
-    from haenv import build as B
+    import haenv.world.generation.build as B
     out = []
     for label, gi, T in _GOLDEN_OVERLAY:
         (_, cid, dis, start, nadir, _T, outcome, rw, slope, mpw, _a, _d, _v) = _GOLDEN_CASES[gi]

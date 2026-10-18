@@ -3,7 +3,7 @@
 # explain_away.yaml -- "can be explained away" overlap table (M2 spec section 4.2, rows E2-E49).
 #
 # One row per "a finding of hidden condition A -> a visible explainer B". Read by
-# `tools/m2_gen_job.py` to write the K-EA reading into each case's difficulty prior (profile only,
+# `tools/generation/m2_gen_job.py` to write the K-EA reading into each case's difficulty prior (profile only,
 # spec 4.4: K-EA takes no part in tiering and no gate). Rendering the hidden line's symptoms from
 # explainable findings only (spec 4.2 "generation rule") is wired in `haenv/m2/core.py:
 # explain_away_render` (revision R-24). Rows E19 on (revision R-31a) cover the comorbid pairs the v3
@@ -68,6 +68,10 @@ clue_explained_by:
   皮肤发灰发暗像古铜色没怎么晒太阳: [JD-ADDISON, JD-CUSH]
   有时四肢发软一阵歇会儿就好: [hypothyroidism, JD-HYPO, JD-CUSH]
   夜里要起来小便好几次: [T2D, JD-LADA]
+#: What on a record a clue would contradict (a known condition or a treatment goal; review: pending). A case
+#: never shows a clue its record contradicts (`core._clue_opts`).
+clue_contradicted_by:
+  我一直瘦瘦的血糖却升得很快: [obesity, sustained_weight_loss]
 
 rows:
   # E1 (B12 <- primary aldosteronism) deleted in R-34: hypokalaemic paraesthesia is not the
@@ -89,9 +93,15 @@ rows:
      key_signals: [TSAT], specs: [HD-COM-03, HD-COM-12, HD-COM-17, HD-COM-21], status: provisional, review: pending}
   - {id: E8, hidden: 血色病, findings: [掌指关节晨僵, 掌指关节痛], explainer_line: SLE, explainer_known: [],
      key_signals: [TSAT], specs: [HD-COM-17], status: provisional, review: pending}
+  # W7 (2026-10-07): the single-line spec of the hidden condition is listed too. The row's claim (the
+  # known explainer accounts for these findings of the hidden condition) does not depend on a second gold
+  # line, and the pair specs above are never drawn by the pack-1 allocation (their pairs fail the
+  # association admission of `tools/generation/gen_composition_v2.py`), so the row had no case. No new clinical
+  # claim; mechanism and source unchanged. review: pending (W7).
   - {id: E9, hidden: 甲旁亢, findings: [乏力, 便秘, 情绪低落, 记忆减退], explainer_line: 甲减, explainer_known: [hypothyroidism],
      key_signals: [Ca, PTH],
-     specs: [HD-COM-04, HD-COM-07, HD-COM-20, HD-COM-21, HD-COM-22, HD-COM-28, HD-COM-32, HD-COM-38, HD-COM-54, HD-COM-55],
+     specs: [HD-COM-04, HD-COM-07, HD-COM-20, HD-COM-21, HD-COM-22, HD-COM-28, HD-COM-32, HD-COM-38, HD-COM-54, HD-COM-55,
+             JD-PHPT],
      status: provisional, review: pending}
   - {id: E10, hidden: 甲旁亢, findings: [PTH升高], explainer_line: null, explainer_known: [CKD],
      key_signals: [Ca, PTH],
@@ -220,8 +230,9 @@ rows:
      mechanism: "已知肥胖者的增重与减重困难被归到肥胖本身",
      source: "临床估计，待复核（revision r2-E4：原引 Teede 2023 的两句方向相反——PCOS 自身的机制驱动增重、体重高是 PCOS 的危险因素——不支持「肥胖解释增重」，已撤）",
      source_level: clinical_estimate}
+  # W7 (2026-10-07): JD-PCOS (single-line spec) listed as for E9 above; review: pending (W7).
   - {id: E38, hidden: PCOS, findings: [月经稀发, 周期推迟, 半年增重, 体重难降], explainer_line: null, explainer_known: [hypothyroidism],
-     key_signals: [Testosterone, SHBG], specs: [HD-COM-02], status: provisional, review: pending,
+     key_signals: [Testosterone, SHBG], specs: [HD-COM-02, JD-PCOS], status: provisional, review: pending,
      mechanism: "已知甲减（含替代不足）致月经紊乱与增重",
      source: "Teede 2023 Figure 1：'Exclusion of other causes = TSH, prolactin, 17-OH progesterone, FSH'; Krassas 2010 摘要：'hypothyroidism is associated mainly with oligomenorrhea'; Jonklaas 2014：hypothyroidism 'weight gain'",
      source_level: guideline}
@@ -242,8 +253,10 @@ rows:
      key_signals: [TSH, FT4], specs: [HD-COM-04, HD-COM-09], status: provisional, review: pending,
      mechanism: "已知血脂异常解释 LDL 升高；不解释增重与乏力，故与 E11 分开",
      source: "临床估计，待复核", source_level: clinical_estimate}
+  # W7 (2026-10-07): JD-OSA (single-line spec) listed as for E9 above; the sibling E12 (known hypertension)
+  # is not extended (W7 only adds explainer-base rows). review: pending (W7).
   - {id: E42, split_from: E12, hidden: OSA, findings: [日间嗜睡, 白天严重嗜睡, 犯困], explainer_line: null, explainer_known: [hypothyroidism],
-     key_signals: [AHI], specs: [HD-COM-01, HD-COM-27, HD-COM-54], status: provisional, review: pending,
+     key_signals: [AHI], specs: [HD-COM-01, HD-COM-27, HD-COM-54, JD-OSA], status: provisional, review: pending,
      mechanism: "甲减致嗜睡；原醛/嗜铬/高血压不致嗜睡，故与 E12 分开；晨起头痛不登记（无可见解释者）",
      source: "临床估计，待复核", source_level: clinical_estimate}
   - {id: E43, split_from: E14, hidden: 嗜铬, findings: [血压升高, 高血压], explainer_line: null, explainer_known: [hypertension],

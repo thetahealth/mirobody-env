@@ -129,7 +129,7 @@ phrases:
     - "晚饭吃得油,后来反了一下酸,胸口烧得慌"
     - "吃了油腻的晚饭,晚上有点反酸烧心"
     - "饭吃得太油,过后烧心反酸了一阵"
-    - "晚上吃了红烧肉和炸鸡,吃得太油,睡前反酸烧心了一下"
+    - "晚上吃得特别油,睡前反酸烧心了一下"
     - "晚饭油大,吃完躺沙发上看电视,过了一阵就反酸烧心"
   "早上刷牙时恶心想吐了一下":
     review: pending
@@ -272,14 +272,14 @@ phrases:
   "双唇干裂脱皮,秋冬交替时明显":
     review: pending
     lay:
-    - "嘴唇干裂起皮,一到秋冬换季就明显"
     - "嘴唇老是干得裂口子、掉皮,换季时更厉害"
+    - "一到秋冬换季,嘴唇就干裂起皮,抹润唇膏能好点"
     - "秋冬交替嘴唇就干裂脱皮"
   "双眼干涩、异物感,傍晚加重":
     review: pending
     lay:
     - "两只眼睛干涩,像有东西在里面,到傍晚更厉害"
-    - "眼睛发干、磨得慌,傍晚更明显"
+    - "最近盯电脑时间长,两只眼睛发干、磨得慌,傍晚更明显"
     - "双眼干,总觉得进了沙子,快天黑时加重"
   "发作后面色苍白、乏力":
     review: pending
@@ -296,57 +296,57 @@ phrases:
   "右下后牙区牙龈红肿、张口稍受限":
     review: pending
     lay:
-    - "右下边后面的牙龈肿了,发红,嘴张不太大"
     - "右下大牙那块牙龈红肿,张嘴有点费劲"
-    - "右边下面后牙牙龈肿,嘴巴张不开太大"
+    - "这两天右下边后面的牙龈肿了,发红,嘴张不太大"
+    - "右边下面后牙牙龈肿起来了,嘴巴张不开太大,吃饭有点受影响"
   "右侧眉弓上方一处皮脂囊肿":
     review: pending
     lay:
-    - "右边眉毛上方长了个小疙瘩"
-    - "右眉骨上面鼓了个小包"
     - "右边眉毛上面有个小包,有一阵子了"
+    - "右眉骨上面鼓了个小包,不红不痛,就是摸得到"
+    - "洗脸时摸到右边眉毛上方长了个小疙瘩"
   "右侧肩胛内侧酸胀,长时间驾车后出现":
     review: pending
     lay:
     - "右边肩胛骨里侧酸胀,开长途车之后出现的"
-    - "开车开久了右后背肩胛那里发酸发胀"
-    - "长时间开车后右边肩胛骨内侧酸胀"
+    - "前几天开了一整天车,右后背肩胛那里就发酸发胀"
+    - "长时间开车后,右边肩胛骨内侧酸胀,歇一歇好点"
   "右侧腰背部牵拉痛,搬家搬重物后出现":
     review: pending
     lay:
-    - "搬家搬了重东西,右边腰背扯着疼"
-    - "右侧腰背拉着疼,是搬家搬重物以后开始的"
     - "搬家那几天抬重物,之后右边腰背一动就扯得疼"
+    - "前阵子搬家,搬了不少重东西,右边腰背就开始扯着疼"
+    - "右侧腰背拉着疼,是搬家搬重物以后开始的,这两天还没好利索"
   "右侧鼻翼旁一处小疖肿":
     review: pending
     lay:
     - "右边鼻翼旁边长了个小疖子"
-    - "鼻子右边冒了个小脓包"
-    - "右鼻翼边上起了个小疖子"
+    - "鼻子右边冒了个小脓包,这两天才长出来的"
+    - "前两天右鼻翼边上起了个小疖子,没管它"
   "右眼白片状发红,无痛、视力如常":
     review: pending
     lay:
     - "右眼白有一片发红,不疼,看东西也正常"
-    - "右边眼白红了一块,不痛,视力没受影响"
-    - "发现右眼眼白一片红,不疼,看东西清楚"
+    - "早上照镜子,发现右边眼白红了一块,不痛,视力也没受影响"
+    - "发现右眼眼白一片红,吓了一跳,不疼,看东西清楚"
   "右耳后小片皮肤脱屑伴瘙痒":
     review: pending
     lay:
-    - "右耳朵后面一小块皮掉屑,痒"
-    - "右耳后有一小片皮肤起皮发痒"
     - "右边耳朵后头一小块地方老掉皮屑,挺痒的"
+    - "右耳后有一小片皮肤起皮,发痒,有几天了"
+    - "最近右耳朵后面一小块皮掉屑,痒"
   "右耳闷胀、自听增强":
     review: pending
     lay:
     - "右耳朵发闷发胀,自己说话听着声音特别响"
-    - "右耳闷,自己说话嗡嗡的"
-    - "右边耳朵胀胀的,听自己说话有回声"
+    - "这两天右耳闷,自己说话嗡嗡的,像隔了一层"
+    - "右边耳朵胀胀的,听自己说话有回声,别的倒没什么"
   "右腕关节背侧一处小囊性隆起,按压无痛":
     review: pending
     lay:
     - "右手腕背面鼓起一个小包,按着不疼"
-    - "右手腕手背那一侧长了个小鼓包,压着不痛"
-    - "右腕背上有个小疙瘩,按上去不疼"
+    - "前些天才发现,右手腕手背那一侧长了个小鼓包,压着不痛"
+    - "右腕背上有个小疙瘩,按上去不疼,不知道什么时候长的"
   "右腕桡侧疼痛,抱婴儿姿势后,拇指外展时明显":
     review: pending
     lay:
@@ -356,15 +356,15 @@ phrases:
   "右膝内侧压痛,跪姿劳作后":
     review: pending
     lay:
-    - "跪着干活后右膝盖内侧一按就疼"
-    - "右膝里侧压着疼,是跪着干了一阵活以后"
     - "跪在地上干了半天活,右膝内侧按着疼"
+    - "前两天跪着擦地,之后右膝盖里侧一按就疼"
+    - "右膝里侧压着疼,是跪着干了一阵活以后,平时没这样"
   "右足第三四趾间脱皮伴瘙痒":
     review: pending
     lay:
-    - "右脚第三四个脚趾中间脱皮,痒"
-    - "右脚三、四趾缝里起皮发痒"
     - "右脚第三和第四个脚趾之间老脱皮,很痒"
+    - "右脚三、四趾缝里起皮发痒,夏天穿运动鞋多"
+    - "最近右脚第三四个脚趾中间脱皮,痒得想挠"
   "吃得更少却持续增重 + 显著怕冷":
     review: pending
     lay:
@@ -399,7 +399,7 @@ phrases:
     review: pending
     lay:
     - "嗓子里像卡了东西,早上起来明显,吃完饭就没了"
-    - "喉咙里总觉得有个东西,早上最明显,吃点东西就好了"
+    - "喉咙里总觉得有个东西,早上最明显,吃点东西就好了,有一阵子了"
     - "咽喉有异物感,早上重,一吃饭就消失"
   "多饮、多尿":
     review: pending
@@ -428,56 +428,56 @@ phrases:
   "左侧太阳穴搏动样头痛,睡眠不足当日出现":
     review: pending
     lay:
-    - "没睡够那天左边太阳穴一跳一跳地疼"
     - "左太阳穴突突地跳着疼,是睡得少的那天"
-    - "睡眠不足的当天,左侧太阳穴一蹦一蹦地痛"
+    - "那天加班没睡够,左边太阳穴一跳一跳地疼"
+    - "睡眠不足的当天,左侧太阳穴一蹦一蹦地痛,睡一觉就好了"
   "左侧腓肠肌夜间抽筋一次":
     review: pending
     lay:
     - "夜里左小腿肚抽筋了一次"
-    - "左腿肚子晚上抽了一回筋"
-    - "有天半夜左边小腿抽筋"
+    - "有天半夜左边小腿抽筋,疼醒了"
+    - "前几天晚上睡觉,左腿肚子抽了一回筋"
   "左侧腰部肌肉牵拉痛,搬花盆后出现":
     review: pending
     lay:
-    - "搬花盆后左边腰扯着疼"
-    - "左侧腰上的肉拉着疼,搬了花盆以后"
     - "搬了几盆花,之后左腰一动就有点拉扯痛"
+    - "周末在阳台搬花盆,搬完左边腰就扯着疼"
+    - "左侧腰上的肉拉着疼,是搬了花盆以后,这两天还在"
   "左侧食指甲下淤血,被门夹伤":
     review: pending
     lay:
-    - "左手食指被门夹了,指甲下面淤青"
     - "左食指让门夹到,指甲底下发紫"
-    - "门夹了左手食指,指甲盖下面一块青"
+    - "关门时没留神,左手食指被夹了,指甲盖下面一块青"
+    - "左手食指被门夹了,指甲下面淤青"
   "左小腿后侧牵拉痛,球场急停变向后":
     review: pending
     lay:
-    - "打球急停转身后,左小腿后面扯着疼"
-    - "左小腿肚子拉着疼,是在球场上急停变向之后"
     - "球场上一个急停,左小腿后侧就扯痛"
+    - "周末打球,急停转身那一下,左小腿后面就扯着疼了"
+    - "左小腿肚子拉着疼,是在球场上急停变向之后,现在还有点"
   "左手拇指甲沟红肿":
     review: pending
     lay:
-    - "左手大拇指指甲边红肿"
     - "左大拇指甲沟那里又红又肿"
-    - "左手拇指指甲旁边发红肿起来"
+    - "前两天剪指甲剪得太深,左手大拇指指甲边红肿了"
+    - "左手拇指指甲旁边发红肿起来,有两三天了"
   "左手食指近端指间关节撞伤后疼痛":
     review: pending
     lay:
-    - "左手食指中间那个关节撞了一下,疼"
     - "撞到左手食指中间的关节,碰着就疼"
-    - "左食指中间那节关节磕了以后一直疼"
+    - "搬东西时左手食指中间那节关节磕了一下,一直疼"
+    - "左手食指中间那个关节撞了一下,疼"
   "左足跟晨起最初几步刺痛,行走后减轻":
     review: pending
     lay:
     - "早上起床头几步左脚后跟刺痛,走一会儿就好些"
-    - "左脚跟早上下地那几步扎着疼,走开了就轻了"
-    - "起床刚走路时左脚后跟像针扎,多走几步缓解"
+    - "这阵子每天早上下床,左脚后跟头几步扎着疼,走开了就轻了"
+    - "起床刚走路时左脚后跟像针扎,多走几步缓解,一连好些天了"
   "左踝外侧扭伤后轻度肿胀":
     review: pending
     lay:
-    - "左脚踝外侧扭了一下,有点肿"
     - "崴了左脚,脚踝外边轻微肿"
+    - "下台阶没踩稳,左脚踝外侧扭了一下,有点肿"
     - "左脚脖子外侧扭伤后肿了一点"
   "开车途中出冷汗、视物发花,靠路边休息并进食后缓解":
     review: pending
@@ -507,7 +507,7 @@ phrases:
     review: pending
     lay:
     - "打球崴了脚,右膝盖也酸痛"
-    - "打球时崴脚了,右边膝盖发酸疼"
+    - "周末打球时崴脚了,右边膝盖发酸疼,歇了两天"
     - "球场上崴了一下,右膝酸痛"
   "换季过敏性鼻炎、喷嚏清涕":
     review: pending
@@ -538,7 +538,7 @@ phrases:
     lay:
     - "低头伏案久了,后脑勺和脖子那儿像箍着一样疼"
     - "长时间趴桌子工作后,后脑脖子发紧,头疼"
-    - "伏案时间一长,后脑勺连着脖子紧绷绷地痛"
+    - "这几天赶材料,伏案时间一长,后脑勺连着脖子紧绷绷地痛"
   "泡沫尿/下肢水肿":
     review: pending
     lay:
@@ -632,9 +632,9 @@ phrases:
   "难治高血压,严格低盐+三联降压仍≈146/96":
     review: pending
     lay:
-    - "血压怎么都降不下来,吃得很淡,三种降压药一起吃还在146/96左右"
-    - "高血压很难控制,严格少盐,三样降压药都用上了,还是146/96上下"
-    - "吃了三种降压药、盐也控得很严,血压还有146/96"
+    - "血压怎么都降不下来,吃得很淡了还在146/96左右"
+    - "高血压很难控制,严格少盐,还是146/96上下"
+    - "盐控得很严,血压还有146/96"
   "非意愿体重明显下降":
     review: pending
     lay:
@@ -720,6 +720,14 @@ phrases:
     lay:
     - "晚上躺了八个多小时,白天还是困得厉害,开会开车都打瞌睡"
     - "睡够八小时了白天照样犯困,开车开会都困"
+  # W7: the covered form of the phrase above under known hypothyroidism (explain-away row E42): the clause
+  # 「卧床8h」 (enough time in bed) and the context (night-time oximetry) are removed, the sleepiness stays.
+  "仍白天严重嗜睡、开会开车犯困":
+    review: pending
+    lay:
+    - "白天困得厉害,开会开车都打瞌睡"
+    - "白天总是犯困,开车开会都困"
+    - "白天特别困,开会、开车的时候都容易打盹"
   "双侧小腿前方红色触痛结节,两周内自行变暗消退":
     review: pending
     source: pack4
@@ -760,8 +768,8 @@ phrases:
     review: pending
     source: pack4
     lay:
-    - "越来越口渴,医生说有时有点酮症的苗头"
-    - "口干得更厉害了,上次查说偶尔有酮体"
+    - "越来越口渴,喝水也不解渴"
+    - "口干得更厉害了,总想喝水"
   "夜尿3-4次(前列腺+血糖正常)+性欲下降":
     review: pending
     source: pack4
@@ -850,8 +858,8 @@ phrases:
     review: pending
     source: pack4
     lay:
-    - "降压药吃了三种,量出来还是148/95左右,压不下来"
-    - "三种血压药一起吃,血压还在148/95上下"
+    - "血压压不下来,量出来还是148/95左右"
+    - "血压一直在148/95上下,降不下去"
   "近半年掉头发比以前多,洗头时明显":
     review: pending
     source: pack4
@@ -1288,8 +1296,8 @@ phrases:
   "35岁新发高血压≈148/95,严格低盐一月无改善":
     review: pending
     lay:
-    - "三十五岁血压突然高了,在148/95上下,严格少盐一个月也没见好"
-    - "35岁才发现血压偏高,148/95上下,控盐一个月没明显变化"
+    - "血压突然高了,在148/95上下,严格少盐一个月也没见好"
+    - "才发现血压偏高,148/95上下,控盐一个月没明显变化"
   "空腹血糖6.9 + 入睡困难、情绪低落":
     review: pending
     lay:
@@ -1298,8 +1306,8 @@ phrases:
   "38岁难治高血压,严格低盐+三联降压仍≈146/96":
     review: pending
     lay:
-    - "38岁血压一直降不下来,严格少盐还吃三种降压药,仍然146/96上下"
-    - "三十八岁血压顽固偏高,低盐吃得很严,三种药下来还是146/96左右"
+    - "血压一直降不下来,严格少盐了仍然146/96上下"
+    - "血压顽固偏高,低盐吃得很严,还是146/96左右"
   "乏力、爬楼腿软,活动后加重 + 手指麻木":
     review: pending
     lay:
@@ -1417,3 +1425,737 @@ phrases:
     - "早上起来腰背发僵,要活动十几分钟才松开"
     - "每天早上起床腰背都是僵的,活动十几分钟才能松开"
     - "早晨起来后腰和背发硬,得活动十几分钟才缓过来"
+
+  走一小段路就喘,比平时明显:
+    review: pending
+    lay:
+    - 走不远就喘,比平常重
+    - 稍走一会儿就气喘,比平时明显
+  晚上躺平后觉得气不够,坐起来稍好:
+    review: pending
+    lay:
+    - 晚上平躺着喘不过气,坐起来好一些
+    - 夜里躺下觉得不够气,坐着能缓一点
+  两边脚踝都肿了,鞋子比以前紧:
+    review: pending
+    lay:
+    - 两只脚踝都肿,鞋穿着变紧了
+    - 脚踝两边一起肿起来,鞋子挤脚
+  静坐时突然觉得心跳乱,一阵快一阵慢:
+    review: pending
+    lay:
+    - 坐着没动也觉得心跳乱,忽快忽慢
+    - 安静坐着时心跳一会儿快一会儿慢
+  同样的路走起来更累,需要停下来歇:
+    review: pending
+    lay:
+    - 走平常那段路更累了,要停下休息
+    - 还是那条路,现在走着更累,得歇一歇
+  心慌时有些头晕,坐下来能缓一点:
+    review: pending
+    lay:
+    - 心里慌的时候有点晕,坐下好一些
+    - 一心慌就觉得头晕,坐着能缓一缓
+  吐了几次,喝进去的水也留不住:
+    review: pending
+    lay:
+    - 吐了好几次,水喝进去也留不住
+    - 反复吐,喝的水也留不下来
+  吃喝都少,嘴里很干:
+    review: pending
+    lay:
+    - 没怎么吃喝,嘴巴很干
+    - 吃得喝得都少,嘴里干得很
+  站起来时发晕,坐着会好一些:
+    review: pending
+    lay:
+    - 一站起来就有点晕,坐下好些
+    - 起身时觉得晕,坐着能缓一些
+  今天小便比平时少很多:
+    review: pending
+    lay:
+    - 今天尿量比往常少了很多
+    - 今天小便明显比平常少
+  最近容易累,做原来的家务要多歇几次:
+    review: pending
+    lay:
+    - 最近做平时的家务容易累,要多休息几次
+    - 以前做得完的家务,现在要多歇几回
+  这阵子小便泡沫多,过一会儿还没散:
+    review: pending
+    lay:
+    - 最近小便的泡沫多,好一会儿还在
+    - 这段时间尿里泡沫不少,不容易散
+  傍晚两边脚踝有些肿,袜口勒出印子:
+    review: pending
+    lay:
+    - 到了傍晚两只脚踝有点肿,袜子勒出印
+    - 晚上脚踝两边发肿,袜口有勒痕
+  这几个月散步比以前费力,走得越来越少:
+    review: pending
+    lay:
+    - 几个月来散步越来越费劲,走的也少了
+    - 这几个月走路比以前累,散步越来越少
+  吃完饭后右上腹痛了一阵:
+    review: pending
+    lay:
+    - 吃过饭以后右边上腹疼了一阵
+    - 饭后右上边肚子痛了一会儿
+  右上腹的痛持续了好几个小时:
+    review: pending
+    lay:
+    - 右上边肚子痛了好几个小时
+    - 右上腹一直痛,已经几个小时了
+  有些发热,碰右上腹会更痛:
+    review: pending
+    lay:
+    - 有点发热,碰到右上边肚子更疼
+    - 觉得发热,一碰右上腹疼得更明显
+  觉得恶心,不太想吃东西:
+    review: pending
+    lay:
+    - 有点想吐,也不怎么想吃东西
+    - 觉得恶心,没什么胃口
+  上腹突然持续疼痛,休息也没缓解:
+    review: pending
+    lay:
+    - 上边肚子突然一直痛,歇着也不好
+    - 上腹一下子疼起来,持续疼,休息没缓解
+  上腹的痛牵到背部:
+    review: pending
+    lay:
+    - 上边肚子疼的时候背也被牵着疼
+    - 上腹疼痛连到背上
+  吐了好几次,仍觉得恶心:
+    review: pending
+    lay:
+    - 反复吐了几次,还是想吐
+    - 吐过好几回以后还觉得恶心
+  腹痛一直没有停,喝水也很难受:
+    review: pending
+    lay:
+    - 肚子一直痛没停过,喝水也难受
+    - 腹痛始终不缓解,连喝水都不舒服
+  过去几个月容易疲倦,休息后也不完全好:
+    review: pending
+    lay:
+    - 几个月来总容易累,休息了也没全好
+    - 这几个月疲倦多,歇过后还是有些累
+  右上腹偶尔发闷,没有持续剧痛:
+    review: pending
+    lay:
+    - 右边上腹有时闷闷的,没有一直很痛
+    - 右上腹偶尔觉得闷,但不是持续剧烈疼痛
+  做平常的活动更费力,需要多休息:
+    review: pending
+    lay:
+    - 平时那些活动做着更费劲,要多歇一会儿
+    - 做原来的事比以前累,需要更多休息
+  这几个月胃口差一些,吃得比以前少:
+    review: pending
+    lay:
+    - 几个月来胃口变差一点,吃得少了
+    - 这几个月不如以前想吃东西,饭量少了
+  这几周特别容易累,平常的路走不远:
+    review: pending
+    lay:
+    - 几周来很容易累,平常那段路也走不远
+    - 最近几周走原来的路很快就累了
+  爬楼梯会心慌,停下来才缓一点:
+    review: pending
+    lay:
+    - 一爬楼就心里慌,停下来好一些
+    - 上楼时觉得心慌,休息后能缓一点
+  这阵子脸色比平常淡:
+    review: pending
+    lay:
+    - 最近脸上的颜色没有平常好
+    - 这段时间脸色比以前淡了
+  最近有几次大便发黑,当时没有吃补铁药:
+    review: pending
+    lay:
+    - 最近几回大便是黑的,那时候没吃铁剂
+    - 这阵子几次排黑色大便,当时没有补铁
+  总想小便,每次只尿一点:
+    review: pending
+    lay:
+    - 老想上厕所小便,每回尿得很少
+    - 尿意频繁,每次只有一点
+  小便时有刺痛感:
+    review: pending
+    lay:
+    - 尿的时候觉得刺刺地疼
+    - 每次小便都有些刺痛
+  发热发冷,一侧腰背有些痛:
+    review: pending
+    lay:
+    - 觉得发热又发冷,一边腰背有点疼
+    - 有热有冷,腰背的一侧也在痛
+  觉得恶心,吃东西比平时少:
+    review: pending
+    lay:
+    - 有些想吐,吃得比平常少了
+    - 觉得恶心,饭量比平时小
+  开始咳嗽,还有些发热:
+    review: pending
+    lay:
+    - 咳起来了,也有点发热
+    - 开始有咳嗽,伴着发热
+  咳嗽比之前多,带少量痰:
+    review: pending
+    lay:
+    - 咳得比之前频繁,有一点痰
+    - 咳嗽加多了,也咳出少量痰
+  走动时气促,比平时更明显:
+    review: pending
+    lay:
+    - 一走动就喘,比平常厉害
+    - 活动的时候觉得气不够,比以前明显
+  深呼吸时胸口有些痛:
+    review: pending
+    lay:
+    - 吸气吸深了胸口有点疼
+    - 做深呼吸的时候胸部有些痛
+  咳嗽咳痰反复了好几个月:
+    review: pending
+    lay:
+    - 几个月以来反复咳嗽,还会咳痰
+    - 咳嗽带痰已有几个月,总反复
+  走快一点就气喘,歇下来好些:
+    review: pending
+    lay:
+    - 稍走快些就喘,休息以后缓一些
+    - 快走就觉得喘,停下来歇会儿好些
+  有时呼吸带响声,在胸里听得见:
+    review: pending
+    lay:
+    - 有的时候呼吸会响,听着在胸里面
+    - 偶尔呼吸有声音,能在胸里听到
+  最近上同样的楼梯要多停几次:
+    review: pending
+    lay:
+    - 最近爬原来那段楼梯要多歇几回
+    - 上同样的楼梯,现在得多停几次
+  两周来大多数日子情绪低落:
+    review: pending
+    lay:
+    - 这两周多数时候心情都不好
+    - 近两周大部分日子心情低落
+  原来喜欢做的事现在提不起兴趣:
+    review: pending
+    lay:
+    - 以前爱做的事情现在没兴趣了
+    - 原来喜欢的那些事,如今不太想做
+  最近睡不好,白天没有精神:
+    review: pending
+    lay:
+    - 最近觉睡得不好,白天没什么精神
+    - 这阵子睡不好觉,白天觉得没劲
+  连平常的小事都难开始,事情做得少了:
+    review: pending
+    lay:
+    - 平时的小事也不容易开始,做的事少了
+    - 连原来做的小事都难动起来,最近做得少
+  两边大腿酸痛,没有明显外伤:
+    review: pending
+    lay:
+    - 两条大腿都酸疼,没有明显伤到
+    - 两边大腿一样酸痛,没什么明显外伤
+  两侧肩臂也酸,活动时更明显:
+    review: pending
+    lay:
+    - 两边肩膀和手臂都酸,动的时候更明显
+    - 两侧肩臂酸疼,活动时感觉重一些
+  从椅子站起来比以前费力:
+    review: pending
+    lay:
+    - 现在从椅子上起身比以前费劲
+    - 坐着再站起来,比以前费力了
+  因为酸痛,最近走路比平时少:
+    review: pending
+    lay:
+    - 最近酸痛,走路少于平时了
+    - 因为身体酸疼,这阵子走得没以前多
+  吃一点就觉得饱,饭后撑着不舒服:
+    review: pending
+    lay:
+    - 吃少量就饱了,饭后撑得难受
+    - 没吃多少就觉得饱,吃后胀得不舒服
+  饭后恶心反复出现:
+    review: pending
+    lay:
+    - 吃完饭以后常常恶心
+    - 饭后总反复觉得想吐
+  有几次饭后很久仍吐出吃过的东西:
+    review: pending
+    lay:
+    - 有几回吃完很久后又把食物吐出来
+    - 几次都在饭后很久还吐出了吃过的食物
+  这种不适持续了几周,吃得越来越少:
+    review: pending
+    lay:
+    - 难受已经几个星期,饭量越来越小
+    - 这种不舒服持续好几周了,吃的也少了
+  肚子觉得胀,裤腰比平时紧:
+    review: pending
+    lay:
+    - 觉得肚子胀,裤子腰部比平时紧
+    - 肚子有点发胀,穿裤子时腰部更紧了
+
+  摸着手腕的脉搏,快慢不太规律:
+    review: pending
+    lay:
+    - 摸手腕时觉得脉搏一会儿快一会儿慢
+    - 自己摸到手腕的脉搏,快慢不太齐
+
+  # Shared vocabulary registration for the M2 overlapping complaint banks.
+  最近口干，喝水比以前多，也更常去厕所。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 最近口干,喝水比以前多,也更常去厕所
+    - 最近总想喝水,夜里也会起来上厕所
+  最近总想喝水，夜里也会起来上厕所。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 最近口干,喝水比以前多,也更常去厕所
+    - 最近总想喝水,夜里也会起来上厕所
+  这阵子体重和食欲都有变化，但没有详细记每天吃多少。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 这阵子体重和食欲都有变化,但没有详细记每天吃多少
+    - 衣服松紧变了,自己也说不清是不是饭量变了
+  衣服松紧变了，自己也说不清是不是饭量变了。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 这阵子体重和食欲都有变化,但没有详细记每天吃多少
+    - 衣服松紧变了,自己也说不清是不是饭量变了
+  有些天很乏力，看东西也没以前清楚。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 有些天很乏力,看东西也没以前清楚
+    - 下午容易累,偶尔看字发糊
+  下午容易累，偶尔看字发糊。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 有些天很乏力,看东西也没以前清楚
+    - 下午容易累,偶尔看字发糊
+  调整生活习惯后还有不舒服，想再查查。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 调整生活习惯后还有不舒服,想再查查
+    - 饮食已经注意了一段时间,还是觉得身体状态不对
+  饮食已经注意了一段时间，还是觉得身体状态不对。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 调整生活习惯后还有不舒服,想再查查
+    - 饮食已经注意了一段时间,还是觉得身体状态不对
+  这段时间没精神，食欲不如以前。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 这段时间没精神,食欲不如以前
+    - 容易累,饭吃得少了些
+  容易累，饭吃得少了些。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 这段时间没精神,食欲不如以前
+    - 容易累,饭吃得少了些
+  站起来有时头晕，坐一会儿能好些。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 站起来有时头晕,坐一会儿能好些
+    - 早晨起身时发晕,喝水后稍好
+  早晨起身时发晕，喝水后稍好。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 站起来有时头晕,坐一会儿能好些
+    - 早晨起身时发晕,喝水后稍好
+  最近肤色看起来和过去不一样，家人也注意到了。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 最近肤色看起来和过去不一样,家人也注意到了
+    - 手背和嘴边的颜色似乎深了些
+  手背和嘴边的颜色似乎深了些。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 最近肤色看起来和过去不一样,家人也注意到了
+    - 手背和嘴边的颜色似乎深了些
+  胃口不好，时不时恶心，吃饭没有以前规律。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 胃口不好,时不时恶心,吃饭没有以前规律
+    - 最近有恶心和腹部不适,怀疑是不是胃的问题
+  最近有恶心和腹部不适，怀疑是不是胃的问题。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 胃口不好,时不时恶心,吃饭没有以前规律
+    - 最近有恶心和腹部不适,怀疑是不是胃的问题
+  体重最近变了，吃饭和活动也不太规律。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 体重最近变了,吃饭和活动也不太规律
+    - 近来裤腰松紧变了,想不明白是哪件事影响的
+  近来裤腰松紧变了，想不明白是哪件事影响的。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 体重最近变了,吃饭和活动也不太规律
+    - 近来裤腰松紧变了,想不明白是哪件事影响的
+  感觉容易累，睡觉也不踏实。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 感觉容易累,睡觉也不踏实
+    - 白天没精神,有时夜里睡不好
+  白天没精神，有时夜里睡不好。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 感觉容易累,睡觉也不踏实
+    - 白天没精神,有时夜里睡不好
+  最近排便习惯和以前不一样。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 最近排便习惯和以前不一样
+    - 上厕所的次数有变化,自己也说不准是什么原因
+  上厕所的次数有变化，自己也说不准是什么原因。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 最近排便习惯和以前不一样
+    - 上厕所的次数有变化,自己也说不准是什么原因
+  身体对冷热的感觉变了，想看看是否需要检查。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 身体对冷热的感觉变了,想看看是否需要检查
+    - 最近出汗和精神状态都与以前不一样
+  最近出汗和精神状态都与以前不一样。:
+    review: pending
+    source:
+      registry: registry/m2_diversity.yaml#presentations
+      ours: true
+      reason: Authored nonspecific patient wording for clinically overlapping presentations.
+    lay:
+    - 身体对冷热的感觉变了,想看看是否需要检查
+    - 最近出汗和精神状态都与以前不一样
+  心里会突然慌一阵,觉得跳得忽快忽慢:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 静坐时突然觉得心跳乱,一阵快一阵慢
+    - 心里会突然慌一阵,觉得跳得忽快忽慢
+  最近走平常那段路容易累,想停下来缓缓:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 同样的路走起来更累,需要停下来歇
+    - 最近走平常那段路容易累,想停下来缓缓
+  心慌时摸过脉搏,感觉节奏有变化:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 摸着手腕的脉搏,快慢不太规律
+    - 心慌时摸过脉搏,感觉节奏有变化
+  发慌那会儿有点晕,坐一会儿轻一些:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 心慌时有些头晕,坐下来能缓一点
+    - 发慌那会儿有点晕,坐一会儿轻一些
+  饭后觉得右边上腹不舒服,疼了一会儿:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 吃完饭后右上腹痛了一阵
+    - 饭后觉得右边上腹不舒服,疼了一会儿
+  肚子右上方疼了几小时,中间轻重有变化:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 右上腹的痛持续了好几个小时
+    - 肚子右上方疼了几小时,中间轻重有变化
+  右上腹发胀,按着有些不舒服:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 右上腹发胀,按着有些不舒服
+    - 右侧上腹胀痛,自己按过觉得更明显
+  右侧上腹胀痛,自己按过觉得更明显:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 右上腹发胀,按着有些不舒服
+    - 右侧上腹胀痛,自己按过觉得更明显
+  胃里有点翻腾,饭量也少了:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 觉得恶心,不太想吃东西
+    - 胃里有点翻腾,饭量也少了
+  这几个月反复咳,有时带点痰:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 咳嗽咳痰反复了好几个月
+    - 这几个月反复咳,有时带点痰
+  快走时比平常喘,慢下来能缓一缓:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 走快一点就气喘,歇下来好些
+    - 快走时比平常喘,慢下来能缓一缓
+  偶尔觉得胸里呼吸有响声:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 有时呼吸带响声,在胸里听得见
+    - 偶尔觉得胸里呼吸有响声
+  爬平常的楼梯,现在想多歇几回:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 最近上同样的楼梯要多停几次
+    - 爬平常的楼梯,现在想多歇几回
+  这段时间白天没精神,夜里也睡不好:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 这段时间白天没精神,夜里也睡不好
+    - 最近睡得不好,白天觉得累
+  最近睡得不好,白天觉得累:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 这段时间白天没精神,夜里也睡不好
+    - 最近睡得不好,白天觉得累
+  觉得做事的兴致有变化,还没细问具体持续多久:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 觉得做事的兴致有变化,还没细问具体持续多久
+    - 有时对事情提不起劲,是不是整天如此还说不清
+  有时对事情提不起劲,是不是整天如此还说不清:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 觉得做事的兴致有变化,还没细问具体持续多久
+    - 有时对事情提不起劲,是不是整天如此还说不清
+  平常的事做得少了,不确定是累还是心情影响:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 平常的事做得少了,不确定是累还是心情影响
+    - 这阵子事情做得比以前少,想弄清是什么原因
+  这阵子事情做得比以前少,想弄清是什么原因:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 平常的事做得少了,不确定是累还是心情影响
+    - 这阵子事情做得比以前少,想弄清是什么原因
+  工作和家里的事情挤在一起,感觉不太应付得来:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 工作和家里的事情挤在一起,感觉不太应付得来
+    - 最近生活事情多,觉得需要找人谈谈
+  最近生活事情多,觉得需要找人谈谈:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored overlapping patient language; diagnostic confirmation remains a separate acquisition.
+    lay:
+    - 工作和家里的事情挤在一起,感觉不太应付得来
+    - 最近生活事情多,觉得需要找人谈谈
+  夜里躺了八小时,白天还是很困,开会时想打瞌睡:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored patient history shared by both confirmation states.
+    lay:
+    - 卧床8h+仍白天严重嗜睡、开会开车犯困
+    - 夜里躺了八小时,白天还是很困,开会时想打瞌睡
+  早上起来头痛,换枕头和喝水都没好多少:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored patient history shared by both confirmation states.
+    lay:
+    - 早晨醒来后脑袋疼,换了枕头、睡前多喝水还是这样
+    - 早上起来头痛,换枕头和喝水都没好多少
+  已经用了几种降压药,家里量的血压还是高:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored patient history shared by both confirmation states.
+    lay:
+    - 血压三药联用仍≈148/95难控
+    - 已经用了几种降压药,家里量的血压还是高
+  夜里起来尿好几次,还觉得精力和性欲比以前差:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored patient history shared by both confirmation states.
+    lay:
+    - 夜里起来尿好几次,还觉得精力和性欲比以前差
+    - 这阵子夜尿次数多,白天没精神,性欲也比以前低
+  这阵子夜尿次数多,白天没精神,性欲也比以前低:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles
+      ours: true
+      reason: Authored patient history shared by both confirmation states.
+    lay:
+    - 夜里起来尿好几次,还觉得精力和性欲比以前差
+    - 这阵子夜尿次数多,白天没精神,性欲也比以前低

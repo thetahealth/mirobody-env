@@ -7,7 +7,7 @@ reason_slot: tool_calls_why
 default_mode: llm
 # semantic-v3.1: the combined-diagnosis clause is sent
 # only for ddx:comorbidity; a single-diagnosis reference "X(Y)" / "X/Y" is rendered
-# as core + non-required note / alternatives (haenv/semantic_rubric.py).
+# as core + non-required note / alternatives (haenv/scoring/semantic/rubric.py).
 diagnosis_rendering: core_note_v1
 judge:
   model_key: gpt-6-luna

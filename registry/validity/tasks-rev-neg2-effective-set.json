@@ -1,0 +1,14 @@
+{
+ "force_flip": {
+  "trivial": true,
+  "why": "三元组整体被改,凭表面即可判 —— 白送(兼作锚的分辨力自检)"
+ },
+ "original": {
+  "trivial": false,
+  "why": "真实作答"
+ },
+ "force_hold": {
+  "trivial": false,
+  "why": "三元组被拉平,改判只可能在正文 —— 最难"
+ }
+}

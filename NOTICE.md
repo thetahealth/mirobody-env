@@ -11,10 +11,10 @@ licence is, and how it is used. It complements — it does not replace — [`LIC
 
 ## 1. Bundled — code that ships inside this repository
 
-### `haenv_kernel/`
+### `src/haenv_kernel/`
 
 The L0 kernel this project builds on. It carries its own licence file at
-[`haenv_kernel/LICENSE`](haenv_kernel/LICENSE) — **MIT,
+[`src/haenv_kernel/LICENSE`](src/haenv_kernel/LICENSE) — **MIT,
 Copyright (c) 2026 Theta Health** — and is therefore *not* covered by the repository's
 own MIT grant; read that file instead.
 
@@ -36,7 +36,7 @@ The wearable streams are shaped by empirical constants measured on the **LifeSna
 No LifeSnaps record is redistributed here. What this repository carries is a handful of aggregate
 summary statistics per stream — a distribution family, a spread, a lag-1 coefficient, an
 availability rate and two transition probabilities — listed with their provenance in
-[`haenv/wearable.py`](haenv/wearable.py) and in [`docs/DATA_CARD.md`](docs/DATA_CARD.md).
+[`src/haenv/world/observations/wearable.py`](src/haenv/world/observations/wearable.py) and in [`docs/DATA_CARD.md`](docs/DATA_CARD.md).
 CC BY 4.0 is the same grant this repository's own data carries ([`LICENSE-DATA`](LICENSE-DATA)).
 
 ---

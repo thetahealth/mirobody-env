@@ -19,10 +19,12 @@ sys.path.insert(0, str(ROOT))
 _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
-from haenv import overlay, quantities                        # noqa: E402
+import haenv.world.overlay as overlay
+import haenv.scoring.quantities as quantities                        # noqa: E402
 from haenv.judges import SINGLE, run_judges                  # noqa: E402
-from haenv.scoring import load_profile                       # noqa: E402
-from haenv.tracks import alias_hit_asserted, thread_aliases  # noqa: E402
+from haenv.scoring.legacy import load_profile                       # noqa: E402
+from haenv.scoring.tracks import alias_hit_asserted
+from haenv.scoring.tracks import thread_aliases  # noqa: E402
 
 
 class FakeOut:

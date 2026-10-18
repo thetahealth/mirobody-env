@@ -3,9 +3,11 @@ from dataclasses import asdict
 import json
 import threading
 
-from haenv.semantic_budget import BudgetLedger
-from haenv.semantic_judge import JudgeTask, JudgeReply
-from haenv.semantic_parallel import MAX_JUDGE_LANES, run_cells
+from haenv.scoring.semantic.budget import BudgetLedger
+from haenv.scoring.semantic.judge import JudgeTask
+from haenv.scoring.semantic.judge import JudgeReply
+from haenv.scoring.semantic.parallel import MAX_JUDGE_LANES
+from haenv.scoring.semantic.parallel import run_cells
 
 
 def records(n):
@@ -69,3 +71,21 @@ def test_max_lanes_dispatch_each_sample_once_and_persist_every_cell(tmp_path):
         assert len(journal) == 2
     again = run_cells(records(n), tmp_path, "run", ledger, factory, concurrency=n)
     assert again["new_cells"] == 0 and len(calls) == 2 * n
+
+
+def test_a_judging_run_reads_the_ledger_totals_never_every_record(tmp_path):
+    """Progress logging and the run report use the ledger's running totals; reading every
+    request costs time proportional to the whole ledger, once per judged cell."""
+    reads = []
+
+    class Counting(BudgetLedger):
+        def snapshot(self):
+            reads.append(1)
+            return super().snapshot()
+
+    def factory():
+        return lambda request: JudgeReply(json.dumps(
+            {"verdicts": {"dx": {"label": "yes", "reason": "A", "evidence": ["A"]}}}), False, None)
+    run_cells(records(6), tmp_path, "run", Counting(tmp_path / "budget.json", limit_usd="100"),
+              factory, concurrency=3)
+    assert reads == []

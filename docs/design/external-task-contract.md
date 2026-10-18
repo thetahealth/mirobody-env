@@ -139,8 +139,8 @@ on a plain case's `vp`.
 ### ② External content can only go into two free-form dicts
 
 `LatentPremise` and `SolverPayload` are both kernel dataclasses with fixed fields; any extra
-top-level key is silently dropped at construction time. `LatentPremise` lives in `haenv_kernel/latent.py`
-(generation segment) and `SolverPayload` in `haenv_kernel/schema.py` (judging segment), so changing either
+top-level key is silently dropped at construction time. `LatentPremise` lives in `src/haenv_kernel/latent.py`
+(generation segment) and `SolverPayload` in `src/haenv_kernel/schema.py` (judging segment), so changing either
 means regenerated packs or recomputed scores.
 
 ⇒ The only landing spots are `meta` (premise side, `m = p.meta` in `generate`) and
@@ -154,7 +154,7 @@ The `out` a judge receives is a kernel `SolverOutput`. To get the raw text, use
 `getattr(out, "_raw_text", "")` (as `evaluate.py` does). Writing
 `(out or {}).get(...)` gets you `'SolverOutput' object has no attribute 'get'`.
 
-### ④ External probes must not be placed in this repo's `probes/`
+### ④ External probes must not be placed in this repo's `benchmarks/probes/`
 
 `load_probes` is default-deny and validates the entire directory in one pass: if any single
 yaml's `framing_ref` isn't registered, it raises and invalidates the whole directory.
@@ -200,11 +200,11 @@ provide:
 4. This contract only covers the reference implementation for the `single` geometry. How it wires
    up on slice / multi-round / gated cases is unverified.
 5. **Your judges are not in `judging_sha16`.** That fingerprint (`anchor.judging_fingerprint`) covers the
-   files in `tools/make_freeze.py`'s `JUDGING` list, and no plugin package is on it — this includes the
+   files in `tools/release/make_freeze.py`'s `JUDGING` list, and no plugin package is on it — this includes the
    in-repo `examples/`. The publish gate keys on it, so rows scored before
    you changed a judge are not flagged as stale. Your package fingerprint does enter `world_sha` (§1a)
    for batches built after the change; recompute older batches yourself.
-6. **The task card lives in this repo's `tasks/`, not in your package.** A plugin cannot ship its own
+6. **The task card lives in this repo's `benchmarks/tasks/`, not in your package.** A plugin cannot ship its own
    card yet, and the card carries neither a version stamp nor a cost figure.
 
 *SYNTHETIC data, evaluation use only, not medical advice.*

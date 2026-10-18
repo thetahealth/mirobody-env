@@ -47,7 +47,7 @@ def _need(*bs):
 
 # ------------------------------------------------------------------ C1 adherence -> labs
 def _registered_drugs():
-    from haenv import drug_effects as DE
+    import haenv.world.clinical.drug_effects as DE
     out = []
     for drug in DE._doc().get("drugs", {}):
         try:
@@ -73,8 +73,8 @@ def test_c1a_steady_state_adherence_effect_within_literature_range(drug):
 
     Catches: adherence no longer scaling the drug effect, or scaling it far outside the
     literature. Turns red when either changes."""
-    from haenv import build as B
-    from haenv import drug_effects as DE
+    import haenv.world.generation.build as B
+    import haenv.world.clinical.drug_effects as DE
     per_kg = B.CLINICAL_SPEC["HbA1c"][0]
     kw = dict(per_kg=per_kg, atten=B.CLINICAL_ATTEN, cohort="T2D")
     e9 = DE.effect_at(drug, "HbA1c", 365, 0.9, **kw)
@@ -110,7 +110,7 @@ def test_c1_negative_control_adherence_ignored(monkeypatch):
     The rendered drug term is `effect_along` (the dose read day by day from the dose line);
     `effect_at` remains the single-dose form. Adherence is cut out of both, so the control
     removes it from the production path whichever one `render_clinical` calls."""
-    from haenv import drug_effects as DE
+    import haenv.world.clinical.drug_effects as DE
     orig_at, orig_along = DE.effect_at, DE.effect_along
     monkeypatch.setattr(DE, "effect_at",
                         lambda drug, sig, day, adherence, *a, **k: orig_at(drug, sig, day, 1.0, *a, **k))
@@ -152,8 +152,8 @@ def test_c2_response_does_not_move_unrelated_streams(stream):
 def test_c2_negative_control_response_ignored(monkeypatch):
     """Negative control: with every person's response fixed at 1.0, the declared response
     no longer reaches the labs and C2's glucose comparison must fail."""
-    from haenv import build as B
-    patch_bound(monkeypatch, "_drug_response_of", source="haenv.build", value=lambda p: 1.0)
+    import haenv.world.generation.build as B
+    patch_bound(monkeypatch, "_drug_response_of", source="haenv.world.generation.build", value=lambda p: 1.0)
     job, cid = MAINTAINER
     base = C.spec_of(job, cid)
     weak = C.build_uncached(C.variant(base, drug_response=0.6), template=job)
@@ -165,8 +165,8 @@ def test_c2_negative_control_response_ignored(monkeypatch):
 def test_c2_negative_control_response_leaks_into_steps(monkeypatch):
     """Negative control: a layer that writes the response into the step counts must be seen
     by C2's unrelated-stream check."""
-    from haenv import build as B
-    from haenv import post_inject as PI
+    import haenv.world.generation.build as B
+    import haenv.world.clinical.post_inject as PI
     seen = {}
     orig_resp, orig_post = B._drug_response_of, PI.apply_post_injection
 
@@ -179,7 +179,7 @@ def test_c2_negative_control_response_leaks_into_steps(monkeypatch):
         for pt in raw.longitudinal_data.get("steps") or []:
             pt["value"] += 1000 * seen.get("r", 0)
         return res
-    patch_bound(monkeypatch, "_drug_response_of", source="haenv.build", value=resp)
+    patch_bound(monkeypatch, "_drug_response_of", source="haenv.world.generation.build", value=resp)
     monkeypatch.setattr(PI, "apply_post_injection", post)
     job, cid = MAINTAINER
     base = C.spec_of(job, cid)
@@ -225,7 +225,7 @@ def test_c3_weight_regain_raises_hba1c_within_range():
 def test_c3_negative_control_weight_decoupled(monkeypatch):
     """Negative control: with HbA1c's per-kg coupling set to zero, C3's ratio must fall
     below its band."""
-    from haenv import build as B
+    import haenv.world.generation.build as B
     monkeypatch.setitem(B.CLINICAL_SPEC, "HbA1c", (0.0, *B.CLINICAL_SPEC["HbA1c"][1:]))
     r = _c3_ratio(C.build_uncached)
     assert not 0.03 <= r <= 0.15, f"C3 still in band with the coupling off ({r:.3f} per kg)"
@@ -278,7 +278,7 @@ def test_c4_distractor_level_adds_distractors_and_leaves_the_course_alone():
 
 def test_c4_negative_control_distractors_not_injected(monkeypatch):
     """Negative control: with the distractor injector a no-op, C4's first half must fail."""
-    from haenv import build as B
+    import haenv.world.generation.build as B
     monkeypatch.setattr(B, "inject_distractors", lambda raw, *a, **k: raw)
     low, high = _c4_pair(C.build_uncached)
     assert not _n_distractor(high) > _n_distractor(low), "C4 passed with no distractor injected"
@@ -287,7 +287,7 @@ def test_c4_negative_control_distractors_not_injected(monkeypatch):
 def test_c4_negative_control_distractor_moves_weight(monkeypatch):
     """Negative control: a distractor injector that also nudges the weight series must be
     caught by C4's second half."""
-    from haenv import build as B
+    import haenv.world.generation.build as B
     orig = B.inject_distractors
 
     def nudge(raw, *a, **k):
@@ -316,7 +316,7 @@ def test_c5_low_responder_moves_hba1c_less_than_a_responder():
 
 def test_c5_negative_control_driver_ignored(monkeypatch):
     """Negative control: with the response no longer depending on the driver, C5 must fail."""
-    from haenv import drug_effects as DE
+    import haenv.world.clinical.drug_effects as DE
     monkeypatch.setattr(DE, "response_for", lambda *a, **k: 1.0)
     job, cid = C.T2D_JOB, "T2G-08"
     base = C.spec_of(job, cid)

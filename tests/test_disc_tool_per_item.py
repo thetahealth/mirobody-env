@@ -21,6 +21,7 @@ that is never actually exercised.
 SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import pathlib
 import sys
@@ -34,7 +35,8 @@ _cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 sys.path.insert(0, str((ROOT / _cfg["kernel_path"]).resolve()))
 
 from haenv.judges import judge_discriminative_tool              # noqa: E402
-from haenv.registry import load_findings, load_rivals  # noqa: E402
+from haenv.resources.registry import load_findings
+from haenv.resources.registry import load_rivals  # noqa: E402
 
 
 def _spec_with_most_rivals():
@@ -102,7 +104,8 @@ def test_per_item_answer_still_scores():
 
 def test_onelong_stub_is_registered():
     """The `onelong` stub must be in `BASELINE_NAMES` -- otherwise it never enters the degenerate-ceiling denominator."""
-    from haenv.baselines import BASELINE_NAMES, OneLongTestSolver
+    from haenv.world.generation.baselines import BASELINE_NAMES
+    from haenv.world.generation.baselines import OneLongTestSolver
     assert "onelong" in BASELINE_NAMES, BASELINE_NAMES
     assert OneLongTestSolver.name == "onelong"
 
@@ -138,7 +141,7 @@ def test_oracle_disc_names_is_not_in_the_prompt_path():
     oracle stubs in `baselines.py`, and touched nowhere else. A field that is one attribute
     access away from a prompt is only one line of code away from being rendered.
     """
-    assert oracle_table_uses(ROOT / "haenv") == []
+    assert oracle_table_uses(_haenv_source_path('haenv', root=ROOT)) == []
 
 
 def test_a_gold_table_read_in_the_render_path_is_reported(tmp_path):

@@ -3,7 +3,7 @@
 version: 1
 # Text lengths should match the true complaints' lengths: the insufficient-information
 # tier replaces its true complaints with these texts, and a length difference would
-# identify the tier (the batch-level `pr_mean_len` check in `haenv/gates.py`).
+# identify the tier (the batch-level `pr_mean_len` check in `haenv/scoring/gates.py`).
 benign_events:
 - text: 下楼踩空右脚踝扭到,局部酸痛
   context: 下楼梯踩空,冰敷后 2 天缓解

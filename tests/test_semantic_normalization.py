@@ -15,7 +15,7 @@ import hashlib
 
 import pytest
 
-from haenv import anchor
+import haenv.provenance.anchor as anchor
 
 CASES = [
     ("for a, b in pairs:\n    pass\n", "for a, b in pairs:\n    pass"),

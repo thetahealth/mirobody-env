@@ -87,7 +87,7 @@ def test_run_judges_names_the_failing_judge():
     # **Installs a judge guaranteed to crash into the dispatch table**, runs
     # it once, and checks whether it got named.
     # Calls the real `run_judges`; does not scan source strings.
-    import haenv.mount_table as MT
+    import haenv.scoring.mounts.table as MT
     j = _Boom()
     orig_app = J.applicable
     orig_sub = MT.subject_of
@@ -119,7 +119,7 @@ def test_zero_refs_is_unmeasured_not_perfect():
     This test **calls the real function** instead of scanning source
     strings: a string scan tests what the code looks like, not what it does.
     """
-    from haenv.process import judge_commitment_consistency as f
+    from haenv.scoring.process import judge_commitment_consistency as f
     # has a commitment, but **cites zero evidence**
     r = f({"commitments": [{"claim": "体重在降", "falsified_by": "体重回升"}]}, [])
     assert r["trace_commitments_n_refs"] == 0, r
@@ -133,7 +133,7 @@ def test_grounded_rate_still_measured_when_refs_exist():
     """Reverse: with citations present, the rate is still computed normally
     (otherwise the zero-refs test could be satisfied by "always return
     `None`")."""
-    from haenv.process import judge_commitment_consistency as f
+    from haenv.scoring.process import judge_commitment_consistency as f
     r = f({"commitments": [{"claim": "见 EV-01 与 EV-99", "falsified_by": "反证"}]},
           ["EV-01"])
     assert r["trace_commitments_n_refs"] >= 1, r

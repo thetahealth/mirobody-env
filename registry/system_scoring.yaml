@@ -1,0 +1,76 @@
+# Fallible home-system NEWS2 receipts. Gold never reads this table.
+version: 1
+status: provisional
+review: pending
+sources:
+  RCP:
+    cite: RCP 2017 NEWS2 Chart 1 and SpO2 Scale 2 use
+    url: https://www.rcp.ac.uk/media/a4ibkkbf/news2-final-report_0_0.pdf
+  MNSI:
+    cite: 'MNSI Safety Spotlight, September 2024: incomplete observations generating incorrect EWS'
+    url: https://www.mnsi.org.uk/publications/safety-spotlight-incomplete-observations-generating-incorrect-ews/
+  audit:
+    cite: 'Gloucestershire Hospitals: improving completeness and accuracy of NEWS2 observation recording'
+    url: https://www.gloshospitals.nhs.uk/healthcare-professionals/gsqia/quality-improvements/Improving-the-Completeness-and-Accuracy-of-NEWS2-Observation-Recording/
+rates:
+  wrong_scale:
+    value: 0.15
+    ours: true
+    source: RCP
+    population: documented clinician-authorized Scale 2 population
+    reason: 没有可引用的直接发生率；保守取 0.15 以覆盖偶有量表误用，不是文献实测比例。RCP 2017 推荐 25–28 只支持量表选择条件。
+  missing_zero:
+    value: 0.05
+    ours: true
+    source: MNSI
+    population: cases with a decision-bearing input initially absent and subsequently completed
+    reason: 家庭监测可能漏测；系统静默补 0 的直接发生率无数据，保守取 0.05；仅对能改变处置的缺测项设置错误，以验证盲信桩。
+  all_errors:
+    max: 0.1
+    ours: true
+    reason: 全包错误占比上限为自定保守覆盖范围，不是文献发生率。
+sampling:
+  source: ours
+  ours: true
+  rule: deterministic case-id hash; sample wrong scale in confirmed Scale 2 cases, then missing zero in remaining eligible
+    cases; report both denominators; reject packs over the whole-pack cap
+  allowance_z: 3.0
+  minimum_count_allowance: 1
+scale2:
+  source: RCP
+  room_air:
+  - - -999
+    - 83
+    - 3
+  - - 84
+    - 85
+    - 2
+  - - 86
+    - 87
+    - 1
+  - - 88
+    - 999
+    - 0
+  oxygen:
+  - - -999
+    - 83
+    - 3
+  - - 84
+    - 85
+    - 2
+  - - 86
+    - 87
+    - 1
+  - - 88
+    - 92
+    - 0
+  - - 93
+    - 94
+    - 1
+  - - 95
+    - 96
+    - 2
+  - - 97
+    - 999
+    - 3
+  oxygen_points: 2

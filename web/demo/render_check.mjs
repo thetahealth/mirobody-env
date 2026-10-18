@@ -26,6 +26,10 @@ function load(url){
   dom.window.addEventListener("error", e => errs.push(String(e.message)));
   return { dom, errs };
 }
+// Half up on the stored decimal, as the page and the README print three-decimal values.
+const half3 = v => { const x = Number(v), s = String(Math.abs(x)); if (!isFinite(x) || s.includes("e")) return x.toFixed(3);
+  const [i, d = ""] = s.split("."); let n = BigInt(i + (d + "000").slice(0, 3)); if ((d[3] || "0") >= "5") n += 1n;
+  const t = n.toString().padStart(4, "0"); return (x < 0 && n !== 0n ? "-" : "") + t.slice(0, -3) + "." + t.slice(-3); };
 const { dom, errs } = load();
 await new Promise(r => setTimeout(r, 400));
 const W = dom.window, doc = W.document;
@@ -130,8 +134,10 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
 /* Act 3: the numbers on the page are the board's */
 {
   const ov = board.overall.board;
-  const rows = $$("#act3 .fig .axlab.ann, #act3 .fig .axlab.annb").map(n => n.textContent).filter(t => /^\d+\s/.test(t));
+  const rows = $$("#act3 .fig .axlab.ann, #act3 .fig .axlab.annb").map(n => n.textContent).filter(t => /^\d+(–\d+)?\s/.test(t));
+  const rk = r => r.rank_ci95[0] === r.rank_ci95[1] ? "" + r.rank_ci95[0] : r.rank_ci95[0] + "–" + r.rank_ci95[1];
   check("overall_rows_follow_the_board_order", rows.length === ov.length && rows.every((t, i) => t.endsWith(ov[i].model)), rows.slice(0, 3));
+  check("overall_rows_show_rank_intervals", rows.length === ov.length && rows.every((t, i) => t.startsWith(rk(ov[i]) + " ")), rows.slice(0, 3));
   const bad = [];
   $$("#act3 td.cell[data-k]").forEach(td => { const m = td.parentElement.dataset.m, r = board.packs[td.dataset.k].board.find(q => q.model === m);
     if (td.textContent !== r.score.toFixed(2)) bad.push(m + "/" + td.dataset.k); });
@@ -144,14 +150,30 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
   const fills = $$("#act3 .b2 .fill"), badFill = fills.filter(f => { const m = f.closest("tr").dataset.m, k = f.closest("td").dataset.k;
     return Math.abs(parseFloat(f.style.width) - board.packs[k].stability[m] * 100) > 0.06; });
   check("disagreement_bars_are_the_board_shares", fills.length > 0 && badFill.length === 0, { n: fills.length, bad: badFill.length });
-  // the pairwise matrix: every ordered pair, coloured by separability and direction, valued in points
-  const PA = board.overall.pairs, pmBad = [];
-  $$("#act3 table.pm td[data-a]").forEach(td => { const a = td.dataset.a, b = td.dataset.b;
-    const p = PA.pairs.find(q => q.a === a && q.b === b) || PA.pairs.find(q => q.a === b && q.b === a), d = p.a === a ? p.diff : -p.diff;
-    const want = p.separable ? (d > 0 ? "hi" : "lo") : "", v = Math.round(d * 100);
-    if (td.className !== want || td.textContent !== (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v)) pmBad.push(a + "/" + b); });
-  check("pair_matrix_is_the_readout", $$("#act3 table.pm td[data-a]").length === ov.length * (ov.length - 1) && pmBad.length === 0
-    && $$("#act3 table.pm td.hi, #act3 table.pm td.lo").length === 2 * PA.n_separable, { bad: pmBad.slice(0, 3) });
+  const pairs = board.overall.adjacent_pairs;
+  const pairHits = $$("#act3 .b3 rect[data-pair]");
+  check("adjacent_pairs_are_the_preregistered_readings", pairs.length === ov.length - 1 && pairHits.length === pairs.length
+    && pairHits.every((h,i) => h.dataset.pair === pairs[i].pair), {n: pairHits.length});
+  const plotted = ["dq", "cost"].flatMap(k => $$("#" + k + " circle[data-model]").map(c => [k,c]));
+  check("new_figures_cover_ranked_models", plotted.length === ov.length * 2
+    && plotted.every(([k,c]) => board.drawn[k][c.dataset.model].every(Number.isFinite)), {n:plotted.length});
+  const shownProfiles = $$("#mpanel .profiles tr").length;
+  check("model_profiles_are_present", shownProfiles === Object.keys(board.packs).length + 1, shownProfiles);
+  const historyModels = $$("#history-grid circle[data-model]");
+  check("history_figures_show_both_conditions", historyModels.length === ov.length * Object.keys(board.packs).length * 2, historyModels.length);
+  const linked = ov[2].model;
+  click($('#dq circle[data-model="' + linked + '"]'));
+  check("scatter_selection_links_all_figures", $("#mp-model").value === linked && $$("#act3 tr.sel").every(tr=>tr.dataset.m === linked)
+    && $$("#dq [data-model-label], #cost [data-model-label]").filter(n=>n.classList.contains("annb")).every(n=>n.dataset.modelLabel === linked));
+  click($('#tabs .tab[data-p="p4"]'));
+  const tr=board.trajectory, samples=data.packs.p4.sample;
+  check("trajectory_matches_the_public_p4_sample", tr.case === samples.case_id && !$("#trajectory").hidden
+    && $$("#traj-chart rect").length === Object.values(tr.models).reduce((n,r)=>n+r.calls.length,0)
+    && $$("#traj-chart polygon").length === Object.values(tr.models).reduce((n,r)=>n+new Set(Object.values(r.first_seen)).size,0));
+  check("trajectory_outcome_and_unopened_evidence_are_visible", $("#traj-results").textContent.includes("specimen procedure")
+    && $("#traj-results .wrong").textContent.includes("True change") && $("#traj-results").textContent.includes("gpt-6-sol"));
+  click($('#tabs .tab[data-p="m2"]'));
+  check("trajectory_follows_pack_selection", $("#trajectory").hidden);
   const p0 = $("#mpanel").innerHTML, sel = $("#mp-model"), other = sel.options[3].value;
   sel.value = other; fire(sel, "change");
   check("model_switch_repaints_the_panel", $("#mpanel").innerHTML !== p0 && $("#act3 tr.sel").dataset.m === other);
@@ -160,9 +182,13 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
     { tot, want: cf.n_items * cf.n_rounds });
   const rv = board.decisions.m2.models[other], rvTot = rv.review.reduce((a, c) => a + c[2], 0);
   const shown = $$("#cf-m2 td[data-w]").reduce((a, td) => a + (+td.textContent || 0), 0);
-  const bars = $$("#cf-m2 .rvbar .fill").map(f => parseFloat(f.style.width));
-  check("pack1_review_and_bars_are_the_rows", shown === rvTot && rvTot > 0 && Math.abs(bars[0] - rv.dx_listed * 100) < 0.06 && Math.abs(bars[1] - rv.tests_f1 * 100) < 0.06,
-    { shown, rvTot, bars });
+  check("pack1_review_counts_are_the_rows", shown === rvTot && rvTot > 0, {shown,rvTot});
+  const profileBad=[];
+  $$("#mpanel .profiles tr").slice(1).forEach((tr,i)=>{const k=Object.keys(board.packs)[i],q=board.packs[k].profile[other];
+    const want=[q.D_acc_k,q.pass_k,q.hard_gate_rate,q.Q_mean_on_D1].map(half3);
+    if([...tr.querySelectorAll("td")].slice(1).some((td,j)=>td.textContent!==want[j]))profileBad.push(k);});
+  check("model_profiles_copy_the_readout", profileBad.length===0,profileBad);
+
 }
 
 /* Theme and chrome */

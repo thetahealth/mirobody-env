@@ -19,11 +19,11 @@
 
 # M2 explainer bases (spec 3.3). Not in `eligible`: the generic sampler would draw them into every
 # regenerated pack, and 甲减 would land in prompts whose hidden line is hypothyroidism. They are
-# attached only by `tools/m2_gen_job.py`, to F1-F3 cases whose hidden line the explain-away table
+# attached only by `tools/generation/m2_gen_job.py`, to F1-F3 cases whose hidden line the explain-away table
 # (`registry/explain_away.yaml`) lets the base explain, never when the base equals a hidden line
 # (audit BASE-1), and to negative-arm cases at the same rate (so the base says nothing about the
 # arm). Lab findings: `registry/base_condition_findings.yaml`; concurrent medicine:
-# `haenv/med_course.py:CONCURRENT`.
+# `haenv/world/clinical/med_course.py:CONCURRENT`.
 explainer_bases:
   hypothyroidism:
     rate: 0.05
@@ -81,3 +81,52 @@ eligible:
       NHANES 2017–2020 · 美国成人肥胖率 **41.9%**。取 0.20 ——
       这里折得更狠:`obesity` 同时是**主线病**的一档,
       当共病时只在主线病不是它的例子上出现,重复记会让它在题面上过度出现。
+
+# ---------------------------------------------------------------------------
+# Age given conditions. A plugin pack's patient draws its age band from
+# P(band | conditions) ∝ Π prevalence(condition, band) over the primary disease and the
+# comorbidities it carries (uniform prior over `demographics.AGE_BANDS`, the condition spec's
+# min_age / max_age respected); `demographics.pack_age_band` is the one function, read by the
+# builder and by any pack generator that plans on age. Rows: [lowest age, highest age, prevalence].
+# Status: provisional, review: pending (US adult prevalence; the shape by age is what is used).
+age_prevalence:
+  hypertension:
+    rows: [[18, 39, 0.224], [40, 59, 0.545], [60, 120, 0.745]]
+    source: "NCHS Data Brief 364 (NHANES 2017–2018, >=130/80 or treated): 22.4 / 54.5 / 74.5 %"
+  T2D:
+    rows: [[18, 44, 0.048], [45, 64, 0.189], [65, 120, 0.292]]
+    source: "CDC National Diabetes Statistics Report (NHANES 2017–2020, total diabetes): 4.8 / 18.9 / 29.2 %"
+  CKD:
+    rows: [[18, 44, 0.06], [45, 64, 0.12], [65, 120, 0.34]]
+    source: "CDC Chronic Kidney Disease Surveillance System (NHANES 2017–2020, stages 1–4): 6 / 12 / 34 %"
+  obesity:
+    rows: [[18, 39, 0.40], [40, 59, 0.448], [60, 120, 0.428]]
+    source: "NCHS Data Brief 360 (NHANES 2017–2018): 40.0 / 44.8 / 42.8 %"
+  dyslipidemia:
+    rows: [[18, 39, 0.20], [40, 59, 0.42], [60, 120, 0.55]]
+    source: >-
+      provisional: high LDL-C or on lipid-lowering medicine rises with age (NHANES, Carroll MD,
+      NCHS Data Brief 363 for total cholesterol; treated share rises after 40); values are a
+      conservative shape, not a quoted figure
+  MASLD:
+    rows: [[18, 39, 0.24], [40, 59, 0.40], [60, 120, 0.43]]
+    source: >-
+      provisional: NHANES 2017–2018 transient elastography (Le MH et al., Clin Gastroenterol Hepatol
+      2022;20:2809, PMID 34890795) prevalence rises from young to middle age then plateaus
+  CAD:
+    rows: [[18, 39, 0.007], [40, 59, 0.06], [60, 120, 0.19]]
+    source: "AHA Heart Disease and Stroke Statistics 2023 (NHANES 2017–2020, CHD by age)"
+  hypothyroidism:
+    rows: [[18, 39, 0.025], [40, 59, 0.05], [60, 120, 0.10]]
+    source: >-
+      provisional: levothyroxine use rises with age (Aoki Y et al., Thyroid 2007;17:1211,
+      PMID 18177256); values are a shape, not quoted figures
+
+# Women who can become pregnant (sex F, age band starting <= age_max): ACE inhibitors, ARBs and
+# statins are avoided unless indicated (ESC/ESH 2023 hypertension guideline; KDIGO 2021 BP in
+# CKD advises contraception counselling with RAS blockade). Read by `demographics.avoid_for`.
+# Status: provisional, review: pending.
+pregnancy_capable:
+  age_max: 44
+  avoid: [enalapril, lisinopril, ramipril, losartan, valsartan, irbesartan, atorvastatin, rosuvastatin]
+  source: "ESC/ESH 2023 arterial hypertension guideline (RAS blockers in women of childbearing potential); KDIGO 2021 BP in CKD"

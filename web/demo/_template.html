@@ -199,7 +199,7 @@ details code{font-family:var(--mono);font-size:12px;background:var(--muted);padd
 .rec dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;margin:0 0 12px}
 .rec dt{color:var(--faint)} .rec dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .rec ul{list-style:none;padding:0;margin:0 0 10px}
-.rec li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;padding:4px 0;border-bottom:1px solid var(--grid)}
+.rec li{display:grid;grid-template-columns:80px minmax(0,1fr);gap:8px;padding:4px 0;border-bottom:1px solid var(--grid)}
 .rec li:last-child{border-bottom:0}
 .rec li .d{color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap}
 .rec li.on{font-weight:500}
@@ -241,6 +241,7 @@ table.bt tr.sel td{background:var(--muted)}
 table.bt tr[data-m]{cursor:pointer}
 table.bt td.mname{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 table.bt td.cell{text-align:center;font-weight:600;border-radius:4px;border:2px solid var(--card)}
+table.bt td.p3{text-align:center;color:var(--foreground)}
 table.bt td.upd{background:repeating-linear-gradient(45deg,var(--hatch) 0 2px,transparent 2px 6px);text-align:center;font-weight:400;color:var(--faint)}
 .track{display:block;position:relative;height:6px;border-radius:3px;background:var(--track);margin:0 4px}
 .fill{display:block;position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--fill)}
@@ -264,6 +265,26 @@ table.cf th.ah{text-align:left;white-space:nowrap;overflow:visible}
 table.cf th.r{text-align:right;color:var(--muted-fg);padding-right:6px}
 table.cf td{text-align:center;height:26px;border-radius:3px;font-variant-numeric:tabular-nums}
 table.cf td.ok{box-shadow:inset 0 0 0 1.5px var(--foreground)}
+
+.insights{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:16px}
+.insight{padding:20px 18px 14px;min-width:0;display:flex;flex-direction:column}.insight .fig{margin-top:auto}
+.insight .note{margin:0 0 14px}
+.history-card{padding:20px 18px 14px;margin-top:16px}
+.history-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin-top:18px}
+.history-grid h4{font-size:12.5px;margin:0 0 2px;font-weight:600}
+.history-grid .note{font-size:11.5px;min-height:36px;margin:0}
+.trajectory{grid-column:1/-1;border-top:1px solid var(--grid);padding:18px 20px}
+.trajectory[hidden]{display:none}
+.trajectory .note{margin:0 0 16px}
+.trajectory-result{margin:6px 0;font-size:12.5px;color:var(--muted-fg)}
+.trajectory-result b{color:var(--foreground);font-weight:600}
+.wrong{color:var(--c2)}
+.profiles{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;font-variant-numeric:tabular-nums}
+.profiles th,.profiles td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+.profiles th{font-weight:500;color:var(--faint)} .profiles th:first-child,.profiles td:first-child{text-align:left}
+@media(max-width:900px){.insights{grid-template-columns:minmax(0,1fr)}.history-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.history-grid{grid-template-columns:minmax(0,1fr)}}
+
 /* ── touch-sized screens: every control at least 40 px tall ── */
 @media(max-width:900px),(pointer:coarse){
   .knob{min-height:40px}
@@ -342,7 +363,12 @@ const lin = (d0, d1, r0, r1) => { const f = v => r0 + (v - d0) / (d1 - d0) * (r1
 function ticks(a, b, n){ const st0 = (b - a) / n, mag = Math.pow(10, Math.floor(Math.log10(st0)));
   const st = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= st0) || mag * 10; const out = [];
   for (let v = Math.ceil(a / st) * st; v <= b + 1e-9; v += st) out.push(+v.toFixed(10)); return out; }
-const f1 = v => (Math.round(v * 10) / 10).toFixed(1), f2 = v => Number(v).toFixed(2), f3 = v => Number(v).toFixed(3);
+// f3 rounds half up on the stored decimal (as the README table does), so 0.6585 shows 0.659; toFixed
+// works on the binary double and would show 0.658.
+const half3 = v => { const x = Number(v), s = String(Math.abs(x)); if (!isFinite(x) || s.includes("e")) return x.toFixed(3);
+  const [i, d = ""] = s.split("."); let n = BigInt(i + (d + "000").slice(0, 3)); if ((d[3] || "0") >= "5") n += 1n;
+  const t = n.toString().padStart(4, "0"); return (x < 0 && n !== 0n ? "-" : "") + t.slice(0, -3) + "." + t.slice(-3); };
+const f1 = v => (Math.round(v * 10) / 10).toFixed(1), f2 = v => Number(v).toFixed(2), f3 = half3;
 
 /* ══ i18n ══ */
 function detectLang(){
@@ -410,9 +436,9 @@ en: {
   tipWithheld: "Withheld from the model", tipNone: "No reading",
   techSummary: "Technical details",
   a2H: "Turn it into a question",
-  a2Sub: "Each pack asks for one clinical decision. A pack is 50 items built by one deterministic command, and the ground truth comes out of the same build. The items below come from the public pack (public seed, N = 50).",
+  a2Sub: "Each pack asks for one clinical decision. The board uses 100 items per pack, built deterministically with their ground truth. The sample items of packs ①–③ come from an earlier version of the question sets and are illustrative; the pack ④ item is from the evaluated N = 100 set.",
   a2SubEn: " Record text is translated from Chinese.",
-  pk_m2: "Differential diagnosis", pk_pack2: "Acute triage", pk_p3: "Medication adjustment", pk_p4: "Follow-up interpretation",
+  pk_m2: "Diagnosis (budgeted differential)", pk_pack2: "Triage", pk_p3: "Medication adjustment", pk_p4: "Lab-change attribution",
   pq_m2: "Which conditions explain the picture?", pq_pack2: "Where should this person go?", pq_p3: "Raise, lower, keep or switch?", pq_p4: "Real change or noise?",
   qHead: d => "The question · day " + d,
   dtPatient: "Patient", dtKnown: "Known", dtDevices: "Devices", dtRecord: "Record", dtTarget: "Clinic target", dtRef: "Reference",
@@ -451,42 +477,82 @@ en: {
   recPts: n => n + " readings",
   g_m2: (dx, n, tests, med) => "<b>" + dx + "</b>: two lines of illness, both new. Confirming tests (" + n + "): " + tests + "." + (med ? " Medication direction: " + med + "." : ""),
   med_investigate_first: "investigate first", med_uptitrate: "increase", med_maintain: "maintain", med_downtitrate: "decrease",
-  j_m2: "Scored: is each gold line listed, how well the proposed tests match the gold tests (F1), and whether the case is flagged for clinician review. Diagnosis and test names are read by one LLM judge; everything else is computed by code.",
+  j_m2: "Code matches the listed diagnoses to the gold through registered aliases (and reads the stated link for independent findings), with no model call; this sets the core decision. Hard gates are read by code. One LLM judge scores Q twice and their mean is used. The board averages three per-answer S = G·D·(1+Q)/2 values (k3).",
   g_pack2: (cls, n2, now, lows, low, nadir) => "<b>" + cls + ".</b> NEWS2 is " + n2 + " and the glucose now is " + now + ", but " + lows + " finger-sticks in the last 72 hours are below " + low + " mmol/L (nadir " + nadir + "). Two or more lows place the visit within 24 hours.",
-  j_pack2: "By code against the world's truth, no model judge. Four classes; the score is chance-corrected balanced accuracy, so guessing scores 0. Under- and over-triage are recorded separately.",
+  j_pack2: "Code checks the answer against the acceptable disposition set and records under- and over-triage. One LLM judge scores Q twice and their mean is used; the board averages S over three answers (k3).",
   g_p3: (cls, v, up, adh) => "<b>" + cls + ".</b> LDL-C is " + v + ", already under the target of " + up + ". The thigh ache and weakness is a dose-related side effect, and the pill count matches the refills (adherence " + adh + "%).",
-  j_p3: "By code against the world's truth, no model judge. Five classes; chance-corrected balanced accuracy.",
+  j_p3: "Code checks the medication decision and hard gates. One LLM judge scores Q twice and their mean is used; the board averages S over three answers (k3).",
   g_p4: (cls, pct, obs, rcv, d) => "<b>" + cls + ", +" + pct + "%</b> (observed +" + obs + "%, beyond the ±" + rcv + "% reference change value). Cause: the ACE inhibitor started on day " + d + ". Next step: act on the change.",
-  j_p4: "By code against the world's truth, no model judge: the class, the size of a real change, the factor behind it, and the next step.",
+  j_p4: "D requires the correct interpretation class and next step, both checked by code. One LLM judge scores Q twice and their mean is used; the board averages S over three answers (k3).",
   cls_ed_now: "ED now", cls_within_24h: "Within 24 hours", cls_routine_followup: "Routine follow-up", cls_watchful_waiting: "Watchful waiting",
   cls_uptitrate: "Raise the dose", cls_downtitrate: "Lower the dose", cls_maintain: "Keep the dose", cls_switch: "Switch drug", cls_check_adherence_or_adverse_effect: "Check first",
   cls_true_change: "True change", cls_analytic_biological_noise: "Noise", cls_preanalytical: "Pre-analytical", cls_method_difference: "Method difference",
   a3H: "See how models do",
-  a3Sub: (m, n, r) => m + " models answer each pack's " + n + " items " + r + " times. Bars are 95% bootstrap intervals over items and rounds. The board runs on a private pack built by the same commands. Select a model to see how its decisions line up with the ground truth.",
-  colOverall: "Overall", colOverallSub: "Mean of pack scores, 95% interval", interim: pk => "interim: packs " + pk,
+  a3Sub: (m,n,r) => "1.4.0 · " + m + " ranked models · four public packs of " + n + " items · " + r + " answers per item. S = G·D·(1+Q)/2 is averaged over three answers (k3), with equal pack weights. The preregistered first-answer score (pk1) gives the same model order. Bars show paired item-cluster bootstrap intervals. Select a model to follow it across the figures.",
+  colOverall: "Overall", colOverallSub: "Equal-weight mean of the pack scores · 95% interval · rank interval", interim: pk => "interim: packs " + pk,
   colPacks: "By pack", colPacksSub: "Score; darker is higher",
   colDis: "Round-to-round disagreement", colDisSub: "Share of items with differing answers · profile, not scored",
   updating: "updating", updatingShort: "—",
-  colPairs: "Which pairs separate", colPairsSub: (k, n) => k + " of " + n + " pairs differ by more than 2 paired SE",
-  pairHi: "row model higher, separates", pairLo: "row model lower, separates", pairNs: "does not separate", pairVal: "number: score difference × 100",
+  colPairs: "Adjacent pairs", colPairsSub: (k,n) => k + " of " + n + " paired 95% intervals exclude zero",
+  pairHi: "row model higher, separates", pairLo: "row model lower, separates", pairNs: "does not separate", pairVal: "number: score difference × 100 · rows and columns in score order",
   sepTip: (a, b) => a + " vs " + b, tipDiff: "Difference", tipSE: "Paired SE", tipSep: "Separate", yes: "yes", no: "no",
-  tipOverall: pk => "Overall (" + pk + ")", tipCI: "95% interval", tipRank: "Rank",
-  shadeNote: (lo, hi) => "Shading: " + lo + " light → " + hi + " dark", barNote: "Bar length: 0–100% per column",
+  tipOverall: pk => "Overall (" + pk + ")", tipCI: "95% interval", tipRank: "Rank interval",
+  shadeNote: (lo, hi) => "Shading: " + lo + " light → " + hi + " dark",
+  thPass3: "All-3", pass3Note: same => "All-3: share of items whose decision is correct in all three answers, mean of the four packs; a reliability profile, not the ranking metric (ranking by it gives " + (same ? "the same" : "a different") + " order).", barNote: "Bar length: 0–100% per column",
   n3: (pend, pk) => "Pack " + pend + " results are being updated; the overall column is the mean of packs " + pk + " until they land. Ranks follow that score.",
-  n3final: "Ranks follow the overall score.",
-  mpModel: "Model", mpOverall: (s, lo, hi, r, n) => "Overall " + s + " (95% interval " + lo + "–" + hi + ") · #" + r + " of " + n,
+  n3final: "Models are listed by overall score. A rank shown as an interval (for example 1–2) is shared: the models whose intervals overlap are not separable on this board.",
+  mpModel: "Model", mpOverall: (s, lo, hi, r, n) => "Overall " + s + " (95% interval " + lo + "–" + hi + ") · rank " + r + " of " + n,
   mpScores: "Scores", thPack: "Pack", thScore: "Score", th95: "95%", thRank: "Rank", thRounds: "By round",
-  mpScoresSub: "Dot: score · bar: 95% interval · rings: each round · #: rank among the models", tipRound: i => "Round " + i,
-  mpNote: "The public sample items in Act 2 are not part of the board, so no answers to them are recorded.",
+  mpScoresSub: "Mean S over three answers (k3), by pack · one dot per pack", tipRound: i => "Round " + i,
+  mpNote: "Pack ④ in Act 2 is an item from this public board; its first-answer tool-call sequences are shown with the sample.",
   mpCf: p => p + ": answers vs truth", mpReview: p => p + ": what is scored",
   rvFlag: "Flagged", rvNo: "Not flagged", rvNone: "None", rvYes: "Review warranted", rvNot: "Not warranted", rvAnswer: "model's review flag →",
-  rvNote: n => "Review decision over " + n + " item-rounds (the items that carry one); rows are the truth, outlined cells are correct. Bars: means over every item and round.",
+  rvNote: n => "Review decisions over " + n + " item-rounds; rows show whether review is warranted, outlined cells agree with the truth.",
   rvTip: (g, s, n, t) => g + ": " + s + " " + n + " of " + t,
   barDx: "Gold lines listed", barTests: "Tests match (F1)", barRecall: v => "recall " + v, cfNote: (n, r) => n + " items × " + r + " rounds; rows are the truth, outlined cells are correct.",
   cfAnswer: "model's answer →", cfNone: "None", cfTip: (g, s, n, t) => "Truth " + g + ": answered " + s + " " + n + " of " + t,
   short_ed_now: "ED now", short_within_24h: "≤ 24 h", short_routine_followup: "Routine", short_watchful_waiting: "Watch",
   short_uptitrate: "Raise", short_downtitrate: "Lower", short_maintain: "Keep", short_switch: "Switch", short_check_adherence_or_adverse_effect: "Check",
   short_true_change: "True", short_analytic_biological_noise: "Noise", short_preanalytical: "Pre-an.", short_method_difference: "Method",
+  dqTitle: "Where the score comes from",
+  dqSub: "Pack means: D over three answers, Q on correct first answers. Grey guides: S = D·(1+Q)/2 with G = 1.",
+  dqX: "Core-decision accuracy D",
+  dqY: "Plan quality Q | D = 1",
+  costTitle: "What a point costs",
+  costSub: j => "Score with 95% interval, against tested-model spend. Costs include mean-price estimates for requests without receipts or token counts; run-ledger judge $" + j + " is separate (Q judging excluded).",
+  costX: "USD / 100 answers · log scale",
+  historyTitle: "When the answer is in the history",
+  historySub: "Core-decision accuracy over three answers. Hollow: ordinary items; filled: history-dependent items. Pack ④ checks the class here; board D also requires the next step.",
+  histOrdinary: "Ordinary items",
+  histHistory: "History-dependent items",
+  histCounts: (h,o) => h + " history · " + o + " ordinary items",
+  adjacentNote: "Paired score differences in board order, with 95% intervals. An interval crossing zero does not establish an order.",
+  profileGate: "Hard-gate rate",
+  profileSub: "D, All-3 and hard-gate rate use all three answers; Q uses correct first answers. These are profiles. Pack ② rows below show the minimum acceptable urgency.",
+  p4Methods: "Method and reagent records",
+  p4Specimens: "Collection and standardized verification",
+  p4Arms: (sample,infusion,running) => "Sampling arm: " + sample + "; infusion arm: " + infusion + (running ? ", infusion running" : ", no infusion running"),
+  side_left: "left", side_right: "right",
+  p4Verification: (value,unit) => "Standardized repeat: " + value + " " + unit,
+  factor_infusion_sampling: "the earlier draw was collected from the arm with a running infusion",
+  step_no_action: "no action on the apparent change",
+  g_p4_verified: (cls,obs,rcv,cause,a,b,step) => "<b>" + cls + ".</b> Observed change: " + obs + "% (RCV ±" + rcv + "%). Cause: " + cause + ". Standardized repeats: " + a + " → " + b + ". Next step: " + step + ".",
+  g_p4_method: (cls,obs,rcv) => "<b>" + cls + ".</b> The observed change is +" + obs + "% (RCV ±" + rcv + "%). The laboratory records a platform change. Next step: repeat under standardized conditions.",
+  trajTitle: "How two models read this record",
+  trajSub: (id,n,N) => "Public board · pack ④ · item " + n + " of " + N + " · " + id + " · first answer. Reproducible at its recorded generation commit.",
+  trajCall: "each tool call, in order",
+  trajFirst: "decisive evidence first appears",
+  trajSeen: (s,n,c) => s + "/" + n + " evidence · " + c + " calls",
+  trajCallN: n => "Call " + n,
+  trajTool: "Tool",
+  trajRound: "Round",
+  trajMissed: s => "Unopened: " + s,
+  trajAll: "all decisive evidence opened",
+  trajReport: d => "report, day " + d,
+  trajProtocol: "clinic protocol",
+  trajMethod: "laboratory method record",
+  trajSpecimen: "specimen procedure",
+  boardPartial: ms => ms.join(", ") + (ms.length > 1 ? " lack" : " lacks") + " a complete set of packs and " + (ms.length > 1 ? "are" : "is") + " unranked overall.",
   lnkDatacard: "Data card", lnkReproduce: "How to reproduce", lnkContributing: "How to contribute", footerDisclaimer: "Synthetic data. For model evaluation only — not medical advice.",
   prov: (n, pts) => "Page generator self-check: " + n + " reference patients, " + pts + " points matched to production.",
   provBad: "Page generator self-check failed: the page and production have drifted apart.",
@@ -547,9 +613,9 @@ zh: {
   tipWithheld: "不给模型看", tipNone: "没有读数",
   techSummary: "技术细节",
   a2H: "变成一道题",
-  a2Sub: "每个题包只问一个临床决定。一包 50 题，由一条确定性命令生成，金标在同一次生成里得出。下面的题来自公开包（公开种子，N = 50）。",
+  a2Sub: "每个题包只问一个临床决定。榜单每包 100 题，由确定性命令连同金标一起生成。下面题包 ①–③ 的样题来自较早版本的题集，仅作示意；题包 ④ 的样题来自评测所用的 N = 100 题集。",
   a2SubEn: "",
-  pk_m2: "鉴别诊断", pk_pack2: "急诊分诊", pk_p3: "慢病调药", pk_p4: "随访解读",
+  pk_m2: "限额诊断", pk_pack2: "分诊", pk_p3: "用药调整", pk_p4: "化验变化归因",
   pq_m2: "哪些疾病能解释这些表现？", pq_pack2: "这个人该去哪？", pq_p3: "加量、减量、维持还是换药？", pq_p4: "真变化还是噪声？",
   qHead: d => "题目 · 第 " + d + " 天",
   dtPatient: "病人", dtKnown: "已知", dtDevices: "设备", dtRecord: "记录", dtTarget: "本院目标", dtRef: "参考区间",
@@ -588,42 +654,82 @@ zh: {
   recPts: n => n + " 个读数",
   g_m2: (dx, n, tests, med) => "<b>" + dx + "</b>：两条疾病线，都是新发。确诊检查（" + n + " 项）：" + tests + "。" + (med ? "调药方向：" + med + "。" : ""),
   med_investigate_first: "先查因", med_uptitrate: "加量", med_maintain: "维持", med_downtitrate: "减量",
-  j_m2: "计分项：每条金标线是否列出、所开检查与金标检查的吻合度（F1），以及该不该请医生复核。诊断与检查名称由一个 LLM 裁判读；其余全部由代码计算。",
+  j_m2: "代码按登记的别名把列出的诊断与金标比对（独立发现另读所述关联），不调用模型，定出核心决定；硬门由代码判。处理方案质量 Q 由一个 LLM 裁判判两次取平均。三次作答的 S = G·D·(1+Q)/2 取平均（k3）进入总榜。",
   g_pack2: (cls, n2, now, lows, low, nadir) => "<b>" + cls + "。</b>NEWS2 为 " + n2 + "，此刻血糖 " + now + "，但近 72 小时有 " + lows + " 次指尖血糖低于 " + low + " mmol/L（最低 " + nadir + "）。两次及以上低血糖就要 24 小时内就诊。",
-  j_pack2: "按世界真值由代码判，不用模型裁判。四类；分数是机会校正后的平衡准确率，瞎猜得 0。分诊不足与过度分诊另行记录。",
+  j_pack2: "代码按可接受去向集合判决定，并记录分诊不足与过度分诊；同一 LLM 裁判两次判处理方案质量 Q 并取平均，三次作答的 S 取平均（k3）进入总榜。",
   g_p3: (cls, v, up, adh) => "<b>" + cls + "。</b>LDL-C 为 " + v + "，已低于目标 " + up + "。大腿酸胀无力是剂量相关的不良反应，药片计数与取药记录吻合（依从性 " + adh + "%）。",
-  j_p3: "按世界真值由代码判，不用模型裁判。五类；机会校正后的平衡准确率。",
+  j_p3: "代码判调药决定和硬门；同一 LLM 裁判两次判处理方案质量 Q 并取平均，三次作答的 S 取平均（k3）进入总榜。",
   g_p4: (cls, pct, obs, rcv, d) => "<b>" + cls + "，+" + pct + "%</b>（观测 +" + obs + "%，超出 ±" + rcv + "% 的参考变化值）。原因：第 " + d + " 天开始用 ACE 抑制剂。下一步：按变化处理。",
-  j_p4: "按世界真值由代码判，不用模型裁判：类别、真变化的幅度、背后的因素和下一步。",
+  j_p4: "D 要求解读类别与下一步均正确，由代码判定；同一 LLM 裁判两次判处理方案质量 Q 并取平均，三次作答的 S 取平均（k3）进入总榜。",
   cls_ed_now: "立即急诊", cls_within_24h: "24 小时内就诊", cls_routine_followup: "常规随访", cls_watchful_waiting: "观察等待",
   cls_uptitrate: "加量", cls_downtitrate: "减量", cls_maintain: "维持", cls_switch: "换药", cls_check_adherence_or_adverse_effect: "先查",
   cls_true_change: "真变化", cls_analytic_biological_noise: "噪声", cls_preanalytical: "分析前因素", cls_method_difference: "方法差异",
   a3H: "模型考得怎么样",
-  a3Sub: (m, n, r) => m + " 个模型把每个题包的 " + n + " 道题各答 " + r + " 次。横条是按题目与轮次重抽样的 95% 区间。榜单用同一组命令生成的私有包。选一个模型，看它的决定与金标对得怎么样。",
-  colOverall: "总分", colOverallSub: "各包分数的均值，95% 区间", interim: pk => "暂行：题包 " + pk,
+  a3Sub: (m,n,r) => "1.4.0 · " + m + " 个参评模型 · 四个公开题包，每包 " + n + " 题，每题作答 " + r + " 次。S = G·D·(1+Q)/2 取三次作答平均（k3），四包等权。首次作答的预注册分 pk1 名次相同。横线为配对题簇自助法区间。选中一个模型，各图跟着高亮。",
+  colOverall: "总分", colOverallSub: "各包分数的等权均值 · 95% 区间 · 名次区间", interim: pk => "暂行：题包 " + pk,
   colPacks: "分包", colPacksSub: "分数；越深越高",
   colDis: "三轮不一致", colDisSub: "三次回答不一致的题目占比 · 画像，不计分",
   updating: "更新中", updatingShort: "—",
-  colPairs: "哪些两两分得开", colPairsSub: (k, n) => n + " 对里 " + k + " 对的差超过 2 倍配对标准误",
-  pairHi: "行模型更高，分得开", pairLo: "行模型更低，分得开", pairNs: "分不开", pairVal: "数字：分差 × 100",
+  colPairs: "相邻模型能分开吗", colPairsSub: (k,n) => n + " 对里 " + k + " 对的差值区间不含 0",
+  pairHi: "行模型更高，分得开", pairLo: "行模型更低，分得开", pairNs: "分不开", pairVal: "数字：分差 × 100 · 行列按分数排列",
   sepTip: (a, b) => a + " 对 " + b, tipDiff: "差", tipSE: "配对标准误", tipSep: "分得开", yes: "是", no: "否",
-  tipOverall: pk => "总分（" + pk + "）", tipCI: "95% 区间", tipRank: "名次",
-  shadeNote: (lo, hi) => "色深：" + lo + " 浅 → " + hi + " 深", barNote: "条长：每列 0–100%",
+  tipOverall: pk => "总分（" + pk + "）", tipCI: "95% 区间", tipRank: "名次区间",
+  shadeNote: (lo, hi) => "色深：" + lo + " 浅 → " + hi + " 深",
+  thPass3: "All-3", pass3Note: same => "All-3（三次全对）：三次作答的决定都正确的题目占比，四包平均；是可靠性画像，不是排名指标（按它排名" + (same ? "次序相同" : "次序不同") + "）。", barNote: "条长：每列 0–100%",
   n3: (pend, pk) => "题包 " + pend + " 的结果正在更新；在它出来之前，总分是题包 " + pk + " 的均值。名次按这个分数排。",
-  n3final: "名次按总分排。",
-  mpModel: "模型", mpOverall: (s, lo, hi, r, n) => "总分 " + s + "（95% 区间 " + lo + "–" + hi + "）· 第 " + r + " / " + n,
+  n3final: "模型按总分排列。名次写成区间（如 1–2）表示区间重叠的模型在本榜上分不开，并不是确定的先后。",
+  mpModel: "模型", mpOverall: (s, lo, hi, r, n) => "总分 " + s + "（95% 区间 " + lo + "–" + hi + "）· 名次 " + r + " / " + n,
   mpScores: "分数", thPack: "题包", thScore: "分数", th95: "95%", thRank: "名次", thRounds: "各轮",
-  mpScoresSub: "圆点：分数 · 横条：95% 区间 · 小圈：各轮 · #：在全部模型中的名次", tipRound: i => "第 " + i + " 轮",
-  mpNote: "第 2 幕的公开样题不在榜单里，所以没有模型对它们的回答。",
+  mpScoresSub: "三次 S 平均（k3）的分包分数 · 每包一个点", tipRound: i => "第 " + i + " 轮",
+  mpNote: "第 2 幕的题包 ④ 样题来自本版公开榜，首次作答轨迹与样题放在一起。",
   mpCf: p => p + "：回答对金标", mpReview: p => p + "：计分的部分",
   rvFlag: "标记", rvNo: "未标记", rvNone: "无", rvYes: "应复核", rvNot: "不必复核", rvAnswer: "模型的复核标记 →",
-  rvNote: n => "复核决定共 " + n + " 个题次（带复核决定的题 × 轮次）；行是金标，加框的格子是答对的。条形：全部题目与轮次的均值。",
+  rvNote: n => n + " 格作答的复核决定；行表示是否需要复核，描边格与金标一致。",
   rvTip: (g, s, n, t) => g + "：" + s + " " + n + " / " + t,
   barDx: "列出的金标线", barTests: "检查匹配 (F1)", barRecall: v => "召回 " + v, cfNote: (n, r) => n + " 题 × " + r + " 轮；行是金标，加框的格子是答对的。",
   cfAnswer: "模型的回答 →", cfNone: "无", cfTip: (g, s, n, t) => "金标 " + g + "：答成 " + s + " " + n + " / " + t,
   short_ed_now: "急诊", short_within_24h: "≤24h", short_routine_followup: "常规", short_watchful_waiting: "观察",
   short_uptitrate: "加量", short_downtitrate: "减量", short_maintain: "维持", short_switch: "换药", short_check_adherence_or_adverse_effect: "先查",
   short_true_change: "真变化", short_analytic_biological_noise: "噪声", short_preanalytical: "分析前", short_method_difference: "方法",
+  dqTitle: "分数从哪来",
+  dqSub: "各包等权画像：D 看三次作答，Q 看首次答对的题。灰线为 G = 1 时的等分线 S = D·(1+Q)/2。",
+  dqX: "核心决定正确率 D",
+  dqY: "方案质量 Q | D = 1",
+  costTitle: "一分多少钱",
+  costSub: j => "得分及 95% 区间，对照被测模型花费。无回执和 token 数的请求按模型均价估算；运行账本中的裁判 $" + j + " 单列，不含独立 Q 判分。",
+  costX: "美元 / 100 次作答 · 对数轴",
+  historyTitle: "答案藏在病史里时",
+  historySub: "三次作答的核心决定正确率。空心点是普通题，实心点是病史依赖题。此处题包 ④ 只判类别；总榜的 D 还要求下一步正确。",
+  histOrdinary: "普通题",
+  histHistory: "病史依赖题",
+  histCounts: (h,o) => "病史依赖 " + h + " 题 · 普通 " + o + " 题",
+  adjacentNote: "按总榜顺序比较相邻模型的配对分差及 95% 区间。区间跨 0，不能确定先后。",
+  profileGate: "硬门率",
+  profileSub: "D、All-3 与硬门率看全部三次作答，Q 看首次答对的题；均作为画像。下方题包 ② 的行表示最低可接受紧急程度。",
+  p4Methods: "方法与试剂记录",
+  p4Specimens: "采血与标准化复核",
+  p4Arms: (sample,infusion,running) => "采血臂：" + sample + "；输液臂：" + infusion + (running ? "，正在输液" : "，未在输液"),
+  side_left: "左", side_right: "右",
+  p4Verification: (value,unit) => "标准化复核：" + value + " " + unit,
+  factor_infusion_sampling: "上次采血来自正在输液的同侧手臂",
+  step_no_action: "不按表观变化处理",
+  g_p4_verified: (cls,obs,rcv,cause,a,b,step) => "<b>" + cls + "。</b>观测变化 " + obs + "%（RCV ±" + rcv + "%）。原因：" + cause + "。标准化复核：" + a + " → " + b + "。下一步：" + step + "。",
+  g_p4_method: (cls,obs,rcv) => "<b>" + cls + "。</b>观测变化 +" + obs + "%（RCV ±" + rcv + "%）。检验科记录显示平台改变。下一步：按统一条件复查。",
+  trajTitle: "模型怎么读这份病历",
+  trajSub: (id,n,N) => "公开榜 · 题包 ④ · " + N + " 题中的第 " + n + " 题 · " + id + " · 首次作答。在所记录的生成提交上可复现。",
+  trajCall: "逐次工具调用",
+  trajFirst: "决定性证据首次出现",
+  trajSeen: (s,n,c) => s + "/" + n + " 条证据 · " + c + " 次调用",
+  trajCallN: n => "第 " + n + " 次调用",
+  trajTool: "工具",
+  trajRound: "轮次",
+  trajMissed: s => "未打开：" + s,
+  trajAll: "全部决定性证据均已打开",
+  trajReport: d => "第 " + d + " 天报告",
+  trajProtocol: "本院规程",
+  trajMethod: "化验方法记录",
+  trajSpecimen: "标本处理规程",
+  boardPartial: ms => ms.join("、") + " 未跑完全部题包，不参与总榜排名。",
   lnkDatacard: "数据说明", lnkReproduce: "怎么复现", lnkContributing: "怎么参与", footerDisclaimer: "合成数据。仅供模型评测，非医疗建议。",
   prov: (n, pts) => "页面生成器自检：" + n + " 个参照病人、" + pts + " 个点与生产一致。",
   provBad: "页面生成器自检未通过：页面与生产已经漂开。",
@@ -638,26 +744,16 @@ en: {
     + "<p>A patient production would refuse is not drawn. The page re-applies the gate's checks to the course it computed: the weight range and the weekly limit (<code>max_weekly_delta</code> × 1.05) on the course, the declared start and lowest weights (±0.5 kg), the outcome the label rule reads, and the condition × drug pair in <code>registry/drug_indications.yaml</code>. The dose follows that pair's ladder with <code>med_course.dose_course</code>.</p>"
     + "<p>Missed weigh-ins, scale noise and copied readings use each patient's fixed random layer, so the same seed always produces the same record. They change the record only; the course and the ground truth stay as generated. The regain rule reads a 7-reading centred median and needs a rise of at least 5% of the weight lost (at least 0.75 kg) that lasts 8 weeks.</p>"
     + "<p>Build the same patient from the command line with <code>haenv build &lt;job.yaml&gt; --gen deterministic</code>.</p>",
-  tech2: (ids) => "<p>Build a pack: <code>python tools/make_pack.py --pack {m2|pack2|p3|p4} --n 50 --out &lt;dir&gt;</code>. The command is deterministic and runs the shared audit before it finishes. Without <code>--seed</code> it builds the public sample pack; the board uses a private seed, and its batch records only the seed's sha256.</p>"
-    + "<p>Chance correction for the classification packs: <code>cc = (m·BA − 1) / (m − 1)</code> for m answer classes, so guessing scores 0. Hard gates multiply the result. Pack ② thresholds follow NEWS2 (RCP 2017, SpO₂ scale 1) and a provisional grading table pending clinical sign-off.</p>"
-    + "<p>Sample items of the public packs: " + ids + ". The line each diary entry belongs to is read from the build's records.</p>",
-  tech3: (boot) => "<p>Each pack score is the pack's production scorer over every item and round. Intervals come from " + boot + " bootstrap draws resampling items and rounds (crossed). The overall score is the equal-weight mean of the pack scores; its draws combine the per-pack draws one by one.</p>"
-    + "<p>A pair separates when its score difference exceeds twice the standard error of the paired bootstrap difference.</p>"
-    + "<p>Round-to-round disagreement counts an item when the model's three answers differ on the pack's decision fields. It describes stability and enters no score.</p>"
-    + "<p>The board data is exported from the board readout by <code>web/demo/export_board.py</code>.</p>",
+  tech2: (ids) => "<p>Build a pack: <code>python tools/make_pack.py --pack {m2|p2|p3|p4} --n 100 --out &lt;dir&gt;</code>. The command runs the shared audit. Default parameters give example packs; the evaluated sets ship as frozen pack files and are reproduced byte for byte at the generation commit each batch records.</p><p>Shown items: " + ids + ". Pack ④ is the board item used in the two first-answer tool-call sequences. Each mark is a stored tool call; a diamond marks the first return of decisive evidence.</p>",
+  tech3: boot => "<p>The main score (k3) averages <code>S = G·D·(1+Q)/2</code> over three answers per item; the preregistered first-answer score (pk1) gives the same model order: G passes hard gates, D is the correct core decision, Q is management-plan quality. Pack scores are item means; the four packs have equal weight. The " + boot + " paired item-cluster bootstrap draws resample the same items for all models within each pack. Overall and rank intervals use those draws. An adjacent pair separates when its paired 95% difference interval excludes zero.</p><p>Q averages two judgments from one LLM judge where both are available: 7,215 records have two judgments, 20 have one, and 11 have no management plan and Q = 0. The rubric is calibrated on the board answers. Judge noise is outside these intervals. Pass³, three-answer accuracy, hard-gate rates, round disagreement and history-group rates are profiles. For the history plot, pack ④ checks class only; board D requires both class and next step.</p><p>Spend is per 100 tested answers, including all three answers and tool calls. Provider receipts or token price-list costs are used when present; requests without either use the same model and role mean price. Solver requests are joined by request ID to the N100 answer view across the main and extension ledgers, excluding the old P4 arm. Judge totals cover those run ledgers only; separate Q judging is excluded. Cost is an estimate, not a receipt total.</p><p><code>web/demo/export_board.py</code> copies scores, intervals, ranks and profiles from <code>board_score.json</code> and figure values from <code>figures_data.json</code>. Per-pack intervals and per-round S are absent in this readout.</p>",
 },
 zh: {
   tech1: (n, pts, w, tol, ok, no, wo, ng, nr) => "<p>页面跑的是生产生成器的移植版。加载时重算 " + n + " 个参照病人，与生产导出的值逐点比对：" + pts + " 个点，体重最大偏差 " + w + " kg（容差 " + tol + "）；带秤噪声的记录读数 " + no + " 个，最大偏差 " + wo + " kg；剂量记录；以及出厂闸门对 " + ng + " 个病人的判定（其中 " + nr + " 个拒收）—— " + (ok ? "通过" : "<b>未通过</b>") + "。</p>"
     + "<p>生产会拒收的病人不画。页面对自己算出的病程重做闸门的检查：病程上的体重范围与每周上限（<code>max_weekly_delta</code> × 1.05）、声明的起始与最低体重（±0.5 kg）、标签规则读出的结局，以及疾病 × 药物在 <code>registry/drug_indications.yaml</code> 里的登记。剂量沿该登记的阶梯，由 <code>med_course.dose_course</code> 生成。</p>"
     + "<p>漏称、秤噪声和照抄都用每个病人固定的随机层，同一个种子永远产出同一份病历。它们只改病历；病程和金标保持生成时的样子。反弹判据读 7 个读数的居中中位数，要求回升至少达到减重量的 5%（至少 0.75 kg）并持续 8 周。</p>"
     + "<p>在命令行造同一个病人：<code>haenv build &lt;job.yaml&gt; --gen deterministic</code>。</p>",
-  tech2: (ids) => "<p>生成一个题包：<code>python tools/make_pack.py --pack {m2|pack2|p3|p4} --n 50 --out &lt;dir&gt;</code>。命令是确定性的，结束前跑共享审计。不加 <code>--seed</code> 生成公开样包；榜单用私有种子，批次里只记种子的 sha256。</p>"
-    + "<p>分类题包的机会校正：<code>cc = (m·BA − 1) / (m − 1)</code>，m 为答案类别数，瞎猜得 0。硬门以乘子作用于结果。题包 ② 的阈值沿用 NEWS2（RCP 2017，SpO₂ 量表 1）与一张待临床签字的暂定分级表。</p>"
-    + "<p>公开包的样题：" + ids + "。每条日记归哪条线，读自生成记录。</p>",
-  tech3: (boot) => "<p>每个题包的分数由该包的生产计分器对全部题目与轮次计算。区间来自 " + boot + " 次按题目与轮次（交叉）的自助重抽样。总分是各包分数的等权均值，其抽样逐次合并各包的抽样。</p>"
-    + "<p>一对模型的分差超过配对自助差值标准误的 2 倍，算分得开。</p>"
-    + "<p>三轮不一致：模型三次回答在该包的决定字段上不一致，就记一题。它描述稳定性，不进任何分数。</p>"
-    + "<p>榜单数据由 <code>web/demo/export_board.py</code> 从榜单读数导出。</p>",
+  tech2: (ids) => "<p>生成题包：<code>python tools/make_pack.py --pack {m2|p2|p3|p4} --n 100 --out &lt;dir&gt;</code>。命令运行共享审计。默认参数得到示例包；评测题集以冻结题包文件发布，在各批次记录的生成提交上可逐字节复现。</p><p>展示样题：" + ids + "。题包 ④ 与两条首次作答轨迹是同一道榜题。每个标记是已记录的工具调用，菱形表示决定性证据首次返回。</p>",
+  tech3: boot => "<p>主分（k3）为每题三次 <code>S = G·D·(1+Q)/2</code> 的平均；首次作答的预注册分 pk1 名次相同：G 表示通过硬门，D 表示核心决定正确，Q 是处理方案质量。包分是题目均分，四包等权。" + boot + " 次配对题簇自助法在每包内对所有模型重抽同一批题，总分区间与名次区间均来自这些抽样。相邻模型的配对分差 95% 区间不含 0，算分得开。</p><p>Q 在同一 LLM 裁判的两次判定均可用时取平均：7,215 条有两次，20 条仅一次，11 条无方案而 Q = 0。量表在本榜作答上校准；区间不包含裁判噪声。All-3、三次作答正确率、硬门率、轮间不一致与病史分组正确率均是画像。病史图中题包 ④ 只判类别，总榜 D 还要求下一步正确。</p><p>花费按每 100 次被测作答计，覆盖全部三次作答及工具请求。有回执用实付，否则用 token 价目；两者均无的请求按同模型、同角色的均价估算。被测请求按请求号与 N100 作答视图关联，读取主臂和扩展账本，排除旧 P4 作答。裁判数值只含这些运行账本中的请求，不含独立 Q 判分。花费是估算值。</p><p><code>web/demo/export_board.py</code> 从 <code>board_score.json</code> 拷入分数、区间、名次与画像，从 <code>figures_data.json</code> 拷入图值。本读数不含分包区间与逐轮 S。</p>",
 },
 };
 /* i18n:tech-strings:end */
@@ -674,11 +770,11 @@ const NAMES = {
           zh: { semaglutide: "司美格鲁肽", tirzepatide: "替尔泊肽", liraglutide: "利拉鲁肽", dulaglutide: "度拉糖肽", metformin: "二甲双胍", atorvastatin: "阿托伐他汀", amlodipine: "氨氯地平" } },
   dev: { en: { smart_scale: "scale", bp_cuff: "BP cuff", lab_panel: "lab panel", wearable: "wearable", cgm: "CGM" },
          zh: { smart_scale: "体重秤", bp_cuff: "血压计", lab_panel: "抽血化验", wearable: "手环", cgm: "动态血糖仪" } },
-  sig: { en: { HbA1c: "HbA1c", fasting_glucose: "Fasting glucose", CGM_TIR: "Time in range", LDL: "LDL-C", creatinine: "Creatinine",
+  sig: { en: { HbA1c: "HbA1c", fasting_glucose: "Fasting glucose", CGM_TIR: "Time in range", LDL: "LDL-C", creatinine: "Creatinine", ck: "CK",
                weight: "Weight", resting_hr: "Resting heart rate", systolic_bp: "Systolic BP", diastolic_bp: "Diastolic BP", ALT: "ALT", AST: "AST", FIB4: "FIB-4",
                hrv: "Heart-rate variability", sleep_hours: "Sleep", steps: "Steps", spo2: "SpO₂", body_temp: "Body temperature", stress_score: "Stress score",
                gi_symptom_score: "GI symptom score", vo2_max: "VO₂ max", skin_temp: "Skin temperature change" },
-         zh: { HbA1c: "糖化血红蛋白", fasting_glucose: "空腹血糖", CGM_TIR: "血糖达标时间", LDL: "LDL-C", creatinine: "肌酐",
+         zh: { HbA1c: "糖化血红蛋白", fasting_glucose: "空腹血糖", CGM_TIR: "血糖达标时间", LDL: "LDL-C", creatinine: "肌酐", ck: "肌酸激酶",
                weight: "体重", resting_hr: "静息心率", systolic_bp: "收缩压", diastolic_bp: "舒张压", ALT: "ALT", AST: "AST", FIB4: "FIB-4",
                hrv: "心率变异性", sleep_hours: "睡眠", steps: "步数", spo2: "血氧", body_temp: "体温", stress_score: "压力评分",
                gi_symptom_score: "胃肠症状评分", vo2_max: "最大摄氧量", skin_temp: "皮温变化" } },
@@ -708,7 +804,7 @@ function hover(node, head, rows){ node.addEventListener("pointermove", e => show
 function fig(host, H, alt){
   host.innerHTML = "";
   host.classList.add("fig");
-  const W = Math.max(260, Math.floor(host.clientWidth || 720));
+  const W = Math.max(120, Math.floor(host.clientWidth || 720));
   host.style.height = H + "px";
   const svg = S("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": alt }, host);
   const keep = [];
@@ -720,8 +816,9 @@ function fig(host, H, alt){
     let x0 = o.anchor === "end" ? x - w : o.anchor === "middle" ? x - w / 2 : x;
     x0 = Math.max(0, Math.min(W - w, x0));
     const y0 = y - h / 2;
+    if (o.avoid && (y0 < 20 || y0 + h > H - 40)){ n.remove(); return null; }
     const box = { l: x0, r: x0 + w, t: y0, b: y0 + h };
-    if (!keep.every(k => box.r + 3 < k.l || box.l > k.r + 3 || box.b - 1 < k.t || box.t > k.b - 1)){ n.remove(); return null; }
+    if ((o.avoid || []).some(k => box.r + 2 > k.l && box.l - 2 < k.r && box.b + 2 > k.t && box.t - 2 < k.b) || !keep.every(k => box.r + 3 < k.l || box.l > k.r + 3 || box.b - 1 < k.t || box.t > k.b - 1)){ n.remove(); return null; }
     keep.push(box);
     n.style.left = x0 + "px"; n.style.top = y0 + "px";
     return n;
@@ -1070,7 +1167,10 @@ const REC = {
     return '<div class="q"><span>' + esc(T("qHead", v.t1)) + "</span>" + esc(T("q_p4", N("sig", v.analyte))) + "</div>"
       + "<dl>" + profileRows(v.profile) + "<dt>" + esc(T("dtRef")) + "</dt><dd>" + esc(v.reference_range + " " + v.unit) + "</dd></dl>"
       + "<h3>" + esc(T("hReports")) + "</h3><ul>" + v.draws.map(r => '<li><span class="d">' + esc(T("tipDay", r[0])) + "</span><span>" + r[1] + " " + esc(v.unit) + " · "
-        + esc(r[2] ? T("fasting") : T("nonFasting")) + " · " + esc(tx(r[3])) + "</span></li>").join("") + "</ul>"
+        + esc(tx(r[2])) + " · " + esc(tx(r[3])) + "</span></li>").join("") + "</ul>"
+      + "<h3>" + esc(T("p4Methods")) + "</h3><ul>" + v.method_records.filter(r => [v.t0,v.t1].includes(r.valid_from) && r.patient_sample_difference_pct != null).map(r => '<li><span class="d">' + esc(T("tipDay",r.day)) + '</span><span>' + esc(tx(r.platform)) + ' · ' + esc(tx(r.comparison)) + ' ' + r.patient_sample_difference_pct + '%</span></li>').join("") + "</ul>"
+      + "<h3>" + esc(T("p4Specimens")) + "</h3><ul>" + v.specimens.map(r => '<li><span class="d">' + esc(T("tipDay", r.day)) + '</span><span>' + esc(T("p4Arms", T(r.sampling_arm === "左" ? "side_left" : "side_right"), T(r.infusion_arm === "左" ? "side_left" : "side_right"), r.infusion_running)) + '</span></li>').join("")
+      + v.method_records.filter(r => r.verification_for_day != null).map(r => '<li><span class="d">' + esc(T("tipDay",r.day)) + '</span><span>' + esc(T("p4Verification",r.value,r.unit)) + '</span></li>').join("") + "</ul>"
       + "<h3>" + esc(T("medNote")) + "</h3><ul>" + v.medication.map(m => '<li><span class="d">' + esc(T("tipDay", m.day)) + "</span><span>" + esc(tx(m.drug)) + " · " + esc(tx(m.event))
         + (m.reason ? " (" + esc(tx(m.reason)) + ")" : "") + "</span></li>").join("") + "</ul>"; },
 };
@@ -1079,8 +1179,8 @@ const GOLD = {
   pack2: () => { const v = V("pack2"), g = v.gold;
     return { g: T("g_pack2", T("cls_" + g.disposition), g.news2, v.poc.capillary_glucose_mmol_L.toFixed(1), g.lows_72h, v.rules.glucose_low.toFixed(1), g.nadir_72h), j: T("j_pack2") }; },
   p3: () => { const v = V("p3"); return { g: T("g_p3", T("cls_" + v.gold.class), v.visits[v.visits.length - 1][1], v.upper, Math.round(v.gold.adherence * 100)), j: T("j_p3") }; },
-  p4: () => { const v = V("p4"), g = v.gold, ev = ((g.acei || {}).events || [])[0] || {};
-    return { g: T("g_p4", T("cls_" + g.class), f1(g.true_change_pct), f1(g.obs_pct), f1(v.rcv * 100), ev.day), j: T("j_p4") }; },
+  p4: () => { const v = V("p4"), g = v.gold, repeats = v.method_records.filter(r => r.verification_for_day != null).sort((a,b) => a.day-b.day);
+    return { g: T("g_p4_verified", T("cls_" + g.class), f1(g.obs_pct), f1(v.rcv * 100), T("factor_" + g.factor), repeats[0].value, repeats[1].value, T("step_" + g.next_step)), j: T("j_p4") }; },
 };
 function sAct2(s){
   const ids = PACK_KEYS.map(k => PACK_NUM[k] + " " + ((PK[k] || {}).sample || {}).case_id).join(" · ");
@@ -1093,9 +1193,9 @@ function sAct2(s){
       + PACK_NUM[k] + " " + esc(T("pk_" + k)) + "<small>" + esc(T("pq_" + k)) + "</small></button>").join("");
     const gd = GOLD[CUR_PACK]();
     $("#pack", s).innerHTML = '<div class="rec">' + REC[CUR_PACK]() + '</div><div class="viz2"><div id="c2"></div><div class="legend" id="lg2"></div><div class="rec2" id="rec2"></div></div>'
-      + '<div class="goldrow"><div><h4>' + esc(T("hGold")) + "</h4><p>" + gd.g + "</p></div><div><h4>" + esc(T("hJudged")) + "</h4><p>" + esc(gd.j) + "</p></div></div>";
+      + '<div class="goldrow"><div><h4>' + esc(T("hGold")) + "</h4><p>" + gd.g + "</p></div><div><h4>" + esc(T("hJudged")) + "</h4><p>" + esc(gd.j) + "</p></div></div>" + '<div class="trajectory" id="trajectory" hidden></div>';
     VIZ[CUR_PACK]();
-    recordPanel();
+    recordPanel(); trajectory();
   };
   tabs.addEventListener("click", e => { const b = e.target.closest(".tab"); if (!b) return; CUR_PACK = b.dataset.p; paint(); });
   s._paint = paint;
@@ -1202,14 +1302,14 @@ const VIZ = {
   },
   p4: () => {
     const host = $("#c2"), v = V("p4"), g = v.gold, H = 400;
-    const F = fig(host, H, T("pk_p4")); const svg = F.svg, ml = 38, mr = 10, x = lin(0, v.t1 + 8, ml, F.W - mr);
+    const F = fig(host, H, T("pk_p4")); const svg = F.svg, ml = 38, mr = 10, xmin = Math.min(0, ...v.draws.map(r => r[0])), x = lin(xmin, v.t1 + 50, ml, F.W - mr);
     const vals = v.draws.map(r => r[1]), refHi = +String(v.reference_range).split(/[–-]/)[1];
     const prev = v.draws.find(r => r[0] === v.t0)[1], cur = v.draws.find(r => r[0] === v.t1)[1], lo = prev * (1 - v.rcv), hi = prev * (1 + v.rcv);
     const ymin = Math.floor(Math.min(lo, ...vals) / 10) * 10 - 5, ymax = Math.ceil(Math.max(hi, refHi, ...vals) / 10) * 10 + 5, y = lin(ymin, ymax, 300, 34);
     F.lab(0, 10, T("p4Title", N("sig", v.analyte), v.unit), { cls: "lane" });
     F.lab(x(v.t1), y(cur) - 14, String(cur), { cls: "annb", anchor: "end" });
     F.lab(x(v.t0), y(prev) - 14, String(prev), { cls: "annb", anchor: "middle" });
-    const ch = (cur / prev - 1) * 100; F.lab(x(v.t1) - 30, (y(prev) + y(cur)) / 2, "+" + f1(ch) + "%", { cls: "annb", anchor: "end" });
+    const ch = (cur / prev - 1) * 100; F.lab(ml + 4, 40, "+" + f1(ch) + "%", { cls: "annb" });
     F.lab(F.W - mr, y(lo) + 12, T("p4Rcv", f1(v.rcv * 100), f1(lo), f1(hi)), { cls: "ann", anchor: "end" });
     F.lab(ml + 4, y(refHi) - 9, T("p4Ref", refHi), {});
     ticks(ymin, ymax, 5).forEach(q => { hline(svg, ml, F.W - mr, y(q)); F.lab(ml - 6, y(q), String(q), { anchor: "end" }); });
@@ -1218,13 +1318,12 @@ const VIZ = {
     hline(svg, x(v.t0), x(v.t1 + 8), y(prev), "var(--accent)", 1, .5);
     v.draws.forEach(r => { const key = r[0] === v.t0 || r[0] === v.t1;
       hover(dot(svg, x(r[0]), y(r[1]), key ? "var(--accent)" : "var(--faint)", key ? 6 : 4.5), T("tipDay", r[0]), [{ k: N("sig", v.analyte), v: r[1] + " " + v.unit }]); });
-    const xc = x(v.t1) - 22; vline(svg, xc, y(prev), y(cur) + 6, "var(--foreground)", 1.5);
-    S("path", { d: `M${xc - 4} ${y(cur) + 8} L${xc + 4} ${y(cur) + 8} L${xc} ${y(cur) + 1} Z`, fill: "var(--foreground)" }, svg);
+
     const ev = ((g.acei || {}).events || [])[0], ye = 336; hline(svg, ml, F.W - mr, ye);
     if (ev){ const right = x(ev.day) > F.W * .6; F.lab(x(ev.day) + (right ? -9 : 9), ye, T("p4Event"), { cls: "ann", anchor: right ? "end" : "start" }); dot(svg, x(ev.day), ye, "var(--c2)", 5.5); }
-    xAxis(F, x, 362, v.t1, 7);
+    hline(svg,ml,F.W-mr,362,"var(--axis)"); ticks(xmin,v.t1,F.narrow?4:7).forEach(d=>F.lab(x(d),376,T("tipDay",d),{anchor:"middle"}));
     $("#lg2").innerHTML = '<span><i class="ld"></i>' + esc(T("lgDraws")) + '</span><span><i class="ld" style="background:var(--faint)"></i>' + esc(T("lgEarlier"))
-      + '</span><span><i class="lh" style="background:var(--accent);opacity:.3;border:0"></i>' + esc(T("lgRcv")) + '</span><span><i class="ld" style="background:var(--c2)"></i>' + esc(T("lgMed")) + "</span>";
+      + '</span><span><i class="lh" style="background:var(--accent);opacity:.3;border:0"></i>' + esc(T("lgRcv")) + "</span>";
   },
 };
 
@@ -1267,19 +1366,24 @@ function recordPanel(){
 
 /* ══ ACT 3: the board (from board.json) ══ */
 const ORDER = (BD.overall || {}).board ? BD.overall.board.map(r => r.model) : [];
+const rankTxt = (r, i) => r.rank_ci95 ? (r.rank_ci95[0] === r.rank_ci95[1] ? "" + r.rank_ci95[0] : r.rank_ci95[0] + "–" + r.rank_ci95[1]) : "" + (i + 1);
+const RKT = {}; ((BD.overall || {}).board || []).forEach((r, i) => { RKT[r.model] = rankTxt(r, i); });
 let CUR_MODEL = ORDER[0];
 const finalPacks = () => PACK_KEYS.filter(k => (BD.packs[k] || {}).status === "final");
 const pendingPacks = () => PACK_KEYS.filter(k => (BD.packs[k] || {}).status !== "final");
 const pkList = ks => ks.map(k => PACK_NUM[k]).join(LANG === "zh" ? "、" : ", ");
 function rowH(){ return (typeof matchMedia === "function" && (matchMedia("(max-width:900px)").matches || matchMedia("(pointer:coarse)").matches)) ? 40 : 30; }
-function selectModel(m){ CUR_MODEL = m; boardPaint(); modelPanel(); }
+function selectModel(m){ CUR_MODEL = m; boardPaint(); insightPaint(); modelPanel(); }
 function sAct3(s){
   const p0 = BD.packs[finalPacks()[0]] || {};
   s.innerHTML = '<div class="wrap"><p class="actnum">' + esc(T("act", 3)) + "</p><h2>" + esc(T("a3H")) + '</h2><p class="sub">' + esc(T("a3Sub", ORDER.length, p0.n_cases, p0.n_rounds)) + "</p>"
     + '<div class="card"><div class="a3top" id="board0"></div><div class="a3" id="board"></div><p class="note" style="padding:0 18px 14px" id="n3"></p></div>'
+    + '<div class="insights"><div class="card insight"><h3>' + esc(T("dqTitle")) + '</h3><p class="note">' + esc(T("dqSub")) + '</p><div id="dq"></div></div>'
+    + '<div class="card insight"><h3>' + esc(T("costTitle")) + '</h3><p class="note">' + esc(T("costSub", BD.spend.judge.usd.toFixed(2))) + '</p><div id="cost"></div></div></div>'
+    + '<div class="card history-card"><h3>' + esc(T("historyTitle")) + '</h3><p class="note">' + esc(T("historySub")) + '</p><div class="legend"><span><i class="ld" style="background:var(--card);border:2px solid var(--accent)"></i>' + esc(T("histOrdinary")) + '</span><span><i class="ld"></i>' + esc(T("histHistory")) + '</span></div><div class="history-grid" id="history-grid"></div></div>'
     + '<div class="card mp" id="mpanel"></div>'
     + '<details><summary>' + esc(T("techSummary")) + '</summary><div class="body">' + ttech("tech3", (BD.source || {}).boot) + "</div></details></div>";
-  boardPaint(); modelPanel();
+  boardPaint(); insightPaint(); modelPanel();
 }
 function boardPaint(){
   const top = $("#board0"), host = $("#board"); if (!host || !top) return;
@@ -1295,57 +1399,50 @@ function boardPaint(){
   ov.board.forEach((r, i) => { const y = HEAD + i * RH, ym = y + RH / 2;
     if (r.model === CUR_MODEL) S("rect", { x: 0, y: y + 1, width: F.W, height: RH - 2, rx: 5, fill: "var(--muted)" }, F.svg);
     hline(F.svg, 0, F.W, y + RH, "var(--grid)", 1, .7);
-    F.lab(4, ym, (i + 1) + "  " + r.model, { cls: r.model === CUR_MODEL ? "annb" : "ann" });
+    F.lab(4, ym, RKT[r.model] + "  " + r.model, { cls: r.model === CUR_MODEL ? "annb" : "ann" });
     S("line", { x1: x(r.ci95[0]), x2: x(r.ci95[1]), y1: ym, y2: ym, stroke: "var(--accent)", "stroke-width": 2, "stroke-linecap": "round", opacity: .55 }, F.svg);
     dot(F.svg, x(r.score), ym, "var(--accent)", 5);
     F.lab(x(r.ci95[1]) + 6, ym, f3(r.score), {});
     const hit = S("rect", { x: 0, y, width: F.W, height: RH, fill: "transparent", "data-m": r.model }, F.svg);
     hit.style.cursor = "pointer"; hit.addEventListener("click", () => selectModel(r.model));
-    hover(hit, r.model, [{ k: T("tipOverall", pkList(ov.packs)), v: f3(r.score) }, { k: T("tipCI"), v: f3(r.ci95[0]) + "–" + f3(r.ci95[1]) }, { k: T("tipRank"), v: "#" + (i + 1) }]);
+    hover(hit, r.model, [{ k: T("tipOverall", pkList(ov.packs)), v: f3(r.score) }, { k: T("tipCI"), v: f3(r.ci95[0]) + "–" + f3(r.ci95[1]) }, { k: T("tipRank"), v: RKT[r.model] }].concat(typeof r.pass3 === "number" ? [{ k: "All-3", v: f3(r.pass3) }] : []));
   });
   // Row 2: three panels on the same rows (the heat map names them), stacked on a narrow screen
-  const PA = ov.pairs || { pairs: [], n_separable: 0 }, nPairs = ORDER.length * (ORDER.length - 1) / 2;
+  const PA = ov.pairs || { pairs: [], n_separable: 0 }, AP = ov.adjacent_pairs, nPairs = AP ? AP.length : ORDER.length * (ORDER.length - 1) / 2;
   host.innerHTML = '<div class="colhead h1">' + esc(T("colPacks")) + "<span>" + esc(T("colPacksSub")) + "</span></div>"
     + '<div class="colhead h2">' + esc(T("colDis")) + "<span>" + esc(T("colDisSub")) + "</span></div>"
-    + '<div class="colhead h3">' + esc(T("colPairs")) + "<span>" + esc(T("colPairsSub", PA.n_separable, nPairs)) + "</span></div>"
+    + '<div class="colhead h3">' + esc(T("colPairs")) + "<span>" + esc(T("colPairsSub", AP ? AP.filter(p => p.separable).length : PA.n_separable, nPairs)) + "</span></div>"
     + '<div class="b1"></div><div class="b2"></div><div class="b3"></div>';
   const c1 = $(".b1", host), c2 = $(".b2", host), c3 = $(".b3", host);
   const sel = m => m === CUR_MODEL ? ' class="sel"' : "";
   // heat map: model x pack
   const lo = 0.25, hi = 0.9;
+  const OVR = Object.fromEntries(ov.board.map(r => [r.model, r])), HAS_P3 = ov.board.every(r => typeof r.pass3 === "number");
+  const P3_SAME = HAS_P3 && ov.board.slice().sort((a, b) => b.pass3 - a.pass3).every((r, i) => r.model === ov.board[i].model);
   const shade = v => Math.round(12 + Math.max(0, Math.min(1, (v - lo) / (hi - lo))) * 88);
-  let h = '<div class="tablewrap"><table class="bt" style="--rh:' + RH + 'px"><tr><th style="width:10.5em"></th>' + PACK_KEYS.map(k => "<th>" + PACK_NUM[k] + "</th>").join("") + "</tr>";
-  ORDER.forEach((m, i) => { h += '<tr data-m="' + esc(m) + '"' + sel(m) + '><td class="mname" title="' + esc(m) + '">' + (i + 1) + "  " + esc(m) + "</td>";
+  let h = '<div class="tablewrap"><table class="bt" style="--rh:' + RH + 'px"><tr><th style="width:10.5em"></th>' + PACK_KEYS.map(k => "<th>" + PACK_NUM[k] + "</th>").join("") + (HAS_P3 ? "<th>" + esc(T("thPass3")) + "</th>" : "") + "</tr>";
+  ORDER.forEach((m, i) => { h += '<tr data-m="' + esc(m) + '"' + sel(m) + '><td class="mname" title="' + esc(m) + '">' + RKT[m] + "  " + esc(m) + "</td>";
     PACK_KEYS.forEach(k => { const P = BD.packs[k];
       if (P.status !== "final"){ h += '<td class="cell upd">' + (i === 0 ? esc(T("updatingShort")) : "") + "</td>"; return; }
       const r = P.board.find(q => q.model === m), pc = shade(r.score);
       h += '<td class="cell" data-k="' + k + '" style="background:color-mix(in oklab, var(--seq-hi) ' + pc + '%, var(--card));color:' + (pc > 55 ? "var(--on-accent)" : "var(--foreground)") + '">' + f2(r.score) + "</td>"; });
+    if (HAS_P3) h += '<td class="p3">' + f3(OVR[m].pass3) + "</td>";
     h += "</tr>"; });
-  c1.innerHTML = h + "</table></div><p class='note'>" + esc(T("shadeNote", lo.toFixed(2), hi.toFixed(2))) + "</p>";
+  c1.innerHTML = h + "</table></div><p class='note'>" + esc(T("shadeNote", lo.toFixed(2), hi.toFixed(2))) + "</p>"
+    + (HAS_P3 ? "<p class='note'>" + esc(T("pass3Note", P3_SAME)) + "</p>" : "");
   $$("td.cell[data-k]", c1).forEach(td => { const m = td.parentElement.dataset.m, P = BD.packs[td.dataset.k], r = P.board.find(q => q.model === m);
-    hover(td, m + " · " + PACK_NUM[td.dataset.k] + " " + T("pk_" + td.dataset.k), [{ k: T("thScore"), v: f3(r.score) }, { k: T("tipCI"), v: f2(r.ci95[0]) + "–" + f2(r.ci95[1]) }, { k: T("tipRank"), v: "#" + r.rank }]); });
+    const q = P.profile[m]; hover(td, m + " · " + PACK_NUM[td.dataset.k] + " " + T("pk_" + td.dataset.k), [{ k: T("thScore"), v: f3(r.score) }, { k: "D", v: f3(q.D_acc_k) }, { k: "All-3", v: f3(q.pass_k) }, { k: T("profileGate"), v: f3(q.hard_gate_rate) }, { k: "Q", v: f3(q.Q_mean_on_D1) }]); });
   // round-to-round disagreement
   let d = '<div class="tablewrap"><table class="bt" style="--rh:' + RH + 'px"><tr>' + (stacked ? "<th style='width:9.5em'></th>" : "") + fin.map(k => "<th>" + PACK_NUM[k] + "</th>").join("") + "</tr>";
-  ORDER.forEach((m, i) => { d += '<tr data-m="' + esc(m) + '"' + sel(m) + ">" + (stacked ? '<td class="mname" title="' + esc(m) + '">' + (i + 1) + "  " + esc(m) + "</td>" : "");
+  ORDER.forEach((m, i) => { d += '<tr data-m="' + esc(m) + '"' + sel(m) + ">" + (stacked ? '<td class="mname" title="' + esc(m) + '">' + RKT[m] + "  " + esc(m) + "</td>" : "");
     fin.forEach(k => { const v = BD.packs[k].stability[m]; d += '<td data-k="' + k + '"><span class="track"><span class="fill" style="width:' + (v * 100).toFixed(1) + '%"></span></span></td>'; }); d += "</tr>"; });
   c2.innerHTML = d + "</table></div><p class='note'>" + esc(T("barNote")) + "</p>";
   $$("td[data-k]", c2).forEach(td => { const m = td.parentElement.dataset.m, k = td.dataset.k;
     hover(td, m + " · " + PACK_NUM[k], [{ k: T("colDis"), v: Math.round(BD.packs[k].stability[m] * 100) + "%" }]); });
-  // pairwise separability: row model vs column model, ordered by rank
-  const pair = (a, b) => { const p = PA.pairs.find(q => (q.a === a && q.b === b) || (q.a === b && q.b === a)); if (!p) return null;
-    return p.a === a ? p : { a: a, b: b, diff: -p.diff, se: p.se, separable: p.separable }; };
-  let t = '<div class="tablewrap"><table class="pm" style="--rh:' + RH + "px;min-width:" + (ORDER.length * 32 + (stacked ? 150 : 40)) + 'px"><tr>' + (stacked ? '<th class="rn"></th>' : '<th class="r"></th>') + ORDER.map((_, j) => "<th>" + (j + 1) + "</th>").join("") + "</tr>";
-  ORDER.forEach((m, i) => { t += '<tr data-m="' + esc(m) + '"' + sel(m) + ">" + (stacked ? '<th class="rn" title="' + esc(m) + '">' + (i + 1) + "  " + esc(m) + "</th>" : '<th class="r">' + (i + 1) + "</th>");
-    ORDER.forEach((n, j) => { if (i === j){ t += '<td class="d"></td>'; return; }
-      const p = pair(m, n); if (!p){ t += "<td></td>"; return; }
-      const v = Math.round(p.diff * 100);
-      t += '<td class="' + (p.separable ? (p.diff > 0 ? "hi" : "lo") : "") + '" data-a="' + esc(m) + '" data-b="' + esc(n) + '">' + (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + "</td>"; });
-    t += "</tr>"; });
-  c3.innerHTML = t + '</table></div><div class="pmleg"><span><i class="hi"></i>' + esc(T("pairHi")) + '</span><span><i class="lo"></i>' + esc(T("pairLo")) + '</span><span><i></i>' + esc(T("pairNs")) + "</span><span>" + esc(T("pairVal")) + "</span></div>";
-  $$("td[data-a]", c3).forEach(td => { const p = pair(td.dataset.a, td.dataset.b);
-    hover(td, T("sepTip", p.a, p.b), [{ k: T("tipDiff"), v: (p.diff > 0 ? "+" : "") + f3(p.diff) }, { k: T("tipSE"), v: f3(p.se) }, { k: T("tipSep"), v: p.separable ? T("yes") : T("no") }]); });
+  adjacentPairs(c3);
+  c3.insertAdjacentHTML("beforeend", '<p class="note">'+esc(T("adjacentNote"))+'</p>');
   $$("tr[data-m]", host).forEach(tr => tr.addEventListener("click", () => selectModel(tr.dataset.m)));
-  $("#n3").textContent = pend.length ? T("n3", pkList(pend), pkList(ov.packs)) : T("n3final");
+  $("#n3").textContent = pend.length ? T("n3", pkList(pend), pkList(ov.packs)) : T("n3final") + (Object.keys(BD.unranked || {}).length ? " " + T("boardPartial", Object.keys(BD.unranked)) : "");
 }
 function confusion(host, pk, m){
   const C = BD.decisions[pk], cols = C.classes.concat(["none"]), cells = C.models[m] || [];
@@ -1377,7 +1474,7 @@ function reviewBlock(host, m){
   h += "</table></div>";
   const bar = (lab, v, extra) => '<div class="rvbar"><span>' + esc(lab) + '</span><span class="track"><span class="fill" style="width:' + ((v || 0) * 100).toFixed(1) + '%"></span></span><b>'
     + (v == null ? "–" : Math.round(v * 100) + "%") + "</b>" + (extra ? '<small class="faint">' + esc(extra) + "</small>" : "") + "</div>";
-  h += bar(T("barDx"), R.dx_listed) + bar(T("barTests"), R.tests_f1, R.tests_recall == null ? "" : T("barRecall", Math.round(R.tests_recall * 100) + "%"));
+
   host.innerHTML = h;
   $$("td[data-w]", host).forEach(td => { const w = td.dataset.w === "true", c = td.dataset.s, tot = cols.reduce((a, q) => a + get(w, q), 0);
     hover(td, "", [{ k: T("rvTip", rn(w), cn[c], get(w, c), tot), v: "" }]); });
@@ -1385,35 +1482,26 @@ function reviewBlock(host, m){
 }
 /** The model's per-pack scores in the overall board's form: one row per pack, the point and its
  *  95% interval on a shared 0–1 axis, each round as a small ring, the value and the rank. */
-function scoreRows(host, m){
-  // A narrow chart puts each pack's name above its bar, so the axis keeps the full width.
-  const narrow = (host.clientWidth || 720) < 560, RH = narrow ? 50 : rowH() + 6, HEAD = 22, ks = PACK_KEYS;
-  const F = fig(host, HEAD + ks.length * RH + 4, T("mpScores")), svg = F.svg;
-  const lw = narrow ? 8 : Math.min(250, Math.max(118, F.W * .3)), rw = 36, x = lin(0, 1, lw, F.W - rw - 48);
-  [0, .25, .5, .75, 1].forEach(v => { vline(svg, x(v), HEAD - 4, HEAD + ks.length * RH, "var(--grid)"); F.lab(x(v), HEAD - 12, v.toFixed(2), { anchor: "middle" }); });
-  ks.forEach((k, i) => { const y = HEAD + i * RH, ym = narrow ? y + RH - 15 : y + RH / 2, P = BD.packs[k];
-    hline(svg, 0, F.W, y + RH, "var(--grid)", 1, .7);
-    F.lab(2, narrow ? y + 11 : ym, PACK_NUM[k] + " " + T("pk_" + k), { cls: "ann" });
-    if (P.status !== "final"){ F.lab(x(.5), ym, T("updating"), { anchor: "middle" }); return; }
-    const r = P.board.find(q => q.model === m), pr = P.per_round[m] || [];
-    S("line", { x1: x(r.ci95[0]), x2: x(r.ci95[1]), y1: ym, y2: ym, stroke: "var(--accent)", "stroke-width": 2, "stroke-linecap": "round", opacity: .55 }, svg);
-    pr.forEach(v => S("circle", { cx: x(v), cy: ym, r: 3, fill: "none", stroke: "var(--faint)", "stroke-width": 1.2 }, svg));
-    dot(svg, x(r.score), ym, "var(--accent)", 5);
-    F.lab(x(r.ci95[1]) + 6, ym, f3(r.score), {});
-    F.lab(F.W - 4, ym, "#" + r.rank, { cls: "annb", anchor: "end" });
-    hover(S("rect", { x: 0, y, width: F.W, height: RH, fill: "transparent" }, svg), PACK_NUM[k] + " " + T("pk_" + k),
-      [{ k: T("thScore"), v: f3(r.score) }, { k: T("tipCI"), v: f3(r.ci95[0]) + "–" + f3(r.ci95[1]) }, { k: T("thRank"), v: "#" + r.rank + " / " + P.board.length }]
-        .concat(pr.map((v, j) => ({ k: T("tipRound", j + 1), v: f3(v) }))));
+function scoreRows(host,m){
+  const RH=48,HEAD=24,F=fig(host,HEAD+PACK_KEYS.length*RH+4,T("mpScores")),narrow=F.W<560,ml=narrow?10:235,x=lin(0,1,ml,F.W-42);
+  [0,.25,.5,.75,1].forEach(v=>{vline(F.svg,x(v),HEAD-4,F.H);F.lab(x(v),HEAD-12,v.toFixed(2),{anchor:"middle"});});
+  PACK_KEYS.forEach((k,i)=>{const r=BD.packs[k].board.find(q=>q.model===m),ym=HEAD+i*RH;
+    F.lab(2,narrow?ym+7:ym+RH/2,PACK_NUM[k]+" "+T("pk_"+k),{cls:"ann"});
+    const y=narrow?ym+30:ym+RH/2;dot(F.svg,x(r.score),y,"var(--accent)",5);F.lab(x(r.score)+8,y,f3(r.score),{cls:"annb"});
   });
+}
+function profileTable(m){
+  return '<div class="tablewrap"><table class="profiles"><tr><th>'+esc(T("thPack"))+'</th><th>D</th><th>All-3</th><th>'+esc(T("profileGate"))+'</th><th>Q | D=1</th></tr>'
+    + PACK_KEYS.map(k=>{const p=BD.packs[k].profile[m];return '<tr><td>'+PACK_NUM[k]+'</td><td>'+f3(p.D_acc_k)+'</td><td>'+f3(p.pass_k)+'</td><td>'+f3(p.hard_gate_rate)+'</td><td>'+f3(p.Q_mean_on_D1)+'</td></tr>';}).join("")+'</table></div><p class="note">'+esc(T("profileSub"))+'</p>';
 }
 function modelPanel(){
   const h = $("#mpanel"); if (!h) return;
   const m = CUR_MODEL, ov = BD.overall.board.find(r => r.model === m);
   const cfs = PACK_KEYS.filter(k => (BD.decisions || {})[k] && k !== "m2"), hasRv = !!((BD.decisions || {}).m2 || {}).models;
   h.innerHTML = '<div class="top"><label>' + esc(T("mpModel")) + ' <select id="mp-model">' + ORDER.map(q => "<option" + (q === m ? " selected" : "") + ">" + esc(q) + "</option>").join("") + "</select></label>"
-    + '<span class="muted" style="font-size:13px">' + esc(T("mpOverall", f3(ov.score), f3(ov.ci95[0]), f3(ov.ci95[1]), ORDER.indexOf(m) + 1, ORDER.length)) + "</span></div>"
+    + '<span class="muted" style="font-size:13px">' + esc(T("mpOverall", f3(ov.score), f3(ov.ci95[0]), f3(ov.ci95[1]), RKT[m], ORDER.length)) + "</span></div>"
     + '<div class="mps"><h4>' + esc(T("mpScores")) + '</h4><p class="sub">' + esc(T("mpScoresSub")) + '</p><div id="mp-scores"></div><p class="note">' + esc(T("mpNote")) + "</p></div>"
-    + '<div class="mpg">'
+    + profileTable(m) + '<div class="mpg">'
     + (hasRv ? "<div><h4>" + esc(T("mpReview", PACK_NUM.m2 + " " + T("pk_m2"))) + '</h4><div id="cf-m2"></div><p class="note" id="rv-note"></p></div>' : "")
     + cfs.map(k => "<div><h4>" + esc(T("mpCf", PACK_NUM[k] + " " + T("pk_" + k))) + '</h4><div id="cf-' + k + '"></div><p class="note">' + esc(T("cfNote", BD.decisions[k].n_items, BD.decisions[k].n_rounds)) + "</p></div>").join("") + "</div>";
   scoreRows($("#mp-scores", h), m);
@@ -1423,11 +1511,125 @@ function modelPanel(){
 }
 
 /* ══ page ══ */
+/* Approved board figures, drawn from exported readings. */
+function markModel(node, m, rows){
+  node.setAttribute("data-model", m); node.setAttribute("aria-label", m);
+  node.style.cursor = "pointer";
+  node.addEventListener("click", () => selectModel(m));
+  return hover(node, m, rows);
+}
+function pointLabels(F, points, bars){
+  const avoid = Object.values(points).map(([x, y]) => ({l:x-8, r:x+8, t:y-8, b:y+8})).concat(bars || []);
+  const candidates = [[9,-14],[9,15],[-9,-14],[-9,15],[0,-28],[0,29],[0,-45],[0,46],[0,-64],[0,65],[0,-84],[0,85]];
+  // Place the selected model first; close neighbours use a leader to keep labels distinct.
+  [CUR_MODEL, ...ORDER.filter(m => m !== CUR_MODEL)].forEach(m => {
+    const [x,y] = points[m];
+    for (const [dx,dy] of candidates){
+      const n = F.lab(x+dx, y+dy, m, {anchor:dx < 0 ? "end" : dx > 0 ? "start" : "middle", cls:m === CUR_MODEL ? "annb" : "ann", avoid});
+      if (n){
+        n.setAttribute("data-model-label", m);
+        n.style.background = "var(--card)";
+        const l = parseFloat(n.style.left), t = parseFloat(n.style.top), w = n.offsetWidth;
+        const endX = Math.max(l-3, Math.min(l+w+3, x)), endY = dy < 0 ? t+14+2 : t-2;
+        if (Math.abs(dy) > 25) S("line", {x1:x, y1:y+(dy<0?-7:7), x2:endX, y2:endY, stroke:"var(--faint)", "stroke-width":.7}, F.svg);
+        break;
+      }
+    }
+  });
+}
+function insightPaint(){
+  if (!$("#dq")) return;
+  plotDQ(); plotCost(); plotHistory();
+}
+function plotDQ(){
+  const F = fig($("#dq"), 350, T("dqTitle")), ml=38, mr=18, top=24, bot=304;
+  const x=lin(.4,1,ml,F.W-mr), y=lin(.45,1,bot,top), points={};
+  F.lab(ml, 9, T("dqY"), {cls:"lane"});
+  [.4,.6,.8,1].forEach(v => { vline(F.svg,x(v),top,bot); F.lab(x(v),bot+14,v.toFixed(1),{anchor:"middle"}); });
+  [.5,.6,.7,.8,.9,1].forEach(v => { hline(F.svg,ml,F.W-mr,y(v)); F.lab(ml-7,y(v),v.toFixed(1),{anchor:"end"}); });
+  F.lab((ml+F.W-mr)/2,340,T("dqX"),{anchor:"middle"});
+  [.4,.5,.6,.7,.8,.9].forEach(s => {
+    const pts=[];
+    for(let d=.4;d<=1.001;d+=.004){const q=2*s/d-1;if(q>=.45&&q<=1)pts.push([x(d),y(q)]);}
+    if(pts.length) S("polyline",{points:pts.map(p=>p.join(",")).join(" "),fill:"none",stroke:"var(--axis)","stroke-width":1.2},F.svg);
+  });
+  ORDER.forEach(m => { const [d,q]=BD.drawn.dq[m], px=x(d), py=y(q); points[m]=[px,py];
+    if(m===CUR_MODEL) dot(F.svg,px,py,"var(--accent)",10,true);
+    markModel(dot(F.svg,px,py,"var(--accent)",5),m,[{k:T("dqX"),v:f3(d)},{k:T("dqY"),v:f3(q)}]);
+  });
+  pointLabels(F,points);
+}
+function plotCost(){
+  const F=fig($("#cost"),350,T("costTitle")), ml=38,mr=18,top=24,bot=304;
+  const log=lin(Math.log10(.1),Math.log10(12),ml,F.W-mr),x=v=>log(Math.log10(v)),y=lin(.32,.88,bot,top),points={},bars=[];
+  F.lab(ml,9,T("colOverall"),{cls:"lane"});
+  [.1,.3,1,3,10].forEach(v=>{vline(F.svg,x(v),top,bot);F.lab(x(v),bot+14,"$"+v,{anchor:"middle"});});
+  [.4,.5,.6,.7,.8].forEach(v=>{hline(F.svg,ml,F.W-mr,y(v));F.lab(ml-7,y(v),v.toFixed(1),{anchor:"end"});});
+  F.lab((ml+F.W-mr)/2,340,T("costX"),{anchor:"middle"});
+  ORDER.forEach(m=>{const [cost,score]=BD.drawn.cost[m],r=BD.overall.board.find(r=>r.model===m),px=x(cost),py=y(score);points[m]=[px,py];
+    vline(F.svg,px,y(r.ci95[1]),y(r.ci95[0]),"var(--accent)",2).setAttribute("opacity",.55);
+    bars.push({l:px-3,r:px+3,t:y(r.ci95[1])-2,b:y(r.ci95[0])+2});
+    if(m===CUR_MODEL)dot(F.svg,px,py,"var(--accent)",10,true);
+    markModel(dot(F.svg,px,py,"var(--accent)",5),m,[{k:T("costX"),v:"$"+cost.toFixed(3)},{k:T("colOverall"),v:f3(score)},{k:T("tipCI"),v:r.ci95.map(f3).join("–")}]);
+  });
+  pointLabels(F,points,bars);
+}
+function plotHistory(){
+  const host=$("#history-grid"); host.innerHTML=PACK_KEYS.map(k=>'<div><h4>'+PACK_NUM[k]+" "+esc(T("pk_"+k))+'</h4><p class="note" id="hist-n-'+k+'"></p><div id="hist-'+k+'"></div></div>').join("");
+  PACK_KEYS.forEach(k=>{const p=k==="pack2"?"p2":k,h=BD.history[p];
+    $("#hist-n-"+k).textContent=T("histCounts",h.n_history,h.n_ordinary);
+    const RH=43,F=fig($("#hist-"+k),38+ORDER.length*RH,T("historyTitle")+" · "+PACK_NUM[k]),x=lin(0,1,9,F.W-12);
+    [0,.5,1].forEach(v=>{vline(F.svg,x(v),23,F.H-5);F.lab(x(v),11,String(v),{anchor:v===0?"start":v===1?"end":"middle"});});
+    ORDER.forEach((m,i)=>{const row=h.models[m],ym=32+i*RH;
+      if(m===CUR_MODEL)S("rect",{x:0,y:ym-4,width:F.W,height:RH-1,rx:4,fill:"var(--muted)"},F.svg);
+      F.lab(2,ym+3,m,{cls:m===CUR_MODEL?"annb":"ann"});
+      const yh=ym+22;
+      hline(F.svg,x(row.ordinary.rate),x(row.history.rate),yh,"var(--accent)",2,.55);
+      markModel(dot(F.svg,x(row.ordinary.rate),yh,"var(--accent)",4.5,true),m,[{k:T("histOrdinary"),v:f3(row.ordinary.rate)},{k:T("histHistory"),v:f3(row.history.rate)}]);
+      markModel(dot(F.svg,x(row.history.rate),yh,"var(--accent)",4.5),m,[{k:T("histHistory"),v:f3(row.history.rate)},{k:T("histOrdinary"),v:f3(row.ordinary.rate)}]);
+      const hit=S("rect",{x:0,y:ym-4,width:F.W,height:RH-1,fill:"transparent"},F.svg);markModel(hit,m,[{k:T("histHistory"),v:f3(row.history.rate)},{k:T("histOrdinary"),v:f3(row.ordinary.rate)}]);
+    });
+  });
+}
+function trajectory(){
+  const host=$("#trajectory");if(!host)return;
+  const tr=BD.trajectory;
+  host.hidden=CUR_PACK!==tr.pack;if(host.hidden){host.innerHTML="";return;}
+  host.innerHTML='<h3>'+esc(T("trajTitle"))+'</h3><p class="note">'+esc(T("trajSub",tr.case,Object.values(tr.models)[0].item_no,Object.values(tr.models)[0].n_items))+'</p><div id="traj-chart"></div><div class="legend"><span><i class="lk"></i>'+esc(T("trajCall"))+'</span><span>◆ '+esc(T("trajFirst"))+'</span></div><div id="traj-results"></div>';
+  const models=Object.keys(tr.models),N=Math.max(...models.map(m=>tr.models[m].calls.length)),RH=88,F=fig($("#traj-chart"),models.length*RH+30,T("trajTitle")),x=lin(1,N,12,F.W-14);
+  models.forEach((m,i)=>{const r=tr.models[m],ym=20+i*RH,first=r.first_seen;
+    F.lab(0,ym,m,{cls:"annb"});F.lab(F.W-4,ym,T("trajSeen",Object.keys(first).length,r.keys.length,r.calls.length),{anchor:"end"});
+    hline(F.svg,x(1),x(N),ym+34,"var(--grid)");
+    r.calls.forEach((c,j)=>{const px=x(j+1),names=r.keys.filter(k=>first[k]===j+1);
+      const mark=S("rect",{x:px-3,y:ym+27,width:6,height:14,rx:2,fill:"var(--accent)",opacity:c.found===false?.35:1},F.svg);
+      hover(mark,T("trajCallN",j+1),[{k:T("trajTool"),v:c.name},{k:T("trajRound"),v:String(c.round)},{k:T("trajFirst"),v:names.length?names.map(evidenceName).join(", "):"—"}]);
+      if(names.length)hover(S("polygon",{points:`${px},${ym+12} ${px+5},${ym+17} ${px},${ym+22} ${px-5},${ym+17}`,fill:"var(--accent)"},F.svg),T("trajCallN",j+1),names.map(k=>({k:T("trajFirst"),v:evidenceName(k)})));
+    });
+    [1,5,10,15].filter(n=>n<=N).forEach(n=>F.lab(x(n),ym+54,String(n),{anchor:"middle"}));
+  });
+  $("#traj-results").innerHTML=models.map(m=>{const r=tr.models[m],miss=r.keys.filter(k=>!Object.hasOwn(r.first_seen,k));return '<p class="trajectory-result"><b>'+esc(m)+'</b> <span class="'+(r.decision_ok?"":"wrong")+'">'+(r.decision_ok?"✓ ":"✗ ")+esc(T("cls_"+r.said))+'</span> · '+esc(miss.length?T("trajMissed",miss.map(evidenceName).join(", ")):T("trajAll"))+'</p>';}).join("");
+}
+function evidenceName(k){
+  if(k.startsWith("report@"))return T("trajReport",k.split("@")[1]);
+  if(k.startsWith("protocol:"))return T("trajProtocol");
+  return T(k==="laboratory_method_record"?"trajMethod":"trajSpecimen");
+}
+function adjacentPairs(host){
+  const plot=el("div"); host.appendChild(plot);
+  const pairs=BD.overall.adjacent_pairs, RH=rowH(),F=fig(plot,pairs.length*RH+32,T("colPairs")),x=lin(-.09,.23,76,F.W-30);
+  [0,.1,.2].forEach(v=>{vline(F.svg,x(v),24,F.H,"var(--grid)");F.lab(x(v),10,v.toFixed(1),{anchor:"middle"});});
+  pairs.forEach((p,i)=>{const ym=27+i*RH+RH/2, [a,b]=p.pair.split(" - ");
+    F.lab(2,ym,"#"+(i+1)+" − #"+(i+2),{cls:"ann"});
+    hline(F.svg,x(p.ci[0]),x(p.ci[1]),ym,"var(--accent)",2,.55);dot(F.svg,x(p.diff),ym,"var(--accent)",4.5);
+    hover(S("rect",{x:0,y:ym-RH/2,width:F.W,height:RH,fill:"transparent","data-pair":p.pair},F.svg),T("sepTip",a,b),[{k:T("tipDiff"),v:f3(p.diff)},{k:T("tipCI"),v:p.ci.map(f3).join("–")},{k:T("tipSep"),v:T(p.separable?"yes":"no")}]);
+  });
+}
+
 const selfcheck = G.selfCheck(D);
 function sHero(s){
   const p0 = BD.packs[finalPacks()[0]] || {};
   s.innerHTML = '<div class="wrap hero"><p class="kicker">' + esc(T("heroKicker")) + "</p><h1>" + esc(T("heroH1")) + '</h1><p class="lede">' + T("heroLede") + "</p>"
-    + '<div class="chips"><span class="chip"><span class="mono">pip install haenv</span></span><span class="chip">' + esc(T("chipPacks", PACK_KEYS.length, (PK.m2 || {}).n_items))
+    + '<div class="chips"><span class="chip"><span class="mono">pip install haenv</span></span><span class="chip">' + esc(T("chipPacks", PACK_KEYS.length, p0.n_cases))
     + '</span><span class="chip">' + esc(T("chipModels", ORDER.length, p0.n_rounds)) + '</span><span class="chip">' + esc(T("chipSynthetic")) + "</span></div>"
     + '<p class="cta-row"><a class="pill primary" data-cta="build-patient" href="#act1">' + esc(T("ctaBuild")) + '</a><a class="pill" data-cta="quickstart" href="https://github.com/thetahealth/mirobody-env#quick-start">' + esc(T("ctaQuick")) + "</a></p></div>";
 }

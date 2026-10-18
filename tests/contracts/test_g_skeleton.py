@@ -25,13 +25,15 @@ import types
 
 import pytest
 
-from haenv import build as B
-from haenv import build_weight as BW   # where the skeleton helpers are read
+import haenv.world.generation.build as B
+import haenv.world.generation.build_weight as BW   # where the skeleton helpers are read
 from _patch_bound import patch_bound  # noqa: E402
-from haenv import gates
-from haenv import rng
-from haenv.latent_rules import (DESCENT_BUDGET_FRAC, MIN_CHANGE_FRAC, MIN_CHANGE_KG,
-                                MIN_PERSIST_DAYS)
+import haenv.scoring.gates as gates
+import haenv.world.generation.rng as rng
+from haenv.world.clinical.latent_rules import DESCENT_BUDGET_FRAC
+from haenv.world.clinical.latent_rules import MIN_CHANGE_FRAC
+from haenv.world.clinical.latent_rules import MIN_CHANGE_KG
+from haenv.world.clinical.latent_rules import MIN_PERSIST_DAYS
 
 pytestmark = pytest.mark.world
 
@@ -432,5 +434,5 @@ def test_g5_negative_control_one_curve_across_t(monkeypatch):
         return real_overlay(lin_pts, model_pts, *a, **k)
 
     monkeypatch.setattr(BW, "_pchip_daily", across)
-    patch_bound(monkeypatch, "_weight_overlay", overlay, source="haenv.build")
+    patch_bound(monkeypatch, "_weight_overlay", overlay, source="haenv.world.generation.build")
     assert _t7_pre_t_mismatches() != []

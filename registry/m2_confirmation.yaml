@@ -1,0 +1,115 @@
+# Synthetic matched diagnostic challenges. Values are authored away from decision boundaries.
+version: 1
+allocation:
+  independent_share: {value: 0.20, ours: true, source: ours, reason: "Balanced paired case-control design: 20% controls and 20% matched unified diagnoses; retain 30% concurrent diagnostic lines and 30% other unified cases. These are coverage weights, not prevalence."}
+  negative_frames: {F1: 2, F2: 2, F3: 1}
+  positive_frames: {F1: 2, F2: 2, F3: 1}
+  outside_endocrine_min_share: {value: 0.5, ours: true, source: registry/clinical_expansion.yaml, reason: "Keep at least half the diagnostic stratum outside endocrinology; paired common presentations and retained historical diagnostic lines may increase this share. This is coverage, not population prevalence."}
+  classic_additional_share: {value: 0.04, ours: true, source: ours, reason: "Two paired sleep-presentation cases per fifty preserve the classic family alongside the frozen bridge; all classic diagnoses remain in the candidate and comorbidity catalogues. Atomic expansion and concurrent diagnostic families retain their coverage."}
+  profiles_per_50: 2
+  candidate_supply_multiplier: {value: 2, ours: true, source: ours, reason: "Matching, existing clinical emission rules and historical coverage must all hold before selection. Expand every clinical candidate stratum equally rather than weakening a gate, dropping a family, or selecting a new seed."}
+  historical_supply: {ours: true, source: registry/difficulty_r2.yaml#difficulty_r2.m2.reusable_findings, reason: "Current-confirmation pairs never disclose their decisive result in a free archive. In the remaining clinically eligible candidate cohort, retain every existing interpretable reusable historical report, then jointly allocate the original 25% history-dependent question quota. No new reusable assay or scoring rule is introduced; disabling historical dependency still disables reuse."}
+  sleep_cohort_sex: {ours: true, source: https://pmc.ncbi.nlm.nih.gov/articles/PMC5337595/, reason: "Balanced diagnostic coverage of adult women and men, not a population prevalence estimate; the source sleep templates were male only. Both members of each pair have the same sex and nonspecific clinical context."}
+  source: {ours: true, reason: "Two pairs for each of five common presentations per fifty questions. Palpitations and biliary symptoms use acute visits, respiratory and mood/function symptoms use chronic visits, and sleep complaints occur at follow-up visits with a separately interpretable routine repeat."}
+profiles:
+  HD-UNI-08:
+    finding: ECGAtrialPattern
+    test: 十二导联心电图
+    negative: 未记录到房颤的短暂心悸，其他跨次不适分别评估
+    source: https://academic.oup.com/eurheartj/article/45/36/3314/7738779
+    criterion: "ESC 2024: visually confirmed ECG rhythm; irregular RR and absent regular P waves. A negative short ECG does not generally exclude paroxysmal AF; the selected control has sinus rhythm during its symptomatic acquisition."
+    complaints:
+      - ["静坐时突然觉得心跳乱,一阵快一阵慢", "心里会突然慌一阵,觉得跳得忽快忽慢"]
+      - ["同样的路走起来更累,需要停下来歇", "最近走平常那段路容易累,想停下来缓缓"]
+      - ["摸着手腕的脉搏,快慢不太规律", "心慌时摸过脉搏,感觉节奏有变化"]
+      - ["心慌时有些头晕,坐下来能缓一点", "发慌那会儿有点晕,坐一会儿轻一些"]
+    context: 心悸时恰逢睡眠不足并饮用浓茶；症状出现时就诊，尚未做心电图，不能仅按诱因判断心律。
+  HD-UNI-11:
+    finding: BiliaryUltrasound
+    test: 胆囊及胆道超声
+    negative: 未见结石或胆囊炎的餐后不适，跨次症状不强行合并
+    source: https://www.nice.org.uk/guidance/cg188/chapter/recommendations
+    criterion: "CG188 1.1.1: liver function tests and ultrasound for suspected gallstone disease; negative imaging must be interpreted with the clinical course."
+    complaints:
+      - ["吃完饭后右上腹痛了一阵", "饭后觉得右边上腹不舒服,疼了一会儿"]
+      - ["右上腹的痛持续了好几个小时", "肚子右上方疼了几小时,中间轻重有变化"]
+      - ["右上腹发胀,按着有些不舒服", "右侧上腹胀痛,自己按过觉得更明显"]
+      - ["觉得恶心,不太想吃东西", "胃里有点翻腾,饭量也少了"]
+    context: 近来饮食偏油，曾伴短期肠胃不适；没有持续高热或黄疸，仍需根据病程和影像判断。
+  HD-UNI-17:
+    finding: PostBDObstruction
+    test: 支气管舒张后肺功能
+    negative: 未见持续气流阻塞的分次咳嗽和活动不适
+    source: https://goldcopd.org/2026-gold-report-and-pocket-guide/
+    criterion: "GOLD 2026: compatible clinical context and quality-assured post-bronchodilator FEV1/FVC <0.70. Normal testing does not diagnose another airway disorder or exclude future disease."
+    positive_ratio: [0.50, 0.62]
+    negative_ratio: [0.78, 0.86]
+    threshold: 0.70
+    complaints:
+      - ["咳嗽咳痰反复了好几个月", "这几个月反复咳,有时带点痰"]
+      - ["走快一点就气喘,歇下来好些", "快走时比平常喘,慢下来能缓一缓"]
+      - ["有时呼吸带响声,在胸里听得见", "偶尔觉得胸里呼吸有响声"]
+      - ["最近上同样的楼梯要多停几次", "爬平常的楼梯,现在想多歇几回"]
+    context: 有长期烟雾接触史，也有鼻部不适和活动减少；这些因素不能替代肺功能确认。
+  HD-UNI-18:
+    finding: DepressionAssessment
+    test: 临床心理状态及功能评估
+    negative: 压力和睡眠波动伴分散不适，访谈不满足抑郁发作标准
+    source: https://www.nice.org.uk/guidance/ng222/chapter/recommendations
+    criterion: "NG222 1.2: comprehensive assessment of symptoms, duration, course and functional impairment; screening scores and fatigue alone do not diagnose depression."
+    complaints:
+      - ["这段时间白天没精神,夜里也睡不好", "最近睡得不好,白天觉得累"]
+      - ["觉得做事的兴致有变化,还没细问具体持续多久", "有时对事情提不起劲,是不是整天如此还说不清"]
+      - ["平常的事做得少了,不确定是累还是心情影响", "这阵子事情做得比以前少,想弄清是什么原因"]
+      - ["工作和家里的事情挤在一起,感觉不太应付得来", "最近生活事情多,觉得需要找人谈谈"]
+    context: 近期工作安排有变化，睡眠和情绪均需进一步访谈；尚不能从乏力或一次筛查作结论。
+  JD-OSA:
+    finding: AHI
+    test: 多导睡眠监测(PSG)/AHI
+    frame: F3
+    negative: 本次规范监测未见呼吸暂停，分次不适结合睡眠时长及慢病背景处理
+    source: https://pmc.ncbi.nlm.nih.gov/articles/PMC5337595/
+    criterion: "AASM 2017: polysomnography is the standard diagnostic test in an appropriate symptomatic adult; a negative study is interpreted clinically and may require repeat testing if suspicion remains. AHI >=5 with relevant symptoms or >=15 without symptoms; sampled bands are away from either boundary."
+    positive_ahi: [18, 36]
+    negative_ahi: [0.8, 3.8]
+    threshold_symptomatic: 5
+    complaints:
+      - ["卧床8h+仍白天严重嗜睡、开会开车犯困", "夜里躺了八小时,白天还是很困,开会时想打瞌睡"]
+      - ["晨起头痛,换高枕+睡前多喝水无效", "早上起来头痛,换枕头和喝水都没好多少"]
+      - ["血压三药联用仍≈148/95难控", "已经用了几种降压药,家里量的血压还是高"]
+      - ["夜里起来尿好几次,还觉得精力和性欲比以前差", "这阵子夜尿次数多,白天没精神,性欲也比以前低"]
+    context: 家人提到睡觉打鼾、偶有呼吸节奏变化，同时存在睡眠不规律和慢病治疗问题；这些线索尚不能代替规范睡眠监测。
+
+value_design: {ours: true, source: ours, reason: "Illustrative observations well away from the registered diagnostic boundary. One latent boolean selects the result branch before rendering. All controls have the same candidate exposures; these do not establish an explanation without the confirmatory observation."}
+competition:
+  source: registry/rivals.yaml
+  ours: true
+  reason: "Use the existing sourced rival/discriminator catalogue as candidate hypotheses, never as a new scoring criterion. Confirmation remains an existing menu acquisition."
+  sources:
+    anemia: https://pmc.ncbi.nlm.nih.gov/articles/PMC8515119/
+    gastric: https://pmc.ncbi.nlm.nih.gov/articles/PMC9373497/
+    airway: https://goldcopd.org/2026-gold-report-and-pocket-guide/
+    mood: https://www.nice.org.uk/guidance/ng222/chapter/Recommendations
+    thyroid: https://www.nice.org.uk/guidance/ng145/chapter/recommendations
+    general: registry/clinical_expansion.yaml
+  notes:
+    HD-UNI-01: 乳糖不耐受和功能性肠道问题也可引起腹胀稀便；需结合菜单中的抗体、总IgA和必要的黏膜检查。
+    HD-UNI-02: 原发性雷诺现象、其他结缔组织问题亦可有手指和消化道不适；需结合甲襞毛细血管和免疫检查。
+    HD-UNI-03: 机械性腰痛也可能反复发作；需结合炎性病程、骶髂关节影像和相关检查判断。
+    HD-UNI-04: 感染及其他肉芽肿性问题亦可累及呼吸和眼部；需影像、必要的取材和病因评估。
+    HD-UNI-05: 药物作用与进食节奏也可引起发作性低血糖；需在发作时同步测定血糖、胰岛素和相关代谢物。
+    HD-UNI-06: 慢性胰腺炎也可伴消化和血糖问题；需结合胰腺影像及代谢检查，不能只凭体重判断。
+    HD-UNI-07: 静脉回流问题和呼吸系统疾病也可引起水肿或气促；需心脏超声和相关客观检查确认。
+    HD-UNI-08: 窦性心动过速和早搏也可引起相似的发慌、头晕；需在症状时采集十二导联心电图。
+    HD-UNI-09: 可靠既往基线上的慢性异常也可造成肌酐偏高；应核对短期重复肌酐、容量状态及病程。
+    HD-UNI-10: 感染或运动后可有暂时尿蛋白变化；需可靠的重复肾功能和尿白蛋白记录判断持续时间。
+    HD-UNI-11: 消化性溃疡和短期消化不适也可引起餐后上腹痛；需胆囊及胆道超声，结合病程复评。
+    HD-UNI-12: 上消化道溃疡或穿孔等急腹症亦可有相似疼痛；需急诊查体、脂肪酶及适当影像综合判断。
+    HD-UNI-13: 单纯脂肪变性和其他肝病可有相似乏力；普通超声不能代替有效弹性成像及病因评估。
+    HD-UNI-14: 慢性炎症相关贫血也可表现为乏力、活动后心慌；需铁蛋白结合转铁蛋白饱和度、炎症背景与失血评估。
+    HD-UNI-15: 非感染性结石和膀胱疼痛也可造成排尿不适；需规范尿培养、尿检及按需影像。
+    HD-UNI-16: 急性支气管炎也可有咳嗽、发热和胸部不适；需结合胸部影像和病程，单凭症状或CRP不能分开。
+    HD-UNI-17: 哮喘、短期气道刺激和活动减少也可有咳嗽气促；需质量合格的舒张后肺功能并结合临床背景复评。
+    HD-UNI-18: 短期适应反应和睡眠不足也可影响精力；应完成临床访谈并评估持续时间、功能变化及既往心境史。
+    HD-UNI-19: 甲状腺疾病和运动后肌肉损伤也可造成类似酸痛；需肌酶、甲功及药物时序与随访评估。
+    HD-UNI-20: 功能性消化不良和胃出口机械梗阻也可有餐后饱胀恶心；应排除梗阻并按规范完成固体餐胃排空测定。

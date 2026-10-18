@@ -1,5 +1,6 @@
 """Source and installed layouts must fingerprint the same actual code and data."""
 from __future__ import annotations
+from haenv.locations import source_path as _haenv_source_path
 
 import json
 import os
@@ -8,9 +9,14 @@ import shutil
 import subprocess
 import sys
 
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
+
 import pytest
 
-from haenv import anchor
+import haenv.provenance.anchor as anchor
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,31 +26,31 @@ ROOT = Path(__file__).resolve().parents[1]
 def installed_tree(tmp_path_factory):
     """Mirror the wheel's package/resource layout without invoking a build backend."""
     site = tmp_path_factory.mktemp("installed-fingerprints")
+    # Wheel namespaces are direct children of site-packages, not a src checkout.
     package = site / "haenv"
-    shutil.copytree(ROOT / "haenv", package, ignore=shutil.ignore_patterns("__pycache__"))
-    shutil.copytree(ROOT / "haenv_kernel", site / "haenv_kernel",
+    shutil.copytree(_haenv_source_path('haenv', root=ROOT), package, ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(_haenv_source_path('haenv_kernel', root=ROOT), site / "haenv_kernel",
                     ignore=shutil.ignore_patterns("__pycache__"))
-    shutil.copytree(ROOT / "verifier_core", site / "verifier_core",
+    shutil.copytree(_haenv_source_path('verifier_core', root=ROOT), site / "verifier_core",
                     ignore=shutil.ignore_patterns("__pycache__"))
     data = package / "_data"
     shutil.copytree(ROOT / "registry", data / "registry")
     shutil.copy2(ROOT / "config.yaml", data / "config.yaml")
-    (data / "tools").mkdir()
-    shutil.copy2(ROOT / "tools" / "make_freeze.py", data / "tools" / "make_freeze.py")
+    with (ROOT / "pyproject.toml").open("rb") as source:
+        included = tomllib.load(source)["tool"]["hatch"]["build"]["targets"]["wheel"]["force-include"]
+    tools = {src: dst for src, dst in included.items() if src.startswith("tools/")}
+    assert set(tools) == {"tools/generation/p3_gen_job.py", "tools/generation/p4_gen_job.py",
+                          "tools/validation/invariant_gates.py"}
+    for src, dst in tools.items():
+        copied = site / dst
+        copied.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / src, copied)
+    assert not list((data / "tools").rglob("make_freeze.py"))
     return site
 
 
 def _installed_readings(site):
-    script = """
-import json, sys
-sys.path.insert(0, sys.argv[1])
-from haenv import anchor
-print(json.dumps({"judging": anchor.judging_fingerprint(),
-                  "world": anchor.world_fingerprint(),
-                  "world_cached": anchor.world_fp_cached(),
-                  "parts": anchor.judge_parts(),
-                  "module": anchor.__file__}))
-"""
+    script = '\nimport json, sys\nsys.path.insert(0, sys.argv[1])\nimport haenv.provenance.anchor as anchor\nprint(json.dumps({"judging": anchor.judging_fingerprint(),\n                  "world": anchor.world_fingerprint(),\n                  "world_cached": anchor.world_fp_cached(),\n                  "parts": anchor.judge_parts(),\n                  "module": anchor.__file__}))\n'
     env = {k: v for k, v in os.environ.items()
            if k not in {"HAENV_DATA_ROOT", "HAENV_KERNEL_PATH", "PYTHONPATH"}}
     result = subprocess.run([sys.executable, "-I", "-c", script, str(site)],
@@ -74,7 +80,7 @@ def test_semantic_cache_detects_same_size_edit_with_restored_mtime(tmp_path):
 
 
 @pytest.mark.parametrize("rel,installed_rel", [
-    ("haenv/scoring.py", "haenv/scoring.py"),
+    ('haenv/scoring/legacy.py', 'haenv/scoring/legacy.py'),
     ("haenv_kernel/verifier.py", "haenv_kernel/verifier.py"),
     ("verifier_core/gate.py", "verifier_core/gate.py"),
     ("registry/scoring.yaml", "haenv/_data/registry/scoring.yaml"),
@@ -99,7 +105,7 @@ def test_installed_file_edits_and_removal_change_all_stamps(
     monkeypatch.setattr(anchor, "ROOT", source)
     expected = anchor.judging_fingerprint(), anchor.world_fingerprint(), anchor.judge_parts()
     monkeypatch.setattr(anchor, "_PACKAGE_ROOT", site / "haenv")
-    monkeypatch.setattr(anchor, "ROOT", site / "haenv" / "_data")
+    monkeypatch.setattr(anchor, "ROOT", site / "haenv/_data")
 
     def readings():
         return anchor.judging_fingerprint(), anchor.world_fp_cached(), anchor.judge_parts()
@@ -121,12 +127,16 @@ def test_installed_file_edits_and_removal_change_all_stamps(
 
 def test_explicit_root_does_not_substitute_installed_files(monkeypatch, tmp_path):
     package = tmp_path / "site" / "haenv"
-    package.mkdir(parents=True)
-    (package / "scoring.py").write_text("VALUE = 1\n", encoding="utf-8")
+    installed = package / "scoring/legacy.py"
+    installed.parent.mkdir(parents=True)
+    installed.write_text("VALUE = 1\n", encoding="utf-8")
     monkeypatch.setattr(anchor, "_PACKAGE_ROOT", package)
+    rel = 'haenv/scoring/legacy.py'
+    monkeypatch.setattr(anchor, "ROOT", package / "_data")
+    present = anchor._fingerprint_of((rel,))
     monkeypatch.setattr(anchor, "ROOT", tmp_path / "explicit-source-root")
-    rel = "haenv/scoring.py"
     missing = anchor._fingerprint_of((rel,))
+    assert missing != present
     direct = anchor.ROOT / rel
     direct.parent.mkdir(parents=True)
     direct.write_text("VALUE = 1\n", encoding="utf-8")

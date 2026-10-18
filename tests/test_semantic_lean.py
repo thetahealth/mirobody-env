@@ -3,9 +3,15 @@ import json
 
 import pytest
 
-from haenv.semantic_judge import JudgeReply, JudgeTask, evaluate_consensus
-from haenv.semantic_lean import case_facts, cited_tokens, lean_prompt
-from haenv.semantic_rubric import REGISTRY_LEAN, load_policy, rubric_atoms
+from haenv.scoring.semantic.judge import JudgeReply
+from haenv.scoring.semantic.judge import JudgeTask
+from haenv.scoring.semantic.judge import evaluate_consensus
+from haenv.scoring.semantic.lean import case_facts
+from haenv.scoring.semantic.lean import cited_tokens
+from haenv.scoring.semantic.lean import lean_prompt
+from haenv.scoring.semantic.rubric import REGISTRY_LEAN
+from haenv.scoring.semantic.rubric import load_policy
+from haenv.scoring.semantic.rubric import rubric_atoms
 
 
 def reference():
@@ -62,7 +68,7 @@ def test_shared_case_prefix_precedes_answer_dependent_content():
 
 
 def test_same_atoms_and_groups_as_verbatim_layout():
-    from haenv.semantic_rubric import make_rubric
+    from haenv.scoring.semantic.rubric import make_rubric
     v3 = load_policy()
     lean = load_policy(REGISTRY_LEAN)
     criteria, rubric3 = make_rubric(reference(), answer(), v3)

@@ -3,7 +3,9 @@ import json
 
 import pytest
 
-from haenv.semantic_judge import JudgeReply, JudgeTask, evaluate_consensus
+from haenv.scoring.semantic.judge import JudgeReply
+from haenv.scoring.semantic.judge import JudgeTask
+from haenv.scoring.semantic.judge import evaluate_consensus
 
 
 def task():
@@ -54,7 +56,7 @@ def test_parallel_first_pair_preserves_index_order_and_votes():
 
 
 def test_budget_stop_propagates_without_creating_fake_failed_votes():
-    from haenv.semantic_budget import BudgetExceeded
+    from haenv.scoring.semantic.budget import BudgetExceeded
     calls, call = dispatcher([reply(), BudgetExceeded("cap")])
     persisted = []
     with pytest.raises(BudgetExceeded):

@@ -1,11 +1,11 @@
-"""Every gate in `haenv/gates.py` runs in production, with real inputs.
+"""Every gate in `haenv/scoring/gates.py` runs in production, with real inputs.
 
 A gate can be unit-tested with a `raw` argument while production calls it with
 `raw=None`, so it judges nothing and its tests stay green. Testing the function
 does not test its call site.
 
 This test watches the call sites. It wraps every `check_*` defined in
-`haenv/gates.py`, runs the production entry (`haenv build`, in process, on cases of
+`haenv/scoring/gates.py`, runs the production entry (`haenv build`, in process, on cases of
 the production pack) and requires each gate to be called and each of its arguments
 to be non-empty in at least one call. Per-case gates run inside `build_case`,
 batch gates in the CLI after it; both are covered by the same run.
@@ -22,14 +22,14 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import haenv                                                        # noqa: E402,F401  mounts the kernel
-from haenv import cli                                              # noqa: E402
-from haenv import gates                                             # noqa: E402
-from haenv import job as J                                          # noqa: E402
+import haenv.app.cli as cli                                              # noqa: E402
+import haenv.scoring.gates as gates                                             # noqa: E402
+import haenv.app.job as J                                          # noqa: E402
 sys.path.insert(0, str(ROOT / "tests"))
 from _module_family import family_source                           # noqa: E402
 from _patch_bound import patch_bound                               # noqa: E402
 
-JOB = ROOT / "inputs" / "ddx-timeline.job.yaml"
+JOB = ROOT / 'benchmarks' / 'inputs' / 'ddx-timeline.job.yaml'
 N_CASES = 8
 
 #: (gate, argument) pairs that are empty by design, with the reason. Anything
@@ -43,7 +43,7 @@ EMPTY_BY_DESIGN: dict[tuple[str, str], str] = {
 
 
 def _defined_gates() -> list[str]:
-    src = family_source("haenv/gates.py")
+    src = family_source('haenv/scoring/gates.py')
     return sorted(set(re.findall(r"^def (check_\w+)\(", src, flags=re.M)))
 
 
@@ -74,7 +74,7 @@ def _run(monkeypatch, tmp_path) -> dict[str, list[dict]]:
             calls.setdefault(__name, []).append(dict(bound.arguments))
             return __orig(*args, **kw)
 
-        patch_bound(monkeypatch, name, spy, source="haenv.gates")
+        patch_bound(monkeypatch, name, spy, source="haenv.scoring.gates")
     monkeypatch.setenv("HAENV_OUTPUT_ROOT", str(tmp_path))
     ids = ",".join(cs.case_id for cs in J.load_job(JOB).cases[:N_CASES])
     # Serial: the spies record in this process. A process pool runs the same `build_case`,

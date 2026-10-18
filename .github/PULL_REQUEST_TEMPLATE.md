@@ -16,8 +16,8 @@ Thanks for sending a PR. CONTRIBUTING.md explains the checks below; read it firs
 <!-- Paste actual command output, not a summary. "It works" is not a reading. -->
 
 ```
-$ uv run python tools/verify_selftest.py
-$ uv run python tools/leak_probe_selftest.py
+$ uv run python tools/testing/verify_selftest.py
+$ uv run python tools/testing/leak_probe_selftest.py
 ```
 
 ---
@@ -28,7 +28,7 @@ $ uv run python tools/leak_probe_selftest.py
 - [ ] `python -m compileall haenv verifier_core` passes on **3.10 and 3.12**
       (`requires-python = ">=3.10"` — a syntax feature newer than that breaks the promise)
 - [ ] If I touched scoring code, I re-anchored the segment fingerprints:
-      `uv run python tools/make_freeze.py --revision <n+1> --segments-only --supersedes <n> --why "…"`
+      `uv run python tools/release/make_freeze.py --revision <n+1> --segments-only --supersedes <n> --why "…"`
       — this needs **no evaluation artifacts** and takes about two seconds
 - [ ] If I added a check, it comes **with a counter-example**: one input proving it fires,
       one proving it is not firing indiscriminately
