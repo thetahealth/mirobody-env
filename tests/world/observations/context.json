@@ -1,0 +1,32 @@
+[
+  {
+    "id": "join-0",
+    "text": "两个过程叠加,非单一",
+    "stripped": true
+  },
+  {
+    "id": "join-1",
+    "text": "彼此独立、互不相关",
+    "stripped": true
+  },
+  {
+    "id": "join-2",
+    "text": "可用同一病因统一解释",
+    "stripped": true
+  },
+  {
+    "id": "clinical-0",
+    "text": "红肿硬结,护肤/外用无明显效果",
+    "stripped": false
+  },
+  {
+    "id": "clinical-1",
+    "text": "无怀孕可能",
+    "stripped": false
+  },
+  {
+    "id": "clinical-2",
+    "text": "血压 220/120",
+    "stripped": false
+  }
+]

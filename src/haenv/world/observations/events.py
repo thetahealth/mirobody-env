@@ -14,7 +14,9 @@ SYNTHETIC data, evaluation only; not medical advice.
 """
 from __future__ import annotations
 
-from haenv.resources.yamlcache import load_yaml as _cached_yaml
+from haenv.resources.snapshots import load_yaml_readonly as _cached_yaml
+from functools import lru_cache
+from types import MappingProxyType
 import haenv.world.observations.wearable as _wear
 import haenv.world.generation.world_plugins as _wp
 
@@ -845,20 +847,33 @@ def sex_words(sex: str | None) -> tuple[str, ...]:
     return tuple(SEX_EXCLUSIVE.get(s, ())) + SEX_LAY_EXCLUSIVE.get(s, ())
 
 
-def symptom_lay(sex: str | None = None) -> dict[str, list[str]]:
-    """`registry/symptom_lay.yaml`: a symptom phrase of a condition template or an explained-away
-    finding -> the hand-written ways a patient of `sex` says it (`lay_F` / `lay_M` when the entry has
-    them, else `lay`)."""
-    d = _cached_yaml(_rp("symptom_lay.yaml")) or {}
-    k = f"lay_{str(sex or '').upper()[:1]}"
-    return {str(p): [str(t) for t in (v.get(k) or v["lay"])] for p, v in (d.get("phrases") or {}).items()}
+@lru_cache(maxsize=16)
+def _lay_snapshot(path, mtime_ns, size, sex):
+    d = _cached_yaml(path) or {}
+    phrases = d.get("phrases") or {}
+    if sex == "every":
+        return MappingProxyType({str(p): tuple(str(t) for k, ts in v.items()
+                                 if k == "lay" or k.startswith("lay_") for t in ts)
+                                 for p, v in phrases.items()})
+    k = f"lay_{sex}"
+    return MappingProxyType({str(p): tuple(str(t) for t in (v.get(k) or v["lay"]))
+                             for p, v in phrases.items()})
 
 
-def symptom_lay_every() -> dict[str, list[str]]:
-    """Every lay sentence of each phrase, all sexes (for the audits that recognise an entered sentence)."""
-    d = _cached_yaml(_rp("symptom_lay.yaml")) or {}
-    return {str(p): [str(t) for k, ts in v.items() if k == "lay" or k.startswith("lay_") for t in ts]
-            for p, v in (d.get("phrases") or {}).items()}
+def _symptom_lay_snapshot(sex):
+    path = _rp("symptom_lay.yaml")
+    st = path.stat()
+    return _lay_snapshot(path, st.st_mtime_ns, st.st_size, sex)
+
+
+def symptom_lay(sex: str | None = None):
+    """Read-only phrase -> patient wording snapshot, shared by readers of this registry."""
+    return _symptom_lay_snapshot(str(sex or "").upper()[:1])
+
+
+def symptom_lay_every():
+    """Every lay sentence, all sexes, in an immutable registry snapshot."""
+    return _symptom_lay_snapshot("every")
 
 
 def scene_lay_sentence(case_id: str, phrase: str, sex: str | None = None) -> str | None:

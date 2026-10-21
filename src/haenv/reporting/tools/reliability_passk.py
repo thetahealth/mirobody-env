@@ -23,6 +23,7 @@ Run:
     uv run python tools/evaluation/reliability_passk.py <job.yaml> --report-only      # aggregate existing samples only
     uv run python tools/evaluation/reliability_passk.py <job.yaml> --k 3 --serial     # run sequentially
     uv run python tools/evaluation/reliability_passk.py <job.yaml> --k 3 --workers 6  # global concurrency
+    uv run python tools/evaluation/reliability_passk.py <job.yaml> --k 3 --model-cap example-model=32 --max-model-cap 16
     uv run python tools/evaluation/reliability_passk.py <job.yaml> --k 3 --offline    # dry run with the offline stub
 
 SYNTHETIC, evaluation only, not medical advice.
@@ -138,7 +139,9 @@ def _run_samples(job_path, sample_dirs, models, *, serial: bool,
                  total_workers: int = PASSK_TOTAL_WORKERS,
                  offline: bool = False, limit: int | None = None,
                  budget_usd: str | None = None, budget_ledger: Path | None = None,
-                 semantic: bool = True, output_root: Path | None = None) -> list[int | None]:
+                 semantic: bool = True, output_root: Path | None = None,
+                 model_caps: list[tuple[str, int]] | None = None,
+                 max_model_cap: int | None = None) -> list[int | None]:
     """Run k samples, concurrently by default; returns each run's exit code in order.
 
     Concurrent runs send identical prompts within seconds of each other, so runs 2..k can
@@ -162,6 +165,10 @@ def _run_samples(job_path, sample_dirs, models, *, serial: bool,
     def _cmd(d):
         c = _runner_argv() + ["run", str(job_path), "--batch", d.name,
                               "--workers", str(per)]
+        for model, cap in model_caps or []:
+            c += ["--model-cap", f"{model}={cap}"]
+        if max_model_cap is not None:
+            c += ["--max-model-cap", str(max_model_cap)]
         if not semantic:
             c.append("--no-semantic")
         if offline:
@@ -416,6 +423,12 @@ def main(argv: list[str]) -> int:
     #: Concurrent by default; `--serial` runs sequentially.
     serial = "--serial" in argv
     total_workers = int(opt("--workers", str(PASSK_TOTAL_WORKERS)))
+    import argparse
+    from haenv.app.arguments import model_cap, positive_int
+    cap_parser = argparse.ArgumentParser(add_help=False)
+    cap_parser.add_argument("--model-cap", action="append", type=model_cap, default=[])
+    cap_parser.add_argument("--max-model-cap", type=positive_int)
+    cap_args, _ = cap_parser.parse_known_args(argv[1:])
     #: Dry run with the offline stub, no model calls.
     offline = "--offline" in argv
     limit = int(opt("--limit")) if "--limit" in argv else None
@@ -457,6 +470,7 @@ def main(argv: list[str]) -> int:
     if not report_only:
         rcs = _run_samples(job_path, sample_dirs, models, serial=serial,
                            total_workers=total_workers,
+                           model_caps=cap_args.model_cap, max_model_cap=cap_args.max_model_cap,
                            offline=offline, limit=limit,
                            budget_usd=budget_usd, budget_ledger=budget_ledger)
         for i, rc in enumerate(rcs, 1):

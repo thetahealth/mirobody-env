@@ -2,7 +2,7 @@
 
 [project]
 name = "haenv"
-version = "1.3.0"
+version = "1.3.1"
 description = "A health-agent evaluation harness: author cases with hidden control variables, run models, get a report"
 requires-python = ">=3.10"
 dependencies = ["pyyaml>=6.0", "pydantic>=2.6"]
@@ -15,6 +15,10 @@ classifiers = ["Development Status :: 3 - Alpha", "Intended Audience :: Science/
 Homepage = "https://github.com/thetahealth/mirobody-env"
 Documentation = "https://github.com/thetahealth/mirobody-env/blob/main/docs/README.md"
 "Data Card" = "https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md"
+
+[project.optional-dependencies]
+analysis = ["numpy>=1.24"]
+serve = ["mcp>=1.30,<2", "fhir.resources==7.1.0"]
 
 [project.scripts]
 haenv = "haenv.cli:main"
@@ -45,8 +49,8 @@ m2 = "haenv.m2.readout:pack"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "docs", "haenv_kernel", "results", "reports", "frozen", "raw_cases", "inputs", "derived", "cases", "probes", "registry", "examples"]
-markers = ["world: world-layer contract tests (`tests/contracts/`): single-variable control cases that check each layer does only its own job; run with `pytest -m world`", "disk: fidelity checks that need paid evaluation batches on disk (`results/`, `reports/`, `frozen/`)", "slow: a single test that takes more than 5 s", "integration: measured slow (tests/_speed_tiers.json) or uses a session-shared offline build; `pytest --fast` leaves these out", "internal: repository governance checks (budget ratchets, house rules, migration ratchets)"]
-addopts = "-m 'not disk and not internal and not world'"
+markers = ["world: world-layer contract tests (`tests/contracts/`): single-variable control cases that check each layer does only its own job; run with `pytest -m world`", "disk: fidelity checks that need paid evaluation batches on disk (`results/`, `reports/`, `frozen/`)", "slow: a single test that takes more than 5 s", "integration: measured slow (tests/fixtures/harness/_speed_tiers.json) or uses a session-shared offline build; `pytest --fast` leaves these out", "internal: repository governance checks (budget ratchets, house rules, migration ratchets)"]
+addopts = "-m 'not disk and not internal and not world' --maxschedchunk=2"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/haenv", "src/haenv_kernel", "src/verifier_core"]
@@ -80,4 +84,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
-test = ["pytest>=8.0,<10", "pytest-xdist>=3.6", "haenv-plugin-demo", "haenv-llm-judge-demo", "tomli>=2.0; python_version < '3.11'"]
+test = ["numpy>=1.24", "pytest>=8.0,<10", "pytest-xdist>=3.6", "haenv-plugin-demo", "haenv-llm-judge-demo", "tomli>=2.0; python_version < '3.11'"]

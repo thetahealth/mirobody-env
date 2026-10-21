@@ -138,6 +138,7 @@ eval:
   model_wall_budget_s: {}
   pooling: elastic
   elastic_max: 16
+  # saturation_report_s: 300  # execution-only default; 0 disables progress/throttle reports
   model_caps: {gemini-3.1-pro: 44, gemini-3.7-flash: 22, qwen3.7-flash: 44, deepseek-v4-pro: 5,
                deepseek-v4-flash: 22, gpt-6-sol: 44, gpt-6-luna: 44, kimi-k3: 44,
                minimax-m3: 44, glm-5.3-flash: 44}

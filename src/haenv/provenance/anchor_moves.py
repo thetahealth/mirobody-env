@@ -313,6 +313,7 @@ class _Digest:
         self.infra_names = infra_names
         self.declared = declared
         self._src = lay.src
+        self._identities: dict[tuple, str] = {}
 
     def nodes(self, rel: str, i: int) -> list:
         """Every node of statement `i` of `rel`, walked once."""
@@ -339,6 +340,11 @@ class _Digest:
         return self._src[key]
 
     def identity(self, target: tuple) -> str:
+        if target not in self._identities:
+            self._identities[target] = self._identity(target)
+        return self._identities[target]
+
+    def _identity(self, target: tuple) -> str:
         if target[0] == "def":
             _, rel, i = target
             names = _bound_names(self.lay.tree(rel).body[i])
@@ -348,8 +354,11 @@ class _Digest:
                 return "declared:" + ",".join(sorted(names))
             if rel in self.lay.infra or (names and set(names) <= self.infra_names):
                 return "infra:" + ",".join(sorted(names))
-            src, _ = self.statement(rel, i)
-            return "def:" + hashlib.sha256(src.encode()).hexdigest()[:16]
+            key = ("definition-sha", rel, i)
+            if key not in self._src:
+                src, _ = self.statement(rel, i)
+                self._src[key] = hashlib.sha256(src.encode()).hexdigest()[:16]
+            return "def:" + self._src[key]
         if target[0] == "module":
             return "module:" + self.lay.canonical(target[1])
         return ":".join(target)
@@ -461,8 +470,18 @@ def _digest(lay: "_Layout", infra_names, declared) -> tuple[str, list]:
             entries.append({"data": lay.src[key], "_where": rel, "_names": [rel]})
     kept = [e for e in entries
             if not _is_declared(e["_where"].rsplit(":", 1)[0], e.get("_names"), declared)]
-    kept.sort(key=lambda e: json.dumps(_bare(e), sort_keys=True))
-    blob = json.dumps([_bare(e) for e in kept], sort_keys=True).encode()
+    # A historical certificate checks each changed definition separately. Most
+    # entries stay identical across those checks. Encode each distinct value once;
+    # joining sorted encodings preserves json.dumps(list, sort_keys=True) byte for byte.
+    encoded = []
+    for entry in kept:
+        bare = _bare(entry)
+        key = ("entry-json", tuple((k, tuple(sorted(v.items())) if isinstance(v, dict) else v)
+                                   for k, v in sorted(bare.items())))
+        if key not in lay.src:
+            lay.src[key] = json.dumps(bare, sort_keys=True)
+        encoded.append(lay.src[key])
+    blob = ("[" + ", ".join(sorted(encoded)) + "]").encode()
     return hashlib.sha256(blob).hexdigest()[:16], entries
 
 

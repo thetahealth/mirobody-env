@@ -185,7 +185,8 @@ class CellCaps:
                    model_caps(cfg), backend_request_limits(cfg), limit, reserved)
 
     def backend(self, name: str) -> int:
-        lanes = self.request_limits.get(name, self.global_limit) - self.judge_reserved
+        paid = self.request_limits.get(name, self.global_limit)
+        lanes = paid - min(self.judge_reserved, paid - 1)
         return max(1, min(int(self.backend_limits.get(name, DEFAULT_BACKEND_LIMIT)), lanes))
 
     def model(self, name: str) -> int | None:
@@ -549,9 +550,73 @@ def ledger_context(path):
         _LEDGER.reset(token)
 
 
+_CAP_OVERRIDES = ContextVar("haenv_model_cap_overrides", default=({}, None))
+
+
+@contextmanager
+def model_cap_context(overrides=None, minimum=None):
+    """Dedicated CLI overrides, scoped to one run and outside scoring configuration."""
+    overrides = dict(overrides or {})
+    if any(not k or type(v) is not int or v < 1 for k, v in overrides.items()):
+        raise ValueError("--model-cap must be MODEL=N with a positive integer N")
+    if minimum is not None and (type(minimum) is not int or minimum < 1):
+        raise ValueError("--max-model-cap must be a positive integer")
+    token = _CAP_OVERRIDES.set((overrides, minimum))
+    try:
+        yield
+    finally:
+        _CAP_OVERRIDES.reset(token)
+
+
+def run_caps(tasks, *, cfg, model_of, backend_for, caps=None, backend_limits=None,
+             ledger_path=None, overrides=None, minimum=None):
+    """Resolve live paid lanes, then apply model overrides within those ceilings.
+
+    Return a copy: a caller's CellCaps may be reused for another run.
+    """
+    from haenv.app.config import paid_experiment_limits
+    from haenv.runtime.slots import current_limits, pool_of
+    live_paid = ledger_path is not None and caps is None
+    original = caps or CellCaps.from_config(cfg, backend_limits=backend_limits)
+    caps = CellCaps(original.backend_limits, original.models, original.request_limits,
+                    original.global_limit, original.judge_reserved)
+    paid_pools = {}
+    for backend in {backend_for(model_of(t)) for t in tasks}:
+        limit = caps.request_limits.get(backend, caps.global_limit)
+        reserved = min(caps.judge_reserved, limit - 1)
+        pool = backend if backend in caps.request_limits else "global"
+        if live_paid:
+            live, live_reserved = current_limits(ledger_path, backend)
+            lower, extra_reserved = paid_experiment_limits(cfg, backend)
+            usable = live - live_reserved
+            if lower is not None or extra_reserved is not None:
+                own = cfg["paid"]["backend_request_limits"].get(backend, cfg["paid"]["global_request_limit"])
+                usable = min(usable, max(1, own - min(cfg["paid"]["judge_reserved_lanes"], own - 1)))
+            limit, reserved = live, live_reserved
+            pool = pool_of(ledger_path, backend) or "global"
+        else:
+            usable = limit - reserved
+        paid_pools[backend] = {"paid_capacity": limit, "judge_reserved": reserved,
+                               "paid_pool": pool, "paid_source": "ledger" if live_paid else "config"}
+        caps.request_limits[backend] = usable
+    caps.judge_reserved = 0  # request_limits now holds solver lanes, after each pool's reserve
+    for model in {model_of(t) for t in tasks}:
+        value = caps.model(model)
+        raised = minimum is not None and value is not None and value < minimum
+        if raised:
+            value = minimum
+        if model in (overrides or {}):
+            value = overrides[model]
+        if value is not None and (model in (overrides or {}) or raised):
+            caps.models[model] = min(value, caps.backend(backend_for(model)))
+    return caps, paid_pools
+
+
 def effective_concurrency(tasks, *, workers, key_of=None, backend_of=None, pooling=None,
-                          caps=None, per_model=None, elastic_size=None, cfg=None):
-    """The four ceilings and actual pool sizes, for exactly the pending cells."""
+                          caps=None, per_model=None, elastic_size=None, cfg=None,
+                          cap_overrides=None, max_model_cap=None, paid_pools=None):
+    """Ceilings for pending cells, not a guaranteed allocation of shared lanes."""
+    from haenv.app.config import value_source
     cfg = _cfg() if cfg is None else cfg
     caps = caps or CellCaps.from_config(cfg)
     pooling = pooling or pooling_mode(cfg)
@@ -572,12 +637,24 @@ def effective_concurrency(tasks, *, workers, key_of=None, backend_of=None, pooli
         lanes = paid_cap - reserved
         pool = 1 if workers <= 1 else int(overrides.get(model, default)) if pooling != "backend" else workers
         limits = {"backend": backend_cap, "model": caps.model(model), "pool": pool, "lanes": lanes}
-        effective = min(v for v in limits.values() if v is not None)
+        effective = min(count, *(v for v in limits.values() if v is not None))
+        source = value_source("eval", "model_caps", model) if caps.model(model) is not None else None
+        if model in (cap_overrides or {}):
+            source = {"kind": "--model-cap", "path": None}
+        elif max_model_cap is not None and model_caps(cfg).get(model, max_model_cap) < max_model_cap:
+            source = {"kind": "--max-model-cap", "path": None, "previous": source}
+        requested = 1 if workers <= 1 else max(workers, overrides.get(model, workers) if pooling != "backend" else workers)
         rows.append({"kind": "model", "backend": backend, "model": model,
                      "serial": workers <= 1,
                      "limits": limits, "effective": effective, "threads": min(effective, count),
-                     "binding": [k for k, v in limits.items() if v == effective],
-                     "paid_capacity": paid_cap, "judge_reserved": reserved})
+                     "binding": [k for k, v in limits.items() if v == effective] + (["cells"] if count == effective else []),
+                     "workers": workers, "requested": requested, "cells": count,
+                     "pool_source": "serial" if workers <= 1 else "eval.model_workers" if model in overrides and pooling != "backend"
+                         else "eval.elastic_max" if pooling == "elastic" else "workers",
+                     "model_cap_source": source,
+                     "paid_capacity": paid_cap, "judge_reserved": reserved,
+                     "paid_pool": backend if backend in caps.request_limits else "global",
+                     **(paid_pools or {}).get(backend, {})})
     for backend in sorted({r["backend"] for r in rows}):
         models = [r for r in rows if r["backend"] == backend]
         first = models[0]
@@ -585,11 +662,14 @@ def effective_concurrency(tasks, *, workers, key_of=None, backend_of=None, pooli
         limits["model"] = (sum(r["limits"]["model"] for r in models)
                            if all(r["limits"]["model"] is not None for r in models) else None)
         limits["pool"] = 1 if workers <= 1 else (workers if pooling == "backend" else sum(r["threads"] for r in models))
-        effective = min(v for v in limits.values() if v is not None)
+        count = sum(counts[r["model"]] for r in models)
+        effective = min(count, *(v for v in limits.values() if v is not None))
         rows.append({"kind": "backend", "backend": backend, "model": None, "limits": limits,
                      "serial": workers <= 1,
                      "effective": effective, "threads": min(effective, sum(counts[r["model"]] for r in models)),
-                     "binding": [k for k, v in limits.items() if v == effective],
+                     "binding": [k for k, v in limits.items() if v == effective] + (["cells"] if count == effective else []),
+                     "cells": count,
+                     "paid_pool": first["paid_pool"], "paid_source": first.get("paid_source", "config"),
                      "paid_capacity": first["paid_capacity"], "judge_reserved": first["judge_reserved"]})
     return rows
 
@@ -629,23 +709,153 @@ def shared_concurrency(rows, processes, ledger_path=None):
 
 def concurrency_lines(rows, warnings):
     lines = ["[haenv] Effective concurrency (units/threads; paid=capacity−judge reserve)",
-             "backend/model | backend | model | pool | paid | effective | binding caps | shared demand"]
+             "backend/model | requested | backend | model (source) | pool | paid | cells | effective | binding caps | shared demand"]
     for row in rows:
         caps = row["limits"]
         model = row["model"] or "*"
         demand = (f"{row['active_processes']}×{row['uniform_threads']}={row['shared_demand']}"
-                  if row["uniform_threads"] is not None else
-                  f"{row['active_processes']} processes, total {row['shared_demand']}")
+                  if row.get("uniform_threads") is not None else
+                  f"{row['active_processes']} processes, total {row['shared_demand']}"
+                  if "active_processes" in row else "unshared upper bound")
         live_lanes = row["paid_capacity"] - row["judge_reserved"]
         paid = f"{row['paid_capacity']}−{row['judge_reserved']}={live_lanes}"
         if live_lanes != caps["lanes"]:
             paid += f" (experiment limit {caps['lanes']})"
-        lines.append(f"{row['backend']}/{model} | {caps['backend']} | {caps['model'] or '∞'} | "
-                     f"{caps['pool']} | {paid} | "
+        source = _source_label(row.get("model_cap_source"))
+        requested = f"{row.get('requested', '*')} (workers {row.get('workers', '*')})"
+        lines.append(f"{row['backend']}/{model} | {requested} | {caps['backend']} | {caps['model'] or '∞'}"
+                     f"{f' ({source})' if source else ''} | "
+                     f"{caps['pool']} ({row.get('pool_source', 'aggregate')}) | {row.get('paid_pool', 'shared')} {paid} | {row['cells']} | "
                      f"{row['effective']} (threads {row['threads']}) | {','.join(row['binding'])} | "
                      f"{demand} / {row['paid_capacity'] - row['judge_reserved']}")
     lines.extend(f"WARNING [{w['pool']}] {w['message']}" for w in warnings)
     return lines
+
+
+def _source_label(source):
+    if not source:
+        return ""
+    return source["kind"] + (f" {source['path']}" if source.get("path") else "")
+
+
+def cap_warning_lines(rows):
+    """One actionable warning per model; a small workload alone is not a cap warning."""
+    lines = []
+    for row in rows:
+        if row["kind"] != "model" or row["effective"] >= row["requested"]:
+            continue
+        binding = [k for k in row["binding"] if k != "cells"]
+        if not binding:
+            continue
+        reasons, hints = [], []
+        model = row["model"]
+        for cap in binding:
+            if cap == "model":
+                reasons.append("eval.model_caps from " + _source_label(row["model_cap_source"]))
+                hints.append(f"--model-cap {model}={max(32, row['requested'])}")
+            elif cap == "backend":
+                reasons.append(f"backend_limits.{row['backend']}")
+                hints.append(f"HAENV_DEPLOY_CONFIG backend_limits.{row['backend']}")
+            elif cap == "lanes":
+                reasons.append(f"paid {row['paid_pool']} lanes minus judge reserve")
+                hints.append("paid capacity (HAENV_DEPLOY_CONFIG or haenv ops)")
+            else:
+                reasons.append(row["pool_source"])
+                hints.append(f"HAENV_DEPLOY_CONFIG {row['pool_source']}")
+        lines.append(f"{model}: {row['effective']} in flight ({'; '.join(reasons)}), "
+                     f"requested {row['requested']} — raise with {', '.join(hints)}")
+    return lines
+
+
+class SaturationMonitor:
+    """Thread-safe progress and live request events; never adds fields to answer rows."""
+
+    def __init__(self, rows, interval=300, *, clock=time.monotonic):
+        self.interval, self.clock = interval, clock
+        self.last = clock()
+        self.lock = threading.Lock()
+        self.stop = threading.Event()
+        self.thread = None
+        self.models = {r["model"]: {"cap": r["effective"], "queued": r["cells"],
+                                    "in_flight": 0, "done": 0, "throttles": 0, "retries": 0}
+                       for r in rows if r["kind"] == "model"}
+
+    def begin(self, model):
+        with self.lock:
+            state = self.models[model]
+            state["queued"] -= 1
+            state["in_flight"] += 1
+
+    def finish(self, model, completed):
+        with self.lock:
+            state = self.models[model]
+            state["in_flight"] -= 1
+            state["done"] += int(completed)
+
+    def event(self, model, *, throttles=0, retries=0):
+        with self.lock:
+            state = self.models[model]
+            state["throttles"] += throttles
+            state["retries"] += retries
+
+    def report(self):
+        """Report only after a full window; injectable monotonic clock for deterministic tests."""
+        with self.lock:
+            now = self.clock()
+            if not self.interval or now - self.last < self.interval:
+                return []
+            window = now - self.last
+            self.last = now
+            lines = []
+            for model, state in sorted(self.models.items()):
+                if state["in_flight"] or state["queued"]:
+                    line = (f"[saturation] {model}: {state['in_flight']}/{state['cap']} in flight, "
+                            f"queued {state['queued']}, done {state['done']}, "
+                            f"429/throttles {state['throttles']}, retries {state['retries']} "
+                            f"(last {window:g}s)")
+                    if state["in_flight"] >= state["cap"] and state["queued"] and not state["throttles"]:
+                        line += "; cap may be too low: queued cells and zero 429/throttles"
+                    lines.append(line)
+                state["throttles"] = state["retries"] = 0
+        for line in lines:
+            log.info("%s", line)
+        return lines
+
+    def _watch(self):
+        while not self.stop.wait(self.interval):
+            self.report()
+
+    def __enter__(self):
+        if self.interval:
+            self.thread = threading.Thread(target=self._watch, name="saturation-monitor", daemon=True)
+            self.thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.stop.set()
+        if self.thread is not None:
+            self.thread.join()
+
+    def execute(self, fn, task, model):
+        previous = getattr(_TL, "monitor", None)
+        _TL.monitor = (self, model)
+        self.begin(model)
+        completed = False
+        try:
+            row = fn(task)
+            completed = True
+            return row
+        finally:
+            self.finish(model, completed)
+            _TL.monitor = previous
+
+
+def note_request_event(*, throttles=0, retries=0):
+    """Observe existing paid error/retry accounting in the cell's executing thread."""
+    active = getattr(_TL, "monitor", None)
+    if active is not None:
+        monitor, model = active
+        monitor.event(model, throttles=throttles, retries=retries)
 
 
 class RunObservation:
@@ -706,43 +916,35 @@ class RunObservation:
 
 def run(fn, tasks, emit, *, workers, ledger_path=None, **kwargs):
     """Schedule with an observable startup snapshot and paid-lane starvation receipt."""
-    from haenv.runtime.slots import current_limits
     from haenv.runtime.slots import running_process
     ledger_path = ledger_path or _LEDGER.get()
     from haenv.app.config import validate
     cfg = validate(_cfg())
-    caps = kwargs.get("caps") or CellCaps.from_config(backend_limits=kwargs.get("backend_limits"))
     backend_for = kwargs.get("backend_of") or (lambda m: "_offline")
     model_of = kwargs.get("key_of") or (lambda t: "_offline")
-    if ledger_path is not None and kwargs.get("caps") is None:
-        from haenv.app.config import paid_experiment_limits
-        backends = {backend_for(model_of(t)) for t in tasks}
-        limits = {b: current_limits(ledger_path, b) for b in backends}
-        # Pool reservations may be clamped differently on differently sized backends.
-        caps.request_limits = {}
-        for backend, (limit, reserved) in limits.items():
-            lower, extra_reserved = paid_experiment_limits(cfg, backend)
-            usable = limit - reserved
-            if lower is not None or extra_reserved is not None:
-                own = cfg["paid"]["backend_request_limits"].get(backend, cfg["paid"]["global_request_limit"])
-                usable = min(usable, max(1, own - min(cfg["paid"]["judge_reserved_lanes"], own - 1)))
-            caps.request_limits[backend] = usable
-        caps.judge_reserved = 0
+    overrides, minimum = _CAP_OVERRIDES.get()
+    caps, paid_pools = run_caps(tasks, cfg=cfg, model_of=model_of, backend_for=backend_for,
+                                caps=kwargs.get("caps"), backend_limits=kwargs.get("backend_limits"),
+                                ledger_path=ledger_path, overrides=overrides, minimum=minimum)
     kwargs["caps"] = caps
-    rows = effective_concurrency(tasks, workers=workers, key_of=kwargs.get("key_of"),
-                                 backend_of=kwargs.get("backend_of"), pooling=kwargs.get("pooling"),
+    rows = effective_concurrency(tasks, workers=workers, key_of=model_of,
+                                 backend_of=backend_for, pooling=kwargs.get("pooling"),
                                  caps=caps, per_model=kwargs.get("per_model"),
-                                 elastic_size=kwargs.get("elastic_size"), cfg=cfg)
-    if ledger_path is not None:
-        for row in rows:
-            row["paid_capacity"], row["judge_reserved"] = current_limits(ledger_path, row["backend"])
+                                 elastic_size=kwargs.get("elastic_size"), cfg=cfg,
+                                 cap_overrides=overrides, max_model_cap=minimum, paid_pools=paid_pools)
     from haenv.runtime.recovery import recovery
     from haenv.runtime.recovery import cell_of
     with running_process(ledger_path, rows) as processes, recovery(kwargs.get("batch_dir"), tasks, model_of) as recovered:
         tasks = sorted(tasks, key=lambda t: cell_of(t, model_of(t)) not in recovered.interrupted)
         warnings = shared_concurrency(rows, processes, ledger_path)
         for line in concurrency_lines(rows, []):
-            print(line, flush=True)
+            log.info("%s", line)
+        for line in cap_warning_lines(rows):
+            log.warning("%s", line)
+        metadata = {"concurrency_plan": rows,
+                    "concurrency_overrides": {"model_cap": overrides, "max_model_cap": minimum}}
+        _refuse_changed_timing(kwargs.get("batch_dir"), timing_sha16())
+        receipt_index = _start_plan(kwargs.get("batch_dir"), metadata)
         for warning in warnings:
             log.warning("[%s] %s", warning["pool"], warning["message"])
         observation = RunObservation(kwargs.get("batch_dir"), rows, warnings, cfg)
@@ -752,13 +954,16 @@ def run(fn, tasks, emit, *, workers, ledger_path=None, **kwargs):
                 check_dispatch(ledger_path)
             recovered.start(task)
             model = model_of(task)
-            return observation.execute(fn, task, model, backend_for(model))
+            return monitor.execute(lambda t: observation.execute(fn, t, model, backend_for(model)),
+                                   task, model)
         def persisted(row):
             result = emit(row)
             recovered.emitted(row)
             return result
         try:
-            return _run(observed, tasks, persisted, workers=workers, **kwargs)
+            with SaturationMonitor(rows, cfg["eval"]["saturation_report_s"]) as monitor:
+                return _run(observed, tasks, persisted, workers=workers,
+                            receipt_index=receipt_index, plan_metadata=metadata, **kwargs)
         finally:
             observation.entry["finished_at"] = time.time()
             observation.persist()
@@ -770,7 +975,7 @@ def _run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
         timing: dict | None = None, batch_dir: Path | None = None,
         per_model: dict | None = None, wall_budget: dict | None = None,
         elastic_size: int | None = None, caps: CellCaps | None = None,
-        clock=time.monotonic) -> list[dict]:
+        clock=time.monotonic, receipt_index=None, plan_metadata=None) -> list[dict]:
     """Run every task once through `fn`, persist each row with `emit`, return rows in task order.
 
     `key_of(task)` names the model, `backend_of(model)` its backend, `geometry_of(task)`
@@ -782,7 +987,8 @@ def _run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
     spent its `wall_budget` (default `config.eval.model_wall_budget_s`) is not started and
     has no row.
     """
-    stats: dict = {"started_at": time.time(), "timing_sha16": timing_sha16()}
+    stats: dict = {"started_at": time.time(), "timing_sha16": timing_sha16(),
+                   **(plan_metadata or {})}
     _refuse_changed_timing(batch_dir, stats["timing_sha16"])
     model_of = key_of or (lambda t: "_offline")
     walls = _WallBudget(wall_budgets() if wall_budget is None else dict(wall_budget), clock)
@@ -800,7 +1006,7 @@ def _run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
             _attach_stalls(row)
             rows.append(emit(row))
         stats["wall_budget_stops"] = walls.stops
-        _write_plan(batch_dir, {"mode": "serial", "cells": len(tasks)}, rows, stats)
+        _write_plan(batch_dir, {"mode": "serial", "cells": len(tasks)}, rows, stats, index=receipt_index)
         return rows
 
 
@@ -929,7 +1135,7 @@ def _run(fn, tasks: list, emit, *, workers: int, key_of=None, backend_of=None,
                             "pools": {k: {"cells": len(v), "threads": size[k],
                                           "backend": pool_backend[k]} for k, v in pools.items()},
                             "cells_with_history": len(known)},
-                [out[i] for i in sorted(out)], stats)
+                [out[i] for i in sorted(out)], stats, index=receipt_index)
     if errors:
         raise errors[0]
     if stops:
@@ -1007,7 +1213,20 @@ def _backend_request_limits() -> dict:
     return backend_request_limits()
 
 
-def _write_plan(batch_dir, plan: dict, rows: list, stats: dict) -> None:
+def _start_plan(batch_dir, metadata):
+    """Persist before any cell starts; retain an interrupted run's startup plan."""
+    if batch_dir is None:
+        return None
+    from haenv.runtime.slots import persist_json
+    path = Path(batch_dir) / "scheduler.json"
+    runs = json.loads(path.read_text()).get("runs", []) if path.is_file() else []
+    index = len(runs)
+    runs.append({"started_at": time.time(), "timing_sha16": timing_sha16(), **metadata})
+    persist_json(path, {"runs": runs})
+    return index
+
+
+def _write_plan(batch_dir, plan: dict, rows: list, stats: dict, *, index=None) -> None:
     """`<batch>/scheduler.json`: how this run was scheduled (appended per run, never read
     back by scoring)."""
     if batch_dir is None:
@@ -1027,7 +1246,11 @@ def _write_plan(batch_dir, plan: dict, rows: list, stats: dict) -> None:
                  "stall_timeouts": stall_counts(rows)}
         p = Path(batch_dir) / "scheduler.json"
         runs = json.loads(p.read_text(encoding="utf-8")).get("runs", []) if p.is_file() else []
-        runs.append(entry)
-        p.write_text(json.dumps({"runs": runs}, ensure_ascii=False, indent=1), encoding="utf-8")
+        if index is None:
+            runs.append(entry)
+        else:
+            runs[index].update(entry)
+        from haenv.runtime.slots import persist_json
+        persist_json(p, {"runs": runs})
     except Exception as e:                                   # noqa: BLE001
         log.warning("[scheduler] could not write scheduler.json: %s", e)

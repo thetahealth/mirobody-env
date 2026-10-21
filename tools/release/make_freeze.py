@@ -104,6 +104,7 @@ from haenv.provenance.declarations import (
     INFRA_PATH_MOVES,
     INFRA_FORBIDDEN_IMPORTS,
     JUDGING_SHA_EQUIVALENCE,
+    WORLD_SHA_EQUIVALENCE,
     JUDGING_SHA_MOVES,
     REGISTRY_YAML_OUT_OF_SCOPE,
     PROVENANCE_MODULES,
@@ -171,9 +172,11 @@ def _trusted_infra_labels(prev: dict) -> tuple[str, ...]:
 
 
 def _equivalence_fields(prev: dict) -> dict:
+    from haenv.provenance.anchor import verify_world_equivalence
     rows = _equivalence_rows(prev)
     return {"judging_sha_equivalence": rows["effective"],
-            "judging_sha_equivalence_pending": rows["pending"]}
+            "judging_sha_equivalence_pending": rows["pending"],
+            "world_sha_equivalence": [verify_world_equivalence(row) for row in WORLD_SHA_EQUIVALENCE]}
 
 
 def _previous_anchor() -> dict:

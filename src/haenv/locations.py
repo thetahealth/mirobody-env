@@ -7,6 +7,7 @@ Canonical source labels retain their namespace and omit the src/ prefix.
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 
 NAMESPACES = frozenset({"haenv", "haenv_kernel", "verifier_core"})
@@ -38,6 +39,7 @@ def _relative(label: str) -> PurePosixPath:
     return path
 
 
+@lru_cache(maxsize=1)
 def source_root() -> Path:
     """Parent of the loaded namespaces, regardless of resource/output overrides."""
     return Path(__file__).resolve().parent.parent

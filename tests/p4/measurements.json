@@ -1,0 +1,115 @@
+{
+  "template": {
+    "analyte": "creatinine",
+    "class": "analytic_biological_noise",
+    "t0": 10,
+    "t1": 40,
+    "cause": null,
+    "decoys": [],
+    "dlog_weight": 0.0,
+    "acei": {
+      "events": []
+    },
+    "records": [
+      {
+        "day": 10,
+        "printed": 80.0,
+        "truth": 80.0,
+        "e": 0.0,
+        "perturbations": [
+          {
+            "factor": "jaffe_enzymatic_switch",
+            "kind": "method",
+            "role": "background",
+            "acts": false,
+            "bias_log": 0.0,
+            "additive": null,
+            "params": {
+              "method_throughout": true
+            }
+          }
+        ]
+      },
+      {
+        "day": 40,
+        "printed": 84.0,
+        "truth": 84.0,
+        "e": 0.0,
+        "perturbations": [
+          {
+            "factor": "jaffe_enzymatic_switch",
+            "kind": "method",
+            "role": "background",
+            "acts": false,
+            "bias_log": 0.0,
+            "additive": null,
+            "params": {
+              "method_throughout": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "contexts": [
+    {
+      "id": "jaffe-X1",
+      "case_id": "X1",
+      "jaffe": true,
+      "reagent_notes": 0
+    },
+    {
+      "id": "jaffe-X2",
+      "case_id": "X2",
+      "jaffe": true,
+      "reagent_notes": 0
+    },
+    {
+      "id": "jaffe-X3",
+      "case_id": "X3",
+      "jaffe": true,
+      "reagent_notes": 0
+    },
+    {
+      "id": "jaffe-X4",
+      "case_id": "X4",
+      "jaffe": true,
+      "reagent_notes": 0
+    },
+    {
+      "id": "enzymatic-X1",
+      "case_id": "X1",
+      "jaffe": false,
+      "reagent_notes": 1
+    }
+  ],
+  "precision": [
+    {
+      "id": "None-None",
+      "analyte": "creatinine",
+      "m0": null,
+      "m1": null,
+      "cvi": 0.055,
+      "cva0": 0.011,
+      "cva1": 0.011
+    },
+    {
+      "id": "None-jaffe",
+      "analyte": "creatinine",
+      "m0": null,
+      "m1": "jaffe",
+      "cvi": 0.055,
+      "cva0": 0.011,
+      "cva1": 0.044
+    },
+    {
+      "id": "jaffe-jaffe",
+      "analyte": "creatinine",
+      "m0": "jaffe",
+      "m1": "jaffe",
+      "cvi": 0.055,
+      "cva0": 0.044,
+      "cva1": 0.044
+    }
+  ]
+}

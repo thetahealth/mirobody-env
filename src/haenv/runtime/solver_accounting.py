@@ -561,6 +561,8 @@ class SolverRequestAccountant:
                         switches += 1
                         if self.stop.is_set():
                             raise BudgetExceeded("Solver run stopped; no further requests may start") from None
+                        from haenv.runtime.scheduler import note_request_event
+                        note_request_event(retries=1)
                         continue
                     raise
                 if retries >= int(cfg["max_retries"]):
@@ -583,6 +585,8 @@ class SolverRequestAccountant:
                                      "backoff_s": round(delay, 3), "replayed": replayed})
                 if self.stop.is_set():
                     raise BudgetExceeded("Solver run stopped; no further requests may start") from None
+                from haenv.runtime.scheduler import note_request_event
+                note_request_event(retries=1)
                 if delay:
                     self._sleep(delay)
 

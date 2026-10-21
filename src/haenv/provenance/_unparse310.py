@@ -10,7 +10,13 @@ from __future__ import annotations
 
 import ast
 import re
-from ast import _ALL_QUOTES, _Precedence, _Unparser
+try:
+    from ast import _Precedence, _Unparser
+except ImportError:  # Python 3.14 moved the unparser out of ast.
+    from _ast_unparse import _Precedence, Unparser as _Unparser
+
+# Python 3.10's quote preference, retained when newer ast versions drop the constant.
+_ALL_QUOTES = ("'", '"', '"""', "'''")
 
 #: Code points Unicode 14.0 assigned as printable characters.
 _UNICODE_14 = (

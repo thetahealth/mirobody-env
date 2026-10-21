@@ -1,0 +1,417 @@
+{
+ "_generated": "Released readings; render with tools/presentation/make_readme_findings.py",
+ "board": [
+  {
+   "model": "deepseek-v4.1-flash",
+   "score": ".837",
+   "ci": [
+    ".813",
+    ".861"
+   ],
+   "rank_ci": [
+    "1",
+    "2"
+   ],
+   "packs": {
+    "p2": ".932",
+    "p3": ".928",
+    "p4": ".833",
+    "m2": ".655"
+   },
+   "all3": ".823"
+  },
+  {
+   "model": "gpt-6-sol",
+   "score": ".832",
+   "ci": [
+    ".808",
+    ".856"
+   ],
+   "rank_ci": [
+    "1",
+    "2"
+   ],
+   "packs": {
+    "p2": ".893",
+    "p3": ".959",
+    "p4": ".785",
+    "m2": ".693"
+   },
+   "all3": ".878"
+  },
+  {
+   "model": "mimo-v2.6-flash",
+   "score": ".793",
+   "ci": [
+    ".765",
+    ".819"
+   ],
+   "rank_ci": [
+    "3",
+    "5"
+   ],
+   "packs": {
+    "p2": ".943",
+    "p3": ".853",
+    "p4": ".807",
+    "m2": ".569"
+   },
+   "all3": ".760"
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "score": ".792",
+   "ci": [
+    ".768",
+    ".816"
+   ],
+   "rank_ci": [
+    "3",
+    "5"
+   ],
+   "packs": {
+    "p2": ".950",
+    "p3": ".882",
+    "p4": ".744",
+    "m2": ".591"
+   },
+   "all3": ".867"
+  },
+  {
+   "model": "qwen38-27b",
+   "score": ".789",
+   "ci": [
+    ".763",
+    ".815"
+   ],
+   "rank_ci": [
+    "3",
+    "5"
+   ],
+   "packs": {
+    "p2": ".930",
+    "p3": ".885",
+    "p4": ".722",
+    "m2": ".617"
+   },
+   "all3": ".765"
+  },
+  {
+   "model": "gpt-6-luna",
+   "score": ".719",
+   "ci": [
+    ".692",
+    ".747"
+   ],
+   "rank_ci": [
+    "6",
+    "7"
+   ],
+   "packs": {
+    "p2": ".859",
+    "p3": ".897",
+    "p4": ".627",
+    "m2": ".494"
+   },
+   "all3": ".693"
+  },
+  {
+   "model": "deepseek-v4-pro",
+   "score": ".696",
+   "ci": [
+    ".666",
+    ".724"
+   ],
+   "rank_ci": [
+    "6",
+    "7"
+   ],
+   "packs": {
+    "p2": ".933",
+    "p3": ".689",
+    "p4": ".629",
+    "m2": ".533"
+   },
+   "all3": ".668"
+  },
+  {
+   "model": "minimax-m3",
+   "score": ".633",
+   "ci": [
+    ".602",
+    ".663"
+   ],
+   "rank_ci": [
+    "8",
+    "10"
+   ],
+   "packs": {
+    "p2": ".870",
+    "p3": ".608",
+    "p4": ".616",
+    "m2": ".440"
+   },
+   "all3": ".525"
+  },
+  {
+   "model": "deepseek-v4-flash",
+   "score": ".632",
+   "ci": [
+    ".599",
+    ".664"
+   ],
+   "rank_ci": [
+    "8",
+    "10"
+   ],
+   "packs": {
+    "p2": ".856",
+    "p3": ".656",
+    "p4": ".538",
+    "m2": ".477"
+   },
+   "all3": ".588"
+  },
+  {
+   "model": "glm-5.3-flash",
+   "score": ".628",
+   "ci": [
+    ".597",
+    ".658"
+   ],
+   "rank_ci": [
+    "8",
+    "10"
+   ],
+   "packs": {
+    "p2": ".813",
+    "p3": ".668",
+    "p4": ".547",
+    "m2": ".484"
+   },
+   "all3": ".530"
+  },
+  {
+   "model": "gemma-4-31b-it",
+   "score": ".536",
+   "ci": [
+    ".506",
+    ".567"
+   ],
+   "rank_ci": [
+    "11",
+    "11"
+   ],
+   "packs": {
+    "p2": ".767",
+    "p3": ".514",
+    "p4": ".482",
+    "m2": ".382"
+   },
+   "all3": ".580"
+  },
+  {
+   "model": "qwen3.7-flash",
+   "score": ".446",
+   "ci": [
+    ".414",
+    ".476"
+   ],
+   "rank_ci": [
+    "12",
+    "12"
+   ],
+   "packs": {
+    "p2": ".599",
+    "p3": ".271",
+    "p4": ".533",
+    "m2": ".380"
+   },
+   "all3": ".327"
+  },
+  {
+   "model": "qwen3-32b",
+   "score": ".171",
+   "ci": [
+    ".150",
+    ".192"
+   ],
+   "rank_ci": [
+    "13",
+    "13"
+   ],
+   "packs": {
+    "p2": ".307",
+    "p3": ".058",
+    "p4": ".249",
+    "m2": ".069"
+   },
+   "all3": ".073"
+  }
+ ],
+ "items_per_pack": 100,
+ "answers_per_item": 3,
+ "bootstrap_draws": 2000,
+ "ranked_models": 13,
+ "coverage": {
+  "wrong_incomplete": "766",
+  "wrong_complete": "247",
+  "wrong_incomplete_pct": "75.6"
+ },
+ "reask": {
+  "n": "142",
+  "by_model": {
+   "gpt-6-luna": "44",
+   "glm-5.3-flash": "50",
+   "qwen3-32b": "48"
+  },
+  "decisive_pct": "64.1",
+  "placebo_pct": "12.7",
+  "resample_pct": "8.5",
+  "decisive_minus_placebo_pp": "51.4",
+  "decisive_minus_placebo_ci_pp": [
+   "40.1",
+   "61.4"
+  ],
+  "half": {
+   "n": "79",
+   "half_pct": "41.8",
+   "resample_pct": "6.3",
+   "all_pct": "75.9"
+  }
+ },
+ "budget": {
+  "items": 100,
+  "levels": [
+   "0.5",
+   "1.0",
+   "2.0"
+  ],
+  "models": [
+   {
+    "model": "gpt-6-sol",
+    "accuracy_pct": {
+     "0.5": 71,
+     "1.0": 77,
+     "2.0": 81
+    },
+    "gain_pp": "10.0",
+    "gain_ci_pp": [
+     "2.0",
+     "18.0"
+    ],
+    "used_at_1x_pct": "73"
+   },
+   {
+    "model": "deepseek-v4-flash",
+    "accuracy_pct": {
+     "0.5": 66,
+     "1.0": 70,
+     "2.0": 76
+    },
+    "gain_pp": "10.0",
+    "gain_ci_pp": [
+     "2.0",
+     "18.0"
+    ],
+    "used_at_1x_pct": "66"
+   },
+   {
+    "model": "minimax-m3",
+    "accuracy_pct": {
+     "0.5": 55,
+     "1.0": 59,
+     "2.0": 65
+    },
+    "gain_pp": "10.0",
+    "gain_ci_pp": [
+     "0.0",
+     "19.0"
+    ],
+    "used_at_1x_pct": "44"
+   },
+   {
+    "model": "glm-5.3-flash",
+    "accuracy_pct": {
+     "0.5": 55,
+     "1.0": 63,
+     "2.0": 63
+    },
+    "gain_pp": "8.0",
+    "gain_ci_pp": [
+     "−2.0",
+     "18.0"
+    ],
+    "used_at_1x_pct": "35"
+   },
+   {
+    "model": "deepseek-v4-pro",
+    "accuracy_pct": {
+     "0.5": 71,
+     "1.0": 77,
+     "2.0": 77
+    },
+    "gain_pp": "6.0",
+    "gain_ci_pp": [
+     "−1.0",
+     "13.0"
+    ],
+    "used_at_1x_pct": "55"
+   },
+   {
+    "model": "gemini-3.8-flash",
+    "accuracy_pct": {
+     "0.5": 72,
+     "1.0": 77,
+     "2.0": 76
+    },
+    "gain_pp": "4.0",
+    "gain_ci_pp": [
+     "−4.0",
+     "12.0"
+    ],
+    "used_at_1x_pct": "53"
+   },
+   {
+    "model": "gpt-6-luna",
+    "accuracy_pct": {
+     "0.5": 63,
+     "1.0": 67,
+     "2.0": 66
+    },
+    "gain_pp": "3.0",
+    "gain_ci_pp": [
+     "−3.0",
+     "9.0"
+    ],
+    "used_at_1x_pct": "50"
+   },
+   {
+    "model": "qwen3.7-flash",
+    "accuracy_pct": {
+     "0.5": 56,
+     "1.0": 57,
+     "2.0": 56
+    },
+    "gain_pp": "0.0",
+    "gain_ci_pp": [
+     "−9.0",
+     "8.0"
+    ],
+    "used_at_1x_pct": "36"
+   }
+  ]
+ },
+ "replay": {
+  "questions": "400",
+  "sessions": "15,600",
+  "calls": "256,609",
+  "identical": "256,609",
+  "resources": "4,621,363",
+  "invalid": "0",
+  "fhir": "R4B",
+  "differing": "0",
+  "stored_differing": "0",
+  "pending_purchases": "234"
+ }
+}

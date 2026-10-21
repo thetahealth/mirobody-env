@@ -11,6 +11,7 @@ import haenv.scoring.mounts.table as _MT
 import hashlib
 import json
 from pathlib import Path
+from copy import deepcopy
 import haenv_kernel.verifier as verifier_mod    # kernel
 import haenv_kernel.runner as runner_mod    # The leakage gate runs inside `solve_guard.guarded_solve`, shared by every geometry.
 from haenv_kernel.build import build_instance
@@ -68,17 +69,35 @@ def answer_windows(job, built: dict, batch_dir=None) -> dict[str, int]:
 
 def _row_single(cid, sname, raw, T, solver, *, ctx: RunContext) -> dict:
     solver.run_ctx = ctx                      # the solver renders and answers within this run
-    sp, vp = build_instance(raw, T)
-    from haenv.interaction.solve_guard import guarded_solve
+    from haenv.interaction.solve_guard import PreparedPayload, guarded_solve
+    key = (id(raw), int(T))
+    with ctx.preparation_lock:
+        cached = ctx.single_cases.get(key)
+        if cached is None or cached[0] != raw:
+            sp, vp = build_instance(raw, T)
+            cached = (deepcopy(raw), PreparedPayload(sp, T), deepcopy(vp), {})
+            ctx.single_cases[key] = cached
+    _, prepared, verifier_snapshot, questions = cached
+    sp, vp = prepared.copy(), deepcopy(verifier_snapshot)
     ddx0 = (vp.adjudication or {}).get("ddx")
 
     _iron_law = iron_law_precheck(raw, sp, vp, solver)
 
+    def _precheck():
+        # The question depends on the case, window and framing, not the solver's
+        # answer. Keep the gate after the leakage verdict, including on a hit.
+        framing = getattr(solver, "probe_id", "") or ""
+        with ctx.preparation_lock:
+            if framing not in questions:
+                questions[framing] = _iron_law()
+            return deepcopy(questions[framing])
+
     try:
         facts = guarded_solve(
             solver, sp, T,
+            prepared=prepared,
             prompt_mode=("ddx" if ddx0 else "default"),   # the question side decides the framing, not information from the answer side
-            precheck=_iron_law,
+            precheck=_precheck,
             on_output=(lambda o: (save_response(ctx.resp_path, cid, sname, o, ctx=ctx),
                                   save_simple_trace(ctx.resp_path.with_name("trace.jsonl"),
                                                     cid, sname, "single", o))
@@ -111,8 +130,9 @@ def _row_single(cid, sname, raw, T, solver, *, ctx: RunContext) -> dict:
                 "n_chars_unparseable": facts.n_chars,
                 "no_response_reason": "json_unextractable"}
     from haenv.judges.safety import evidence_names_for as _ev_names
+    from haenv.interaction.query.profile import returned_ids_of as _returned_ids
     rep = verifier_mod.grade(out, vp, [e["evidence_id"] for e in sp.evidence_ledger],
-                             evidence_names=_ev_names(sp))
+                             evidence_names=_ev_names(sp), returned_ids=_returned_ids(solver))
     from haenv.judges import run_judges
     from haenv.judges import SINGLE
     # ---- process-track scoring ----
@@ -257,9 +277,11 @@ def _row_gated(cid, sname, raw, T, solver, *, ctx: RunContext) -> dict:
         # (`gate_unknown`) and the error is recorded.
         try:
             from haenv.judges.safety import evidence_names_for as _ev_names
+            from haenv.interaction.query.profile import returned_ids_of as _returned_ids
             _rep = verifier_mod.grade(
                 out, vp, [e["evidence_id"] for e in (sp.evidence_ledger or [])],
-                evidence_names=_ev_names(sp, getattr(tr, "targets", None)))
+                evidence_names=_ev_names(sp, getattr(tr, "targets", None)),
+                returned_ids=_returned_ids(solver))
         except Exception as e:                          # noqa: BLE001
             log.error("[eval] %s|%s gated kernel scoring failed -> recording gate_unknown "
                       "(not writing the `gates` key): %s",

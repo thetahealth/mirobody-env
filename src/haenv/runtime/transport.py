@@ -314,6 +314,22 @@ def envelope_content(backend: str, prompt: str) -> dict:
     return out
 
 
+def solver_envelope_content(solver, prompt: str) -> dict:
+    """Keep MiniMax/Novita's implicit automatic tool selection wire-compatible.
+
+    The router reports this route supports tools but no explicit tool_choice values.
+    With tools present the API default is auto; with tools absent they are closed.
+    All conversation messages, sampling and the pinned upstream remain unchanged.
+    """
+    content = envelope_content(solver.backend, prompt)
+    if (solver.backend == "openrouter" and solver.model == "minimax/minimax-m3"
+            and pinned_upstream(getattr(solver, "provider", None)) == "Novita"):
+        choice = content.pop("tool_choice", None)
+        if choice == "none":
+            content.pop("tools", None)
+    return content
+
+
 def google_response_format(response_format: dict) -> dict:
     """Google's JSON Schema wire fields; OpenAI name/strict are not sent."""
     if response_format.get("type") != "json_schema":
@@ -370,7 +386,7 @@ def verify_wire(solver, body: bytes, prompt: str) -> None:
         # The conversation keys must be exactly the envelope's derivation; the rest of the body
         # is checked below as for any request (no conversation key may appear outside one).
         data = json.loads(body)
-        if {k: data[k] for k in ENVELOPE_KEYS if k in data} != envelope_content(backend, prompt):
+        if {k: data[k] for k in ENVELOPE_KEYS if k in data} != solver_envelope_content(solver, prompt):
             problems.append("messages")
         body = json.dumps({k: v for k, v in data.items() if k not in ENVELOPE_KEYS}).encode()
     seen = wire_view(backend, body, getattr(solver, "max_tokens_field", "max_tokens"))

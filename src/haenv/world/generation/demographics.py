@@ -221,8 +221,9 @@ def _band_bounds(band: str) -> tuple[int, int]:
     return int(lo), int(hi)
 
 
-def _prevalence(cond: str, band: str) -> float | None:
-    rows = ((_comorbid_registry().get("age_prevalence") or {}).get(cond) or {}).get("rows")
+def _prevalence(cond: str, band: str, registry=None) -> float | None:
+    registry = _comorbid_registry() if registry is None else registry
+    rows = ((registry.get("age_prevalence") or {}).get(cond) or {}).get("rows")
     if not rows:
         return None
     lo, hi = _band_bounds(band)
@@ -238,6 +239,7 @@ def age_weights(conditions, min_age=None, max_age=None) -> dict[str, float]:
     registry prevalence of each condition in that band (`age_prevalence`); bands outside the
     spec's `min_age` / `max_age` get 0. A condition without a row leaves the weights as they are."""
     out = {}
+    registry = _comorbid_registry()
     for band in AGE_BANDS:
         lo, hi = _band_bounds(band)
         if (min_age is not None and lo < int(min_age)) or (max_age is not None and hi > int(max_age)):
@@ -245,7 +247,7 @@ def age_weights(conditions, min_age=None, max_age=None) -> dict[str, float]:
             continue
         w = 1.0
         for c in dict.fromkeys(str(x) for x in conditions or () if x):
-            p = _prevalence(c, band)
+            p = _prevalence(c, band, registry)
             if p is not None:
                 w *= p
         out[band] = w

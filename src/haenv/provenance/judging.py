@@ -14,7 +14,7 @@ from pathlib import Path
 import subprocess
 
 import haenv.provenance.anchor as anchor
-from haenv.scoring.semantic.source import _semantic_cached
+from haenv.scoring.semantic.source import _semantic_cached, _source_tree
 from haenv.locations import source_path, resource_path
 from haenv.provenance.criteria import PACK_SCORING, DISPATCH_BOUNDARIES, CRITERIA
 from haenv.provenance.history import (
@@ -28,7 +28,7 @@ def _registry_module_names(raw: bytes) -> tuple[str, ...]:
     """Cache only immutable names from content, never paths or file existence."""
     import re
     import yaml
-    doc = yaml.safe_load(raw.decode("utf-8"))
+    doc = yaml.load(raw.decode("utf-8"), Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader))
     todo, names = [doc], []
     while todo:
         value = todo.pop()
@@ -61,16 +61,18 @@ def criterion_fingerprints(rev: str | None = None, *, root: Path | None = None,
             ["git", "-C", str(root), "rev-parse", "--verify", f"{rev}^{{commit}}"], text=True).strip()
         committed_paths = set(subprocess.check_output(
             ["git", "-C", str(root), "ls-tree", "-r", "--full-tree", "--name-only", "-z", commit]).decode().split("\0"))
+        physical_paths = committed_paths
+        anchor._prime_blobs(commit, [path for path in committed_paths
+                                   if path.endswith((".yaml", ".yml", ".json", ".toml"))], root=root)
 
     @lru_cache(maxsize=None)
     def raw_read(rel):
         if rel in overrides:
             return overrides[rel]
         if commit is not None:
-            if rel not in committed_paths:
+            if rel not in physical_paths:
                 return None
-            proc = subprocess.run(["git", "-C", str(root), "show", f"{commit}:{rel}"], capture_output=True)
-            return proc.stdout if proc.returncode == 0 else None
+            return anchor._git_blob(commit, rel, root=root)
         path = anchor._fingerprint_path(rel) if root == anchor.ROOT else source_path(rel, root=root)
         return path.read_bytes() if path.is_file() else None
 
@@ -101,8 +103,7 @@ def criterion_fingerprints(rev: str | None = None, *, root: Path | None = None,
             physical = revision_path(rel, ns)
             if physical not in physical_paths:
                 return None
-            proc = subprocess.run(["git", "-C", str(root), "show", f"{commit}:{physical}"], capture_output=True)
-            return proc.stdout if proc.returncode == 0 else None
+            return raw_read(physical)
         return raw_read(rel)
 
     allow = set(ns["JUDGING_IMPORT_ALLOW"])
@@ -118,12 +119,26 @@ def criterion_fingerprints(rev: str | None = None, *, root: Path | None = None,
         blob = read(rel)
         if blob is None:
             raise ValueError(f"Missing dependency: {rel}")
-        return ast.parse(_semantic_cached(blob, ".py").decode("utf-8"), filename=rel)
+        return _source_tree(blob)
+
+    @lru_cache(maxsize=None)
+    def levels(node):
+        out, level = [], (node,)
+        while level:
+            out.append(level)
+            level = tuple(child for n in level for child in ast.iter_child_nodes(n))
+        return tuple(out)
 
     @lru_cache(maxsize=None)
     def walk(node):
         # Source ASTs are immutable here; this cache ends with this build.
-        return tuple(ast.walk(node))
+        if not isinstance(node, ast.Module):
+            return tuple(n for level in levels(node) for n in level)
+        # Selected modules share their statements. Reuse each statement's walk
+        # while preserving ast.walk's exact breadth-first order.
+        groups = [levels(child) for child in ast.iter_child_nodes(node)]
+        return (node, *(n for depth in range(max(map(len, groups), default=0))
+                        for group in groups if depth < len(group) for n in group[depth]))
 
     @lru_cache(maxsize=None)
     def bindings(node):
@@ -142,6 +157,17 @@ def criterion_fingerprints(rev: str | None = None, *, root: Path | None = None,
         return {n.id for n in walk(node) if isinstance(n, ast.Name)}
 
     @lru_cache(maxsize=None)
+    def statement_index(rel):
+        available, users = set(), {}
+        for i, statement in enumerate(tree(rel).body):
+            names = bindings(statement)
+            available.update(names)
+            # Unbound module initialization matters when it touches a wanted name.
+            for name in names or references(statement):
+                users.setdefault(name, set()).add(i)
+        return available, users
+
+    @lru_cache(maxsize=None)
     def selected_tree(rel, symbols):
         """Follow a named scoring export and its local helpers, hash its whole file.
 
@@ -156,23 +182,24 @@ def criterion_fingerprints(rev: str | None = None, *, root: Path | None = None,
             # A wildcard can supply any local helper/global; retain the whole
             # module rather than drop an import with no explicit binding name.
             return node
-        available = set().union(*(bindings(n) for n in node.body))
+        available, users = statement_index(rel)
         missing = set(symbols) - available
         if missing:
             raise ValueError(f"Unresolved scoring export in {rel}: {sorted(missing)}")
-        wanted, kept = set(symbols), set()
-        while True:
-            added = {i for i, n in enumerate(node.body) if bindings(n) & wanted}
-            # Module initialization that touches a selected binding also matters.
-            added |= {i for i, n in enumerate(node.body) if not bindings(n)
-                      and references(n) & wanted}
-            if added <= kept:
-                break
-            kept |= added
-            wanted |= set().union(*(references(node.body[i]) for i in added))
+        pending, kept = set(symbols), set()
+        while pending:
+            name = pending.pop()
+            for i in users.get(name, ()):
+                if i not in kept:
+                    kept.add(i)
+                    pending.update(references(node.body[i]))
         return ast.Module(body=[n for i, n in enumerate(node.body) if i in kept], type_ignores=[])
 
     def module(parts):
+        return module_cached(tuple(parts))
+
+    @lru_cache(maxsize=None)
+    def module_cached(parts):
         if not parts or parts[0] not in firstparty:
             return None
         if ".".join(parts) == declaration_module:
@@ -293,13 +320,22 @@ def criterion_fingerprints(rev: str | None = None, *, root: Path | None = None,
         return visit(node), receipts
 
     @lru_cache(maxsize=None)
+    def name_uses(node):
+        parents, uses = {}, {}
+        for n in walk(node):
+            parents.update((child, n) for child in ast.iter_child_nodes(n))
+            if isinstance(n, ast.Name):
+                uses.setdefault(n.id, []).append(n)
+        return parents, uses
+
+    @lru_cache(maxsize=None)
     def imported_symbols(node, alias, symbol):
         if symbol != "*":
             return (symbol,)
         # A module alias can be scoped when every use is an explicit attribute;
         # passing the module object/getattr/dynamic imports retain the whole module.
-        parents = {child: n for n in walk(node) for child in ast.iter_child_nodes(n)}
-        uses = [n for n in walk(node) if isinstance(n, ast.Name) and n.id == alias]
+        parents, names = name_uses(node)
+        uses = names.get(alias, ())
         if uses and all(isinstance(parents.get(n), ast.Attribute) and parents[n].value is n for n in uses):
             return tuple(sorted({parents[n].attr for n in uses}))
         return None
@@ -327,10 +363,7 @@ def criterion_fingerprints(rev: str | None = None, *, root: Path | None = None,
         return (rel, tuple(sorted(callbacks)))
 
     @lru_cache(maxsize=None)
-    def edges(rel, symbols=None, scoped=False):
-        selected = selected_tree(rel, symbols)
-        node, stopped = dispatch_tree(rel, selected)
-        imps = imports(rel, node)
+    def file_edges(rel):
         # The entire hashed file is subject to the illegal-import guard, even
         # when the import lives in an unused callback or a dispatch function.
         forbidden = ({dep for dep, _, _ in imports(rel, tree(rel))} & provenance)
@@ -345,6 +378,14 @@ def criterion_fingerprints(rev: str | None = None, *, root: Path | None = None,
                 name = n.func.id if isinstance(n.func, ast.Name) else (
                     n.func.attr if isinstance(n.func, ast.Attribute) else None)
                 refs |= loaders.get(aliases.get(name, name), set())
+        return refs, forbidden
+
+    @lru_cache(maxsize=None)
+    def edges(rel, symbols=None, scoped=False):
+        selected = selected_tree(rel, symbols)
+        node, stopped = dispatch_tree(rel, selected)
+        imps = imports(rel, node)
+        refs, forbidden = file_edges(rel)
         deps = {(dep, imported_symbols(selected, alias, symbol) if scoped else None)
                 for dep, alias, symbol in imps}
         return deps, refs, stopped, forbidden

@@ -47,27 +47,38 @@ def _semantic_cached(raw: bytes, suf: str) -> bytes:
     return hit
 
 
+def _source_tree(raw: bytes):
+    """Parse scoring source without docstrings, preserving existing locations.
+
+    Expressions cannot contain a statement definition. Skipping their subtrees
+    avoids walking large literal tables just to look for function docstrings.
+    """
+    import ast
+    tree = ast.parse(raw.decode("utf-8"))
+    todo = [tree]
+    while todo:
+        node = todo.pop()
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = node.body
+            if (body and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)):
+                node.body = body[1:] or [ast.copy_location(ast.Pass(), body[0])]
+        todo.extend(child for child in ast.iter_child_nodes(node) if not isinstance(child, ast.expr))
+    return tree
+
+
 def _semantic_of(raw: bytes, suf: str) -> bytes:
     try:
         if suf == ".py":
-            import ast
-            tree = ast.parse(raw.decode("utf-8"))
-            for node in ast.walk(tree):
-                if not isinstance(node, (ast.Module, ast.ClassDef,
-                                         ast.FunctionDef, ast.AsyncFunctionDef)):
-                    continue
-                body = getattr(node, "body", None)
-                if (body and isinstance(body[0], ast.Expr)
-                        and isinstance(body[0].value, ast.Constant)
-                        and isinstance(body[0].value.value, str)):
-                    node.body = body[1:] or [ast.Pass()]
-            return _unparse(ast.fix_missing_locations(tree)).encode("utf-8")
+            return _unparse(_source_tree(raw)).encode("utf-8")
         if suf in (".yaml", ".yml"):
             import json
 
             import yaml
             # Key order is preserved: some registry tables are first-match-wins.
-            return json.dumps(yaml.safe_load(raw.decode("utf-8")),
+            return json.dumps(yaml.load(raw.decode("utf-8"),
+                                        Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader)),
                               ensure_ascii=False, sort_keys=False,
                               default=str).encode("utf-8")
     except Exception:                                            # noqa: BLE001

@@ -1,0 +1,75 @@
+{
+  "measured_on": "2026-10-20",
+  "python": "3.14.7",
+  "uv": "uv 0.12.2 (x86_64-unknown-linux-gnu)",
+  "affinity": {
+    "8": "taskset -c 0-7",
+    "128": "taskset -c 0-127"
+  },
+  "installation": "Fresh virtual environment and empty uv cache; dependencies installed via a package mirror. Python and uv were already installed. PyPI timings may differ.",
+  "method": "One elapsed-time run per variant and CPU affinity; shared Linux server, no model calls. Installation is timed separately from build. cProfile runs are excluded.",
+  "seconds": {
+    "before": {
+      "8": {
+        "install": 3.37,
+        "build": 28.491,
+        "verify": 19.712,
+        "run": 38.863,
+        "report": 16.958
+      },
+      "128": {
+        "install": 1.526,
+        "build": 20.828,
+        "verify": 19.974,
+        "run": 37.066,
+        "report": 19.873
+      }
+    },
+    "after": {
+      "8": {
+        "install": 1.668,
+        "build": 10.221,
+        "verify": 9.407,
+        "run": 17.67,
+        "report": 7.712
+      },
+      "128": {
+        "install": 2.047,
+        "build": 10.252,
+        "verify": 9.231,
+        "run": 18.515,
+        "report": 7.739
+      }
+    }
+  },
+  "machine_note": "The full-server affinity was 0-127; os.cpu_count() and the online CPU list reported 109 CPUs. The 8-CPU runs used exactly affinity 0-7. The server was shared.",
+  "public_tests": {
+    "8": {
+      "workers": "auto",
+      "before_seconds": 152.87,
+      "after_seconds": 85.221,
+      "before_result": {
+        "passed": 1558,
+        "skipped": 7
+      },
+      "after_result": {
+        "passed": 1563,
+        "skipped": 7
+      }
+    },
+    "128": {
+      "workers": 64,
+      "before_seconds": 106.537,
+      "after_seconds": 69.144,
+      "before_result": {
+        "passed": 1558,
+        "skipped": 7
+      },
+      "after_result": {
+        "passed": 1563,
+        "skipped": 7
+      }
+    },
+    "note": "The successful after runs used --lf after resolving two failures, then ran the full suite once the failure cache was clear. The added preparation tests increase the test count. A separate offline pack build overlapped these after-suite reruns on the shared server."
+  }
+}

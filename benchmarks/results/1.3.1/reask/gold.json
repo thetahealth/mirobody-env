@@ -1,0 +1,1229 @@
+{
+ "JD-112v5": {
+  "spec_id": "HD-COM-77",
+  "diagnosis": "原发性醛固酮增多症 + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "原醛",
+   "醛固酮",
+   "conn",
+   "aldosteron",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "肾上腺线",
+    "aliases": [
+     "原醛",
+     "醛固酮",
+     "conn",
+     "aldosteron"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-110v3": {
+  "spec_id": "HD-COM-75",
+  "diagnosis": "阻塞性睡眠呼吸暂停(OSA) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "osa",
+   "睡眠呼吸暂停",
+   "呼吸暂停",
+   "OSAHS",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "呼吸线",
+    "aliases": [
+     "osa",
+     "睡眠呼吸暂停",
+     "呼吸暂停",
+     "OSAHS"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-53v6": {
+  "spec_id": "HD-COM-18",
+  "diagnosis": "原发性醛固酮增多症 + 维生素B12缺乏(亚急性联合变性)",
+  "aliases": [
+   "原醛",
+   "醛固酮",
+   "conn",
+   "aldosteron",
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin"
+  ],
+  "threads": [
+   {
+    "name": "肾上腺线",
+    "aliases": [
+     "原醛",
+     "醛固酮",
+     "conn",
+     "aldosteron"
+    ]
+   },
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   }
+  ]
+ },
+ "JD-108v5": {
+  "spec_id": "HD-COM-73",
+  "diagnosis": "维生素B12缺乏(亚急性联合变性) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-112v10": {
+  "spec_id": "HD-COM-77",
+  "diagnosis": "原发性醛固酮增多症 + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "原醛",
+   "醛固酮",
+   "conn",
+   "aldosteron",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "肾上腺线",
+    "aliases": [
+     "原醛",
+     "醛固酮",
+     "conn",
+     "aldosteron"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-102v5": {
+  "spec_id": "HD-COM-67",
+  "diagnosis": "原发性甲状腺功能减退(桥本) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "甲减",
+   "甲状腺功能减退",
+   "hypothyroid",
+   "桥本",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲减",
+     "甲状腺功能减退",
+     "hypothyroid",
+     "桥本"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-102v2": {
+  "spec_id": "HD-COM-67",
+  "diagnosis": "原发性甲状腺功能减退(桥本) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "甲减",
+   "甲状腺功能减退",
+   "hypothyroid",
+   "桥本",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲减",
+     "甲状腺功能减退",
+     "hypothyroid",
+     "桥本"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-25v7": {
+  "spec_id": "HD-COM-08",
+  "diagnosis": "库欣综合征 + 维生素B12缺乏(亚急性联合变性)",
+  "aliases": [
+   "库欣",
+   "cushing",
+   "皮质醇增多",
+   "高皮质醇血症",
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin"
+  ],
+  "threads": [
+   {
+    "name": "皮质醇线",
+    "aliases": [
+     "库欣",
+     "cushing",
+     "皮质醇增多",
+     "高皮质醇血症"
+    ]
+   },
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   }
+  ]
+ },
+ "JD-98v22": {
+  "spec_id": "HD-COM-63",
+  "diagnosis": "多囊卵巢综合征(PCOS) + 原发性甲状腺功能减退(桥本)",
+  "aliases": [
+   "多囊",
+   "pcos",
+   "polycystic",
+   "甲减",
+   "甲状腺功能减退",
+   "hypothyroid",
+   "桥本"
+  ],
+  "threads": [
+   {
+    "name": "卵巢/代谢线",
+    "aliases": [
+     "多囊",
+     "pcos",
+     "polycystic"
+    ]
+   },
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲减",
+     "甲状腺功能减退",
+     "hypothyroid",
+     "桥本"
+    ]
+   }
+  ]
+ },
+ "JD-108": {
+  "spec_id": "HD-COM-73",
+  "diagnosis": "维生素B12缺乏(亚急性联合变性) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-115v10": {
+  "spec_id": "HD-COM-80",
+  "diagnosis": "甲状腺功能亢进(Graves) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "甲亢",
+   "graves",
+   "甲状腺功能亢进",
+   "弥漫性毒性甲状腺肿",
+   "突眼性甲状腺肿",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲亢",
+     "graves",
+     "甲状腺功能亢进",
+     "弥漫性毒性甲状腺肿",
+     "突眼性甲状腺肿"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-122v8": {
+  "spec_id": "HD-UNI-13",
+  "diagnosis": "代谢相关进展期肝纤维化",
+  "aliases": [
+   "masld伴进展期纤维化",
+   "脂肪性肝病伴进展期纤维化",
+   "advanced fibrosis in masld",
+   "advanced fibrosis in nafld"
+  ],
+  "threads": null
+ },
+ "JD-122v15": {
+  "spec_id": "HD-UNI-13",
+  "diagnosis": "代谢相关进展期肝纤维化",
+  "aliases": [
+   "masld伴进展期纤维化",
+   "脂肪性肝病伴进展期纤维化",
+   "advanced fibrosis in masld",
+   "advanced fibrosis in nafld"
+  ],
+  "threads": null
+ },
+ "JD-22v5": {
+  "spec_id": "HD-COM-05",
+  "diagnosis": "维生素B12缺乏(亚急性联合变性) + 多囊卵巢综合征(PCOS)",
+  "aliases": [
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin",
+   "多囊",
+   "pcos",
+   "polycystic"
+  ],
+  "threads": [
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   },
+   {
+    "name": "卵巢/代谢线",
+    "aliases": [
+     "多囊",
+     "pcos",
+     "polycystic"
+    ]
+   }
+  ]
+ },
+ "JD-112v7": {
+  "spec_id": "HD-COM-77",
+  "diagnosis": "原发性醛固酮增多症 + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "原醛",
+   "醛固酮",
+   "conn",
+   "aldosteron",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "肾上腺线",
+    "aliases": [
+     "原醛",
+     "醛固酮",
+     "conn",
+     "aldosteron"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-113v3": {
+  "spec_id": "HD-COM-78",
+  "diagnosis": "原发性醛固酮增多症 + 库欣综合征",
+  "aliases": [
+   "原醛",
+   "醛固酮",
+   "conn",
+   "aldosteron",
+   "库欣",
+   "cushing",
+   "皮质醇增多",
+   "高皮质醇血症"
+  ],
+  "threads": [
+   {
+    "name": "肾上腺线",
+    "aliases": [
+     "原醛",
+     "醛固酮",
+     "conn",
+     "aldosteron"
+    ]
+   },
+   {
+    "name": "皮质醇线",
+    "aliases": [
+     "库欣",
+     "cushing",
+     "皮质醇增多",
+     "高皮质醇血症"
+    ]
+   }
+  ]
+ },
+ "JD-102v4": {
+  "spec_id": "HD-COM-67",
+  "diagnosis": "原发性甲状腺功能减退(桥本) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "甲减",
+   "甲状腺功能减退",
+   "hypothyroid",
+   "桥本",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲减",
+     "甲状腺功能减退",
+     "hypothyroid",
+     "桥本"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-127v4": {
+  "spec_id": "HD-UNI-18",
+  "diagnosis": "抑郁",
+  "aliases": [
+   "单相抑郁障碍",
+   "重性抑郁障碍",
+   "major depressive disorder",
+   "unipolar depressive disorder"
+  ],
+  "threads": null
+ },
+ "JD-108v13": {
+  "spec_id": "HD-COM-73",
+  "diagnosis": "维生素B12缺乏(亚急性联合变性) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-115v6": {
+  "spec_id": "HD-COM-80",
+  "diagnosis": "甲状腺功能亢进(Graves) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "甲亢",
+   "graves",
+   "甲状腺功能亢进",
+   "弥漫性毒性甲状腺肿",
+   "突眼性甲状腺肿",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲亢",
+     "graves",
+     "甲状腺功能亢进",
+     "弥漫性毒性甲状腺肿",
+     "突眼性甲状腺肿"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-108v9": {
+  "spec_id": "HD-COM-73",
+  "diagnosis": "维生素B12缺乏(亚急性联合变性) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-53v4": {
+  "spec_id": "HD-COM-18",
+  "diagnosis": "原发性醛固酮增多症 + 维生素B12缺乏(亚急性联合变性)",
+  "aliases": [
+   "原醛",
+   "醛固酮",
+   "conn",
+   "aldosteron",
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin"
+  ],
+  "threads": [
+   {
+    "name": "肾上腺线",
+    "aliases": [
+     "原醛",
+     "醛固酮",
+     "conn",
+     "aldosteron"
+    ]
+   },
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   }
+  ]
+ },
+ "JD-123v13": {
+  "spec_id": "HD-UNI-14",
+  "diagnosis": "缺铁性贫血（消化道慢性失血）",
+  "aliases": [
+   "缺铁性贫血",
+   "iron deficiency anemia",
+   "iron deficiency anaemia"
+  ],
+  "threads": null
+ },
+ "JD-111v5": {
+  "spec_id": "HD-COM-76",
+  "diagnosis": "原发性醛固酮增多症 + 早期2型糖尿病/胰岛素抵抗",
+  "aliases": [
+   "原醛",
+   "醛固酮",
+   "conn",
+   "aldosteron",
+   "糖尿病",
+   "胰岛素抵抗",
+   "diabetes",
+   "insulin"
+  ],
+  "threads": [
+   {
+    "name": "肾上腺线",
+    "aliases": [
+     "原醛",
+     "醛固酮",
+     "conn",
+     "aldosteron"
+    ]
+   },
+   {
+    "name": "糖代谢线",
+    "aliases": [
+     "糖尿病",
+     "胰岛素抵抗",
+     "diabetes",
+     "insulin"
+    ]
+   }
+  ]
+ },
+ "JD-118v17": {
+  "spec_id": "HD-UNI-09",
+  "diagnosis": "急性肾损伤（脱水）",
+  "aliases": [
+   "脱水相关急性肾损伤",
+   "容量不足相关急性肾损伤",
+   "volume depletion associated acute kidney injury"
+  ],
+  "threads": null
+ },
+ "JD-119v17": {
+  "spec_id": "HD-UNI-10",
+  "diagnosis": "CKD 进展",
+  "aliases": [
+   "慢性肾脏病进展",
+   "chronic kidney disease progression"
+  ],
+  "threads": null
+ },
+ "JD-128v11": {
+  "spec_id": "HD-UNI-19",
+  "diagnosis": "他汀相关肌肉症状",
+  "aliases": [
+   "他汀相关肌病",
+   "他汀相关肌肉症状",
+   "statin associated muscle symptoms",
+   "statin associated myopathy"
+  ],
+  "threads": null
+ },
+ "JD-118": {
+  "spec_id": "HD-UNI-09",
+  "diagnosis": "急性肾损伤（脱水）",
+  "aliases": [
+   "脱水相关急性肾损伤",
+   "容量不足相关急性肾损伤",
+   "volume depletion associated acute kidney injury"
+  ],
+  "threads": null
+ },
+ "JD-119v10": {
+  "spec_id": "HD-UNI-10",
+  "diagnosis": "CKD 进展",
+  "aliases": [
+   "慢性肾脏病进展",
+   "chronic kidney disease progression"
+  ],
+  "threads": null
+ },
+ "JD-120": {
+  "spec_id": "HD-UNI-11",
+  "diagnosis": "胆石症或急性胆囊炎",
+  "aliases": [
+   "胆石症",
+   "胆囊结石",
+   "急性胆囊炎",
+   "cholelithiasis",
+   "acute cholecystitis"
+  ],
+  "threads": null
+ },
+ "JD-119v11": {
+  "spec_id": "HD-UNI-10",
+  "diagnosis": "CKD 进展",
+  "aliases": [
+   "慢性肾脏病进展",
+   "chronic kidney disease progression"
+  ],
+  "threads": null
+ },
+ "JD-107v11": {
+  "spec_id": "HD-COM-72",
+  "diagnosis": "甲状腺功能亢进(Graves) + 原发性肾上腺皮质功能减退(Addison)",
+  "aliases": [
+   "甲亢",
+   "graves",
+   "甲状腺功能亢进",
+   "弥漫性毒性甲状腺肿",
+   "突眼性甲状腺肿",
+   "addison",
+   "肾上腺皮质功能减退",
+   "艾迪生"
+  ],
+  "threads": [
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲亢",
+     "graves",
+     "甲状腺功能亢进",
+     "弥漫性毒性甲状腺肿",
+     "突眼性甲状腺肿"
+    ]
+   },
+   {
+    "name": "肾上腺皮质线",
+    "aliases": [
+     "addison",
+     "肾上腺皮质功能减退",
+     "艾迪生"
+    ]
+   }
+  ]
+ },
+ "JD-117": {
+  "spec_id": "HD-UNI-08",
+  "diagnosis": "新发房颤",
+  "aliases": [
+   "新发房颤",
+   "心房颤动",
+   "房颤",
+   "atrial fibrillation"
+  ],
+  "threads": null
+ },
+ "JD-128v8": {
+  "spec_id": "HD-UNI-19",
+  "diagnosis": "他汀相关肌肉症状",
+  "aliases": [
+   "他汀相关肌病",
+   "他汀相关肌肉症状",
+   "statin associated muscle symptoms",
+   "statin associated myopathy"
+  ],
+  "threads": null
+ },
+ "JD-127v7": {
+  "spec_id": "HD-UNI-18",
+  "diagnosis": "抑郁",
+  "aliases": [
+   "单相抑郁障碍",
+   "重性抑郁障碍",
+   "major depressive disorder",
+   "unipolar depressive disorder"
+  ],
+  "threads": null
+ },
+ "JD-04v14": {
+  "spec_id": "JD-OSA",
+  "diagnosis": "阻塞性睡眠呼吸暂停(OSA)",
+  "aliases": [
+   "osa",
+   "睡眠呼吸暂停",
+   "呼吸暂停",
+   "OSAHS"
+  ],
+  "threads": null
+ },
+ "JD-127v16": {
+  "spec_id": "HD-UNI-18",
+  "diagnosis": "抑郁",
+  "aliases": [
+   "单相抑郁障碍",
+   "重性抑郁障碍",
+   "major depressive disorder",
+   "unipolar depressive disorder"
+  ],
+  "threads": null
+ },
+ "JD-115v9": {
+  "spec_id": "HD-COM-80",
+  "diagnosis": "甲状腺功能亢进(Graves) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "甲亢",
+   "graves",
+   "甲状腺功能亢进",
+   "弥漫性毒性甲状腺肿",
+   "突眼性甲状腺肿",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲亢",
+     "graves",
+     "甲状腺功能亢进",
+     "弥漫性毒性甲状腺肿",
+     "突眼性甲状腺肿"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-16v12": {
+  "spec_id": "JD-CKM",
+  "diagnosis": "心肾代谢综合征:2型糖尿病失控 + 慢性肾病进展",
+  "aliases": [
+   "糖尿病",
+   "慢性肾病",
+   "ckd",
+   "心肾"
+  ],
+  "threads": [
+   {
+    "name": "糖代谢线",
+    "aliases": [
+     "糖尿病",
+     "diabetes",
+     "t2dm",
+     "高血糖",
+     "血糖控制不佳",
+     "血糖失控",
+     "糖代谢"
+    ]
+   },
+   {
+    "name": "肾脏线",
+    "aliases": [
+     "慢性肾病",
+     "ckd",
+     "肾病",
+     "肾损",
+     "肾脏受累",
+     "肾功能不全",
+     "肾功能下降",
+     "肾功能恶化",
+     "蛋白尿",
+     "白蛋白尿"
+    ]
+   }
+  ]
+ },
+ "JD-106v4": {
+  "spec_id": "HD-COM-71",
+  "diagnosis": "甲状腺功能亢进(Graves) + 维生素B12缺乏(亚急性联合变性)",
+  "aliases": [
+   "甲亢",
+   "graves",
+   "甲状腺功能亢进",
+   "弥漫性毒性甲状腺肿",
+   "突眼性甲状腺肿",
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin"
+  ],
+  "threads": [
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲亢",
+     "graves",
+     "甲状腺功能亢进",
+     "弥漫性毒性甲状腺肿",
+     "突眼性甲状腺肿"
+    ]
+   },
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   }
+  ]
+ },
+ "JD-126v11": {
+  "spec_id": "HD-UNI-17",
+  "diagnosis": "未确诊的 COPD",
+  "aliases": [
+   "慢性阻塞性肺疾病",
+   "慢阻肺",
+   "copd",
+   "chronic obstructive pulmonary disease"
+  ],
+  "threads": null
+ },
+ "JD-110v9": {
+  "spec_id": "HD-COM-75",
+  "diagnosis": "阻塞性睡眠呼吸暂停(OSA) + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "osa",
+   "睡眠呼吸暂停",
+   "呼吸暂停",
+   "OSAHS",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "呼吸线",
+    "aliases": [
+     "osa",
+     "睡眠呼吸暂停",
+     "呼吸暂停",
+     "OSAHS"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-112v2": {
+  "spec_id": "HD-COM-77",
+  "diagnosis": "原发性醛固酮增多症 + 成人隐匿性自身免疫糖尿病(LADA)",
+  "aliases": [
+   "原醛",
+   "醛固酮",
+   "conn",
+   "aldosteron",
+   "lada",
+   "自身免疫糖尿病",
+   "1型",
+   "gad"
+  ],
+  "threads": [
+   {
+    "name": "肾上腺线",
+    "aliases": [
+     "原醛",
+     "醛固酮",
+     "conn",
+     "aldosteron"
+    ]
+   },
+   {
+    "name": "胰岛自身免疫线",
+    "aliases": [
+     "lada",
+     "自身免疫糖尿病",
+     "1型",
+     "gad"
+    ]
+   }
+  ]
+ },
+ "JD-127v8": {
+  "spec_id": "HD-UNI-18",
+  "diagnosis": "抑郁",
+  "aliases": [
+   "单相抑郁障碍",
+   "重性抑郁障碍",
+   "major depressive disorder",
+   "unipolar depressive disorder"
+  ],
+  "threads": null
+ },
+ "JD-126v6": {
+  "spec_id": "HD-UNI-17",
+  "diagnosis": "未确诊的 COPD",
+  "aliases": [
+   "慢性阻塞性肺疾病",
+   "慢阻肺",
+   "copd",
+   "chronic obstructive pulmonary disease"
+  ],
+  "threads": null
+ },
+ "JD-40v18": {
+  "spec_id": "HD-UNI-02",
+  "diagnosis": "系统性硬化症(局限皮肤型)",
+  "aliases": [
+   "系统性硬化症",
+   "硬皮病",
+   "scleroderma",
+   "ssc",
+   "局限皮肤型硬化"
+  ],
+  "threads": null
+ },
+ "JD-15v3": {
+  "spec_id": "JD-ADDISON",
+  "diagnosis": "原发性肾上腺皮质功能减退(Addison)",
+  "aliases": [
+   "addison",
+   "肾上腺皮质功能减退",
+   "艾迪生"
+  ],
+  "threads": null
+ },
+ "JD-40v16": {
+  "spec_id": "HD-UNI-02",
+  "diagnosis": "系统性硬化症(局限皮肤型)",
+  "aliases": [
+   "系统性硬化症",
+   "硬皮病",
+   "scleroderma",
+   "ssc",
+   "局限皮肤型硬化"
+  ],
+  "threads": null
+ },
+ "JD-125v5": {
+  "spec_id": "HD-UNI-16",
+  "diagnosis": "社区获得性肺炎",
+  "aliases": [
+   "社区获得性肺炎",
+   "community acquired pneumonia"
+  ],
+  "threads": null
+ },
+ "JD-117v5": {
+  "spec_id": "HD-UNI-08",
+  "diagnosis": "新发房颤",
+  "aliases": [
+   "新发房颤",
+   "心房颤动",
+   "房颤",
+   "atrial fibrillation"
+  ],
+  "threads": null
+ },
+ "JD-41v7": {
+  "spec_id": "HD-UNI-03",
+  "diagnosis": "中轴型脊柱关节炎(强直性脊柱炎)",
+  "aliases": [
+   "强直性脊柱炎",
+   "中轴型脊柱关节炎",
+   "axspa",
+   "ankylosing",
+   "脊柱关节炎"
+  ],
+  "threads": null
+ },
+ "JD-120v4": {
+  "spec_id": "HD-UNI-11",
+  "diagnosis": "胆石症或急性胆囊炎",
+  "aliases": [
+   "胆石症",
+   "胆囊结石",
+   "急性胆囊炎",
+   "cholelithiasis",
+   "acute cholecystitis"
+  ],
+  "threads": null
+ },
+ "JD-41v3": {
+  "spec_id": "HD-UNI-03",
+  "diagnosis": "中轴型脊柱关节炎(强直性脊柱炎)",
+  "aliases": [
+   "强直性脊柱炎",
+   "中轴型脊柱关节炎",
+   "axspa",
+   "ankylosing",
+   "脊柱关节炎"
+  ],
+  "threads": null
+ },
+ "JD-125v7": {
+  "spec_id": "HD-UNI-16",
+  "diagnosis": "社区获得性肺炎",
+  "aliases": [
+   "社区获得性肺炎",
+   "community acquired pneumonia"
+  ],
+  "threads": null
+ },
+ "JD-114v3": {
+  "spec_id": "HD-COM-79",
+  "diagnosis": "原发性甲状腺功能减退(桥本) + 维生素B12缺乏(亚急性联合变性)",
+  "aliases": [
+   "甲减",
+   "甲状腺功能减退",
+   "hypothyroid",
+   "桥本",
+   "b12",
+   "维生素b12",
+   "钴胺",
+   "cobalamin"
+  ],
+  "threads": [
+   {
+    "name": "甲状腺线",
+    "aliases": [
+     "甲减",
+     "甲状腺功能减退",
+     "hypothyroid",
+     "桥本"
+    ]
+   },
+   {
+    "name": "血液/神经线",
+    "aliases": [
+     "b12",
+     "维生素b12",
+     "钴胺",
+     "cobalamin"
+    ]
+   }
+  ]
+ }
+}

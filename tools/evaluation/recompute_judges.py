@@ -437,6 +437,15 @@ def main(argv: list[str]) -> int:
     def belongs(field, names):
         import fnmatch
         return any(fnmatch.fnmatchcase(field, pattern) for name in names for pattern in CRITERIA[name]["fields"])
+    # Record row ids returned to each cell in query mode, for the citation check: the trace of
+    # the latest run of a cell, as the board keeps its latest row.
+    _qtraces: dict = {}
+    if (d / "query_trace.jsonl").is_file():
+        with open(d / "query_trace.jsonl", encoding="utf-8") as _fh:
+            for _line in _fh:
+                if _line.strip():
+                    _qt = json.loads(_line)
+                    _qtraces[(_qt.get("case"), _qt.get("solver"))] = _qt
     _plugins = load_batch_plugins(d)
     if _plugins:
         print(f"[recompute] plugin judges of the batch's job attached: {_plugins}")
@@ -684,8 +693,17 @@ def main(argv: list[str]) -> int:
                                     "slices:末片原文不在盘上 ⇒ 整例门沿用 live 读数,未重算")
                             else:
                                 from haenv.judges.safety import evidence_names_for as _ev_names
+                                from haenv.interaction.query.adapter import ADAPTERS as _ADP
+                                from haenv.interaction.query.adapter import adapter_for as _adapter_for
+                                from haenv.interaction.query.profile import returned_record_ids as _rids
+                                from haenv.interaction.query.adapter import load_pack_adapters as _load_adp
+                                _load_adp()
+                                _qtr = _qtraces.get((row.get("case"), row.get("solver")))
+                                _adp = (_ADP.get("m2") if _gated_row else _adapter_for(_sp)) if _qtr else None
                                 _rep = _V.grade(_subject, vp, _ev, unit_gates_per_slice=_per_slice,
-                                                evidence_names=_ev_names(_sp, row.get("tool_targets")))
+                                                evidence_names=_ev_names(_sp, row.get("tool_targets")),
+                                                returned_ids=_rids(_qtr, getattr(_adp, "sections", None))
+                                                if _qtr else None)
                                 add["tracks"] = _rep.tracks
                                 add["gates"] = _rep.hard_gate_failures
                                 # `overall`, `tracks` and `gates` are written back together from the

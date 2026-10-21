@@ -101,6 +101,8 @@ def install():
     def source_lay(sex=None):
         result = lay(sex)
         if _ACTIVE.get():
+            # The base vocabulary is an immutable snapshot shared by readers.
+            result = dict(result)
             from haenv.resources.regpath import registry_path
             from haenv.resources.yamlcache import load_yaml
             result.update({r["text"]: r["lay"] for r in load_yaml(registry_path("p2_complaint_pool.yaml"))["complaints"]})

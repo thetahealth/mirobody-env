@@ -356,15 +356,17 @@ def position(sub: str, cid: str, drug_name: str | None = None) -> str:
 
 
 def make_plans(cases: list[dict], world_streams: dict[str, set[str]], cap: int = CAP_PER_DRUG,
-               *, condition_specs: dict | None = None) -> dict[str, dict]:
+               *, condition_specs: dict | None = None,
+               eligibility: dict[str, list[str]] | None = None) -> dict[str, dict]:
     """A14: each drug appears in every class it can take, in equal shares. Inside each H stratum,
     cases (fewest eligible drugs first, then hash order) take their eligible drug dealt least so
     far, each drug taking at most `cap` cases per stratum; inside each (H, drug),
     the classes the drug can take are dealt round-robin in hash order."""
     from haenv.world.labworld.meds import drug
-    ok = {str(c["case_id"]): eligible_drugs(c, world_streams.get(str(c["case_id"]), set()),
+    ok = ({str(c["case_id"]): eligibility[str(c["case_id"])] for c in cases}
+          if eligibility is not None else {str(c["case_id"]): eligible_drugs(c, world_streams.get(str(c["case_id"]), set()),
                                          **({"condition_specs": condition_specs} if condition_specs is not None else {}))
-          for c in cases}
+          for c in cases})
     Hs = {str(c["case_id"]): hidden(c.get("latent") or {}) for c in cases}
     cases_by = {str(c["case_id"]): c for c in cases}
     out = {}

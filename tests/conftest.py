@@ -17,6 +17,8 @@ import sys
 
 import pytest
 
+pytest_plugins = ["_artifact_cache"]
+
 _HERE = pathlib.Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
@@ -32,6 +34,13 @@ if str(ROOT / "plugins") not in sys.path:
 # Subprocesses that run a script under tools/ must import this tree's `haenv`. A worktree whose
 # virtualenv holds an editable install of another checkout would otherwise test that one.
 import os as _os
+# Child commands must never synchronise the shared interpreter.
+_os.environ["UV_NO_SYNC"] = "1"
+_os.environ["UV_FROZEN"] = "1"
+# xdist owns the CPU parallelism; numerical libraries must not start another
+# team in each of its 64 processes (or in their classifier children).
+for _thread_limit in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+    _os.environ[_thread_limit] = "1"
 _os.environ["PYTHONPATH"] = _os.pathsep.join(
     [str(ROOT / "src"), str(ROOT), str(ROOT / "plugins"),
      *(p for p in _os.environ.get("PYTHONPATH", "").split(_os.pathsep)
@@ -226,7 +235,7 @@ except ModuleNotFoundError as _e:                               # pragma: no cov
 # ---- speed tiers: `pytest --fast` is the inner loop; the default tier still runs everything
 
 #: Fixtures built once per session and shared by every worker.
-SHARED_BUILD_FIXTURES = frozenset({"offline_batch", "slice_batch", "serial_batch"})
+SHARED_BUILD_FIXTURES = frozenset({"offline_batch", "slice_batch", "serial_batch", "artifact_cache"})
 
 
 def pytest_addoption(parser):
@@ -237,8 +246,14 @@ def pytest_addoption(parser):
 
 def _slow_ids() -> frozenset:
     import json
-    path = _HERE / "_speed_tiers.json"
+    path = _HERE / "fixtures/harness/_speed_tiers.json"
     return frozenset(json.loads(path.read_text(encoding="utf-8"))["slow"]) if path.is_file() else frozenset()
+
+
+def _runtime_costs() -> dict:
+    import json
+    path = _HERE / "fixtures/harness/_runtime_costs.json"
+    return json.loads(path.read_text(encoding="utf-8"))["seconds"] if path.is_file() else {}
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -255,3 +270,7 @@ def pytest_collection_modifyitems(config, items):
         keep = [it for it in items if it.get_closest_marker("integration") is None]
         config.hook.pytest_deselected(items=[it for it in items if it not in keep])
         items[:] = keep
+    # Start independent long contracts first. Small xdist queues leave room for
+    # short parameters while those run; this changes no selection or assertion.
+    costs = _runtime_costs()
+    items.sort(key=lambda item: -costs.get(item.nodeid.split("[", 1)[0], 0.0))

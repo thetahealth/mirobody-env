@@ -605,7 +605,10 @@ without its fingerprint is not reproducible. For a pack, also cite its `n_items`
   ended before a valid answer. On its own answered cells it scores 0.556 (`ddx-timeline`, 17
   cases, descriptive) and 0.473 (`ddx-workup`, 116 cases), close to `qwen3.7-flash`.
   The answered counts are in [1.x evaluation](#1x-evaluation-historical).
-* The judging and world fingerprints at the top of this card are computed under Python 3.12, the
+* The freeze anchor records development-tree judging and world fingerprints; public export
+  rewrites provenance strings and recomputes the exported tree's identities. Development-tree
+  fingerprint values are meaningful only with their named source revision. They are computed
+  under Python 3.12, the
   version the board was produced with. They hash `ast.unparse` output, which differs on Python
   3.10, so the same tree yields different fingerprints there; compare fingerprints computed under
   the same Python version.

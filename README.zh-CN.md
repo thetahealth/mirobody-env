@@ -74,7 +74,33 @@ HAEnv（Health Agent Environment）是本仓库中的 Python 包与命令行工�
 
 ## 排行榜
 
-1.3.0 榜在四个题包上给 8 个模型排名，每包 100 题（N100），每题作答 3 次。主分为每题三次作答的 `S = G·D·(1+Q)/2` 取平均（k3），四包等权；首次作答的预注册分 pk1 名次相同。95% 区间来自配对题簇自助法（2,000 次），对所有模型重抽同一批题目；名次区间来自同一批抽样。
+两个榜都在四个题包上排名，每包 100 题（N100），每题作答 3 次；当前榜是 1.3.1（十三个模型），其后是 1.3.0 榜（八个模型）。主分为每题三次作答的 `S = G·D·(1+Q)/2` 取平均（k3），四包等权；首次作答的预注册分 pk1 作为稳健性检查报告。95% 区间来自配对题簇自助法（2,000 次），对所有模型重抽同一批题目；名次区间来自同一批抽样。
+
+### 1.3.1 榜单
+
+1.3.1 榜单在同样的四个 N100 包上、用 1.3.1 的引用检查给 13 个模型排名，k3 聚合、区间和抽样次数都不变。
+下面八个模型的诊断分与 1.3.0 表不同，因为在当前环境中刷新了受影响的作答，并应用当前评分器（见 `CHANGELOG.md`）。
+分数读数：[`docs/boards/1.3.1/k3.json`](docs/boards/1.3.1/k3.json)，首次作答读数 [`docs/boards/1.3.1/pk1.json`](docs/boards/1.3.1/pk1.json)。
+
+<!-- board-1.3.1:start -->
+![13 模型总分、95% 区间与名次区间](docs/figures/readme_board_131.png)
+
+| 名次 | 模型 | 总分（95% CI） | ① | ② | ③ | ④ | All-3 |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 1–2 | deepseek-v4.1-flash | 0.837 (0.813–0.861) | 0.655 | 0.932 | 0.928 | 0.833 | 0.823 |
+| 1–2 | gpt-6-sol | 0.832 (0.808–0.856) | 0.693 | 0.893 | 0.959 | 0.785 | 0.878 |
+| 3–5 | mimo-v2.6-flash | 0.793 (0.765–0.819) | 0.569 | 0.943 | 0.853 | 0.807 | 0.760 |
+| 3–5 | gemini-3.8-flash | 0.792 (0.768–0.816) | 0.591 | 0.950 | 0.882 | 0.744 | 0.867 |
+| 3–5 | qwen38-27b | 0.789 (0.763–0.815) | 0.617 | 0.930 | 0.885 | 0.722 | 0.765 |
+| 6–7 | gpt-6-luna | 0.719 (0.692–0.747) | 0.494 | 0.859 | 0.897 | 0.627 | 0.693 |
+| 6–7 | deepseek-v4-pro | 0.696 (0.666–0.724) | 0.533 | 0.933 | 0.689 | 0.629 | 0.668 |
+| 8–10 | minimax-m3 | 0.633 (0.602–0.663) | 0.440 | 0.870 | 0.608 | 0.616 | 0.525 |
+| 8–10 | deepseek-v4-flash | 0.632 (0.599–0.664) | 0.477 | 0.856 | 0.656 | 0.538 | 0.588 |
+| 8–10 | glm-5.3-flash | 0.628 (0.597–0.658) | 0.484 | 0.813 | 0.668 | 0.547 | 0.530 |
+| 11 | gemma-4-31b-it | 0.536 (0.506–0.567) | 0.382 | 0.767 | 0.514 | 0.482 | 0.580 |
+| 12 | qwen3.7-flash | 0.446 (0.414–0.476) | 0.380 | 0.599 | 0.271 | 0.533 | 0.327 |
+| 13 | qwen3-32b | 0.171 (0.150–0.192) | 0.069 | 0.307 | 0.058 | 0.249 | 0.073 |
+<!-- board-1.3.1:end -->
 
 ### 1.3.0 总分
 
@@ -99,6 +125,40 @@ HAEnv（Health Agent Environment）是本仓库中的 Python 包与命令行工�
 [榜单数据（JSON）](https://github.com/thetahealth/mirobody-env/blob/main/web/demo/board.json) ·
 [早期榜单](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
 [重算榜单](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-130-overall-board)
+
+<!-- findings-1.3.1:start -->
+
+## 1.3.1 发现
+
+![错误诊断的证据覆盖与重新提问后的改对率](docs/figures/readme_findings_131.png)
+
+**错误诊断大多缺证据。** 在列有决定性检查结果的题目上，错误诊断（不含中止）中 766 条未拿全决定性结果，247 条拿全了：75.6% 缺少部分决定性证据。
+
+**补上漏掉的结果，多数能改对。** 从覆盖不全的错误诊断中抽取 142 条（gpt-6-luna 44 条、glm-5.3-flash 50 条、qwen3-32b 48 条），从最终作答之前重新提问。补上漏掉的决定性结果后 64.1% 改对；补上同样数量的非决定性结果为 12.7%，什么都不补为 8.5%（比非决定性结果高 51.4 个百分点，95% 区间 40.1 至 61.4）。在漏掉至少两项决定性结果的 79 条上，随机补一半改对 41.8%（不补 6.3%，全补 75.9%）。
+
+**加大检查预算，各模型获益不同。** 100 道诊断题（首次作答）在一半、默认（即榜单）和两倍检查预算下的诊断正确率。增益：从一半到两倍预算的百分点变化及其配对 95% 区间；预算使用：平均花掉默认预算的比例。
+
+| 模型 | 0.5× | 1× | 2× | 增益 [95% 区间] | 1× 预算使用 |
+|---|---:|---:|---:|---:|---:|
+| deepseek-v4-flash | 66% | 70% | 76% | +10.0 [2.0, 18.0] | 66% |
+| gpt-6-sol | 71% | 77% | 81% | +10.0 [2.0, 18.0] | 73% |
+| minimax-m3 | 55% | 59% | 65% | +10.0 [0.0, 19.0] | 44% |
+| glm-5.3-flash | 55% | 63% | 63% | +8.0 [−2.0, 18.0] | 35% |
+| deepseek-v4-pro | 71% | 77% | 77% | +6.0 [−1.0, 13.0] | 55% |
+| gemini-3.8-flash | 72% | 77% | 76% | +4.0 [−4.0, 12.0] | 53% |
+| gpt-6-luna | 63% | 67% | 66% | +3.0 [−3.0, 9.0] | 50% |
+| qwen3.7-flash | 56% | 57% | 56% | 0.0 [−9.0, 8.0] | 36% |
+
+**HTTP 重放复现已存工具结果。** 把榜单运行中 400 道题上 15,600 次作答会话的 256,609 次工具调用经 `haenv serve fhir` 重放并解码，256,609 次中 256,609 次与当前函数调用输出一致，并复现这些会话轨迹中存储的全部工具结果（含购买与拒绝）；返回的 4,621,363 个资源都是合法的 FHIR R4B（不合法 0 个）。重放工具是 [`tools/release/replay_http.py`](tools/release/replay_http.py)，在榜单池上运行：
+
+```bash
+python tools/release/replay_http.py --work leaderboard-pool/ --workers 32 --out artifacts/replay-http-results.json
+```
+
+预期汇总：`questions=400`、`responses=15600`、`calls=256609`、`identical=256609`、`differing=0`、`stored_differing=0`、`pending_purchases_replayed=234`、`validation_failures=0`；`missing=[]`、`worker_errors=[]`。榜单池含已存运行，需另行提供。源码树内的离线 HTTP 演练为 `python tools/release/replay_http.py --offline`。
+
+离线重算并重评分公开的 re-ask 答案：`python tools/evaluation/reask_pooled.py --check`（[数据与条件](benchmarks/results/1.3.1/reask/README.md)）。
+<!-- findings-1.3.1:end -->
 
 ## 快速开始
 
@@ -137,6 +197,20 @@ uv run --with scikit-learn --with joblib python tools/generation/make_pack.py --
 ```
 
 `--pack` 取 `m2`（①）、`p2`（②）、`p3`（③）或 `p4`（④）；`--n` 定题量，`--seed`（或 `HAENV_PACK_SEED`）定种子。同一题包、题量与种子出的包相同；批次只记种子的哈希。出包与审计各门全部通过时退出码为 0，审计没过的题包，`haenv run` 拒绝评测。示例 job、各类占比与审计见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#task-packs-and-their-generators)。
+</details>
+
+<details>
+<summary>用 FHIR REST 或 MCP 提供一道题</summary>
+
+```bash
+B=$(ls -d artifacts/results/early_warning/ew-demo/*/ | tail -1)   # 上面生成的批次
+uv run haenv serve fhir --pack "$B" --question EWX-01 --port 8000 &   # 一道题，标准库 HTTP 服务
+curl -s localhost:8000/metadata                                     # CapabilityStatement：路由与检索参数
+uv run --extra serve haenv serve mcp --pack "$B" --question EWX-01  # 同一组工具，走 MCP stdio
+```
+
+服务端的检索、分页、行数上限、日期过滤和检查预算与函数调用工具一致，病例日换算成 ISO 日期；
+`tools/release/replay_http.py` 通过它重放已存的工具调用，并核对解码后的输出完全一致。
 </details>
 
 <details>
@@ -247,6 +321,7 @@ uv run haenv run benchmarks/inputs/example-ew.job.yaml --models my-agent --limit
 
 | 主题 | 位置 |
 |---|---|
+| 技术规格、评分细节与补充结果 | [`docs/supplement.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/supplement.md) |
 | 题包、金标来源、计分细节、早期榜单、已知缺口 | [`docs/DATA_CARD.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md) |
 | 孪生病历：只改一处声明字段的成对题目 | [`docs/DATA_CARD.md#twin-records`](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#twin-records) |
 | 哪些可免费复现、哪些计费、缓存与自检 | [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md) |
@@ -258,9 +333,9 @@ uv run haenv run benchmarks/inputs/example-ew.job.yaml --models my-agent --limit
 ## 局限
 
 - **包 ④ 的 RCV 基线。** 只读两次印出值和规程 RCV 表的读者，在包 ④ 上 D 约 0.5，所以 ④ 分数在 0.5 附近只说明会用 RCV。
-- **名次不确定性。** 七对相邻模型里，一对（deepseek-v4-flash 与 glm-5.3-flash）的配对分差区间包含 0，榜单不能确定这一对的先后。
+- **名次不确定性。** 1.3.1 榜的 12 对相邻模型中，只有 6 对的配对分差区间不含 0；区间重叠时不能确定先后。
 - **临床复核。** 题包 ② 和 ③ 背后的规则以及若干登记条目带 `review: pending`；医学内容整体尚未经执业医生审阅。
-- **单一语义裁判。** 一个模型（`gpt-6-luna`）为 `Q` 评分，被测模型中有同一厂商的模型。跨厂商的 Gemini 裁判（服务方实际提供 `gemini-3.8-flash`，它本身也是被测模型）重判了全部 6,937 条 `G·D = 1` 的作答：八个模型的名次不变，模型层面平均 `Q` 与主裁判的相关 r = 0.968。`Q` 的量表在本榜作答上校准，没有临床医生核验。
+- **单一语义裁判。** 一个模型（`gpt-6-luna`）为 `Q` 评分，被测模型中有同一厂商的模型。跨厂商的 Gemini 裁判（服务方实际提供 `gemini-3.8-flash`，它本身也是被测模型）在历史 1.3.0 榜上重判了全部 6,937 条 `G·D = 1` 的作答：八个模型的名次不变，模型层面平均 `Q` 与主裁判的相关 r = 0.968。`Q` 的量表在本榜作答上校准，没有临床医生核验。
 - **合成数据。** 所有病人都是合成的，不构成任何医疗建议。
 
 完整清单见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#known-gaps)。
@@ -293,7 +368,7 @@ HAEnv 同时具备在 `T` 处截断的纵向病历、先于数据确定的金标
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.3.0}
+  version = {1.3.1}
 }
 ```
 
@@ -306,3 +381,40 @@ HAEnv 同时具备在 `T` 处截断的纵向病历、先于数据确定的金标
 HAEnv 的灵感来自 [ESL-Bench](https://arxiv.org/abs/2604.02834)。
 
 <p align="center"><sub>合成数据 · 仅供评测 · 非医疗建议</sub></p>
+
+<details>
+<summary>让一次答错的诊断回答再答一次</summary>
+
+`haenv reask` 从存档对话最终答案之前的位置继续，选择有证据清单、已作答且诊断错误的回答，
+再向原模型各问一次：`resample` 不补结果；`decisive` 补携带遗漏证据的结果；`placebo` 补同等
+数量、且不携带任何证据清单条目的结果；`half` 按种子抽取 `floor(k/2)` 条 decisive 结果，
+只用于 `k >= 2` 的单元，并保留原顺序。证据已齐全但仍答错的回答只运行 resample。
+
+```bash
+haenv reask saved-batch/ --models glm-5.3-flash --questions QUESTION_ID \
+  --sources saved-result-corpus/ --dry-run
+haenv reask saved-batch/ --models glm-5.3-flash --questions QUESTION_ID \
+  --sources saved-result-corpus/ --out reasked/ --model-cap glm-5.3-flash=32 \
+  --judge-budget-ledger reask-ledger --judge-budget-usd 1
+```
+
+源目录需要 `query_trace.jsonl`、`payloads.jsonl`，以及 `responses.jsonl` 或计费回执中的最终请求
+指纹；`trace.jsonl` 的购买观察值用于重建工具声明。未存档的 decisive 购买通过环境自身购买流程
+生成，需要 `cases.jsonl`。`--sources` 补充同题的已存档返回；要复现选择，须使用相同来源集合、
+`--seed` 和 `--half-seed`。原请求指纹不匹配或 placebo 不足等量时，在调用模型前明确失败。
+placebo 排除所有尝试买过的项目（包括被拒绝的购买），也可选不携带证据项的监测流。
+
+各注入组统一使用空文本 assistant 工具调用消息和原样 tool 返回，不向模型暴露证据标签。
+最后关闭工具；GLM Flash 路由为兼容使用 `auto`，若返回工具调用则记为未作答且不执行。
+`--dry-run` 输出每组测试名称和携带的证据项，不初始化模型提供方。
+
+结果目录包含 `injection-rows.jsonl`（`model/question/repeat/kind/arm/status/D/n_added`，
+组代码 `A/B/C/H`）、完整请求及选择清单、答案、调度回执与正常计费记录。
+`D` 由随包诊断判分器对存档 gold 计算；传输失败为 `D: null`。已完成组可续跑，计划变化须使用新
+输出目录。repeat 优先取存档字段，再取目录 `-pkN`/`-repN` 后缀，否则为第一次。
+
+默认每模型 64 并发，将历史较小的 cell cap 提升至该并发数，同时受共享付费请求容量约束；
+显式 `--model-cap MODEL=N` 优先。Python API 为 `haenv.reask.prepare(...)`、`dry_rows(units)`
+和 `run(units, output, ledger_path=..., budget_usd=..., model_caps=...)`，规则与 CLI 相同。
+
+</details>

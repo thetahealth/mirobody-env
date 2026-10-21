@@ -7,6 +7,81 @@ per-criterion fingerprints identify which result columns remain comparable, and 
 fingerprint identifies the complete set of criteria. Combined scores also require matching
 aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [1.3.1] - 2026-10-20
+
+### Added
+
+- Bilingual README findings and reproducible figures for the thirteen-model board,
+  decisive-evidence coverage, re-asking, the test-budget sweep and HTTP replay.
+- Stored re-ask outcomes with offline diagnosis re-scoring and pooled question-cluster
+  bootstrap recomputation (`tools/evaluation/reask_pooled.py --check`).
+- `haenv.__version__` exposes the package release version.
+- `haenv reask` and `haenv.reask` replay failed diagnosis conversations before the final answer,
+  with resample, decisive, equal-count placebo and seeded half-evidence arms, offline dry runs,
+  archived-request fingerprint checks, diagnosis scoring and normal scheduling/cost accounting.
+  Portable fixtures check payload, selection order and request equivalence without model calls.
+- `haenv serve fhir` serves one question as a FHIR REST endpoint (stdlib HTTP server): one search
+  route per tool, `POST /ServiceRequest` for a purchase (a batch Bundle for several in one round),
+  `Bundle.link` `next` for paging, `OperationOutcome` for errors, `_count` fixed to the row cap, and
+  case days mapped to ISO dates from an anchor and kept in an extension, so results convert back
+  exactly. `haenv serve mcp` exposes the same tools over MCP stdio. Both need the `serve` extra
+  (`pip install 'haenv[serve]'`); the core install gains no dependency. The function-call tools
+  and their returns are unchanged.
+- `tools/release/replay_http.py` replays the tool calls of stored responses through the HTTP
+  server and through the tools, compares the decoded outputs (purchases and refusals included)
+  and validates every returned resource with `fhir.resources` R4B models. On the released 1.3.x
+  leaderboard answers: 256,609 calls in 15,600 sessions, all identical to both current
+  tools and stored results, 4,621,363 resources, no validation failure; `--offline`
+  replays a self-contained stored-session subset.
+- Runs log a concurrency plan at start (per model: requested workers, model cap and its source,
+  backend cap, paid lanes, effective cells in flight and the binding limit) and store it in
+  `scheduler.json`; a WARNING names any cap that binds below the requested workers.
+  `--model-cap MODEL=N` and `--max-model-cap N` override caps from the command line, `--dry-plan`
+  prints the plan without any model call, and `eval.saturation_report_s` (default 300) logs a
+  saturation line per model with throttle counts. Throughput only: rows are unchanged apart from
+  timing fields.
+
+### Fixed
+
+- The citation check accepts the id of a record row that the record API returned to the agent in
+  the same answer. Rows without an evidence id are returned as `<section>-<index>`, and an agent
+  has no other id for them, so citing one no longer fails the rule check. Ids of rows that were
+  not returned, invented ids and loosely matched names still fail. The returned ids are read from
+  the answer's tool results; `tools/evaluation/recompute_judges.py --full --tracks` applies the
+  same rule to stored answers from the batch's `query_trace.jsonl`.
+- On the 1.3.0 question sets only the diagnosis task is affected: 431 of the 2,400 final
+  diagnosis answers change their rule-check result, and no answer in the other three tasks
+  changes.
+
+### Changed
+
+- Generation reuses read-only registry snapshots and merges parallel P3 retry candidates in
+  deterministic order. The frozen P3 public job fell from 281.80 s to 20.71 s;
+  the forced private retry fell from 695.87 s to 31.94 s in concurrent proof runs.
+- The development-tree world fingerprint moves from `b20f0330492cd29f` at
+  `aada47f9` to `bd0bc1b7383d06c1` at `f1f09e9c` (Python 3.12).
+  Regenerated question packs are byte-identical with source-revision labels fixed at build input;
+  judging, kernel and all thirteen task judging fingerprints are unchanged.
+  The [equivalence receipt](registry/anchors/world-equivalence-1.3.1.json) retains both native
+  hashes and the P3 revision-label differences. The freeze anchor certifies the move without
+  replacing any frozen batch.
+
+- The `kernel`, `scoring`, `safety`, `llm_rubric` and per-task judging fingerprints change, and
+  the citation-check change also changes the aggregate judging fingerprint. The
+  `diagnosis`, `semantic`, `management_rubric` and `trajectory` fingerprints are unchanged.
+  Diagnosis results scored under 1.3.0 are not comparable until the stored answers are rescored.
+- The development-tree aggregate judging fingerprint is `c5f48d1223a2a877` at
+  `aada47f9` and `f1f09e9c` (Python 3.12). Named source-segment values above reproduce
+  with `anchor.fingerprint_at(revision, anchor._segment_at(revision, segment))`.
+  Public export rewrites provenance strings and recomputes its own fingerprints;
+  these development-tree values must not be substituted for an exported tree's values.
+- The source snapshot is revision 116; it also records the generation change that quotes the
+  patient-reported reading in symptom notes, which 1.3.0 shipped. Question packs are unchanged.
+- Thirteen registry files carry the canary header again, and the distribution guards scan the
+  `benchmarks/inputs/` and `benchmarks/raw_cases/` layout introduced on 2026-10-16 (they still
+  matched the old prefixes, so the job-file scan surface was empty). World and judging
+  fingerprints are unchanged by the header.
+
 ## [1.3.0] - 2026-10-18
 
 The first release since 1.2.2. The 1.3.0 board uses four tasks with 100 questions per task and

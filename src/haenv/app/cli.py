@@ -225,6 +225,12 @@ def _rel(p) -> str:
 def main(argv=None) -> int:
     import sys as _sys
     _argv = list(_sys.argv[1:] if argv is None else argv)
+    if _argv[:1] == ["reask"]:
+        from haenv.app.reask import main as reask_main
+        return reask_main(_argv[1:])
+    if _argv[:1] == ["serve"]:
+        from haenv.serve.cli import main as serve_main
+        return serve_main(_argv[1:])
     if _argv[:1] == ["gate"]:
         from haenv.scoring.gate import main as gate_main
         return gate_main(_argv[1:])
@@ -268,6 +274,64 @@ def _twin_ops() -> list[str]:
     return sorted(OPS)
 
 
+def _dry_plan(args, job, cfg, *, workers):
+    from dataclasses import replace
+    from haenv.app.artifacts import batch
+    from haenv.app.artifacts.store import load_cases
+    from haenv.app.evaluate import _done_keys, build_solvers
+    from haenv.interaction.query import install
+    from haenv.runtime.scheduler import (cap_warning_lines, concurrency_lines,
+                                         effective_concurrency, run_caps)
+
+    if args.fresh and args.batch:
+        raise ValueError("--fresh and --batch cannot be used together")
+    job.batch, _ = batch.resolve(job.root, job.task_type, job.job_id,
+                                 fresh=args.fresh, batch=args.batch)
+    stored = {} if args.rebuild else load_cases(job.cases_file)
+    cases = [c.case_id for c in job.cases if not stored or c.case_id in stored]
+    if stored and not cases:
+        raise ValueError("The batch's cases do not match the selected job cases; use --rebuild")
+    done = _done_keys(job.results_file) if not args.fresh else set()
+
+    # Reuse the baseline roster (including query geometry) without building online solvers.
+    install(cfg)
+    baseline_job = replace(job, models=[])
+    baseline_cfg = {**cfg, "default_models": [], "models": {}}
+    names = [name for name, _ in build_solvers(baseline_job, baseline_cfg)]
+    specs = cfg.get("models") or {}
+    for model in job.models or cfg.get("default_models", []):
+        spec = specs.get(model)
+        if spec is None:
+            if job.models:
+                raise ValueError(f"--models has a name not defined in config.models: {model}")
+            continue
+        if isinstance(spec, dict) and spec.get("retired"):
+            raise ValueError(f"Cannot plan retired model: {model}")
+        names.append(model)
+    tasks = [(cid, name) for cid in cases for name in names if f"{cid}|{name}" not in done]
+
+    def backend_for(model):
+        spec = specs.get(model)
+        return spec.get("backend", "openrouter") if isinstance(spec, dict) else "_cli" if spec else "_offline"
+
+    overrides = dict(args.model_cap)
+    ledger = None if args.offline else args.judge_budget_ledger
+    caps, pools = run_caps(tasks, cfg=cfg, model_of=lambda t: t[1], backend_for=backend_for,
+                           ledger_path=ledger, overrides=overrides, minimum=args.max_model_cap)
+    rows = effective_concurrency(tasks, workers=workers, key_of=lambda t: t[1],
+                                 backend_of=backend_for, cfg=cfg, caps=caps, paid_pools=pools,
+                                 cap_overrides=overrides, max_model_cap=args.max_model_cap)
+    print("[haenv] Dry plan: pending cells; new jobs use declared cases before emission gates")
+    print("[haenv] Shared backend/paid lanes are upper bounds; other runs may consume them")
+    if not rows:
+        print("[haenv] No pending cells")
+    for line in concurrency_lines(rows, []):
+        print(line)
+    for line in cap_warning_lines(rows):
+        print(f"WARNING {line}")
+    return 0
+
+
 def _main(argv=None) -> int:
     # Maintenance modules are excluded from the public snapshot and distribution.
     # Advertise only commands that are actually included in this installation.
@@ -276,6 +340,10 @@ def _main(argv=None) -> int:
     from haenv.app.arguments import parser_for
     ap = parser_for(maintenance, _twin_ops())
     a = ap.parse_args(argv)
+    if a.dry_plan and a.cmd != "run":
+        ap.error("--dry-plan is only valid with run")
+    if a.dry_plan and Path(a.job or "").suffix not in (".yaml", ".yml"):
+        ap.error("--dry-plan requires a YAML job; extract case text before planning")
     if a.cmd == "twin" and not (a.op and a.from_batch and a.out):
         ap.error("`twin` needs --op, --from-batch and --out")
     if a.cmd != "tasks" and not a.job:
@@ -345,7 +413,7 @@ def _main(argv=None) -> int:
         _unreg = [c for c in _inputs.scan_code_constants() if not c["class"]]
         return 1 if (_unreg or _inputs.absent_entries()) else 0
 
-    if a.cmd == "run" and not a.offline:
+    if a.cmd == "run" and not a.offline and not a.dry_plan:
         if a.judge_budget_ledger is None:
             print("[haenv] online solvers and default LLM semantic judging share one budget; provide "
                   "--judge-budget-ledger before any paid calls")
@@ -359,7 +427,7 @@ def _main(argv=None) -> int:
         print(f"[haenv] pinned ledger budget: ${a.judge_budget_usd}")
 
     # A job file or case text; text is extracted to `derived/<stem>.job.yaml` under the output root.
-    _job_path = _resolve_input(a, OUT)
+    _job_path = a.job if a.dry_plan else _resolve_input(a, OUT)
     from haenv import output_root as _out_root
     job = load_job(_job_path, root=_out_root())
     job.allow_retired = bool(a.allow_retired)
@@ -370,7 +438,7 @@ def _main(argv=None) -> int:
         print(f"[haenv] physiology layer {'enabled' if a.physio else 'disabled'} from the command line (overrides job.yaml)")
     if a.models:
         job.models = [m.strip() for m in a.models.split(",") if m.strip()]
-    if a.cmd == "run" and not a.offline:
+    if a.cmd == "run" and not a.offline and not a.dry_plan:
         from haenv.runtime.transport import log_proxy_routes
         from haenv.scoring.semantic.rubric import load_policy
         route_models = list(job.models or cfg.get("default_models") or [])
@@ -390,6 +458,13 @@ def _main(argv=None) -> int:
         job.models = []
         cfg = {**cfg, "default_models": []}
         job.include_baseline = True
+
+    if a.dry_plan:
+        try:
+            return _dry_plan(a, job, cfg, workers=_workers)
+        except ValueError as error:
+            print(f"[haenv] cannot plan this run: {error}")
+            return 2
 
     # ---- board-freeze gate ----
     if "board_freeze" in maintenance:
@@ -585,7 +660,7 @@ def _main(argv=None) -> int:
             return cs, None, e
 
     if dispatch is None and _n_workers > 1:
-        print(f"[haenv] generating on {_n_workers} processes (results collected in input order, byte-identical to serial)")
+        print(f"[haenv] generating on {min(_n_workers, len(job.cases))} processes (results collected in input order, byte-identical to serial)")
         _results = _bp.build_all(job.cases, lambda cs: build_case(
             cs, max_rounds=int(syn.get("max_rounds", 6))), _n_workers)
     elif _n_workers > 1:
@@ -1137,8 +1212,9 @@ def _eval_and_report(a, job, cfg, built, audits, run_eval, write_report, *,
         append_record(job.results_dir, cfg, config_layers())
         from haenv.interaction.query import install as _install_query
         _install_query(cfg)
-        from haenv.runtime.scheduler import ledger_context
-        with ledger_context(None if a.offline else a.judge_budget_ledger):
+        from haenv.runtime.scheduler import ledger_context, model_cap_context
+        with (ledger_context(None if a.offline else a.judge_budget_ledger),
+              model_cap_context(dict(getattr(a, "model_cap", [])), getattr(a, "max_model_cap", None))):
             if a.offline:
                 rows = run_eval(job, cfg, built, resume=not a.fresh, ctx=ctx)
             else:

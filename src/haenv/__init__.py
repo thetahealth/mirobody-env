@@ -9,6 +9,7 @@ import os as _os
 from pathlib import Path as _Path
 
 __all__ = ["job", "build", "evaluate", "report", "cli", "kernel_path"]
+__version__ = "1.3.1"
 
 # Opt-in scratch redirect: HAENV_SCRATCH_TMP sets TMPDIR once, process-wide, unless TMPDIR
 # is already set. There is no default path, so importing the package creates no directories.

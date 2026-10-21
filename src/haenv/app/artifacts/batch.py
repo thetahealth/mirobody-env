@@ -99,7 +99,7 @@ def kernel_fingerprint() -> tuple[str, str]:
 
 
 def provenance_fields(cfg: dict, job_path: str | None = None,
-                      root: Path | None = None) -> dict:
+                      root: Path | None = None, *, revision_label: str | None = None) -> dict:
     """Per-row provenance: `haenv_git_sha` (with `+dirty`), `job_sha256`,
     `world_knobs`, `generator_sha`, `world_sha`, `kernel_sha256`.
 
@@ -110,16 +110,19 @@ def provenance_fields(cfg: dict, job_path: str | None = None,
     import subprocess
     root = _module_source_root(__file__)
     out: dict = {}
-    try:                                        # haenv's own code version
-        r = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", "HEAD"],
-                           capture_output=True, text=True, timeout=10)
-        out["haenv_git_sha"] = (r.stdout or "").strip() or "unknown"
-        d = subprocess.run(["git", "-C", str(root), "status", "--porcelain"],
-                           capture_output=True, text=True, timeout=10)
-        if (d.stdout or "").strip():
-            out["haenv_git_sha"] += "+dirty"    # uncommitted changes -> the conclusion can't be reproduced exactly, must stay visible
-    except Exception:
-        out["haenv_git_sha"] = "unknown"
+    if revision_label is not None:
+        out["haenv_git_sha"] = revision_label
+    else:
+        try:                                        # haenv's own code version
+            r = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", "HEAD"],
+                               capture_output=True, text=True, timeout=10)
+            out["haenv_git_sha"] = (r.stdout or "").strip() or "unknown"
+            d = subprocess.run(["git", "-C", str(root), "status", "--porcelain"],
+                               capture_output=True, text=True, timeout=10)
+            if (d.stdout or "").strip():
+                out["haenv_git_sha"] += "+dirty"    # uncommitted changes -> the conclusion can't be reproduced exactly, must stay visible
+        except Exception:
+            out["haenv_git_sha"] = "unknown"
     if job_path:                                # content digest of job.yaml (should change if the item changed)
         try:
             out["job_sha256"] = hashlib.sha256(

@@ -229,12 +229,12 @@ class _HTTPChat:
     """`chat` over the production transport: one accounted request per turn."""
 
     def _wire_body(self, prompt: str) -> bytes:
-        from haenv.runtime.transport import envelope_content, is_envelope
+        from haenv.runtime.transport import solver_envelope_content, is_envelope
         if not is_envelope(prompt):
             return super()._wire_body(prompt)
         import haenv.runtime.llm as _llm
         from haenv.runtime.transport import sent_temperature
-        content = envelope_content(self.backend, prompt)
+        content = solver_envelope_content(self, prompt)
         if self.backend == "google":
             gen = {"maxOutputTokens": self.max_tokens}
             if sent_temperature(self.sampling) is not None:

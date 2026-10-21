@@ -101,11 +101,39 @@ identifiers are in English.
 
 ## Leaderboard
 
-The 1.3.0 board ranks 8 models on the four packs, 100 items per pack (N100), with 3 answers per
-item. The main score averages the three answer scores `S = G·D·(1+Q)/2` of each item (k3) and gives
-the four packs equal weight; the preregistered first-answer score (pk1) gives the same model order.
+Both boards rank models on the four packs, 100 items per pack (N100), with 3 answers per item; the
+current board is 1.3.1 (thirteen models), the 1.3.0 board (eight models) follows it. The main score averages the three answer scores `S = G·D·(1+Q)/2` of each item (k3) and gives
+the four packs equal weight; the preregistered first-answer score (pk1) is reported as a robustness check.
 Intervals are 95% paired item-cluster bootstrap intervals (2,000 draws) that resample the same items
 for every model; rank intervals come from the same draws.
+
+### 1.3.1 board
+
+The 1.3.1 board ranks 13 models with the 1.3.1 citation check on the same four N100 packs and the
+same k3 aggregation, intervals and draws. Diagnosis scores of the eight models below differ from
+the 1.3.0 table after refreshing affected answers under the current environment and applying the
+current scorer (see `CHANGELOG.md`). Score readouts: [`docs/boards/1.3.1/k3.json`](docs/boards/1.3.1/k3.json)
+and the first-answer readout [`docs/boards/1.3.1/pk1.json`](docs/boards/1.3.1/pk1.json).
+
+<!-- board-1.3.1:start -->
+![Overall scores, 95% intervals and rank intervals for 13 models](docs/figures/readme_board_131.png)
+
+| Rank | Model | Overall (95% CI) | ① | ② | ③ | ④ | All-3 |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 1–2 | deepseek-v4.1-flash | 0.837 (0.813–0.861) | 0.655 | 0.932 | 0.928 | 0.833 | 0.823 |
+| 1–2 | gpt-6-sol | 0.832 (0.808–0.856) | 0.693 | 0.893 | 0.959 | 0.785 | 0.878 |
+| 3–5 | mimo-v2.6-flash | 0.793 (0.765–0.819) | 0.569 | 0.943 | 0.853 | 0.807 | 0.760 |
+| 3–5 | gemini-3.8-flash | 0.792 (0.768–0.816) | 0.591 | 0.950 | 0.882 | 0.744 | 0.867 |
+| 3–5 | qwen38-27b | 0.789 (0.763–0.815) | 0.617 | 0.930 | 0.885 | 0.722 | 0.765 |
+| 6–7 | gpt-6-luna | 0.719 (0.692–0.747) | 0.494 | 0.859 | 0.897 | 0.627 | 0.693 |
+| 6–7 | deepseek-v4-pro | 0.696 (0.666–0.724) | 0.533 | 0.933 | 0.689 | 0.629 | 0.668 |
+| 8–10 | minimax-m3 | 0.633 (0.602–0.663) | 0.440 | 0.870 | 0.608 | 0.616 | 0.525 |
+| 8–10 | deepseek-v4-flash | 0.632 (0.599–0.664) | 0.477 | 0.856 | 0.656 | 0.538 | 0.588 |
+| 8–10 | glm-5.3-flash | 0.628 (0.597–0.658) | 0.484 | 0.813 | 0.668 | 0.547 | 0.530 |
+| 11 | gemma-4-31b-it | 0.536 (0.506–0.567) | 0.382 | 0.767 | 0.514 | 0.482 | 0.580 |
+| 12 | qwen3.7-flash | 0.446 (0.414–0.476) | 0.380 | 0.599 | 0.271 | 0.533 | 0.327 |
+| 13 | qwen3-32b | 0.171 (0.150–0.192) | 0.069 | 0.307 | 0.058 | 0.249 | 0.073 |
+<!-- board-1.3.1:end -->
 
 ### 1.3.0 overall
 
@@ -136,6 +164,40 @@ their batches record. [Interactive board](https://thetahealth.github.io/mirobody
 [earlier boards](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
 [recomputing the board](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-130-overall-board)
 
+<!-- findings-1.3.1:start -->
+
+## 1.3.1 findings
+
+![Evidence coverage among wrong diagnoses and re-ask correction rates](docs/figures/readme_findings_131.png)
+
+**Wrong diagnoses usually lack evidence.** Of the wrong diagnoses (aborts excluded) on items with a list of decisive results, 766 had not obtained all of those results and 247 all of them: 75.6% lacked part of the decisive evidence.
+
+**Supplying the missed results corrects most of them.** 142 wrong diagnoses with incomplete coverage (gpt-6-luna 44, glm-5.3-flash 50, qwen3-32b 48) were re-asked from just before the final answer. With the missed decisive results added, 64.1% became correct, against 12.7% with as many non-decisive results and 8.5% with nothing added (51.4 points over non-decisive results, 95% CI 40.1 to 61.4). On the 79 that missed at least two decisive results, adding a random half of them corrected 41.8% (nothing added 6.3%, all 75.9%).
+
+**A larger test budget helps some models more than others.** Diagnosis accuracy on the 100 diagnosis items (first answers) at half, the default (the board) and twice the default test budget. Gain: percentage points from half to twice the budget, with its paired 95% interval; budget used: mean share of the default budget spent.
+
+| Model | 0.5× | 1× | 2× | Gain [95% CI] | Budget used at 1× |
+|---|---:|---:|---:|---:|---:|
+| deepseek-v4-flash | 66% | 70% | 76% | +10.0 [2.0, 18.0] | 66% |
+| gpt-6-sol | 71% | 77% | 81% | +10.0 [2.0, 18.0] | 73% |
+| minimax-m3 | 55% | 59% | 65% | +10.0 [0.0, 19.0] | 44% |
+| glm-5.3-flash | 55% | 63% | 63% | +8.0 [−2.0, 18.0] | 35% |
+| deepseek-v4-pro | 71% | 77% | 77% | +6.0 [−1.0, 13.0] | 55% |
+| gemini-3.8-flash | 72% | 77% | 76% | +4.0 [−4.0, 12.0] | 53% |
+| gpt-6-luna | 63% | 67% | 66% | +3.0 [−3.0, 9.0] | 50% |
+| qwen3.7-flash | 56% | 57% | 56% | 0.0 [−9.0, 8.0] | 36% |
+
+**HTTP replay reproduces the stored tool results.** Replaying the 256,609 tool calls of the 15,600 leaderboard answer sessions on the 400 items through `haenv serve fhir` and decoding the responses gives identical output to the function-call tools in 256,609 of 256,609 calls and reproduces every tool result stored in those sessions' traces, purchases and refusals included; the 4,621,363 returned resources are valid FHIR R4B (0 invalid). Run [`tools/release/replay_http.py`](tools/release/replay_http.py) on the leaderboard pool:
+
+```bash
+python tools/release/replay_http.py --work leaderboard-pool/ --workers 32 --out artifacts/replay-http-results.json
+```
+
+Expected summary: `questions=400`, `responses=15600`, `calls=256609`, `identical=256609`, `differing=0`, `stored_differing=0`, `pending_purchases_replayed=234`, `validation_failures=0`; `missing=[]`, `worker_errors=[]`. The pool contains the stored leaderboard runs and is supplied separately from the source tree. An offline HTTP rehearsal is `python tools/release/replay_http.py --offline`.
+
+Recompute and re-score the released re-ask answers offline: `python tools/evaluation/reask_pooled.py --check` ([data and conditions](benchmarks/results/1.3.1/reask/README.md)).
+<!-- findings-1.3.1:end -->
+
 ## Quick start
 
 Generate, verify, answer and score offline. No API keys, no cost.
@@ -143,6 +205,8 @@ Generate, verify, answer and score offline. No API keys, no cost.
 ```bash
 git clone https://github.com/thetahealth/mirobody-env && cd mirobody-env
 
+# 8-core Linux timings: install ~2s; build ~10s; verify ~9s; offline run ~18s; report ~8s.
+# Installation used a package mirror; PyPI and other machines may differ (docs/quickstart-timing.json).
 uv run haenv build  benchmarks/inputs/example-ew.job.yaml --gen deterministic --fresh   # generate patients and cases
 uv run haenv verify benchmarks/inputs/example-ew.job.yaml --gen deterministic           # verify every item
 uv run haenv run    benchmarks/inputs/example-ew.job.yaml --offline                     # answer with offline reference solvers
@@ -180,6 +244,21 @@ uv run --with scikit-learn --with joblib python tools/generation/make_pack.py --
 the seed's hash. The command exits 0 when the build and every audit gate pass, and `haenv run`
 refuses a pack's items without a passing audit. Example jobs, class shares and the audit are in the
 [data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#task-packs-and-their-generators).
+</details>
+
+<details>
+<summary>Serve a question over FHIR REST or MCP</summary>
+
+```bash
+B=$(ls -d artifacts/results/early_warning/ew-demo/*/ | tail -1)   # the batch built above
+uv run haenv serve fhir --pack "$B" --question EWX-01 --port 8000 &   # one question, stdlib HTTP server
+curl -s localhost:8000/metadata                                     # CapabilityStatement: routes and search parameters
+uv run --extra serve haenv serve mcp --pack "$B" --question EWX-01  # the same tools over MCP stdio
+```
+
+The server answers the same searches, paging, row cap, date filters and test budget as the
+function-call tools, with case days mapped to ISO dates; `tools/release/replay_http.py` replays
+stored tool calls through it and checks that the decoded outputs are identical.
 </details>
 
 <details>
@@ -313,6 +392,7 @@ plugin packages, each with a negative control. Guides:
 
 | Topic | Where |
 |---|---|
+| Specifications, scoring details and additional results | [`docs/supplement.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/supplement.md) |
 | Packs, gold provenance, scoring details, earlier boards, known gaps | [`docs/DATA_CARD.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md) |
 | Twin records: paired items that change one declared field | [`docs/DATA_CARD.md#twin-records`](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#twin-records) |
 | What is free to reproduce, what is billed, caching and self-checks | [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md) |
@@ -325,13 +405,13 @@ plugin packages, each with a negative control. Guides:
 
 - **Pack ④ RCV baseline.** A reader using only the two printed values and the protocol RCV table
   reaches D around 0.5 on pack ④, so a pack ④ score near 0.5 demonstrates use of RCV alone.
-- **Rank uncertainty.** One of the seven adjacent paired score-difference intervals includes zero
-  (deepseek-v4-flash and glm-5.3-flash); the board does not establish an order for that pair.
+- **Rank uncertainty.** Only 6 of 12 adjacent paired score-difference intervals exclude zero on the 1.3.1 board;
+  overlapping intervals do not establish an order.
 - **Clinical review.** The rules behind packs ② and ③ and several registry entries carry
   `review: pending`; the medical content as a whole has not been reviewed by a practising clinician.
 - **Single semantic judge.** One model (`gpt-6-luna`) scores `Q`, and the same vendor's models are
   among those tested. A cross-family Gemini judge (the provider served `gemini-3.8-flash`, itself a
-  tested model) re-scored all 6,937 responses with `G·D = 1`: the eight-model order is unchanged and
+  tested model) re-scored all 6,937 responses on the historical 1.3.0 board with `G·D = 1`: the eight-model order is unchanged and
   model-mean `Q` correlates with the primary judge at r = 0.968. The `Q` rubric is calibrated on
   these board answers, without clinician validation.
 - **Synthetic data.** All patients are synthetic; nothing here is medical advice.
@@ -370,7 +450,7 @@ All patients are synthetic. Nothing here is medical advice or suitable for clini
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.3.0}
+  version = {1.3.1}
 }
 ```
 
@@ -384,3 +464,71 @@ Code is under the [MIT License](https://github.com/thetahealth/mirobody-env/blob
 HAEnv is inspired by [ESL-Bench](https://arxiv.org/abs/2604.02834).
 
 <p align="center"><sub>Synthetic data · evaluation use only · not medical advice</sub></p>
+
+<details>
+<summary>Ask a failed diagnosis response again</summary>
+
+`haenv reask` resumes a stored query conversation immediately before its final answer.
+It reproduces the experiment's mechanism per unit. The pooled 1.3.1 re-ask results are
+recomputed from the shipped package in [`benchmarks/results/1.3.1/reask/`](benchmarks/results/1.3.1/reask/README.md)
+(stored answers, inclusion list and diagnosis gold):
+`tools/evaluation/reask_pooled.py --check` re-scores the 535 stored answers and checks the
+61 reported readings, intervals included. A new `haenv reask` run selects its own units; it
+does not apply the original per-model sampling, per-question inclusion caps or prefix-check
+exclusions. Units with one missed result have no half request; the pooled half-evidence
+analysis keeps their original D=0 rather than a new resample outcome.
+
+It selects failed, answered diagnosis responses with an evidence list and asks the original
+model once per arm: `resample` adds nothing, `decisive` adds results carrying the missed
+evidence, `placebo` adds the same number of results carrying no evidence-list item, and
+`half` adds a seeded subset of `floor(k/2)` of the decisive results, only when `k >= 2`. Failed responses with complete evidence coverage receive resample only.
+
+```bash
+haenv reask saved-batch/ --models glm-5.3-flash --questions QUESTION_ID \
+  --sources saved-result-corpus/ --dry-run
+haenv reask saved-batch/ --models glm-5.3-flash --questions QUESTION_ID \
+  --sources saved-result-corpus/ --out reasked/ --model-cap glm-5.3-flash=32 \
+  --judge-budget-ledger reask-ledger --judge-budget-usd 1
+```
+
+The source needs `query_trace.jsonl`, `payloads.jsonl`, and final-request fingerprints in
+`responses.jsonl` or accounting receipts. Purchase observations in `trace.jsonl` rebuild the
+stored tool declarations. Unrecorded decisive purchases use the environment's own purchase
+path and require `cases.jsonl`. `--sources` adds recorded results only after matching the
+question's solver/verifier payload identity, prediction time T and archived case fingerprints
+where available. Same-question world mismatches and conflicting returns for the same call
+stop preparation. Use
+the same source corpus, `--seed` and `--half-seed` to reproduce a selection. A fingerprint
+mismatch or insufficient placebo pool stops preparation before model calls. Placebo excludes
+all attempted purchases, including refused ones, and can include purchased monitoring streams.
+
+Every injected arm uses the same empty assistant tool-call wrapper and original result objects;
+no evidence labels reach the model. Tools are closed for the final answer; the GLM Flash route
+uses `auto` for compatibility, with any returned tool call scored as unanswered and never executed.
+The dry run prints test names and carried evidence keys without loading a provider.
+
+Before any model call, the current solver's canonical model, upstream, sampling, output
+limit, reasoning effort and response format must match the source accounting manifest or
+final-request receipts. Equivalent transport routes use the runtime's canonical answer
+view. Missing source settings also stop execution. `--allow-settings-override` explicitly
+permits missing or different settings and labels the output accordingly; it cannot claim
+verified settings replay.
+
+Output includes `injection-rows.jsonl` (`model` is the actual model id; `source_model` is the
+original solver name; `answer_settings` records the actual settings; `settings_replay` is
+`verified`, `mismatch` or `unavailable`; also `question`, `repeat`, `kind`, `arm`, `status`,
+`D`, `n_added`; arm codes `A/B/C/H`), the exact request/selection manifest, answers, scheduler
+receipts and normal cost accounting. `D` uses the shipped diagnosis scorer and stored gold;
+transport and scoring errors have `D: null`. A scoring/conversion error saves the raw answer
+and error details for that cell and allows the batch to continue. Such cells are complete
+outcomes; transport failures can retry. Completed arms resume without another call; changed plans
+require a new output directory. Repeats come from stored metadata, a batch's `-pkN`/`-repN`
+suffix, or otherwise default to the first repeat.
+
+The command defaults to 64 workers per model, raises legacy cell caps to that concurrency,
+and remains bounded by configured backend limits and shared paid request lanes.
+`--model-cap MODEL=N` takes precedence within these ceilings and the worker count.
+Python callers can use `haenv.reask.prepare(...)`, `dry_rows(units)` and
+`run(units, output, ledger_path=..., budget_usd=..., model_caps=...)` with the same semantics.
+
+</details>

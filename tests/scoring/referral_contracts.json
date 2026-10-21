@@ -1,0 +1,323 @@
+{
+  "review_gates": [
+    {
+      "id": "miss-0",
+      "action": "A0",
+      "tests": [],
+      "flag": false,
+      "warranted": true,
+      "expected": [
+        "premature_closure"
+      ]
+    },
+    {
+      "id": "miss-1",
+      "action": "A1",
+      "tests": [],
+      "flag": false,
+      "warranted": true,
+      "expected": [
+        "premature_closure"
+      ]
+    },
+    {
+      "id": "miss-2",
+      "action": "A0",
+      "tests": [
+        "TSH"
+      ],
+      "flag": false,
+      "warranted": true,
+      "expected": [
+        "missing_clinician_review_flag"
+      ]
+    },
+    {
+      "id": "miss-3",
+      "action": "A1",
+      "tests": [
+        "TSH"
+      ],
+      "flag": false,
+      "warranted": true,
+      "expected": [
+        "missing_clinician_review_flag"
+      ]
+    },
+    {
+      "id": "miss-4",
+      "action": "A2",
+      "tests": [],
+      "flag": false,
+      "warranted": true,
+      "expected": [
+        "missing_clinician_review_flag"
+      ]
+    },
+    {
+      "id": "miss-5",
+      "action": "A3",
+      "tests": [
+        "TSH"
+      ],
+      "flag": false,
+      "warranted": true,
+      "expected": [
+        "missing_clinician_review_flag"
+      ]
+    },
+    {
+      "id": "miss-6",
+      "action": "A0 continue_monitoring",
+      "tests": [
+        "TSH"
+      ],
+      "flag": false,
+      "warranted": true,
+      "expected": [
+        "missing_clinician_review_flag"
+      ]
+    },
+    {
+      "id": "no-miss-0",
+      "action": "A1",
+      "tests": [
+        "TSH"
+      ],
+      "flag": true,
+      "warranted": true,
+      "expected": []
+    },
+    {
+      "id": "no-miss-1",
+      "action": "A1",
+      "tests": [],
+      "flag": false,
+      "warranted": false,
+      "expected": []
+    },
+    {
+      "id": "no-miss-2",
+      "action": "A4",
+      "tests": [],
+      "flag": false,
+      "warranted": true,
+      "expected": []
+    },
+    {
+      "id": "no-miss-3",
+      "action": "A5",
+      "tests": [
+        "TSH"
+      ],
+      "flag": false,
+      "warranted": true,
+      "expected": []
+    }
+  ],
+  "citations": [
+    {
+      "id": "citation-0",
+      "ledger": [
+        "EV-C1-01",
+        "EV-C1-05",
+        "EV-C1-23"
+      ],
+      "cited": [
+        "EV-23"
+      ],
+      "flagged": []
+    },
+    {
+      "id": "citation-1",
+      "ledger": [
+        "EV-C1-01",
+        "EV-C1-05",
+        "EV-C1-23"
+      ],
+      "cited": [
+        "EV-5",
+        "EV-05",
+        "EV-C1-01"
+      ],
+      "flagged": []
+    },
+    {
+      "id": "citation-2",
+      "ledger": [
+        "EV-C1-01",
+        "EV-C1-05",
+        "EV-C1-23"
+      ],
+      "cited": [
+        "EV-99"
+      ],
+      "flagged": [
+        "EV-99"
+      ]
+    },
+    {
+      "id": "citation-3",
+      "ledger": [
+        "EV-C1-01",
+        "EV-C1-05",
+        "EV-C1-23"
+      ],
+      "cited": [
+        "EV-C2-23"
+      ],
+      "flagged": [
+        "EV-C2-23"
+      ]
+    },
+    {
+      "id": "citation-4",
+      "ledger": [
+        "EV-C1-01",
+        "EV-C1-05",
+        "EV-C1-23"
+      ],
+      "cited": [
+        "EV-C1-304"
+      ],
+      "flagged": [
+        "EV-C1-304"
+      ]
+    },
+    {
+      "id": "citation-5",
+      "ledger": [
+        "EV-C1-01",
+        "EV-C1-05",
+        "EV-C1-23"
+      ],
+      "cited": [
+        "EV-C1-5"
+      ],
+      "flagged": [
+        "EV-C1-5"
+      ]
+    },
+    {
+      "id": "citation-6",
+      "ledger": [
+        "EV-C1-01",
+        "EV-C1-05",
+        "EV-C1-23"
+      ],
+      "cited": [
+        "EV-23",
+        "EV-77"
+      ],
+      "flagged": [
+        "EV-77"
+      ]
+    },
+    {
+      "id": "ambiguous-number",
+      "ledger": [
+        "EV-C1-23",
+        "EV-C1-023"
+      ],
+      "cited": [
+        "EV-23"
+      ],
+      "flagged": [
+        "EV-23"
+      ]
+    }
+  ],
+  "macro": [
+    {
+      "id": "always",
+      "groups": [
+        [
+          true,
+          11,
+          true
+        ],
+        [
+          false,
+          6,
+          true
+        ]
+      ],
+      "expected": 0.0
+    },
+    {
+      "id": "never",
+      "groups": [
+        [
+          true,
+          11,
+          false
+        ],
+        [
+          false,
+          6,
+          false
+        ]
+      ],
+      "expected": 1.0
+    },
+    {
+      "id": "matches",
+      "groups": [
+        [
+          true,
+          11,
+          true
+        ],
+        [
+          false,
+          6,
+          false
+        ]
+      ],
+      "expected": 1.0
+    },
+    {
+      "id": "half-specificity",
+      "groups": [
+        [
+          false,
+          2,
+          false
+        ],
+        [
+          false,
+          2,
+          true
+        ],
+        [
+          true,
+          3,
+          false
+        ]
+      ],
+      "expected": 0.5
+    },
+    {
+      "id": "warranted-only",
+      "groups": [
+        [
+          true,
+          11,
+          false
+        ]
+      ],
+      "expected": null
+    },
+    {
+      "id": "unwarranted-only",
+      "groups": [
+        [
+          false,
+          6,
+          false
+        ]
+      ],
+      "expected": null
+    }
+  ]
+}

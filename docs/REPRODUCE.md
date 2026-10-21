@@ -65,6 +65,22 @@ uv run haenv report benchmarks/inputs/ddx-timeline.job.yaml --batch <batch>
 `restamp_batch` drops the stubs, recomputes from the stored responses, re-runs the stubs offline,
 and then proves the batch passes the publish gate. A failed gate exits non-zero.
 
+### Run an audited task offline
+
+This exercises lab-change attribution with deterministic reference solvers, including
+generation, the pack audit and scoring:
+
+```bash
+uv run --with scikit-learn --with joblib python tools/generation/make_pack.py --pack p4 --n 50 --out artifacts/lab-smoke
+HAENV_OUTPUT_ROOT=artifacts/lab-smoke/pack uv run haenv run artifacts/lab-smoke/pack/p4-followup.job.yaml --offline
+```
+
+Keep the output root on the audited `pack` directory: otherwise `run` builds a separate
+batch without the audit marker. The audit dependencies are needed only for the first command.
+This reproduces the task and scoring procedure with new synthetic cases and offline answers.
+Recomputing the published model scores still requires the original stored answers and judge
+votes; the shipped board JSON files contain readouts, not those run artifacts.
+
 ### The judging version is part of the citation
 
 A result records the identity of each criterion and of the complete criterion set.
@@ -213,7 +229,7 @@ uv run haenv run benchmarks/inputs/ddx-timeline.job.yaml --fresh                
 The default models are reached directly: Gemini models through Google's API, Qwen models through
 DashScope, and every other model through OpenRouter, pinned to one upstream with fallbacks off:
 the vendor's own endpoint where the account's zero-data-retention setting allows it, otherwise a
-named host serving the same weights (OpenAI models on Azure, Claude on Google Vertex, MiniMax on
+named host serving the same weights (OpenAI models on Azure, Claude on Google Vertex, MiniMax M3 on
 Novita). No third-party relay sits between the pipeline and a model.
 
 A billed run counts every request against `--judge-budget-usd`. On `openrouter`, `google` and

@@ -1,0 +1,485 @@
+[
+  {
+    "id": "p3-0",
+    "pack": "p3",
+    "index": 0,
+    "kind": "null-swap-conditions",
+    "case_id": "JD-01"
+  },
+  {
+    "id": "p3-1",
+    "pack": "p3",
+    "index": 1,
+    "kind": "p3-adherence",
+    "case_id": "JD-01"
+  },
+  {
+    "id": "p3-2",
+    "pack": "p3",
+    "index": 2,
+    "kind": "p3-observation",
+    "case_id": "JD-01"
+  },
+  {
+    "id": "p3-3",
+    "pack": "p3",
+    "index": 3,
+    "kind": "p3-observation",
+    "case_id": "JD-01"
+  },
+  {
+    "id": "p3-4",
+    "pack": "p3",
+    "index": 4,
+    "kind": "null-swap-conditions",
+    "case_id": "JD-05v3"
+  },
+  {
+    "id": "p3-5",
+    "pack": "p3",
+    "index": 5,
+    "kind": "p3-onset",
+    "case_id": "JD-05v3"
+  },
+  {
+    "id": "p3-6",
+    "pack": "p3",
+    "index": 6,
+    "kind": "p3-onset",
+    "case_id": "JD-05v3"
+  },
+  {
+    "id": "p3-7",
+    "pack": "p3",
+    "index": 7,
+    "kind": "p3-onset",
+    "case_id": "JD-05v3"
+  },
+  {
+    "id": "p3-8",
+    "pack": "p3",
+    "index": 8,
+    "kind": "p3-adherence",
+    "case_id": "JD-05v3"
+  },
+  {
+    "id": "p3-9",
+    "pack": "p3",
+    "index": 9,
+    "kind": "p3-adherence",
+    "case_id": "JD-05v3"
+  },
+  {
+    "id": "p3-10",
+    "pack": "p3",
+    "index": 10,
+    "kind": "p3-observation",
+    "case_id": "JD-05v3"
+  },
+  {
+    "id": "p4-0",
+    "pack": "p4",
+    "index": 0,
+    "kind": "null-swap-conditions",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p4-1",
+    "pack": "p4",
+    "index": 1,
+    "kind": "p4-remove-candidate",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p4-2",
+    "pack": "p4",
+    "index": 2,
+    "kind": "p4-remove-candidate",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p4-3",
+    "pack": "p4",
+    "index": 3,
+    "kind": "p4-remove-candidate",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p4-4",
+    "pack": "p4",
+    "index": 4,
+    "kind": "p4-observation",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p4-5",
+    "pack": "p4",
+    "index": 5,
+    "kind": "null-swap-conditions",
+    "case_id": "JD-08v3"
+  },
+  {
+    "id": "p4-6",
+    "pack": "p4",
+    "index": 6,
+    "kind": "p4-remove-candidate",
+    "case_id": "JD-08v3"
+  },
+  {
+    "id": "p4-7",
+    "pack": "p4",
+    "index": 7,
+    "kind": "p4-observation",
+    "case_id": "JD-08v3"
+  },
+  {
+    "id": "p4-8",
+    "pack": "p4",
+    "index": 8,
+    "kind": "p4-observation",
+    "case_id": "JD-08v3"
+  },
+  {
+    "id": "p2-0",
+    "pack": "p2",
+    "index": 0,
+    "kind": "null-swap-conditions",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-1",
+    "pack": "p2",
+    "index": 1,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-2",
+    "pack": "p2",
+    "index": 2,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-3",
+    "pack": "p2",
+    "index": 3,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-4",
+    "pack": "p2",
+    "index": 4,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-5",
+    "pack": "p2",
+    "index": 5,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-6",
+    "pack": "p2",
+    "index": 6,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-7",
+    "pack": "p2",
+    "index": 7,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-8",
+    "pack": "p2",
+    "index": 8,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-9",
+    "pack": "p2",
+    "index": 9,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-10",
+    "pack": "p2",
+    "index": 10,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-11",
+    "pack": "p2",
+    "index": 11,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-12",
+    "pack": "p2",
+    "index": 12,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-13",
+    "pack": "p2",
+    "index": 13,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-14",
+    "pack": "p2",
+    "index": 14,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-15",
+    "pack": "p2",
+    "index": 15,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-16",
+    "pack": "p2",
+    "index": 16,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-17",
+    "pack": "p2",
+    "index": 17,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-18",
+    "pack": "p2",
+    "index": 18,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-19",
+    "pack": "p2",
+    "index": 19,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-20",
+    "pack": "p2",
+    "index": 20,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-21",
+    "pack": "p2",
+    "index": 21,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-22",
+    "pack": "p2",
+    "index": 22,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-23",
+    "pack": "p2",
+    "index": 23,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-24",
+    "pack": "p2",
+    "index": 24,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-25",
+    "pack": "p2",
+    "index": 25,
+    "kind": "null-swap-conditions",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-26",
+    "pack": "p2",
+    "index": 26,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-27",
+    "pack": "p2",
+    "index": 27,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-28",
+    "pack": "p2",
+    "index": 28,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-29",
+    "pack": "p2",
+    "index": 29,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-30",
+    "pack": "p2",
+    "index": 30,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-31",
+    "pack": "p2",
+    "index": 31,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-32",
+    "pack": "p2",
+    "index": 32,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-33",
+    "pack": "p2",
+    "index": 33,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-34",
+    "pack": "p2",
+    "index": 34,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-35",
+    "pack": "p2",
+    "index": 35,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-36",
+    "pack": "p2",
+    "index": 36,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-37",
+    "pack": "p2",
+    "index": 37,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-38",
+    "pack": "p2",
+    "index": 38,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-39",
+    "pack": "p2",
+    "index": 39,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-40",
+    "pack": "p2",
+    "index": 40,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-41",
+    "pack": "p2",
+    "index": 41,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-42",
+    "pack": "p2",
+    "index": 42,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-43",
+    "pack": "p2",
+    "index": 43,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-44",
+    "pack": "p2",
+    "index": 44,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-45",
+    "pack": "p2",
+    "index": 45,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-46",
+    "pack": "p2",
+    "index": 46,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-47",
+    "pack": "p2",
+    "index": 47,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  },
+  {
+    "id": "p2-48",
+    "pack": "p2",
+    "index": 48,
+    "kind": "p2-measurement",
+    "case_id": "JD-07"
+  }
+]

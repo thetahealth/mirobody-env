@@ -31,7 +31,7 @@ GENERATION = (
     "haenv/m2/background.py", "registry/background_m2.yaml",
     "registry/m2_pre_review.yaml",
     'haenv/world/generation/framings.py',
-    'haenv/resources/yamlcache.py',
+    'haenv/resources/yamlcache.py', 'haenv/resources/snapshots.py',
     'haenv/resources/regpath.py',
     'haenv/world/generation/world_plugins.py',
     'haenv/world/clinical/post_inject.py',
@@ -452,6 +452,16 @@ INFRA_FORBIDDEN_IMPORTS = ("haenv.judges", "haenv.scoring", "haenv.gates", "haen
 JUDGING_SHA_EQUIVALENCE = (
     {"old": "548e2c872f6271c7", "rev": "6f1196dc", "new": "2f560f1c346ba93d"},
     {"old": "6aa282bab6e2afcf", "rev": "a26d32ad", "new": "2f560f1c346ba93d"},
+)
+
+#: Generation implementation changed; the referenced recipe compares regenerated
+#: packs with frozen source-revision labels and retains the native outputs too.
+#: Both endpoints are recomputed from Git by ``verify_world_equivalence``.
+WORLD_SHA_EQUIVALENCE = (
+    {"old": "b20f0330492cd29f", "rev": "aada47f9",
+     "new": "bd0bc1b7383d06c1", "new_rev": "f1f09e9c",
+     "proof": "world-equivalence-1.3.1.json",
+     "proof_sha256": "507a96f2b4568ca85455b98db88c00abfff5751d4effb2f49a59f10d9686c32b"},
 )
 
 #: Old judging fingerprints and the value after a refactor that only moved code: files
@@ -1047,6 +1057,10 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
                                "`judge_spec`, which drops the solver-only keys so a judge's request is what "
                                'it was before they existed. google_response_format translates the declared '
                                'schema into Google wire fields; proxy_for_solver selects the recorded route. '
+                               'solver_envelope_content preserves messages and declared automatic/closed '
+                               'tool semantics while omitting unsupported explicit defaults on the pinned '
+                               'MiniMax/Novita route; verify_wire checks that same derivation. Saved-response '
+                               'rescoring does not use this wire translation. '
                                'None of them produces or alters a response, a vote or a score. The crossing '
                                'symbols are pinned in `ALLOW_SYMBOL_PIN`.',
  'haenv/scoring/semantic/runref.py': 'Only locates the sealed semantic run a manifest or view names -- by '
@@ -1398,7 +1412,7 @@ ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
     'haenv/runtime/relay_accounting.py': frozenset(('RELAY_COST_DEFAULT', 'RELAY_COST_HEADROOM', 'RELAY_COST_PER_GRID', 'RELAY_USD_PER_MTOK', '_measured_tokens_per_grid', 'preflight_quota')),
     'haenv/runtime/scheduler.py': frozenset(('_schedule', '_stall_guard', 'stall_report_lines')),
     'haenv/runtime/solver_accounting.py': frozenset(('fetch_endpoints', 'prepare_accounting', 'wire_settings')),
-    'haenv/runtime/transport.py': frozenset(('check_pin', 'check_sampling', 'check_served', 'envelope_content', 'google_response_format', 'is_envelope', 'judge_spec', 'make_envelope', 'model_urlopen', 'proxy_for_solver', 'sent_temperature', 'verify_wire')),
+    'haenv/runtime/transport.py': frozenset(('check_pin', 'check_sampling', 'check_served', 'google_response_format', 'is_envelope', 'judge_spec', 'make_envelope', 'model_urlopen', 'proxy_for_solver', 'sent_temperature', 'solver_envelope_content', 'verify_wire')),
     'haenv/scoring/management/plan.py': frozenset(('M', 'answer')),
     'haenv/scoring/matching/excludes.py': frozenset(('alias_excluded_at',)),
     'haenv/scoring/semantic/budget.py': frozenset(('BudgetExceeded', 'cost_summary')),

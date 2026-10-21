@@ -78,13 +78,52 @@ sharing. An experiment reduction still limits its own cells when live capacity i
 Layer paths and SHA-256 hashes appear in `config_runs.jsonl`; deployment caps enter no
 judging fingerprint.
 
-At startup the **生效并发表** prints backend and model rows: the four ceilings, effective
+At startup the **effective concurrency table** logs backend and model rows at INFO: the four ceilings, effective
 cap, actual threads, binding ceiling(s), and live process demand versus paid solver lanes.
 Identical processes read as `N×threads=demand`; differing process profiles are summed.
 A backend row aggregates its models; a global pool aggregates all backends using it.
-`通道将成为瓶颈：N 个单元争 M 条通道` warns that their combined demand exceeds that pool.
+`Channel bottleneck: N units competing for M lanes` warns that their combined demand exceeds that pool.
 Only live registered solver processes count; exited or killed processes drop out through
 kernel locks. Older runners that do not register are not counted; restart them when migrating.
+
+## Plan, overrides and saturation
+
+The startup table includes pending cell counts, requested workers, the pool sizing rule,
+and every binding ceiling (including the cell count). Model caps name their source:
+`config.yaml`, deployment file, overlay file with its path, `--set`, or a dedicated CLI
+override. `scheduler.json` saves `concurrency_plan` and `concurrency_overrides` before any
+cell starts and retains them if interrupted. Each model's effective count is an upper
+bound: models and processes may compete for the same backend or paid lanes.
+
+A ceiling below requested workers emits one WARNING per model, naming the binding
+limit and how to raise it. A small cell count alone does not warn. With elastic pooling,
+`--workers` above one does not size the pool; `eval.elastic_max` or the model's
+`eval.model_workers` does. Both requested workers and that pool ceiling are shown.
+
+```bash
+haenv run job.yaml --workers 12 --model-cap example-model=32 --dry-plan
+haenv run job.yaml --workers 12 --max-model-cap 32 --judge-budget-ledger budget.json
+```
+
+`--model-cap MODEL=N` is repeatable (last value for a model wins).
+`--max-model-cap N` raises configured model caps to at least N; an absent cap is already
+unbounded. Specific `--model-cap` values take precedence over this floor, then config and
+overlays. Both options respect backend and paid solver-lane ceilings and leave pool sizes
+unchanged. Reliability repetitions accept and forward the same options to every child.
+These explicit run overrides are separate from the overlay narrowing rules above.
+
+`--dry-plan` requires a YAML job and exits before generation or accounting, without model
+calls. It uses selected stored cases and skips completed cells when resuming; for a new
+batch it uses declared cases before emission gates. Supply the intended ledger to inspect
+its live paid capacity; without one, the plan uses configured capacity.
+
+Every `eval.saturation_report_s` seconds (default 300; 0 disables), INFO lines show each
+active model's in-flight/effective count, queued and completed cells in this invocation,
+and window counts of 429/throttle errors and accounted backoff/route retries. Errors come
+from paid error evidence, including terminal failures and upstream throttle bodies;
+replayed errors are not new throttles. A full model cap with queued cells and zero
+throttles adds a hint that the cap may be too low. Counters reset each window. Monitoring
+and these options affect execution only; solver inputs, scoring and answer rows are unchanged.
 
 `concurrency.json` records the startup table and every cell's slot-wait/wall-clock ratio,
 with backend totals. Waiting includes the paid lane queue and the reserve-ahead gate,

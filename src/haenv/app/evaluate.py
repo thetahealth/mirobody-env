@@ -250,6 +250,7 @@ def run_eval(job, cfg, built: dict, resume: bool = True, *,
     every row builder, which binds it to the cell's solver as `solver.run_ctx`.
     """
     ctx = ctx if ctx is not None else RunContext()
+    ctx.single_cases.clear()
     out_path = job.results_file
     out_path.parent.mkdir(parents=True, exist_ok=True)
     ctx.resp_path = out_path.parent / "responses.jsonl"      # raw responses persist in the same batch as eval

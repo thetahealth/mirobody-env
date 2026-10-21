@@ -1,0 +1,180 @@
+{
+  "gold": {
+    "diagnosis": "多囊卵巢综合征(PCOS)",
+    "aliases": [
+      "多囊",
+      "pcos",
+      "polycystic"
+    ],
+    "join_gold": "unified",
+    "tests": [
+      "OGTT+胰岛素"
+    ],
+    "specialty": [
+      "妇科内分泌"
+    ]
+  },
+  "rank": [
+    {
+      "id": "first-ranked",
+      "raw": {
+        "differential": [
+          {
+            "rank": 1,
+            "diagnosis": "多囊卵巢综合征",
+            "supporting_evidence": [
+              "EV-1"
+            ]
+          },
+          {
+            "rank": 2,
+            "diagnosis": "甲减",
+            "supporting_evidence": [
+              "EV-2"
+            ]
+          }
+        ],
+        "join_type": "unified"
+      },
+      "expected": {
+        "dx_hit": true,
+        "dx_hit_top1": true,
+        "dx_rank": 1,
+        "dx_source": "structured"
+      }
+    },
+    {
+      "id": "third-ranked",
+      "raw": {
+        "differential": [
+          {
+            "rank": 1,
+            "diagnosis": "甲减"
+          },
+          {
+            "rank": 2,
+            "diagnosis": "库欣"
+          },
+          {
+            "rank": 3,
+            "diagnosis": "PCOS"
+          }
+        ]
+      },
+      "expected": {
+        "dx_hit": true,
+        "dx_hit_top1": false,
+        "dx_rank": 3
+      }
+    },
+    {
+      "id": "unmentioned",
+      "raw": {
+        "differential": [
+          {
+            "rank": 1,
+            "diagnosis": "甲减"
+          }
+        ]
+      },
+      "expected": {
+        "dx_hit": false
+      }
+    },
+    {
+      "id": "unstructured",
+      "expected": {
+        "dx_source": "text_fallback"
+      }
+    },
+    {
+      "id": "independent",
+      "gold": {
+        "diagnosis": "无统一病理",
+        "aliases": [
+          "独立",
+          "良性",
+          "无统一"
+        ],
+        "join_gold": "independent"
+      },
+      "raw": {
+        "differential": [
+          {
+            "rank": 1,
+            "diagnosis": "过敏性鼻炎"
+          }
+        ]
+      },
+      "expected": {
+        "dx_applicable": false
+      },
+      "absent": [
+        "dx_hit"
+      ]
+    }
+  ],
+  "join": [
+    {
+      "id": "agree",
+      "raw": {
+        "join_type": "unified"
+      },
+      "expected": {
+        "join_hit": true
+      }
+    },
+    {
+      "id": "disagree",
+      "raw": {
+        "join_type": "comorbidity"
+      },
+      "expected": {
+        "join_hit": false
+      }
+    },
+    {
+      "id": "unstructured",
+      "expected": {
+        "join_source": "text_fallback"
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "id": "two-evidenced",
+      "raw": {
+        "differential": [
+          {
+            "rank": 1,
+            "diagnosis": "多囊卵巢综合征",
+            "supporting_evidence": [
+              "EV-1"
+            ]
+          },
+          {
+            "rank": 2,
+            "diagnosis": "甲减",
+            "supporting_evidence": [
+              "EV-2"
+            ]
+          }
+        ],
+        "join_type": "unified"
+      },
+      "score": 1.0
+    },
+    {
+      "id": "one-driver",
+      "drivers": [
+        {
+          "driver": "x",
+          "evidence_for": [
+            "EV-1"
+          ]
+        }
+      ],
+      "score": 0.5
+    }
+  ]
+}

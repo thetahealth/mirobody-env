@@ -1,0 +1,951 @@
+{
+ "preregistration": "docs/REPRODUCE.md",
+ "aggregation": "pk1",
+ "packs": [
+  "p2",
+  "p3",
+  "p4",
+  "m2"
+ ],
+ "overall": {
+  "deepseek-v4-flash": {
+   "score": 0.6301,
+   "ci": [
+    0.5916,
+    0.6705
+   ],
+   "packs": {
+    "p2": 0.8415,
+    "p3": 0.6806,
+    "p4": 0.5344,
+    "m2": 0.464
+   },
+   "rank": 8,
+   "rank_ci": [
+    8.0,
+    10.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "deepseek-v4-pro": {
+   "score": 0.7141,
+   "ci": [
+    0.6787,
+    0.7482
+   ],
+   "packs": {
+    "p2": 0.9233,
+    "p3": 0.7362,
+    "p4": 0.6154,
+    "m2": 0.5813
+   },
+   "rank": 7,
+   "rank_ci": [
+    6.0,
+    7.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "deepseek-v4.1-flash": {
+   "score": 0.8371,
+   "ci": [
+    0.8086,
+    0.8653
+   ],
+   "packs": {
+    "p2": 0.9437,
+    "p3": 0.9425,
+    "p4": 0.8237,
+    "m2": 0.6385
+   },
+   "rank": 1,
+   "rank_ci": [
+    1.0,
+    2.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "gemini-3.8-flash": {
+   "score": 0.7863,
+   "ci": [
+    0.7595,
+    0.814
+   ],
+   "packs": {
+    "p2": 0.95,
+    "p3": 0.8804,
+    "p4": 0.7235,
+    "m2": 0.591
+   },
+   "rank": 4,
+   "rank_ci": [
+    3.0,
+    5.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "gemma-4-31b-it": {
+   "score": 0.5328,
+   "ci": [
+    0.4969,
+    0.5705
+   ],
+   "packs": {
+    "p2": 0.7433,
+    "p3": 0.5038,
+    "p4": 0.486,
+    "m2": 0.3979
+   },
+   "rank": 11,
+   "rank_ci": [
+    11.0,
+    11.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "glm-5.3-flash": {
+   "score": 0.6178,
+   "ci": [
+    0.5779,
+    0.6595
+   ],
+   "packs": {
+    "p2": 0.8204,
+    "p3": 0.6752,
+    "p4": 0.5008,
+    "m2": 0.4746
+   },
+   "rank": 10,
+   "rank_ci": [
+    8.0,
+    10.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "gpt-6-luna": {
+   "score": 0.7336,
+   "ci": [
+    0.7001,
+    0.7674
+   ],
+   "packs": {
+    "p2": 0.8802,
+    "p3": 0.9187,
+    "p4": 0.6365,
+    "m2": 0.4992
+   },
+   "rank": 6,
+   "rank_ci": [
+    6.0,
+    7.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "gpt-6-sol": {
+   "score": 0.8228,
+   "ci": [
+    0.7954,
+    0.8491
+   ],
+   "packs": {
+    "p2": 0.8967,
+    "p3": 0.9619,
+    "p4": 0.7762,
+    "m2": 0.6562
+   },
+   "rank": 2,
+   "rank_ci": [
+    1.0,
+    3.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "mimo-v2.6-flash": {
+   "score": 0.7935,
+   "ci": [
+    0.761,
+    0.8269
+   ],
+   "packs": {
+    "p2": 0.9348,
+    "p3": 0.8348,
+    "p4": 0.8044,
+    "m2": 0.6002
+   },
+   "rank": 3,
+   "rank_ci": [
+    2.0,
+    5.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "minimax-m3": {
+   "score": 0.6217,
+   "ci": [
+    0.5806,
+    0.6623
+   ],
+   "packs": {
+    "p2": 0.87,
+    "p3": 0.5402,
+    "p4": 0.6381,
+    "m2": 0.4385
+   },
+   "rank": 9,
+   "rank_ci": [
+    8.0,
+    10.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "qwen3-32b": {
+   "score": 0.1927,
+   "ci": [
+    0.1606,
+    0.2257
+   ],
+   "packs": {
+    "p2": 0.3373,
+    "p3": 0.0767,
+    "p4": 0.2817,
+    "m2": 0.075
+   },
+   "rank": 13,
+   "rank_ci": [
+    13.0,
+    13.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "qwen3.7-flash": {
+   "score": 0.4304,
+   "ci": [
+    0.3895,
+    0.4718
+   ],
+   "packs": {
+    "p2": 0.6183,
+    "p3": 0.2079,
+    "p4": 0.5256,
+    "m2": 0.3698
+   },
+   "rank": 12,
+   "rank_ci": [
+    12.0,
+    12.0
+   ],
+   "rank_ci_draws": 2000
+  },
+  "qwen38-27b": {
+   "score": 0.7753,
+   "ci": [
+    0.7432,
+    0.8079
+   ],
+   "packs": {
+    "p2": 0.921,
+    "p3": 0.8988,
+    "p4": 0.6954,
+    "m2": 0.586
+   },
+   "rank": 5,
+   "rank_ci": [
+    3.0,
+    5.0
+   ],
+   "rank_ci_draws": 2000
+  }
+ },
+ "adjacent_pairs": [
+  {
+   "pair": "deepseek-v4.1-flash - gpt-6-sol",
+   "diff": 0.0144,
+   "ci": [
+    -0.013,
+    0.0424
+   ],
+   "separable": false
+  },
+  {
+   "pair": "gpt-6-sol - mimo-v2.6-flash",
+   "diff": 0.0292,
+   "ci": [
+    -0.0074,
+    0.0658
+   ],
+   "separable": false
+  },
+  {
+   "pair": "mimo-v2.6-flash - gemini-3.8-flash",
+   "diff": 0.0073,
+   "ci": [
+    -0.0289,
+    0.0438
+   ],
+   "separable": false
+  },
+  {
+   "pair": "gemini-3.8-flash - qwen38-27b",
+   "diff": 0.0109,
+   "ci": [
+    -0.0211,
+    0.0444
+   ],
+   "separable": false
+  },
+  {
+   "pair": "qwen38-27b - gpt-6-luna",
+   "diff": 0.0417,
+   "ci": [
+    0.0051,
+    0.0789
+   ],
+   "separable": true
+  },
+  {
+   "pair": "gpt-6-luna - deepseek-v4-pro",
+   "diff": 0.0196,
+   "ci": [
+    -0.0185,
+    0.0573
+   ],
+   "separable": false
+  },
+  {
+   "pair": "deepseek-v4-pro - deepseek-v4-flash",
+   "diff": 0.084,
+   "ci": [
+    0.0435,
+    0.1252
+   ],
+   "separable": true
+  },
+  {
+   "pair": "deepseek-v4-flash - minimax-m3",
+   "diff": 0.0084,
+   "ci": [
+    -0.0393,
+    0.0568
+   ],
+   "separable": false
+  },
+  {
+   "pair": "minimax-m3 - glm-5.3-flash",
+   "diff": 0.004,
+   "ci": [
+    -0.0446,
+    0.0541
+   ],
+   "separable": false
+  },
+  {
+   "pair": "glm-5.3-flash - gemma-4-31b-it",
+   "diff": 0.085,
+   "ci": [
+    0.0405,
+    0.1284
+   ],
+   "separable": true
+  },
+  {
+   "pair": "gemma-4-31b-it - qwen3.7-flash",
+   "diff": 0.1023,
+   "ci": [
+    0.0571,
+    0.147
+   ],
+   "separable": true
+  },
+  {
+   "pair": "qwen3.7-flash - qwen3-32b",
+   "diff": 0.2378,
+   "ci": [
+    0.1873,
+    0.2873
+   ],
+   "separable": true
+  }
+ ],
+ "profile": {
+  "p2": {
+   "deepseek-v4-pro": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9633,
+    "pass_k": 0.92,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9439,
+    "Q_coverage_pk1": "99/100"
+   },
+   "minimax-m3": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.8933,
+    "pass_k": 0.77,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9333,
+    "Q_coverage_pk1": "96/100"
+   },
+   "glm-5.3-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.8533,
+    "pass_k": 0.75,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9079,
+    "Q_coverage_pk1": "92/100"
+   },
+   "deepseek-v4-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.8833,
+    "pass_k": 0.77,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9344,
+    "Q_coverage_pk1": "93/100"
+   },
+   "qwen3.7-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.64,
+    "pass_k": 0.41,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.8737,
+    "Q_coverage_pk1": "80/100"
+   },
+   "gemini-3.8-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9867,
+    "pass_k": 0.98,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9192,
+    "Q_coverage_pk1": "99/100"
+   },
+   "gemma-4-31b-it": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.88,
+    "pass_k": 0.83,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.7287,
+    "Q_coverage_pk1": "86/100"
+   },
+   "gpt-6-luna": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9033,
+    "pass_k": 0.82,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9135,
+    "Q_coverage_pk1": "97/100"
+   },
+   "gpt-6-sol": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9433,
+    "pass_k": 0.91,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.8877,
+    "Q_coverage_pk1": "97/100"
+   },
+   "deepseek-v4.1-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.96,
+    "pass_k": 0.92,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9661,
+    "Q_coverage_pk1": "96/100"
+   },
+   "qwen3-32b": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.3833,
+    "pass_k": 0.14,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.6453,
+    "Q_coverage_pk1": "41/100"
+   },
+   "qwen38-27b": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9533,
+    "pass_k": 0.88,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 1,
+    "Q_mean_on_D1": 0.9597,
+    "Q_coverage_pk1": "94/100"
+   },
+   "mimo-v2.6-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9633,
+    "pass_k": 0.91,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.968,
+    "Q_coverage_pk1": "95/100"
+   }
+  },
+  "p3": {
+   "deepseek-v4-pro": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.75,
+    "pass_k": 0.57,
+    "hard_gate_rate": 0.0167,
+    "propensity_gate_rate": 0.0133,
+    "abort": 0,
+    "Q_mean_on_D1": 0.8639,
+    "Q_coverage_pk1": "90/100"
+   },
+   "glm-5.3-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7133,
+    "pass_k": 0.51,
+    "hard_gate_rate": 0.0133,
+    "propensity_gate_rate": 0.0333,
+    "abort": 0,
+    "Q_mean_on_D1": 0.902,
+    "Q_coverage_pk1": "85/100"
+   },
+   "minimax-m3": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7033,
+    "pass_k": 0.45,
+    "hard_gate_rate": 0.0433,
+    "propensity_gate_rate": 0.0567,
+    "abort": 0,
+    "Q_mean_on_D1": 0.7799,
+    "Q_coverage_pk1": "79/100"
+   },
+   "deepseek-v4-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7133,
+    "pass_k": 0.5,
+    "hard_gate_rate": 0.01,
+    "propensity_gate_rate": 0.0,
+    "abort": 2,
+    "Q_mean_on_D1": 0.8395,
+    "Q_coverage_pk1": "86/100"
+   },
+   "qwen3.7-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.3067,
+    "pass_k": 0.08,
+    "hard_gate_rate": 0.01,
+    "propensity_gate_rate": 0.02,
+    "abort": 0,
+    "Q_mean_on_D1": 0.808,
+    "Q_coverage_pk1": "63/100"
+   },
+   "gemini-3.8-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.96,
+    "pass_k": 0.95,
+    "hard_gate_rate": 0.03,
+    "propensity_gate_rate": 0.2167,
+    "abort": 0,
+    "Q_mean_on_D1": 0.891,
+    "Q_coverage_pk1": "96/100"
+   },
+   "gemma-4-31b-it": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.6067,
+    "pass_k": 0.42,
+    "hard_gate_rate": 0.02,
+    "propensity_gate_rate": 0.2267,
+    "abort": 0,
+    "Q_mean_on_D1": 0.7076,
+    "Q_coverage_pk1": "59/100"
+   },
+   "gpt-6-sol": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9933,
+    "pass_k": 0.99,
+    "hard_gate_rate": 0.0133,
+    "propensity_gate_rate": 0.1033,
+    "abort": 0,
+    "Q_mean_on_D1": 0.963,
+    "Q_coverage_pk1": "99/100"
+   },
+   "gpt-6-luna": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9267,
+    "pass_k": 0.83,
+    "hard_gate_rate": 0.0133,
+    "propensity_gate_rate": 0.07,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9758,
+    "Q_coverage_pk1": "96/100"
+   },
+   "deepseek-v4.1-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9733,
+    "pass_k": 0.93,
+    "hard_gate_rate": 0.01,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9433,
+    "Q_coverage_pk1": "97/100"
+   },
+   "qwen3-32b": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.0733,
+    "pass_k": 0.0,
+    "hard_gate_rate": 0.01,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.7037,
+    "Q_coverage_pk1": "9/100"
+   },
+   "qwen38-27b": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.94,
+    "pass_k": 0.87,
+    "hard_gate_rate": 0.02,
+    "propensity_gate_rate": 0.0733,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9328,
+    "Q_coverage_pk1": "93/100"
+   },
+   "mimo-v2.6-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.9367,
+    "pass_k": 0.87,
+    "hard_gate_rate": 0.0333,
+    "propensity_gate_rate": 0.0967,
+    "abort": 0,
+    "Q_mean_on_D1": 0.8973,
+    "Q_coverage_pk1": "88/100"
+   }
+  },
+  "p4": {
+   "glm-5.3-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.6367,
+    "pass_k": 0.41,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.727,
+    "Q_coverage_pk1": "58/100"
+   },
+   "minimax-m3": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.6567,
+    "pass_k": 0.52,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9049,
+    "Q_coverage_pk1": "67/100"
+   },
+   "deepseek-v4-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.6133,
+    "pass_k": 0.52,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.752,
+    "Q_coverage_pk1": "61/100"
+   },
+   "qwen3.7-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.63,
+    "pass_k": 0.41,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.6956,
+    "Q_coverage_pk1": "62/100"
+   },
+   "deepseek-v4-pro": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7133,
+    "pass_k": 0.58,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.7583,
+    "Q_coverage_pk1": "70/100"
+   },
+   "gemma-4-31b-it": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.67,
+    "pass_k": 0.56,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.4509,
+    "Q_coverage_pk1": "67/100"
+   },
+   "deepseek-v4.1-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.87,
+    "pass_k": 0.84,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.8937,
+    "Q_coverage_pk1": "87/100"
+   },
+   "qwen3-32b": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.3367,
+    "pass_k": 0.13,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.5225,
+    "Q_coverage_pk1": "37/100"
+   },
+   "gpt-6-sol": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.88,
+    "pass_k": 0.86,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.7642,
+    "Q_coverage_pk1": "88/100"
+   },
+   "gpt-6-luna": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7133,
+    "pass_k": 0.56,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.7928,
+    "Q_coverage_pk1": "71/100"
+   },
+   "gemini-3.8-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.89,
+    "pass_k": 0.89,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.6259,
+    "Q_coverage_pk1": "89/100"
+   },
+   "qwen38-27b": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7667,
+    "pass_k": 0.66,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.8544,
+    "Q_coverage_pk1": "75/100"
+   },
+   "mimo-v2.6-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.8333,
+    "pass_k": 0.77,
+    "hard_gate_rate": 0.0,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.9383,
+    "Q_coverage_pk1": "83/100"
+   }
+  },
+  "m2": {
+   "minimax-m3": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.5867,
+    "pass_k": 0.36,
+    "hard_gate_rate": 0.1167,
+    "propensity_gate_rate": 0.0067,
+    "abort": 10,
+    "Q_mean_on_D1": 0.6846,
+    "Q_coverage_pk1": "75/100"
+   },
+   "glm-5.3-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.6567,
+    "pass_k": 0.45,
+    "hard_gate_rate": 0.0667,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.6216,
+    "Q_coverage_pk1": "80/100"
+   },
+   "deepseek-v4-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7133,
+    "pass_k": 0.56,
+    "hard_gate_rate": 0.16,
+    "propensity_gate_rate": 0.06,
+    "abort": 7,
+    "Q_mean_on_D1": 0.6191,
+    "Q_coverage_pk1": "76/100"
+   },
+   "gpt-6-sol": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.82,
+    "pass_k": 0.75,
+    "hard_gate_rate": 0.0033,
+    "propensity_gate_rate": 0.0,
+    "abort": 5,
+    "Q_mean_on_D1": 0.7045,
+    "Q_coverage_pk1": "77/100"
+   },
+   "deepseek-v4-pro": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7333,
+    "pass_k": 0.6,
+    "hard_gate_rate": 0.14,
+    "propensity_gate_rate": 0.0033,
+    "abort": 3,
+    "Q_mean_on_D1": 0.6595,
+    "Q_coverage_pk1": "85/100"
+   },
+   "qwen3.7-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.5833,
+    "pass_k": 0.41,
+    "hard_gate_rate": 0.08,
+    "propensity_gate_rate": 0.0,
+    "abort": 1,
+    "Q_mean_on_D1": 0.4295,
+    "Q_coverage_pk1": "78/100"
+   },
+   "gemini-3.8-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7733,
+    "pass_k": 0.65,
+    "hard_gate_rate": 0.01,
+    "propensity_gate_rate": 0.01,
+    "abort": 4,
+    "Q_mean_on_D1": 0.5568,
+    "Q_coverage_pk1": "85/100"
+   },
+   "gemma-4-31b-it": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.6067,
+    "pass_k": 0.51,
+    "hard_gate_rate": 0.0467,
+    "propensity_gate_rate": 0.0133,
+    "abort": 1,
+    "Q_mean_on_D1": 0.4211,
+    "Q_coverage_pk1": "56/100"
+   },
+   "gpt-6-luna": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.67,
+    "pass_k": 0.56,
+    "hard_gate_rate": 0.0067,
+    "propensity_gate_rate": 0.0,
+    "abort": 0,
+    "Q_mean_on_D1": 0.5149,
+    "Q_coverage_pk1": "87/100"
+   },
+   "deepseek-v4.1-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.7567,
+    "pass_k": 0.6,
+    "hard_gate_rate": 0.0133,
+    "propensity_gate_rate": 0.01,
+    "abort": 16,
+    "Q_mean_on_D1": 0.7258,
+    "Q_coverage_pk1": "74/100"
+   },
+   "qwen3-32b": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.12,
+    "pass_k": 0.02,
+    "hard_gate_rate": 0.3567,
+    "propensity_gate_rate": 0.0033,
+    "abort": 0,
+    "Q_mean_on_D1": 0.3636,
+    "Q_coverage_pk1": "11/100"
+   },
+   "qwen38-27b": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.75,
+    "pass_k": 0.65,
+    "hard_gate_rate": 0.0233,
+    "propensity_gate_rate": 0.0,
+    "abort": 4,
+    "Q_mean_on_D1": 0.6508,
+    "Q_coverage_pk1": "71/100"
+   },
+   "mimo-v2.6-flash": {
+    "n_pk1": 100,
+    "k": 3,
+    "D_acc_k": 0.6733,
+    "pass_k": 0.49,
+    "hard_gate_rate": 0.0167,
+    "propensity_gate_rate": 0.0,
+    "abort": 18,
+    "Q_mean_on_D1": 0.7653,
+    "Q_coverage_pk1": "68/100"
+   }
+  }
+ }
+}

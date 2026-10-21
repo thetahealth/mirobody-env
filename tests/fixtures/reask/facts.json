@@ -1,0 +1,16 @@
+{
+  "source_batches": 39,
+  "source_tool_results": 52457,
+  "counts": {
+    "units": 171,
+    "prefix_sha_matches": 171,
+    "missed_matches": 171,
+    "A_items_exact": 171,
+    "wrapper_matches": 538,
+    "B_items_exact": 141,
+    "C_items_exact": 141,
+    "H_items_exact": 85
+  },
+  "receipt_recovered_original_exclusions": 3,
+  "differences": []
+}

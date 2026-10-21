@@ -75,6 +75,30 @@ def config_layers() -> list[dict]:
             for p in paths if p.is_file()]
 
 
+def value_source(*path: str) -> dict:
+    """Origin of a resolved leaf, including equal-valued overlay copies."""
+    def contains(mapping):
+        for key in path:
+            if not isinstance(mapping, dict) or key not in mapping:
+                return False
+            mapping = mapping[key]
+        return True
+
+    source = {"kind": "default", "path": None}
+    files = [("config.yaml", ROOT / "config.yaml"),
+             ("config.local.yaml", ROOT / "config.local.yaml"),
+             ("deployment", deployment_path())]
+    named = os.environ.get(CONFIG_OVERLAY_ENV, "").strip()
+    if named:
+        files.append(("overlay", Path(named)))
+    for kind, file in files:
+        if file is not None and file.is_file() and contains(_cached(file) or {}):
+            source = {"kind": kind, "path": str(file)}
+    if contains(settings.apply_set({})):
+        source = {"kind": "--set", "path": None}
+    return source
+
+
 CONFIG_OVERLAY_ENV = "HAENV_CONFIG_OVERLAY"
 DEPLOY_CONFIG_ENV = "HAENV_DEPLOY_CONFIG"
 
@@ -157,7 +181,12 @@ class RuntimeTransportSettings(settings.TransportSection):
     backend_proxies: dict[str, str] = settings._f("route", {})
 
 
+class RuntimeEvalSettings(settings.EvalSection):
+    saturation_report_s: float = settings._f("execution", 300.0, ge=0, strict=True, allow_inf_nan=False)
+
+
 class RuntimeConfig(settings.Config):
+    eval: RuntimeEvalSettings = settings._f("execution", RuntimeEvalSettings())
     board: BoardSettings = settings._f("execution", BoardSettings())
     transport: RuntimeTransportSettings = settings._f("route", RuntimeTransportSettings())
     paid: PaidConcurrencySettings = settings._f("execution", PaidConcurrencySettings())
@@ -179,6 +208,8 @@ def _validate_runtime(cfg: dict) -> dict:
     original.pop("board", None)
     original.pop("gate", None)
     original.pop("diversity", None)
+    if isinstance(original.get("eval"), dict):
+        original["eval"] = {k: v for k, v in original["eval"].items() if k != "saturation_report_s"}
     if isinstance(original.get("budget"), dict):
         original["budget"] = {k: v for k, v in original["budget"].items() if k != "counted_backends"}
     if isinstance(original.get("paid"), dict):

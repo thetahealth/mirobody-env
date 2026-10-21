@@ -18,6 +18,7 @@ SYNTHETIC data, evaluation only, not medical advice.
 from __future__ import annotations
 
 import json
+import re
 
 from haenv.interaction.query.fhir import source_of
 from haenv.interaction.query.fhir import unshape
@@ -40,6 +41,46 @@ def returned_rows(trace: dict):
             yield name, {"_from": "profile", **{k: v for k, v in res.items() if k not in ("extension", "found")}}
             for k, v in (res.get("extension") or {}).items():
                 yield name, {"_from": k, "value": v}
+
+
+_ROW_ID = re.compile(r"([A-Za-z_]+)-(\d+)")
+
+
+def returned_record_ids(trace: dict, sections) -> frozenset[str]:
+    """Ids of the record rows the tools returned in the cell, for the citation check
+    (`verifier.grade(returned_ids=)`): every `<section>-<index>` resource id in a tool result
+    whose section is one of the pack's record `sections` (not the Patient resource, a protocol or
+    a series). Read off the tool results the model was shown, so a row counts only if it was
+    returned in this answer."""
+    names = set(sections or ())
+    if not names:
+        return frozenset()
+    out: set[str] = set()
+    for m in trace.get("messages") or ():
+        if m.get("role") != "tool":
+            continue
+        stack = [m.get("content")]
+        while stack:
+            o = stack.pop()
+            if isinstance(o, dict):
+                rid = o.get("id")
+                hit = _ROW_ID.fullmatch(rid) if isinstance(rid, str) else None
+                if hit and hit.group(1) in names:
+                    out.add(rid)
+                stack.extend(o.values())
+            elif isinstance(o, list):
+                stack.extend(o)
+    return frozenset(out)
+
+
+def returned_ids_of(solver) -> frozenset[str]:
+    """`returned_record_ids` of the cell a query-mode solver just answered (`_last_query`, set by
+    the query loop and reset by the row wrapper before each cell); empty outside query mode."""
+    last = getattr(solver, "_last_query", None)
+    if not last:
+        return frozenset()
+    trace, store = last
+    return returned_record_ids(trace or {}, getattr(store, "sections", None))
 
 
 def profile(trace: dict, lookups: list) -> dict:

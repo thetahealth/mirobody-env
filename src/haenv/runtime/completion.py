@@ -650,6 +650,9 @@ class AccountedCompletion:
                 except OSError:
                     zero = None                   # no durable basis => keep the bound
                 limited = is_rate_limited(evidence)
+                if limited:
+                    from haenv.runtime.scheduler import note_request_event
+                    note_request_event(throttles=1)
                 if zero is not None:
                     self.ledger.settle_rejected(request_id, basis=(
                         f"HTTP {zero['http_status']} before generation ({self.backend}); "

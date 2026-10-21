@@ -48,9 +48,11 @@ def build_all(cases: list, build, workers: int) -> list[tuple]:
     """`[(case, (raw, audit) | None, exception | None)]` in input order. `build(case)` runs in
     a forked child; the fork inherits the loaded job, plugins and registries."""
     import haenv.world.wq as wq
+    if not cases:
+        return []
     _CTX.update(cases=list(cases), build=build)
     try:
-        with _mp.get_context("fork").Pool(processes=workers) as pool:
+        with _mp.get_context("fork").Pool(processes=min(workers, len(cases))) as pool:
             out = list(pool.imap(_build_one, range(len(cases)), chunksize=1))
     finally:
         _CTX.clear()

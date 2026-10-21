@@ -10,13 +10,69 @@ SYNTHETIC, evaluation only, not medical advice.
 from __future__ import annotations
 
 import logging
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Callable
 
 from haenv_kernel.build import leakage_probe                      # kernel
+from haenv_kernel.schema import SolverPayload
 from haenv_kernel.solver import _extract_json
 
 log = logging.getLogger("haenv")
+
+
+def _probe_snapshot(payload):
+    """Freeze the entire probe view, including dynamic attributes.
+
+    Only plain JSON data has a cache identity. Custom objects and subclasses
+    may have equality or access behavior that their attributes cannot capture;
+    leave those to the probe. Preserve types and dict order conservatively.
+    """
+    def freeze(value):
+        kind = type(value)
+        if kind in (str, int, bool, type(None)):
+            return kind, value
+        if kind is float:
+            return kind, value.hex()
+        if kind is list:
+            return kind, tuple(freeze(item) for item in value)
+        if kind is dict:
+            if any(type(key) is not str for key in value):
+                raise TypeError("non-string JSON key")
+            return kind, tuple((key, freeze(item)) for key, item in value.items())
+        raise TypeError("non-JSON value")
+
+    if type(payload) is not SolverPayload:
+        return None
+    try:
+        return freeze(payload.__dict__)
+    except (TypeError, RuntimeError):  # Includes recursion or a changing dict.
+        return None
+
+
+class PreparedPayload:
+    """A private snapshot and its leakage verdict, reusable within one run.
+
+    Delivery uses a fresh copy. A changed payload or time is probed again, so
+    neither a plugin edit nor a different window can inherit a clean verdict.
+    """
+
+    def __init__(self, payload, T: int):
+        self._payload = deepcopy(payload)
+        self._T = int(T)
+        ok, violations = leakage_probe(self._payload, self._T)
+        self._verdict = ok, tuple(violations)
+        self._snapshot = _probe_snapshot(self._payload)
+
+    def copy(self):
+        return deepcopy(self._payload)
+
+    def probe(self, payload, T: int):
+        if (int(T) == self._T and self._snapshot is not None
+                and _probe_snapshot(payload) == self._snapshot):
+            ok, violations = self._verdict
+            return ok, list(violations)
+        return leakage_probe(payload, int(T))
 
 #: `.solve(` call sites that bypass the skeleton, with the reason for each.
 SOLVE_EXEMPT: dict[str, str] = {
@@ -82,6 +138,7 @@ class SolveFacts:
 def guarded_solve(solver, payload, T: int, *, prompt_mode: str | None = None,
                   on_output: Callable[[object], None] | None = None,
                   precheck: Callable[[], object] | None = None,
+                  prepared: PreparedPayload | None = None,
                   tag: str = "") -> SolveFacts:
     """The only path that hands a payload to the solver: probe -> (precheck) -> solve -> persist -> verify raw text.
 
@@ -93,7 +150,8 @@ def guarded_solve(solver, payload, T: int, *, prompt_mode: str | None = None,
     The leakage probe always runs first, so a cell that both leaks and fails
     `precheck` reads `ABORT(leak)`.
     """
-    ok, viol = leakage_probe(payload, int(T))
+    ok, viol = (prepared.probe(payload, int(T)) if prepared is not None
+                else leakage_probe(payload, int(T)))
     if not ok:
         log.error("[guard] %s leak -> not delivered: %s", tag or "?", viol[:3])
         return SolveFacts(out=None, leak=list(viol), raw_empty=False,

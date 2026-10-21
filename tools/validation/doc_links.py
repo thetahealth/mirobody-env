@@ -12,7 +12,7 @@ Two kinds of link are checked:
   looks at them. The ref is ignored: the README writes `main`, a release pins a tag,
   and either way the path has to exist in the tree being released.
 
-The same scan serves `tests/test_link_targets.py` (which ships, so the public tree checks
+The same scan serves `tests/release/test_link_targets.py` (which ships, so the public tree checks
 itself) and the maintainers' release gate; there is one way to read a link here.
 
 SYNTHETIC, evaluation use only, not medical advice.

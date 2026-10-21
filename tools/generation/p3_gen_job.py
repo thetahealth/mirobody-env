@@ -94,7 +94,7 @@ def world_case(case: dict, plan: dict, *, condition_specs: dict | None = None) -
 
 
 def build(n: int = PS.DEFAULT_N, seed: str = PS.PUBLIC_SEED, window_extra: int = 0,
-          supply_multiplier: int = 1) -> tuple[str, dict]:
+          supply_multiplier: int = 1, *, workers: int = 64) -> tuple[str, dict]:
     from haenv.world.overlay import condition_registry
     from haenv.p3.audit import planned_scenarios
     from haenv.p3.plan import CAP_PER_DRUG, eligible_drugs, h01, hidden, make_plans
@@ -115,15 +115,22 @@ def build(n: int = PS.DEFAULT_N, seed: str = PS.PUBLIC_SEED, window_extra: int =
         top = _topup(*topup)
     condition_specs = condition_registry(include_draft=True)
     from haenv.world.generation.patient_sampling import fresh_patient
-    allc = [with_pack_age(fresh_patient(c, "p3", seed), condition_specs=condition_specs) for c in cases + top]
-    ws = {str(c["case_id"]): _world_streams(c) for c in allc}
-    elig = {str(c["case_id"]): eligible_drugs(c, ws[str(c["case_id"])], condition_specs=condition_specs)
-            for c in allc}
+    from haenv.world.generation.build_pool import map_ordered
+    def candidate(c):
+        c = with_pack_age(fresh_patient(c, "p3", seed), condition_specs=condition_specs)
+        streams = _world_streams(c)
+        return c, streams, eligible_drugs(c, streams, condition_specs=condition_specs)
+    # Candidates are independent. imap preserves the source order used for dealing,
+    # including every private-window retry; children inherit the loaded registry.
+    candidates = map_ordered(candidate, cases + top, workers, chunksize=8)
+    allc = [c for c, _, _ in candidates]
+    ws = {str(c["case_id"]): streams for c, streams, _ in candidates}
+    elig = {str(c["case_id"]): drugs for c, _, drugs in candidates}
     full = {k: bool(v) for k, v in elig.items()}       # one eligible drug (A12; the decision is dealt among those it can carry)
     H0 = [c for c in allc if not hidden(c["latent"]) and full[str(c["case_id"])]]
     H1 = sorted([c for c in allc if hidden(c["latent"]) and full[str(c["case_id"])]],
                 key=lambda c: h01(PS.seeded("p3pool", seed), c["case_id"]))[:h1]
-    plans = make_plans(H0 + H1, ws, cap=cap, condition_specs=condition_specs)
+    plans = make_plans(H0 + H1, ws, cap=cap, condition_specs=condition_specs, eligibility=elig)
     planned = collections.Counter((p["drug"], p["class"], p.get("comorbidity"), p["subtype"]) for p in plans.values())
     need = planned_scenarios(m)
     if base and window_extra < WINDOW_EXTRA_MAX and (
@@ -132,7 +139,7 @@ def build(n: int = PS.DEFAULT_N, seed: str = PS.PUBLIC_SEED, window_extra: int =
         # varies; one more variant per condition until the floor holds (the public pool never retries).
         print(f"[p3] window plans {len(plans)} < {WINDOW_FLOOR} x {POOL_FACTOR} x {m} or a cell short: "
               "one more variant per condition", file=sys.stderr)
-        return build(n, seed, window_extra + 1, supply_multiplier)
+        return build(n, seed, window_extra + 1, supply_multiplier, workers=workers)
     PS.short(need, planned, "p3 plans")
     if len(plans) < POOL_FACTOR * m:
         raise SystemExit(f"[pack] p3 plans: pool too small -- {len(plans)} planned cases, need >= {POOL_FACTOR} x {m}")

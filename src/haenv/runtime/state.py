@@ -47,6 +47,9 @@ class RunContext:
     retry_acc: dict = field(default_factory=dict)          # (case, solver) -> retry attribution
     replay_n: dict = field(default_factory=dict)           # (case, solver) -> slices reused
     replay_fresh: dict = field(default_factory=dict)       # (case, solver) -> answers bought during a replay
+    # Single-shot preparation belongs to this run, never a global cache.
+    single_cases: dict = field(default_factory=dict, repr=False)
+    preparation_lock: object = field(default_factory=_threading.Lock, repr=False)
 
 
 def run_ctx_of(solver) -> RunContext:

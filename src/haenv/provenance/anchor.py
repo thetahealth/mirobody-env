@@ -141,13 +141,57 @@ class EquivalenceError(ValueError):
     """A `judging_sha_equivalence` row does not reproduce from the repository."""
 
 
-def _git_blob(rev: str, rel: str) -> bytes | None:
+def _prime_blobs(rev: str | None, paths, *, root=None) -> None:
+    """Read a fixed revision's Python sources and declared files in one Git batch."""
+    import io
+    import re
+    import subprocess
+    if rev is None or not re.fullmatch(r"[0-9a-f]{7,40}", rev) or rev in _BLOB_PATHS:
+        return
+    root = ROOT if root is None else root
+    listing = subprocess.run(["git", "-C", str(root), "ls-tree", "--full-tree", "-r", "-t", "-z", rev],
+                             capture_output=True, timeout=60)
+    if listing.returncode:
+        return
+    wanted = set(paths)
+    entries, present = [], set()
+    for line in listing.stdout.split(b"\0"):
+        if not line:
+            continue
+        meta, path = line.split(b"\t", 1)
+        _, kind, oid = meta.split()
+        label = path.decode("utf-8", "surrogateescape")
+        present.add(label)
+        if kind == b"blob" and (label.endswith(".py") or label in wanted):
+            entries.append((label, oid))
+    result = subprocess.run(["git", "-C", str(root), "cat-file", "--batch"],
+                            input=b"".join(oid + b"\n" for _, oid in entries),
+                            capture_output=True, timeout=60, check=True)
+    stream = io.BytesIO(result.stdout)
+    for label, oid in entries:
+        header = stream.readline().split()
+        if len(header) != 3 or header[:2] != [oid, b"blob"]:
+            raise EquivalenceError(f"invalid Git blob response for {rev}:{label}")
+        size = int(header[2])
+        blob = stream.read(size)
+        if len(blob) != size or stream.read(1) != b"\n":
+            raise EquivalenceError(f"truncated Git blob for {rev}:{label}")
+        _BLOBS[rev, label] = blob
+    _BLOB_PATHS[rev] = present
+
+
+_BLOB_PATHS: dict[str, set[str]] = {}
+
+
+def _git_blob(rev: str, rel: str, *, root=None) -> bytes | None:
     import re
     import subprocess
     immutable = re.fullmatch(r"[0-9a-f]{7,40}", rev) is not None
     if immutable and (rev, rel) in _BLOBS:
         return _BLOBS[rev, rel]
-    r = subprocess.run(["git", "-C", str(ROOT), "show", f"{rev}:{rel}"],
+    if immutable and rev in _BLOB_PATHS and rel not in _BLOB_PATHS[rev]:
+        return None
+    r = subprocess.run(["git", "-C", str(ROOT if root is None else root), "show", f"{rev}:{rel}"],
                        capture_output=True, timeout=60)
     blob = r.stdout if r.returncode == 0 else None
     if immutable:                      # a commit id names fixed content; a ref such as HEAD moves
@@ -209,6 +253,46 @@ def verify_judging_equivalence(row: dict, *, infra=None) -> dict:
     return {**row, "dropped_to_infra": dropped, "kept_n": len(kept)}
 
 
+def verify_world_equivalence(row: dict) -> dict:
+    """Reproduce both generation identities from immutable Git revisions.
+
+    Generation equivalence is established by the regeneration recipe referenced
+    by ``proof``. It never changes the raw fingerprint computed for either tree.
+    """
+    revisions = (row["rev"], row["new_rev"])
+    segments = [_segment_at(rev, "GENERATION") for rev in revisions]
+    for rev, paths, expected in zip(revisions, segments, (row["old"], row["new"])):
+        values = _declarations_at(rev)
+        _prime_blobs(rev, [revision_path(path, values) for path in paths])
+        actual = fingerprint_at(rev, paths)
+        if actual != expected:
+            raise EquivalenceError(f"world at {rev} is {actual}, not {expected}")
+    judging = [fingerprint_at(rev, _segment_at(rev, "JUDGING")) for rev in revisions]
+    if judging[0] != judging[1]:
+        raise EquivalenceError("a world equivalence cannot change judging")
+    proof = (ANCHOR_DIR / row["proof"]).read_bytes()
+    if hashlib.sha256(proof).hexdigest() != row["proof_sha256"]:
+        raise EquivalenceError("world equivalence proof has changed")
+    return {**row, "generation_files": [len(paths) for paths in segments]}
+
+
+def worlds_equivalent(old: str | None, new: str | None) -> bool:
+    """Accept equal identities or an explicitly certified, anchored world move."""
+    if not old or not new:
+        return False
+    if old == new:
+        return True
+    for row in load_freeze().get("world_sha_equivalence", ()):
+        verify_world_equivalence(row)
+        pairs = [(row["old"], row["new"])]
+        proof = json.loads((ANCHOR_DIR / row["proof"]).read_text(encoding="utf-8"))
+        pairs.extend((item["before_world"], item["native_after_world"])
+                     for item in proof["worlds"].values())
+        if any({old, new} == {before, after} for before, after in pairs):
+            return True
+    return False
+
+
 def _reader(rev: str | None):
     """Source access at a revision (git objects), or the working tree for `None`."""
     if rev is None:
@@ -247,6 +331,10 @@ def verify_judging_move(row: dict, *, infra=None) -> dict:
     rev, new_rev = row["rev"], row.get("new_rev")
     j_old, i_old = _segments(rev)
     j_new, i_new = _segments(new_rev)
+    for revision, judging, infrastructure in ((rev, j_old, i_old), (new_rev, j_new, i_new)):
+        if revision is not None:
+            values = _declarations_at(revision)
+            _prime_blobs(revision, [revision_path(path, values) for path in (*judging, *infrastructure)])
     if infra is not None:
         i_new = tuple(f for f in i_new if f in set(infra))
     if fingerprint_at(rev, j_old) != row["old"]:

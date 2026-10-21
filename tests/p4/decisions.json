@@ -1,0 +1,528 @@
+[
+  {
+    "id": "previous-preanalytical",
+    "gold": {
+      "class": "preanalytical",
+      "t0": 10,
+      "t1": 40,
+      "records": [
+        {
+          "day": 10,
+          "printed": 95.0,
+          "truth": 80.0,
+          "e": 0.0,
+          "perturbations": [
+            {
+              "factor": "meat_meal",
+              "kind": "preanalytical",
+              "role": "cause",
+              "acts": true,
+              "bias_log": 0.15,
+              "additive": null,
+              "params": {}
+            }
+          ]
+        },
+        {
+          "day": 40,
+          "printed": 80.0,
+          "truth": 80.0,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": "meat_meal",
+      "true_change_pct": 0.0,
+      "obs_pct": -15.789,
+      "analyte": "creatinine"
+    },
+    "primary": "no_action",
+    "actions": {
+      "no_action": true,
+      "repeat_standardized": true,
+      "act_on_change": false
+    }
+  },
+  {
+    "id": "today-preanalytical",
+    "gold": {
+      "class": "preanalytical",
+      "t0": 10,
+      "t1": 40,
+      "records": [
+        {
+          "day": 10,
+          "printed": 80.0,
+          "truth": 80.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 40,
+          "printed": 95.0,
+          "truth": 80.0,
+          "e": 0.0,
+          "perturbations": [
+            {
+              "factor": "meat_meal",
+              "kind": "preanalytical",
+              "role": "cause",
+              "acts": true,
+              "bias_log": 0.15,
+              "additive": null,
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "cause": "meat_meal",
+      "true_change_pct": 0.0,
+      "obs_pct": 18.75,
+      "analyte": "creatinine"
+    },
+    "primary": "repeat_standardized",
+    "actions": {
+      "no_action": false
+    }
+  },
+  {
+    "id": "previous-method_difference",
+    "gold": {
+      "class": "method_difference",
+      "t0": 10,
+      "t1": 40,
+      "records": [
+        {
+          "day": 10,
+          "printed": 95.0,
+          "truth": 80.0,
+          "e": 0.0,
+          "perturbations": [
+            {
+              "factor": "jaffe_enzymatic_switch",
+              "kind": "method",
+              "role": "cause",
+              "acts": true,
+              "bias_log": 0.15,
+              "additive": null,
+              "params": {}
+            }
+          ]
+        },
+        {
+          "day": 40,
+          "printed": 80.0,
+          "truth": 80.0,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": "jaffe_enzymatic_switch",
+      "true_change_pct": 0.0,
+      "obs_pct": -15.789,
+      "analyte": "creatinine"
+    },
+    "primary": "no_action",
+    "actions": {
+      "no_action": true,
+      "repeat_standardized": true,
+      "act_on_change": false
+    }
+  },
+  {
+    "id": "today-method_difference",
+    "gold": {
+      "class": "method_difference",
+      "t0": 10,
+      "t1": 40,
+      "records": [
+        {
+          "day": 10,
+          "printed": 80.0,
+          "truth": 80.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 40,
+          "printed": 95.0,
+          "truth": 80.0,
+          "e": 0.0,
+          "perturbations": [
+            {
+              "factor": "jaffe_enzymatic_switch",
+              "kind": "method",
+              "role": "cause",
+              "acts": true,
+              "bias_log": 0.15,
+              "additive": null,
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "cause": "jaffe_enzymatic_switch",
+      "true_change_pct": 0.0,
+      "obs_pct": 18.75,
+      "analyte": "creatinine"
+    },
+    "primary": "repeat_standardized",
+    "actions": {
+      "no_action": false
+    }
+  },
+  {
+    "id": "acei-stop-fall",
+    "gold": {
+      "class": "true_change",
+      "t0": 10,
+      "t1": 40,
+      "records": [
+        {
+          "day": 10,
+          "printed": 78.0,
+          "truth": 78.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 40,
+          "printed": 61.0,
+          "truth": 61.0,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": "acei_start_or_stop",
+      "true_change_pct": -21.795,
+      "obs_pct": -21.795,
+      "analyte": "creatinine"
+    },
+    "primary": "no_action",
+    "actions": {
+      "no_action": true,
+      "act_on_change": true
+    }
+  },
+  {
+    "id": "acei-visible-rise",
+    "gold": {
+      "class": "true_change",
+      "t0": 10,
+      "t1": 40,
+      "records": [
+        {
+          "day": 10,
+          "printed": 60.0,
+          "truth": 60.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 40,
+          "printed": 82.2,
+          "truth": 71.3,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": "acei_start_or_stop",
+      "true_change_pct": 18.833,
+      "obs_pct": 37.0,
+      "analyte": "creatinine"
+    },
+    "primary": "act_on_change",
+    "actions": {
+      "no_action": false
+    }
+  },
+  {
+    "id": "other-cause-rise",
+    "gold": {
+      "class": "true_change",
+      "t0": 10,
+      "t1": 40,
+      "records": [
+        {
+          "day": 10,
+          "printed": 60.0,
+          "truth": 60.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 40,
+          "printed": 75.0,
+          "truth": 75.0,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": "weight_change",
+      "true_change_pct": 25.0,
+      "obs_pct": 25.0,
+      "analyte": "creatinine"
+    },
+    "primary": "act_on_change",
+    "actions": {},
+    "acceptable": [
+      "act_on_change"
+    ]
+  },
+  {
+    "id": "acei-small-rise",
+    "gold": {
+      "class": "true_change",
+      "t0": 10,
+      "t1": 40,
+      "records": [
+        {
+          "day": 10,
+          "printed": 60.0,
+          "truth": 60.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 40,
+          "printed": 75.0,
+          "truth": 78.0,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": "acei_start_or_stop",
+      "true_change_pct": 30.0,
+      "obs_pct": 25.0,
+      "analyte": "creatinine"
+    },
+    "primary": "repeat_standardized",
+    "actions": {
+      "act_on_change": false
+    },
+    "acceptable": [
+      "repeat_standardized",
+      "no_action"
+    ]
+  },
+  {
+    "id": "acei-uncertain-baseline",
+    "gold": {
+      "class": "true_change",
+      "t0": 20,
+      "t1": 70,
+      "records": [
+        {
+          "day": 10,
+          "printed": 92.0,
+          "truth": 92.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 20,
+          "printed": 73.0,
+          "truth": 73.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 70,
+          "printed": 102.0,
+          "truth": 102.0,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": "acei_start_or_stop",
+      "true_change_pct": 39.726,
+      "obs_pct": 39.726,
+      "analyte": "creatinine",
+      "acei": {
+        "events": [
+          {
+            "day": 65,
+            "action": "start"
+          }
+        ],
+        "initial_on": false
+      }
+    },
+    "primary": "act_on_change",
+    "actions": {
+      "no_action": false
+    },
+    "acceptable": [
+      "act_on_change",
+      "repeat_standardized"
+    ]
+  },
+  {
+    "id": "acei-both-baselines-over",
+    "gold": {
+      "class": "true_change",
+      "t0": 50,
+      "t1": 70,
+      "records": [
+        {
+          "day": 10,
+          "printed": 60.0,
+          "truth": 60.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 20,
+          "printed": 56.0,
+          "truth": 56.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 30,
+          "printed": 56.0,
+          "truth": 56.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 40,
+          "printed": 63.0,
+          "truth": 63.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 50,
+          "printed": 63.0,
+          "truth": 63.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 70,
+          "printed": 85.0,
+          "truth": 85.0,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": "acei_start_or_stop",
+      "true_change_pct": 34.921,
+      "obs_pct": 34.921,
+      "analyte": "creatinine",
+      "acei": {
+        "events": [
+          {
+            "day": 65,
+            "action": "start"
+          }
+        ],
+        "initial_on": false
+      }
+    },
+    "primary": "act_on_change",
+    "actions": {},
+    "acceptable": [
+      "act_on_change"
+    ]
+  },
+  {
+    "id": "acei-previous-course",
+    "gold": {
+      "class": "true_change",
+      "t0": 30,
+      "t1": 70,
+      "records": [
+        {
+          "day": 4,
+          "printed": 60.0,
+          "truth": 60.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 12,
+          "printed": 120.0,
+          "truth": 120.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 30,
+          "printed": 63.0,
+          "truth": 63.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 70,
+          "printed": 85.0,
+          "truth": 85.0,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": "acei_start_or_stop",
+      "true_change_pct": 34.921,
+      "obs_pct": 34.921,
+      "analyte": "creatinine",
+      "acei": {
+        "events": [
+          {
+            "day": 5,
+            "action": "start"
+          },
+          {
+            "day": 15,
+            "action": "stop"
+          },
+          {
+            "day": 50,
+            "action": "start"
+          }
+        ],
+        "initial_on": false
+      }
+    },
+    "primary": "act_on_change",
+    "actions": {},
+    "acceptable": [
+      "act_on_change"
+    ]
+  },
+  {
+    "id": "noise",
+    "gold": {
+      "class": "analytic_biological_noise",
+      "t0": 10,
+      "t1": 40,
+      "records": [
+        {
+          "day": 10,
+          "printed": 78.0,
+          "truth": 78.0,
+          "e": 0.0,
+          "perturbations": []
+        },
+        {
+          "day": 40,
+          "printed": 84.0,
+          "truth": 84.0,
+          "e": 0.0,
+          "perturbations": []
+        }
+      ],
+      "cause": null,
+      "true_change_pct": 7.692,
+      "obs_pct": 7.692,
+      "analyte": "creatinine"
+    },
+    "primary": "no_action",
+    "actions": {},
+    "acceptable": [
+      "no_action",
+      "repeat_standardized"
+    ]
+  }
+]

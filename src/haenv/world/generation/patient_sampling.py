@@ -34,9 +34,10 @@ def benign_symptoms(case: dict) -> dict:
     banned = E.event_proxy_tags(f, driver_of(c["case_id"], c["latent"]))
     side_effects = E.side_effect_topics(E.shown_drugs(f.case_id, f.disease, f.comorbidities, f.drug,
                                                     sex=f.sex, age_range=c["raw"]["age_range"]))
+    lay = E.symptom_lay(f.sex)
     pool = [e for e in E.event_pools()[0] if E._event_ok(e, f, banned, cond=cond)[0]
             and e["topic"] not in side_effects
-            and e["text"] in E.symptom_lay(f.sex)]
+            and e["text"] in lay]
     old = c["raw"].get("symptoms") or []
     order = E.weighted_order(pool, f, "patient-complaints", cond)
     if len(order) < len(old):

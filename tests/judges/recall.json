@@ -1,0 +1,16 @@
+{
+  "notice": "SYNTHETIC, evaluation only, not medical advice.",
+  "cases": [
+    {"id":"ferritin-transferrin","item":"血清铁蛋白","proposals":["转铁蛋白饱和度 (Transferrin Saturation)","血清铁与总铁结合力 (Serum Iron & TIBC)"],"verdicts":["no","undecided"]},
+    {"id":"ferritin-explicit","item":"血清铁蛋白","proposals":["血清铁蛋白"],"verdicts":["yes"]},
+    {"id":"ferritin-co-listed","item":"血清铁蛋白","proposals":["铁蛋白、转铁蛋白饱和度"],"verdicts":["yes"]},
+    {"id":"ferritin-shadow-control","item":"血清铁蛋白","proposals":["转铁蛋白饱和度 (Transferrin Saturation)","血清铁与总铁结合力 (Serum Iron & TIBC)"],"remove_shadow":"铁蛋白","verdicts":["yes"]},
+    {"id":"imaging-vague","item":"腹部CT/MRI","proposals":["若生化检查支持嗜铬细胞瘤/副神经节瘤，再由专科安排定位影像检查"],"verdicts":["undecided"],"rule":"vague_imaging","hint_stop_absent":"影像"},
+    {"id":"imaging-specific","item":"腹部CT/MRI","proposals":["腹部CT平扫+增强"],"verdicts":["yes"]},
+    {"id":"imaging-not-lab","item":"血清铁蛋白","proposals":["若生化检查支持嗜铬细胞瘤/副神经节瘤，再由专科安排定位影像检查"],"verdicts":["no"]},
+    {"id":"imaging-generic-control","item":"腹部CT/MRI","proposals":["若生化检查支持嗜铬细胞瘤/副神经节瘤，再由专科安排定位影像检查"],"clear_rv":["imaging_generic"],"verdicts":["no"]},
+    {"id":"past-result","item":"多导睡眠监测(PSG)/AHI","proposals":["CPAP压力滴定/auto-CPAP治疗及随访(睡眠中心实施,PSG诊断性监测已于ts=336完成)"],"verdicts":["undecided"],"rule":"past_result"},
+    {"id":"new-sleep-order","item":"多导睡眠监测(PSG)/AHI","proposals":["多导睡眠监测(PSG)"],"verdicts":["yes"]},
+    {"id":"past-marker-control","item":"多导睡眠监测(PSG)/AHI","proposals":["CPAP压力滴定/auto-CPAP治疗及随访(睡眠中心实施,PSG诊断性监测已于ts=336完成)"],"clear_rv":["past_result"],"clear_past":true,"verdicts":["yes"]}
+  ]
+}

@@ -5,8 +5,25 @@ import argparse
 from pathlib import Path
 
 
+def positive_int(value: str) -> int:
+    try:
+        number = int(value)
+        if number > 0:
+            return number
+    except ValueError:
+        pass
+    raise argparse.ArgumentTypeError("must be a positive integer")
+
+
+def model_cap(value: str) -> tuple[str, int]:
+    model, sep, number = value.rpartition("=")
+    if not sep or not model.strip():
+        raise argparse.ArgumentTypeError("must be MODEL=N with a positive integer N")
+    return model.strip(), positive_int(number)
+
+
 def parser_for(maintenance: set[str], twin_ops: list[str]) -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="haenv", description="Health agent environment: generate, evaluate, and report in one pipeline")
+    ap = argparse.ArgumentParser(prog="haenv", description="Health agent environment: generate, evaluate, and report in one pipeline; use `haenv reask --help` to re-ask stored diagnosis responses")
     ap.add_argument("cmd", choices=["run", "build", "verify", "report", "twin"]
                     + [name for name in ("inputs", "tasks") if name in maintenance])
     ap.add_argument("job", nargs="?", default=None,
@@ -88,6 +105,15 @@ def parser_for(maintenance: set[str], twin_ops: list[str]) -> argparse.ArgumentP
                          "on one backend share that backend's cap; rows are identical to a serial run apart "
                          "from timing fields. Under `--pooling elastic` only 1 (serial) matters: pools are "
                          "sized by `config.eval.elastic_max`")
+    ap.add_argument("--model-cap", action="append", type=model_cap, default=[], metavar="MODEL=N",
+                    help="override a model's cell cap after config/overlays (repeatable; last wins), "
+                         "bounded by backend and paid ceilings")
+    ap.add_argument("--max-model-cap", type=positive_int, metavar="N",
+                    help="raise configured model caps to at least N within backend/paid ceilings; "
+                         "--model-cap takes precedence")
+    ap.add_argument("--dry-plan", action="store_true",
+                    help="run only: print the pending-cell concurrency plan without any model calls; "
+                         "requires a YAML job, uses stored cases when resuming")
     ap.add_argument("--geometry", choices=["query", "single"], default=None,
                     help="how a pack case (P2, P3, P4, M2) is put to a model (default `config.query.geometry`, "
                          "query): `query` = the record is read through tools, `single` = the whole record in "

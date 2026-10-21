@@ -32,20 +32,20 @@ The separate Pages workflow checks the demo in a browser and does not run during
 
 ### Tests
 
-`tests/` holds the unit tests and the world-layer contract tests (`tests/contracts/`). They make
-no model calls and need no API key and no evaluation results. CI runs both tiers on Python 3.10
-and 3.12:
-
+Contracts live in `tests/<component>/`, mirroring `src/haenv/<component>/`;
+release and paper-script contracts live in `tests/release/` and `tests/paper/`.
+Add a regression row with a stable ID to the table beside its contract and
+parametrize the invariant over it. Component fixtures live beside contracts; only shared helpers stay at the test root.
+World artifacts use the frozen world identity and their audited inputs as cache
+keys; readers take private copies. Ordinary test edits and commits reuse them.
+Use the component gate while working, the public surface for code changes,
+and the full default suite once before a push:
 ```bash
-uv run --group test pytest -n auto --dist worksteal   # unit tests, in parallel
-uv run --group test pytest --fast -n auto             # the edit-test loop: skips `integration` tests
-uv run --group test pytest -m world                   # world-layer contract tests
+export UV_NO_SYNC=1 UV_FROZEN=1 PYTHONPATH=src:.:plugins
+.venv/bin/python tools/dev/affected_tests.py --run src/haenv/p2/rules.py
+.venv/bin/python tools/dev/affected_tests.py --public --run
+.venv/bin/python -m pytest tests -n 64 --ff --durations=30
 ```
-
-The `test` dependency group installs pytest and the two example plugin packages the plugin tests
-load (`examples/plugin_demo`, `examples/llm_judge_demo`). The wheel test builds with `uv build`
-and reports a skip when `uv` is not on `PATH`. The maintainers' governance checks (guard budgets,
-commit and style rules, runtime ledgers, the export gate) are not part of this repository.
 
 ---
 
