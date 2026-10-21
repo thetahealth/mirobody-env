@@ -2,9 +2,12 @@
 
 `docs/boards/1.3.1/k3.json` is the thirteen-model k3 readout; the README rows show rank interval,
 overall score and interval, the four pack scores and All-3 (equal-weight mean of the packs' pass^3),
-three decimals rounded half up on the stored decimal."""
+three decimals rounded half up on the stored decimal. All-3 averages with `math.fsum`, which rounds
+the exact sum once, so the check gives the same result on every supported Python version
+(`sum` of floats changed in Python 3.12)."""
 from _paths import ROOT as _TEST_ROOT
 import json
+import math
 import re
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
@@ -27,7 +30,7 @@ def expected(board):
     for m in ranked:
         r = board["overall"][m]
         lo, hi = (int(v) for v in r["rank_ci"])
-        all3 = sum(board["profile"][p][m]["pass_k"] for p in ("m2", "p2", "p3", "p4")) / 4
+        all3 = math.fsum(board["profile"][p][m]["pass_k"] for p in ("m2", "p2", "p3", "p4")) / 4
         out.append((str(lo) if lo == hi else f"{lo}–{hi}", m, _h3(r["score"]), _h3(r["ci"][0]), _h3(r["ci"][1]),
                     tuple(_h3(r["packs"][p]) for p in ("m2", "p2", "p3", "p4")) + (_h3(all3),)))
     return out
