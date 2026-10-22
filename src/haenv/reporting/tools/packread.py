@@ -23,9 +23,7 @@ from dataclasses import dataclass, field as _dc_field
 from datetime import datetime
 from pathlib import Path
 
-from haenv.locations import data_root
-
-ROOT = data_root()
+from haenv.locations import result_roots
 
 #: Batch directory name format.
 _STAMP = re.compile(r"^(\d{8})-(\d{6})$")
@@ -71,11 +69,12 @@ class Scan:
 
 def scan(root: Path | None = None, *, task_type: str | None = None,
          job_id: str | None = None, now: datetime | None = None) -> Scan:
-    """Scan `results/`, returning (batches in ascending time order, anomalous directories)."""
-    root = root or ROOT
+    """Scan all result roots by default, or only ``root/results`` when supplied."""
+    roots = result_roots() if root is None else (Path(root) / "results",)
     now = now or datetime.now()
     out = Scan()
-    for d in sorted((root / "results").glob("*/*/*")):
+    directories = (d for base in roots for d in sorted(base.glob("*/*/*")))
+    for d in directories:
         if not d.is_dir():
             continue
         tt, jid, stamp = d.parts[-3], d.parts[-2], d.parts[-1]

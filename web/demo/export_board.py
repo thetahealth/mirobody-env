@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 """Write `board.json`, the board the demo page shows in its third act, from a board readout.
 
+The public 1.3.1 export needs only released inputs:
+
+    python web/demo/export_board.py --score docs/boards/1.3.1/k3.json \\
+        --pk1 docs/boards/1.3.1/pk1.json --sample-board web/demo/board-1.3.0.json
+
+Add `--check` to compare without writing. Act 2 retains only the historical snapshot's
+sample tool traces, explicitly labelled with their version; its board readings are not reused.
+
 For 1.3.0 use `--score <board_score.json> --figures <figures_data.json> --work <run-root>`
 (repeat --work for separate pack runs). Scores, overall intervals, ranks, profiles and adjacent
 paired differences are copied from the score readout; chart values are copied from the approved
@@ -34,6 +42,7 @@ import argparse
 import collections
 import hashlib
 import json
+import math
 import pathlib
 import statistics
 import sys
@@ -311,6 +320,66 @@ SCORE_PACKS = {"m2": "m2", "pack2": "p2", "p3": "p3", "p4": "p4"}
 TRAJECTORY_CASE = "PT-91fbb6a5120fd049a7d7"
 
 
+def build_released(score: pathlib.Path, pk1: pathlib.Path, sample_board: pathlib.Path) -> dict:
+    """Export the public 1.3.1 readouts without inventing unpublished descriptors."""
+    R = json.loads(score.read_text(encoding="utf-8"))
+    first = json.loads(pk1.read_text(encoding="utf-8"))
+    if R["aggregation"] != "k3" or first["aggregation"] != "pk1":
+        raise Missing("released board needs k3 and pk1 readouts")
+    ranked = sorted((m for m, r in R["overall"].items() if r["score"] is not None),
+                    key=lambda m: R["overall"][m]["rank"])
+    first_order = sorted((m for m, r in first["overall"].items() if r["score"] is not None),
+                         key=lambda m: first["overall"][m]["rank"])
+    if not ranked or set(ranked) != set(first_order) or set(R["packs"]) != set(SCORE_PACKS.values()):
+        raise Missing("released readouts disagree on model or pack coverage")
+    overall, packs = [], {}
+    for m in ranked:
+        r = R["overall"][m]
+        lo, hi = r["ci"]
+        rlo, rhi = r["rank_ci"]
+        if not (0 <= lo <= r["score"] <= hi <= 1 and 1 <= rlo <= r["rank"] <= rhi <= len(ranked)):
+            raise Missing(f"overall/{m}: invalid score or rank interval")
+        overall.append({"model": m, "score": r["score"], "ci95": r["ci"], "rank": r["rank"],
+                        "rank_ci95": [int(rlo), int(rhi)],
+                        "pass3": math.fsum(R["profile"][p][m]["pass_k"] for p in SCORE_PACKS.values()) / 4})
+    if [r["rank"] for r in overall] != list(range(1, len(ranked) + 1)):
+        raise Missing("overall: incomplete rank order")
+    for key, pack in SCORE_PACKS.items():
+        prof = R["profile"][pack]
+        counts = {prof[m]["n_pk1"] for m in ranked}
+        if len(counts) != 1 or any(prof[m]["k"] != 3 for m in ranked):
+            raise Missing(f"profiles/{pack}: inconsistent item or answer counts")
+        rows = [{"model": m, "score": R["overall"][m]["packs"][pack]} for m in ranked]
+        if any(not 0 <= r["score"] <= 1 for r in rows):
+            raise Missing(f"packs/{pack}: invalid score")
+        packs[key] = {"status": "final", "n_cases": counts.pop(), "n_rounds": 3,
+                      "board": rows, "profile": prof}
+    pairs = R["adjacent_pairs"]
+    if ([p["pair"] for p in pairs] != [a + " - " + b for a, b in zip(ranked, ranked[1:])]
+            or any(p["separable"] != (p["ci"][0] > 0 or p["ci"][1] < 0) for p in pairs)):
+        raise Missing("overall: adjacent pairs disagree with the board order or intervals")
+    draws = {R["overall"][m]["rank_ci_draws"] for m in ranked}
+    if len(draws) != 1:
+        raise Missing("overall: inconsistent bootstrap draw counts")
+    sample = json.loads(sample_board.read_text(encoding="utf-8"))
+    if sample["version"] != "1.3.0":
+        raise Missing("sample traces require the published 1.3.0 snapshot")
+    return {"_generated": "do not hand-edit; rebuild with `python web/demo/export_board.py "
+            "--score docs/boards/1.3.1/k3.json --pk1 docs/boards/1.3.1/pk1.json "
+            "--sample-board web/demo/board-1.3.0.json`",
+            "version": "1.3.1", "source": {"boot": draws.pop(), "answer": "mean_of_three",
+                                          "aggregation": "k3", "seed": "public"},
+            "provenance": {"score_sha16": _sha(score), "pk1_sha16": _sha(pk1),
+                           "sample_board_sha16": _sha(sample_board)},
+            "models": ranked, "packs": packs,
+            "overall": {"status": "final", "packs": list(SCORE_PACKS), "board": overall,
+                        "adjacent_pairs": pairs},
+            "first_answer": {"aggregation": "pk1", "models": first_order},
+            "unranked": {m: r for m, r in R["overall"].items() if r["score"] is None},
+            "profile": R["profile"], "decisions": {},
+            "trajectory": {**sample["trajectory"], "version": sample["version"]}}
+
+
 def _profile_rows(work: list[pathlib.Path], pack: str) -> dict:
     """Last stored answer per cell, including recorded replacements of transport aborts.
 
@@ -452,6 +521,8 @@ def main() -> int:
     source.add_argument("--readout", type=pathlib.Path, help="historical chance-corrected board")
     source.add_argument("--score", type=pathlib.Path, help="preregistered board_score.json; copied, never recalculated")
     ap.add_argument("--figures", type=pathlib.Path, help="approved figures_data.json")
+    ap.add_argument("--pk1", type=pathlib.Path, help="released first-answer readout (public 1.3.1 mode)")
+    ap.add_argument("--sample-board", type=pathlib.Path, help="published 1.3.0 snapshot for Act 2's sample traces")
     ap.add_argument("--work", type=pathlib.Path, action="append", default=[], help="board run root, repeatable; descriptive answer counts only")
     ap.add_argument("--results", type=pathlib.Path, help="results root holding the board batches")
     ap.add_argument("--batch", action="append", default=[], metavar="PACK=JOB/STAMP",
@@ -459,6 +530,7 @@ def main() -> int:
     ap.add_argument("--items", action="append", default=[], metavar="STAMP=JOB.yaml",
                     help="a part of a pack run in two parts contributes only the items this job file lists")
     ap.add_argument("--out", type=pathlib.Path, default=OUT)
+    ap.add_argument("--check", action="store_true", help="compare with the generated JSON without writing it")
     a = ap.parse_args()
     try:
         batches = dict(b.split("=", 1) for b in a.batch)
@@ -466,15 +538,25 @@ def main() -> int:
         items = {k: {c["case_id"] for c in yaml.safe_load(pathlib.Path(v).read_text(encoding="utf-8"))["cases"]}
                  for k, v in (x.split("=", 1) for x in a.items)}
         if a.score:
-            if not a.figures or not a.work:
+            if a.pk1 and a.sample_board and not a.figures and not a.work:
+                out = build_released(a.score, a.pk1, a.sample_board)
+            elif not a.figures or not a.work:
                 raise Missing("--score needs --figures and at least one --work")
-            out = build_score(a.score, a.figures, a.work)
+            else:
+                out = build_score(a.score, a.figures, a.work)
         else:
             out = build(a.readout, a.results, batches, items)
     except (Missing, KeyError, ValueError) as e:
         print(f"export stopped: {e}")
         return 2
-    a.out.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    rendered = json.dumps(out, ensure_ascii=False, indent=1) + "\n"
+    if a.check:
+        if not a.out.is_file() or a.out.read_text(encoding="utf-8") != rendered:
+            print(f"stale board: {a.out.name}")
+            return 1
+        print(f"ok: {a.out.name} matches its released inputs ({len(out['models'])} models)")
+        return 0
+    a.out.write_text(rendered, encoding="utf-8")
     print(f"wrote {a.out.name}: packs {sorted(out['packs'])} · decisions {sorted(out['decisions'])}")
     return 0
 

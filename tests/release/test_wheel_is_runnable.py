@@ -413,6 +413,58 @@ def test_output_root_never_writes_into_the_package(tmp_path, monkeypatch):
         "两个都设时 HAENV_OUTPUT_ROOT 必须赢(它更specific)"
 
 
+    # The reader side of the same location contract is exercised from a data
+    # table, including a wheel's decoy resources and real working-directory runs.
+    import json
+    from types import SimpleNamespace
+    from haenv.reporting.tools import packread
+    from haenv.runtime.spend import _resolve_batches
+    table = pathlib.Path(__file__).with_name("result_roots.json").read_text()
+    for i in range(1, 5):
+        table = table.replace("{stamp" + str(i) + "}", f"1999010{i}-000000")
+    rows = json.loads(table)
+    for row in rows:
+        with pytest.MonkeyPatch.context() as patch:
+            base = tmp_path / row["id"]
+            repo, site, work = (base / name for name in ("repo", "site", "work"))
+            work.mkdir(parents=True)
+            if row["layout"] == "wheel":
+                (site / "haenv/_data").mkdir(parents=True)
+                code = site
+            else:
+                repo.mkdir()
+                (repo / "pyproject.toml").write_text("")
+                code = repo / "src" if row["layout"] == "src" else repo
+            patch.setattr(locations, "source_root", lambda: code)
+            patch.chdir(work)
+            for env in ("HAENV_OUTPUT_ROOT", "HAENV_DATA_ROOT"):
+                patch.delenv(env, raising=False)
+            for env, value in row["env"].items():
+                patch.setenv(env, str(base / value))
+            for label in row["files"]:
+                path = base / label
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("{}\n")
+            for label, target in row.get("symlinks", {}).items():
+                path = base / label
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.symlink_to(base / target, target_is_directory=True)
+            before = set(base.rglob("*"))
+            assert locations.result_roots() == tuple(base / name for name in row["roots"]), row["id"]
+            expected = sorted((base / name).parent for name in row["evals"])
+            assert sorted(b.dir for b in packread.scan().ok) == expected, row["id"]
+            if "explicit" in row:
+                assert [b.eval_file for b in packread.scan(base / row["explicit"]).ok] == [
+                    base / name for name in row["explicit_evals"]]
+            for stamp, label in row.get("spend", {}).items():
+                supplied = str(base / stamp) if "/" in stamp else stamp
+                assert _resolve_batches(SimpleNamespace(batch=[supplied], scan_root=[])) == [base / label]
+            for stamp, error in row.get("errors", {}).items():
+                with pytest.raises(SystemExit, match=error):
+                    _resolve_batches(SimpleNamespace(batch=[stamp], scan_root=[]))
+            assert set(base.rglob("*")) == before, row["id"]
+
+
 def test_cli_passes_output_root_not_data_root():
     """The contract has to propagate to the call site -- having `output_root()` is useless unless `cli` actually uses it.
 

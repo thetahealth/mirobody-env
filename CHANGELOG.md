@@ -7,12 +7,38 @@ per-criterion fingerprints identify which result columns remain comparable, and 
 fingerprint identifies the complete set of criteria. Combined scores also require matching
 aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [1.3.2] - 2026-10-21
+
+Documentation and bug-fix release. Question packs, scorers and the 1.3.1 board are unchanged.
+
+### Changed
+
+- The README returns to the 1.3.0 layout with one board (1.3.1) and a per-task heatmap. The
+  1.3.0 board moves to `docs/DATA_CARD.md` (Historical boards); the re-ask guide moves to
+  `docs/reask.md`, and the re-ask recomputation and HTTP replay checks to `docs/REPRODUCE.md`.
+- The interactive demo shows the 1.3.1 board; the 1.3.0 board data stays in
+  `web/demo/board-1.3.0.json`.
+- `tools/dev/affected_tests.py` selects only the release tests for version-only edits, keeps
+  `--public` off the world tests and stops a whole-tree selection unless `--allow-slow` is given.
+
+### Added
+
+- `haenv.locations.result_roots()` lists the run roots to scan: legacy `results/` and the
+  current output root.
+- `tools/evaluation/board_score.py` can exclude cases (`--exclude-cases`), restrict the model
+  panel (`--models`) and export per-question scores (`--items-out`).
+
+### Fixed
+
+- `haenv spend --batch <stamp>` finds runs in the current output root and reports ambiguous stamps.
+- Pack scans and artifact readers include both legacy results and current output overrides.
+
 ## [1.3.1] - 2026-10-20
 
 ### Added
 
-- Bilingual README findings and reproducible figures for the thirteen-model board,
-  decisive-evidence coverage, re-asking, the test-budget sweep and HTTP replay.
+- Thirteen-model board and released readouts for decisive-evidence coverage, re-asking,
+  the test-budget sweep and HTTP replay.
 - Stored re-ask outcomes with offline diagnosis re-scoring and pooled question-cluster
   bootstrap recomputation (`tools/evaluation/reask_pooled.py --check`).
 - `haenv.__version__` exposes the package release version.
@@ -55,6 +81,8 @@ aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
 ### Changed
 
+- Diagnosis scores were refreshed relative to 1.3.0 after refreshing affected answers under
+  the current environment and applying the current scorer.
 - Generation reuses read-only registry snapshots and merges parallel P3 retry candidates in
   deterministic order. The frozen P3 public job fell from 281.80 s to 20.71 s;
   the forced private retry fell from 695.87 s to 31.94 s in concurrent proof runs.

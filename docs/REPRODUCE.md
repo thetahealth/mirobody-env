@@ -88,6 +88,24 @@ Unchanged criterion columns remain comparable when another criterion changes; co
 scores also require matching aggregation rules and task weights. Legacy results retain
 their `judging_sha16` and freeze revision; see [`DATA_CARD.md`](DATA_CARD.md).
 
+### Recomputing the 1.3.1 overall board
+
+Given the archived thirteen-model answer tree and its per-answer Q JSONL file, recompute
+the current board without calling a model:
+
+```bash
+uv run python tools/evaluation/board_score.py --tree . \
+  --work /path/to/answers --q /path/to/q.jsonl \
+  --aggregation k3 --boot 2000 --out /path/to/readout-k3
+```
+
+Use the 1.3.1 stored answers and scores, including the refreshed diagnosis answers. The shipped
+readouts are [`k3.json`](boards/1.3.1/k3.json) and [`pk1.json`](boards/1.3.1/pk1.json);
+`--aggregation pk1` selects the preregistered first-answer score. Compared with k3, pk1 swaps
+minimax-m3 and deepseek-v4-flash at positions 8 and 9; the remaining order is unchanged.
+The answer-root layout and missing-Q handling are the same as for 1.3.0 below. The readouts
+alone do not contain the stored answers or judge votes needed to recompute the board.
+
 ### Recomputing the 1.3.0 overall board
 
 Given an archived 1.3.0 answer tree and its per-answer Q JSONL file, recompute the
@@ -108,6 +126,42 @@ explicitly when it prevents a score. The main result averages each question's
 three answer scores and gives the four tasks equal weight.
 
 The evaluated question sets ship as frozen pack files. Each batch records its generation commit and world settings, and regenerating at those commits reproduces all four sets byte for byte (verified 2026-10-17: ① diagnosis and ② triage at `c3cecbee`, the ③ medication candidate arm at `fcf3b389` with its pairing at `c3cecbee`, ④ lab-change attribution at `05f97181`). `Q` averages two judgments by one LLM judge: of 7,246 Q records, 7,215 average two judgments, 20 contain one, and 11 have no management plan and score zero.
+
+### Recomputing the released re-ask results
+
+Re-score the released diagnosis answers and recompute the pooled results offline:
+
+```bash
+python tools/evaluation/reask_pooled.py --check
+```
+
+Expected summary: `61 facts matched; 535 answers re-scored; 0 D mismatches`.
+The [released data and conditions](../benchmarks/results/1.3.1/reask/README.md) include
+the stored answers, inclusion list and diagnosis gold. A new `haenv reask` run selects its
+own units; see the [re-asking guide](reask.md) for the input contract and arm definitions.
+
+### Checking HTTP replay
+
+Replay the stored leaderboard tool calls through `haenv serve fhir`, compare decoded outputs
+with the function-call tools and the stored traces, and validate the returned FHIR R4B resources:
+
+```bash
+python tools/release/replay_http.py --work leaderboard-pool/ --workers 32 --out artifacts/replay-http-results.json
+```
+
+Expected summary: `questions=400`, `responses=15600`, `calls=256609`, `identical=256609`,
+`differing=0`, `stored_differing=0`, `pending_purchases_replayed=234`, `validation_failures=0`;
+`missing=[]`, `worker_errors=[]`. Purchases and refusals are included. The pool contains the
+stored leaderboard runs and is supplied separately from the source tree. Install the `serve`
+extra for FHIR validation (`pip install 'haenv[serve]'`).
+
+An offline rehearsal uses the bundled stored-session subset, with no model calls or external pool:
+
+```bash
+python tools/release/replay_http.py --offline
+```
+
+The subset checks one question, one response and 31 calls; it does not reproduce the full-pool counts.
 
 ### Historical candidate board (2026-10-06)
 

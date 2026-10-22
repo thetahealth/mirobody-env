@@ -185,7 +185,40 @@ tables (drug tables, analyte baselines), so it can change the gold answer.
 
 ## Historical boards
 
-Earlier boards are kept for reference. They are not comparable with the 1.3.0 board: the judging and world fingerprints, the questions and the scoring have changed since. The 1.x board on the two bridge tracks is in [1.x evaluation](#1x-evaluation-historical).
+Earlier boards are kept as published. The 1.3.0 and 1.3.1 boards use the same four public-seed
+N100 question sets and k3 aggregation; diagnosis scores were refreshed for 1.3.1 after affected
+answers were refreshed under the current environment and scored with the current scorer.
+Older boards differ in questions, world or scoring and are not directly comparable. The 1.x
+board on the two bridge tracks is in [1.x evaluation](#1x-evaluation-historical).
+
+### 1.3.0 overall
+
+The 1.3.0 board ranks eight models, with three answers per item. Intervals use the paired
+item-cluster bootstrap (2,000 draws); the preregistered first-answer score (pk1) gives the same order.
+
+<p align="center">
+  <img src="figures/readme_board.png" alt="Overall scores and 95% intervals for eight models, ordered by score, with rank intervals at left" width="88%">
+</p>
+
+| Rank | Model | Overall (95% CI) | ① | ② | ③ | ④ | All-3 (all 3 correct) |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 1 | gpt-6-sol | 0.831 (0.808–0.854) | 0.687 | 0.893 | 0.959 | 0.785 | 0.875 |
+| 2 | gemini-3.8-flash | 0.792 (0.768–0.816) | 0.591 | 0.950 | 0.882 | 0.744 | 0.873 |
+| 3 | gpt-6-luna | 0.718 (0.690–0.746) | 0.490 | 0.859 | 0.897 | 0.627 | 0.695 |
+| 4 | deepseek-v4-pro | 0.659 (0.630–0.689) | 0.383 | 0.933 | 0.689 | 0.629 | 0.670 |
+| 5–6 | deepseek-v4-flash | 0.627 (0.595–0.660) | 0.459 | 0.856 | 0.656 | 0.538 | 0.585 |
+| 5–6 | glm-5.3-flash | 0.602 (0.571–0.632) | 0.381 | 0.813 | 0.668 | 0.547 | 0.533 |
+| 7 | minimax-m3 | 0.562 (0.532–0.589) | 0.153 | 0.870 | 0.608 | 0.616 | 0.518 |
+| 8 | qwen3.7-flash | 0.425 (0.394–0.457) | 0.299 | 0.599 | 0.271 | 0.533 | 0.325 |
+
+<sub>① Diagnosis · ② Triage · ③ Medication adjustment · ④ Lab-change attribution. All-3 is the share
+of items whose decision is correct in all three answers (equal-weight mean over the packs); it is a
+reliability profile, not the ranking metric. `G` is passing the hard gates, `D` a correct core
+decision, `Q` the plan quality (mean of two judgments by one LLM judge; intervals exclude judge
+noise). Overlapping rank intervals do not establish an order.</sub>
+
+[Board data (JSON)](../web/demo/board-1.3.0.json) ·
+[Recomputing this board](REPRODUCE.md#recomputing-the-130-overall-board)
 
 ### 2026-10-06 candidate overall
 

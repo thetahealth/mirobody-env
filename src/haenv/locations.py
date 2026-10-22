@@ -80,6 +80,27 @@ def output_root() -> Path:
     return (repo if repo is not None else Path.cwd()) / "artifacts"
 
 
+def result_roots(*, legacy_root: Path | None = None) -> tuple[Path, ...]:
+    """Existing evaluation roots, legacy first, then the current output root.
+
+    The legacy base is the checkout, or the working directory for an installed
+    distribution; packaged resources are never an implicit run location.
+    ``legacy_root`` overrides that base for callers with an explicit checkout.
+    Deduplicate by resolved identity while retaining the original path labels.
+    Missing roots are skipped and resolving locations never creates directories.
+    """
+    legacy = legacy_root if legacy_root is not None else repository_root()
+    if legacy is None:
+        legacy = Path.cwd()
+    roots, seen = [], set()
+    for path in (legacy / "results", output_root() / "results"):
+        resolved = path.resolve()
+        if path.is_dir() and resolved not in seen:
+            roots.append(path)
+            seen.add(resolved)
+    return tuple(roots)
+
+
 def resource_path(label: str) -> Path:
     return data_root() / _relative(label)
 

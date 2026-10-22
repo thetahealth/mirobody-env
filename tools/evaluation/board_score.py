@@ -57,9 +57,24 @@ def load_rows(work, pack):
     return out
 
 
+def pack_score_from_items(values, cases):
+    """The leaderboard's complete-case pack mean, shared with exclusion analyses."""
+    v = [values.get(c) for c in cases]
+    if not v or any(x is None for x in v):
+        return None
+    return sum(v) / len(v)
+
+
+def overall_from_packs(scores, n_packs):
+    return sum(scores) / len(scores) if len(scores) == n_packs and scores and all(v is not None for v in scores) else None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", required=True); ap.add_argument("--tree", required=True)
+    ap.add_argument('--exclude-cases', type=pathlib.Path, help='JSON list of [pack, case] pairs to exclude before scoring and bootstrap')
+    ap.add_argument('--models', help='Optional comma-separated model panel')
+    ap.add_argument('--items-out', type=pathlib.Path, help='Optional exact per-question S export for exclusion analyses')
     ap.add_argument("--q"); ap.add_argument("--packs", default=",".join(PACKS))
     ap.add_argument("--boot", type=int, default=2000); ap.add_argument("--seed", type=int, default=20261014)
     ap.add_argument("--out", required=True)
@@ -103,6 +118,22 @@ def main():
     req = {p for p in a.packs.split(",") if p}
     packs = [p for p in PACKS if p in req]   # canonical order: bootstrap draws do not depend on the --packs order (10-15)
     data = {p: load_rows(a.work, p) for p in packs}
+    if a.models:
+        panel = set(a.models.split(','))
+        for p in packs:
+            if not panel <= set(data[p]):
+                raise ValueError(f'{p}: missing requested models {sorted(panel-set(data[p]))}')
+            data[p] = {m:ks for m,ks in data[p].items() if m in panel}
+    if a.exclude_cases:
+        exclusions = json.loads(a.exclude_cases.read_text())
+        if any(not isinstance(q,list) or len(q)!=2 or q[0] not in packs for q in exclusions):
+            raise ValueError('Exclusions must be [pack, case] pairs in the scored tasks')
+        for p,c in exclusions:
+            for ks in data[p].values():
+                for rows in ks.values():
+                    if c not in rows:
+                        raise ValueError(f'Unknown excluded case {p}/{c}')
+                    del rows[c]
     models = sorted({m for p in packs for m in data[p]})
     per = {}   # (pack, model) -> {case: S or None}
     prof = collections.defaultdict(dict)
@@ -141,17 +172,17 @@ def main():
             }
 
     def pack_score(p, m, cases):
-        v = [per[(p, m)].get(c) for c in cases]
-        if not v or any(x is None for x in v):
-            return None
-        return sum(v) / len(v)
+        return pack_score_from_items(per[(p, m)], cases)
 
     case_lists = {p: sorted(set.intersection(*[set(per[(p, m)]) for m in models if (p, m) in per])) for p in packs}
     point = {}
     for m in models:
         ps = {p: pack_score(p, m, case_lists[p]) for p in packs if (p, m) in per}
-        point[m] = {"packs": ps, "overall": (sum(ps.values()) / len(ps)) if ps and all(v is not None for v in ps.values()) and len(ps) == len(packs) else None}
+        point[m] = {"packs": ps, "overall": overall_from_packs(list(ps.values()), len(packs))}
 
+    if a.items_out:
+        a.items_out.write_text(json.dumps({'aggregation':a.aggregation,
+            'items':{p:{m:per[(p,m)] for m in models if (p,m) in per} for p in packs}}, sort_keys=True)+'\n')
     rng = random.Random(a.seed)
     boots = collections.defaultdict(list)
     draw_overall = []   # added 2026-10-14 for rank_ci only: each draw's overall per model (same draws as `boots`)

@@ -79,8 +79,8 @@ def test_a_changed_snapshot_is_caught(data):
     assert got != want
 
 
-# ── the current board: both READMEs against `web/demo/board.json` (the demo's board data) ──
-BOARD_HEADINGS = {"README.md": ("overall", "by pack"), "README.zh-CN.md": ("总分", "分包")}
+# The archived 1.3.0 table keeps every reading from the demo's original board data.
+BOARD_HEADINGS = {"docs/DATA_CARD.md": ("overall", "by pack")}
 VERSION = r"\d+\.\d+\.\d+"
 NUM = r"-?[\d.]+"
 OVERALL_ROW = re.compile(rf"^\|\s*(\d+(?:–\d+)?)\s*\|\s*(\S+)\s*\|\s*({NUM})\s*\|\s*({NUM})–({NUM})\s*\|\s*$", re.M)
@@ -91,7 +91,7 @@ PACKS = ("m2", "pack2", "p3", "p4")
 
 @pytest.fixture(scope="module")
 def board():
-    return json.loads((ROOT / "web/demo/board.json").read_text(encoding="utf-8"))
+    return json.loads((ROOT / "web/demo/board-1.3.0.json").read_text(encoding="utf-8"))
 
 
 def _section(text, name):
@@ -128,7 +128,7 @@ def board_shown(text, doc):
 
 
 @pytest.mark.parametrize("doc", sorted(BOARD_HEADINGS))
-def test_readme_board_matches_the_demo_board(board, doc):
+def test_historical_board_matches_the_demo_board(board, doc):
     text = (ROOT / doc).read_text(encoding="utf-8")
     assert all(p["status"] == "final" for p in board["packs"].values()) and board["overall"]["status"] == "final"
     assert board_shown(text, doc) == board_expected(board)
@@ -157,8 +157,8 @@ def test_the_board_carries_no_alternative_weighting(board):
 
 def test_a_changed_reading_in_the_board_is_caught(board):
     """Moving any displayed score, interval, pack value or rank breaks the match."""
-    text = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert board_shown(text, "README.md") == board_expected(board)
+    text = (ROOT / "docs/DATA_CARD.md").read_text(encoding="utf-8")
+    assert board_shown(text, "docs/DATA_CARD.md") == board_expected(board)
     for field in ("score", "ci95", "rank_ci95"):
         moved = copy.deepcopy(board)
         row = moved["overall"]["board"][0]
@@ -166,7 +166,7 @@ def test_a_changed_reading_in_the_board_is_caught(board):
             row[field][1] += .01 if field == "ci95" else 1
         else:
             row[field] += .01
-        assert board_expected(moved) != board_shown(text, "README.md")
+        assert board_expected(moved) != board_shown(text, "docs/DATA_CARD.md")
     moved = copy.deepcopy(board)
     moved["packs"]["p4"]["board"][0]["score"] += .01
-    assert board_expected(moved) != board_shown(text, "README.md")
+    assert board_expected(moved) != board_shown(text, "docs/DATA_CARD.md")

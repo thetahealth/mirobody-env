@@ -1,0 +1,179 @@
+[
+  {
+    "id": "checkout-legacy-and-artifacts",
+    "layout": "src",
+    "files": [
+      "repo/results/joint_dx/old/{stamp1}/eval.jsonl",
+      "repo/artifacts/results/early_warning/current/{stamp2}/eval.jsonl"
+    ],
+    "env": {},
+    "roots": [
+      "repo/results",
+      "repo/artifacts/results"
+    ],
+    "evals": [
+      "repo/results/joint_dx/old/{stamp1}/eval.jsonl",
+      "repo/artifacts/results/early_warning/current/{stamp2}/eval.jsonl"
+    ],
+    "spend": {
+      "{stamp2}": "repo/artifacts/results/early_warning/current/{stamp2}"
+    },
+    "explicit": "repo",
+    "explicit_evals": [
+      "repo/results/joint_dx/old/{stamp1}/eval.jsonl"
+    ]
+  },
+  {
+    "id": "output-override-beats-data-resources",
+    "layout": "flat",
+    "files": [
+      "repo/results/joint_dx/old/{stamp1}/eval.jsonl",
+      "runs/results/early_warning/current/{stamp2}/eval.jsonl",
+      "resources/results/ignored/pack/{stamp3}/eval.jsonl",
+      "repo/artifacts/results/ignored/pack/{stamp4}/eval.jsonl"
+    ],
+    "env": {
+      "HAENV_OUTPUT_ROOT": "runs",
+      "HAENV_DATA_ROOT": "resources"
+    },
+    "roots": [
+      "repo/results",
+      "runs/results"
+    ],
+    "evals": [
+      "repo/results/joint_dx/old/{stamp1}/eval.jsonl",
+      "runs/results/early_warning/current/{stamp2}/eval.jsonl"
+    ],
+    "spend": {
+      "{stamp2}": "runs/results/early_warning/current/{stamp2}"
+    }
+  },
+  {
+    "id": "data-root-fallback",
+    "layout": "src",
+    "files": [
+      "resources/results/early_warning/current/{stamp2}/eval.jsonl"
+    ],
+    "env": {
+      "HAENV_DATA_ROOT": "resources"
+    },
+    "roots": [
+      "resources/results"
+    ],
+    "evals": [
+      "resources/results/early_warning/current/{stamp2}/eval.jsonl"
+    ],
+    "spend": {
+      "{stamp2}": "resources/results/early_warning/current/{stamp2}"
+    }
+  },
+  {
+    "id": "wheel-uses-cwd-never-package",
+    "layout": "wheel",
+    "files": [
+      "work/results/joint_dx/old/{stamp1}/eval.jsonl",
+      "work/artifacts/results/early_warning/current/{stamp2}/eval.jsonl",
+      "site/haenv/_data/results/ignored/pack/{stamp3}/eval.jsonl",
+      "site/results/ignored/pack/{stamp4}/eval.jsonl"
+    ],
+    "env": {},
+    "roots": [
+      "work/results",
+      "work/artifacts/results"
+    ],
+    "evals": [
+      "work/results/joint_dx/old/{stamp1}/eval.jsonl",
+      "work/artifacts/results/early_warning/current/{stamp2}/eval.jsonl"
+    ],
+    "spend": {
+      "{stamp2}": "work/artifacts/results/early_warning/current/{stamp2}"
+    }
+  },
+  {
+    "id": "wheel-output-redirect",
+    "layout": "wheel",
+    "files": [
+      "runs/results/early_warning/current/{stamp2}/eval.jsonl",
+      "site/haenv/_data/results/ignored/pack/{stamp3}/eval.jsonl"
+    ],
+    "env": {
+      "HAENV_OUTPUT_ROOT": "runs"
+    },
+    "roots": [
+      "runs/results"
+    ],
+    "evals": [
+      "runs/results/early_warning/current/{stamp2}/eval.jsonl"
+    ],
+    "spend": {
+      "{stamp2}": "runs/results/early_warning/current/{stamp2}"
+    }
+  },
+  {
+    "id": "resolved-root-alias-once",
+    "layout": "src",
+    "files": [
+      "repo/results/joint_dx/old/{stamp1}/eval.jsonl"
+    ],
+    "symlinks": {
+      "alias/results": "repo/results"
+    },
+    "env": {
+      "HAENV_OUTPUT_ROOT": "alias"
+    },
+    "roots": [
+      "repo/results"
+    ],
+    "evals": [
+      "repo/results/joint_dx/old/{stamp1}/eval.jsonl"
+    ],
+    "spend": {
+      "{stamp1}": "repo/results/joint_dx/old/{stamp1}"
+    }
+  },
+  {
+    "id": "missing-roots-stay-missing",
+    "layout": "src",
+    "files": [],
+    "env": {},
+    "roots": [],
+    "evals": [],
+    "errors": {
+      "{stamp1}": "batch not found"
+    }
+  },
+  {
+    "id": "empty-wheel-stays-empty",
+    "layout": "wheel",
+    "files": [],
+    "env": {},
+    "roots": [],
+    "evals": [],
+    "errors": {
+      "{stamp1}": "batch not found"
+    }
+  },
+  {
+    "id": "ambiguous-stamp-needs-directory",
+    "layout": "src",
+    "files": [
+      "repo/results/joint_dx/old/{stamp1}/eval.jsonl",
+      "repo/artifacts/results/early_warning/current/{stamp1}/eval.jsonl"
+    ],
+    "env": {},
+    "roots": [
+      "repo/results",
+      "repo/artifacts/results"
+    ],
+    "evals": [
+      "repo/results/joint_dx/old/{stamp1}/eval.jsonl",
+      "repo/artifacts/results/early_warning/current/{stamp1}/eval.jsonl"
+    ],
+    "errors": {
+      "{stamp1}": "ambiguous batch stamp"
+    },
+    "spend": {
+      "repo/artifacts/results/early_warning/current/{stamp1}": "repo/artifacts/results/early_warning/current/{stamp1}"
+    }
+  }
+]

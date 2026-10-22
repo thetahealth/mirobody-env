@@ -17,7 +17,10 @@
 import { JSDOM } from "jsdom";
 import fs from "fs";
 
-const html = fs.readFileSync(process.env.HAENV_PAGE || new URL("./index.html", import.meta.url), "utf-8");
+let html = fs.readFileSync(process.env.HAENV_PAGE || new URL("./index.html", import.meta.url), "utf-8");
+// Exercise historical descriptive charts against their immutable snapshot as well.
+if (process.env.HAENV_BOARD) html = html.replace(/(<script id="haenv-board"[^>]*>)[\s\S]*?(<\/script>)/,
+  (_, open, close) => open + fs.readFileSync(process.env.HAENV_BOARD, "utf-8").replaceAll("</", "<\\/") + close);
 function load(url){
   const errs = [];
   const dom = new JSDOM(html, { url: url || "file:///index.html", runScripts: "dangerously", pretendToBeVisual: true,
@@ -149,22 +152,28 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
   check("interim_overall_is_labelled", board.overall.status !== "interim" || !!$("#act3 .tagi"));
   const fills = $$("#act3 .b2 .fill"), badFill = fills.filter(f => { const m = f.closest("tr").dataset.m, k = f.closest("td").dataset.k;
     return Math.abs(parseFloat(f.style.width) - board.packs[k].stability[m] * 100) > 0.06; });
-  check("disagreement_bars_are_the_board_shares", fills.length > 0 && badFill.length === 0, { n: fills.length, bad: badFill.length });
+  const hasDisagreement=Object.values(board.packs).every(p=>!!p.stability);
+  check("disagreement_bars_are_the_board_shares", hasDisagreement ? fills.length === ov.length*nFinal && badFill.length === 0 : !$("#act3 .b2"), { n: fills.length, bad: badFill.length });
   const pairs = board.overall.adjacent_pairs;
   const pairHits = $$("#act3 .b3 rect[data-pair]");
   check("adjacent_pairs_are_the_preregistered_readings", pairs.length === ov.length - 1 && pairHits.length === pairs.length
     && pairHits.every((h,i) => h.dataset.pair === pairs[i].pair), {n: pairHits.length});
   const plotted = ["dq", "cost"].flatMap(k => $$("#" + k + " circle[data-model]").map(c => [k,c]));
-  check("new_figures_cover_ranked_models", plotted.length === ov.length * 2
-    && plotted.every(([k,c]) => board.drawn[k][c.dataset.model].every(Number.isFinite)), {n:plotted.length});
+  check("new_figures_cover_ranked_models", board.drawn ? plotted.length === ov.length * 2
+    && plotted.every(([k,c]) => board.drawn[k][c.dataset.model].every(Number.isFinite)) : !$("#dq") && !$("#cost"), {n:plotted.length});
   const shownProfiles = $$("#mpanel .profiles tr").length;
   check("model_profiles_are_present", shownProfiles === Object.keys(board.packs).length + 1, shownProfiles);
   const historyModels = $$("#history-grid circle[data-model]");
-  check("history_figures_show_both_conditions", historyModels.length === ov.length * Object.keys(board.packs).length * 2, historyModels.length);
+  check("history_figures_show_both_conditions", board.history ? historyModels.length === ov.length * Object.keys(board.packs).length * 2 : !$("#history-grid"), historyModels.length);
   const linked = ov[2].model;
+  if(board.drawn){
   click($('#dq circle[data-model="' + linked + '"]'));
   check("scatter_selection_links_all_figures", $("#mp-model").value === linked && $$("#act3 tr.sel").every(tr=>tr.dataset.m === linked)
     && $$("#dq [data-model-label], #cost [data-model-label]").filter(n=>n.classList.contains("annb")).every(n=>n.dataset.modelLabel === linked));
+  }else{
+    click($('#board0 rect[data-m="' + linked + '"]'));
+    check("board_selection_links_the_model_panel", $("#mp-model").value===linked && $$("#act3 tr.sel").every(tr=>tr.dataset.m===linked));
+  }
   click($('#tabs .tab[data-p="p4"]'));
   const tr=board.trajectory, samples=data.packs.p4.sample;
   check("trajectory_matches_the_public_p4_sample", tr.case === samples.case_id && !$("#trajectory").hidden
@@ -177,6 +186,7 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
   const p0 = $("#mpanel").innerHTML, sel = $("#mp-model"), other = sel.options[3].value;
   sel.value = other; fire(sel, "change");
   check("model_switch_repaints_the_panel", $("#mpanel").innerHTML !== p0 && $("#act3 tr.sel").dataset.m === other);
+  if(board.decisions.pack2){
   const cf = board.decisions.pack2, cells = cf.models[other], tot = cells.reduce((a, c) => a + c[2], 0);
   // The "No answer" column appears only for a model with answers outside the classes.
   const noneCol = cfm => cfm.some(c => c[1] === "none" && c[2]) ? 1 : 0;
@@ -187,10 +197,17 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
   const rv = board.decisions.m2.models[other], rvTot = rv.review.reduce((a, c) => a + c[2], 0);
   const shown = $$("#cf-m2 td[data-w]").reduce((a, td) => a + (+td.textContent || 0), 0);
   check("pack1_review_counts_are_the_rows", shown === rvTot && rvTot > 0, {shown,rvTot});
+  }else{
+    check("unreleased_decision_counts_are_absent", !$("#cf-pack2") && !$("#cf-m2") && !$("#mpanel .cflegend"));
+  }
   const profileBad=[];
-  $$("#mpanel .profiles tr").slice(1).forEach((tr,i)=>{const k=Object.keys(board.packs)[i],q=board.packs[k].profile[other];
-    const want=[q.D_acc_k,q.pass_k,q.hard_gate_rate,q.Q_mean_on_D1].map(half3);
+  for(const selected of ov){
+  const control=$("#mp-model");control.value=selected.model;fire(control,"change");
+  $$("#mpanel .profiles tr").slice(1).forEach((tr,i)=>{const k=Object.keys(board.packs)[i];
+    const qSelected=board.packs[k].profile[selected.model];
+    const want=[qSelected.D_acc_k,qSelected.pass_k,qSelected.hard_gate_rate,qSelected.Q_mean_on_D1].map(half3);
     if([...tr.querySelectorAll("td")].slice(1).some((td,j)=>td.textContent!==want[j]))profileBad.push(k);});
+  }
   check("model_profiles_copy_the_readout", profileBad.length===0,profileBad);
 
 }

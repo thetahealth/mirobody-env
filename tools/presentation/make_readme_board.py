@@ -2,7 +2,7 @@
 
 The figure shows each model's overall score (equal-weight mean of the four pack scores, k3) with
 its 95% paired item-bootstrap interval and its rank interval. Values come from
-`web/demo/board.json:overall.board` without re-aggregation; labels round the stored decimal half
+`web/demo/board-1.3.0.json:overall.board` without re-aggregation; labels round the stored decimal half
 up, the rule the README tables and the demo use.
 
     uv run --with matplotlib python tools/presentation/make_readme_board.py
@@ -10,6 +10,8 @@ up, the rule the README tables and the demo use.
 
 `--score` draws a `board_score.json` readout instead (the 1.3.1 board: `docs/boards/1.3.1/k3.json`
 -> `docs/figures/readme_board_131.png`), copying its overall scores, intervals and rank intervals.
+The PNG is trimmed to its drawn content plus a narrow even margin, so the README can show it at the
+full column width.
 
 No model calls or scoring recomputation.
 """
@@ -35,7 +37,7 @@ from pathlib import Path
 import tempfile
 
 ROOT = _repository_root(__file__)
-SOURCE = ROOT / "web/demo/board.json"
+SOURCE = ROOT / "web/demo/board-1.3.0.json"
 OUTPUT = ROOT / "docs/figures"
 NAME = "readme_board.png"
 
@@ -43,6 +45,8 @@ INK, MUTED, FAINT = "#0b0b0b", "#52514e", "#7a7873"
 GRID, AXIS, BG = "#e1e0d9", "#c3c2b7", "#fcfcfb"
 DOT, BAR = "#2a78d6", "#88b3e6"
 X0, X1 = 0.3, 0.9
+#: Background pixels kept around the drawn content when the PNG is trimmed.
+CROP_PAD = 16
 
 
 def half_up3(x: float) -> str:
@@ -77,6 +81,17 @@ def prepare(board: dict, x0: float = X0, x1: float = X1) -> list[dict]:
         if not (x0 <= lo <= r["score"] <= hi <= x1):
             raise SystemExit(f"{r['model']}: score or interval outside the drawn axis {x0}-{x1}")
     return rows
+
+
+def crop_to_content(image, background: str = BG, pad: int = CROP_PAD):
+    """Trim `image` to the pixels that differ from `background`, keeping `pad` pixels on each side."""
+    from PIL import Image, ImageChops
+    box = ImageChops.difference(image, Image.new(image.mode, image.size, background)).getbbox()
+    if box is None:
+        raise SystemExit("The figure is empty")
+    left, top, right, bottom = box
+    return image.crop((max(left - pad, 0), max(top - pad, 0),
+                       min(right + pad, image.width), min(bottom + pad, image.height)))
 
 
 def rank_label(r: dict) -> str:
@@ -156,7 +171,7 @@ def draw(board: dict, output: Path, name: str = NAME, x0: float = X0, x1: float 
     plt.close(fig)
     buf.seek(0)
     output.mkdir(parents=True, exist_ok=True)
-    Image.open(buf).convert("RGB").save(output / name, optimize=True)
+    crop_to_content(Image.open(buf).convert("RGB")).save(output / name, optimize=True)
 
 
 def main() -> int:

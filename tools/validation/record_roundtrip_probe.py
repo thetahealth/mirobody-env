@@ -65,6 +65,8 @@ import pathlib
 import statistics as st
 import sys
 
+from haenv.locations import result_roots
+
 ROOT = _repository_root(__file__)
 sys.path.insert(0, str(ROOT))
 
@@ -101,7 +103,7 @@ def _payloads(n: int) -> list[tuple[str, dict]]:
     # (duplicated entries are perfectly correlated).
     rows: list[tuple[str, dict]] = []
     seen: set[str] = set()
-    for f in sorted(glob.glob(str(ROOT / "results" / "*" / "*" / "*" / "payloads.jsonl")),
+    for f in sorted((p for root in result_roots(legacy_root=ROOT) for p in root.glob("*/*/*/payloads.jsonl")),
                     key=os.path.getmtime, reverse=True):
         for line in pathlib.Path(f).read_text(encoding="utf-8").splitlines():
             if not line.strip():

@@ -502,12 +502,14 @@ def test_run_respects_configured_backend_and_shared_paid_caps(tmp_path, monkeypa
 
 
 
-def test_help_and_readme_explain_per_unit_and_pooled_reproduction():
+def test_help_and_guide_explain_per_unit_and_pooled_reproduction():
     from haenv.app.reask import parser
     help_text = " ".join(parser().format_help().split())
-    readme = " ".join(((_TEST_ROOT / "README.md")).read_text().split())
-    for text in (help_text, readme):
+    guide = " ".join(((_TEST_ROOT / "docs/reask.md")).read_text().split())
+    for text in (help_text, guide):
         assert "per unit" in text and "pooled" in text
         assert "inclusion list" in text and "reask_pooled.py --check" in text
         assert "not shipped" not in text
+    for doc in ("README.md", "README.zh-CN.md"):
+        assert "docs/reask.md" in (_TEST_ROOT / doc).read_text()
     assert parser().parse_args(["batch", "--allow-settings-override"]).allow_settings_override

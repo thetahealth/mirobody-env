@@ -819,9 +819,15 @@ def _resolve_batches(args) -> list[Path]:
     for b in args.batch or []:
         p = Path(b)
         if not p.is_dir():
-            matches = sorted(Path.cwd().glob(f"results/*/*/{b}"))
+            from haenv.locations import result_roots
+            matches = {match.resolve(): match for root in result_roots()
+                       for match in sorted(root.glob(f"*/*/{b}")) if match.is_dir()}
+            matches = list(matches.values())
             if not matches:
                 raise SystemExit(f"batch not found: {b}")
+            if len(matches) > 1:
+                raise SystemExit(f"ambiguous batch stamp: {b}; use a directory: "
+                                 + ", ".join(map(str, matches)))
             p = matches[0]
         found.append(p)
     for root in args.scan_root or []:
