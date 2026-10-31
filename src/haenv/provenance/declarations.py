@@ -1408,7 +1408,7 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
 
 #: Anchor version. Entries in `PENDING_ANCHOR` are only valid for this version;
 #: as soon as the anchor advances, this table must be emptied.
-PENDING_ANCHOR_REVISION = 117
+PENDING_ANCHOR_REVISION = 118
 
 #: Files added to `JUDGING` before the anchor was updated (allowed while re-anchoring
 #: is not); emptied once the anchor moves past `PENDING_ANCHOR_REVISION`.

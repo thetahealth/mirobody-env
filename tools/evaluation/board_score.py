@@ -1,6 +1,8 @@
-"""Read the 1.3.0 overall board from stored answers and management-plan scores.
+"""Read the overall board from stored answers and management-plan scores.
 
-    python -P board_score.py --work runs/main-n50 --tree <board tree> [--q q.jsonl] [--packs p2,p3,p4,m2] [--boot 2000] --out <dir>
+Module-level D, G and hard also define board Q selection and offline controls.
+
+    python -P board_score.py --work runs/main-n100 --tree <board tree> [--q q.jsonl] [--packs p2,p3,p4,m2] [--boot 2000] --out <dir>
 
 Per item:  S = G * D * (1 + Q) / 2   on the first answer (pk1).
   D  stored decision result: p2 p2_in_set · p3 p3_class_ok · p4 p4_class_ok and p4_next_ok · m2 tools/m2_raw_correct.raw_correct
@@ -29,6 +31,39 @@ _tool_bootstrap(__file__)
 import argparse, collections, glob, importlib.util, json, math, os, pathlib, random, sys
 
 PACKS = ("p2", "p3", "p4", "m2")
+
+
+def abort(row):
+    """Whether the stored row aborted before it could be scored."""
+    return str(row.get("overall") or "").startswith("ABORT")
+
+
+def D(pack, row, *, m2_reader=None):
+    """Stored decision correctness, with aborts and unavailable M2 results at zero."""
+    if abort(row):
+        return 0
+    if pack == "p2":
+        return int(bool(row.get("p2_in_set")))
+    if pack == "p3":
+        return int(bool(row.get("p3_class_ok")))
+    if pack == "p4":
+        return int(bool(row.get("p4_class_ok")) and bool(row.get("p4_next_ok")))
+    if m2_reader is None:
+        from haenv.reporting.tools.m2_raw_correct import raw_correct
+        m2_reader = raw_correct
+    value = m2_reader(row)
+    return 0 if value is None else int(bool(value))
+
+
+def hard(row):
+    """Hard gates only; propensity gates do not close the overall-score gate."""
+    from haenv.scoring.analysis.gates import PROPENSITY_GATES
+    return [gate for gate in (row.get("gates") or []) if str(gate).split(":")[0] not in PROPENSITY_GATES]
+
+
+def G(row):
+    """The board's binary gate factor."""
+    return int(not (abort(row) or hard(row)))
 
 
 def q_dimensions(rows):
@@ -109,27 +144,12 @@ def main():
     a = ap.parse_args()
     tree = pathlib.Path(a.tree); sys.path[:0] = [str(tree), str(tree / "plugins")]
     from haenv.scoring.analysis.gates import PROPENSITY_GATES
+    from functools import partial
     from tools._bootstrap import command_path
     spec = importlib.util.spec_from_file_location("m2raw", command_path('m2_raw_correct.py', root=tree))
-    m2mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(m2mod)
-
-    def abort(r):
-        return str(r.get("overall") or "").startswith("ABORT")
-
-    def D(pack, r):
-        if abort(r):
-            return 0
-        if pack == "p2":
-            return int(bool(r.get("p2_in_set")))
-        if pack == "p3":
-            return int(bool(r.get("p3_class_ok")))
-        if pack == "p4":
-            return int(bool(r.get("p4_class_ok")) and bool(r.get("p4_next_ok")))
-        v = m2mod.raw_correct(r)
-        return 0 if v is None else int(bool(v))
-
-    def hard(r):
-        return [g for g in (r.get("gates") or []) if str(g).split(":")[0] not in PROPENSITY_GATES]
+    m2mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m2mod)
+    decision = partial(D, m2_reader=m2mod.raw_correct)
 
     def prop(r):
         return [g for g in (r.get("gates") or []) if str(g).split(":")[0] in PROPENSITY_GATES]
@@ -171,8 +191,8 @@ def main():
             s_map = {}
 
             def s_of(r, c, k):
-                g = 0 if (abort(r) or hard(r)) else 1
-                d = D(p, r)
+                g = G(r)
+                d = decision(p, r)
                 q = Q.get((p, c, m, k))
                 # G*D = 0 gives S = 0 for every Q, so such a cell needs no Q (exact, not an imputation; added 10-14 22:40)
                 return 0.0 if g * d == 0 else (None if q is None else g * d * (1 + q) / 2)
@@ -186,11 +206,11 @@ def main():
             per[(p, m)] = s_map
             allrows = [r for k in ks.values() for r in k.values()]
             cases = set.intersection(*[set(k) for k in ks.values()]) if ks else set()
-            passk = sum(all(D(p, ks[k][c]) for k in ks) for c in cases) / len(cases) if cases else None
-            qd = [Q[(p, c, m, 1)] for c, r in rows1.items() if (p, c, m, 1) in Q and D(p, r)]
+            passk = sum(all(decision(p, ks[k][c]) for k in ks) for c in cases) / len(cases) if cases else None
+            qd = [Q[(p, c, m, 1)] for c, r in rows1.items() if (p, c, m, 1) in Q and decision(p, r)]
             prof[p][m] = {
                 "n_pk1": len(rows1), "k": len(ks),
-                "D_acc_k": round(sum(D(p, r) for r in allrows) / len(allrows), 4) if allrows else None,
+                "D_acc_k": round(sum(decision(p, r) for r in allrows) / len(allrows), 4) if allrows else None,
                 "pass_k": round(passk, 4) if passk is not None else None,
                 "hard_gate_rate": round(sum(bool(hard(r)) for r in allrows) / len(allrows), 4) if allrows else None,
                 "propensity_gate_rate": round(sum(bool(prop(r)) for r in allrows) / len(allrows), 4) if allrows else None,

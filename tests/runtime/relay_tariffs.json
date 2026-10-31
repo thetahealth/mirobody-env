@@ -1,0 +1,27 @@
+{
+  "tariffs": [
+    {"id": "deepseek", "model": "deepseek-v4.1-flash", "expr": "(tier(\"base\", p * 0.3 + c * 1.2 + cr * 0.03)) * (hour(\"Asia/Shanghai\") >= 22 || hour(\"Asia/Shanghai\") < 8 ? 0.5 : 1)", "input": "0.3", "output": "1.2"},
+    {"id": "luna", "model": "gpt-6-luna", "expr": "len <= 272000 ? tier(\"Input<=272K\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125) : len > 272000 ? tier(\"Input>272K\", p * 0.2 + c * 0.75 + cr * 0.02 + cc * 0.25) : tier(\"Input<=272K\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125)", "input": "0.25", "output": "0.75"},
+    {"id": "legacy", "mode": null, "input": "1.5", "output": "7.5"},
+    {"id": "legacy-ratio", "mode": "ratio", "input": "1.5", "output": "7.5"},
+    {"id": "parenthesized-tier", "expr": "((tier(\"base\", p * .3 + c * 1.2)))", "input": "0.3", "output": "1.2"},
+    {"id": "group-upper-bound", "group": 2, "expr": "tier(\"base\", p * .3 + c * 1.2)", "input": "0.6", "output": "2.4"},
+    {"id": "ternary-multiplier", "expr": "(len > 10 ? tier(\"a\", p * .2 + c * .4) : tier(\"b\", p * .3 + c * .1)) * (len >= 2 && len < 9 ? 2 : .5)", "input": "0.6", "output": "0.8"},
+    {"id": "summed-coefficients", "expr": "tier(\"base\", p * .1 + p * .2 + c * 1e0)", "input": "0.3", "output": "1"},
+    {"id": "unknown-function", "expr": "discount(tier(\"base\", p * .3 + c * 1.2))", "error": "Unsupported relay billing expression"},
+    {"id": "unknown-condition-function", "expr": "evil(1) > 0 ? tier(\"base\", p * .3 + c * 1.2) : tier(\"other\", p * 1 + c * 2)", "error": "Unsupported relay billing expression"},
+    {"id": "unknown-variable", "expr": "tier(\"base\", p * .3 + x * 1.2)", "error": "Unsupported relay billing expression"},
+    {"id": "missing-expression", "expr": null, "error": "Unsupported relay billing expression"},
+    {"id": "missing-output", "expr": "tier(\"base\", p * .3 + cr * .03)", "error": "Unsupported relay billing expression"},
+    {"id": "missing-input", "expr": "tier(\"base\", c * 1.2)", "error": "Unsupported relay billing expression"},
+    {"id": "negative-coefficient", "expr": "tier(\"base\", p * -.3 + c * 1.2)", "error": "Unsupported relay billing expression"},
+    {"id": "nonfinite-coefficient", "expr": "tier(\"base\", p * NaN + c * 1.2)", "error": "Unsupported relay billing expression"},
+    {"id": "nonlinear-body", "expr": "tier(\"base\", p * .3 + c * p)", "error": "Unsupported relay billing expression"},
+    {"id": "unrecognized-multiplier", "expr": "tier(\"base\", p * .3 + c * 1.2) * 2", "error": "Unsupported relay billing expression"},
+    {"id": "negative-multiplier-bound", "expr": "tier(\"base\", p * .3 + c * 1.2) * (len > 2 ? -1 : -2)", "error": "Unsupported relay billing expression"},
+    {"id": "non-tier-branch", "expr": "len > 2 ? tier(\"base\", p * .3 + c * 1.2) : 0", "error": "Unsupported relay billing expression"},
+    {"id": "legacy-null-output", "mode": "ratio", "null_field": "completion_ratio", "error": "null completion_ratio"},
+    {"id": "legacy-null-cache", "mode": "ratio", "null_field": "cache_ratio", "error": "null cache_ratio"},
+    {"id": "unknown-mode", "mode": "future_mode", "error": "Unsupported relay billing mode"}
+  ]
+}

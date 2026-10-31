@@ -16,6 +16,7 @@ def pre_review_rules() -> dict:
 
 def workup_tests(spec_id: str, optional=()) -> list[str]:
     """Unique mandatory tests in the initial stage, using exact menu names."""
+    from haenv.i18n.identity import source
     from haenv.world.overlay import condition_registry
     from haenv.world.overlay import HAENV_COMORBID_PAIRS
     from haenv.judges.differential import _gold_test_optional
@@ -46,7 +47,8 @@ def workup_tests(spec_id: str, optional=()) -> list[str]:
         test = rules["fibrosis_evidence"]["test"]
         if test not in tests:
             tests.append(test)
-    return [t for t in tests if t not in optional]
+    optional_src = {source(o) for o in optional}
+    return [t for t in tests if source(t) not in optional_src]
 
 
 def workup_alternatives(test: str) -> list[str]:

@@ -1218,16 +1218,8 @@ def _refusals(prepare):
     return checked
 
 
-@_refusals
-def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
-                       ledger_path: Path, limit_usd: str, identity: dict,
-                       legacy_roots: list[str] | None = None) -> BatchAccounting:
-    """Validate the complete requested set before any solver can spend money.
-
-    The manifest pins settings, price data, source provenance and the shared
-    ledger. Resume validates identity; it never changes the existing cap or
-    silently reissues a request with a changed payload.
-    """
+def _accounting_solvers(solvers, cfg):
+    """Select live routes and validate declarations without creating run files."""
     from haenv.world.generation.baselines import BASELINE_NAMES
     from haenv.runtime.solvers import OpenAICompatSolver
     from haenv.runtime.solvers import GoogleSolver
@@ -1255,16 +1247,95 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
               "exists for the openrouter, relay, google and dashscope backends only. On another "
               "backend, declare the model's price as config.models.<name>.price "
               "(input_per_million_usd, output_per_million_usd; 0 for a free endpoint)")
+    return live, declared_prices
+
+
+def _prices_for_routes(live, metadata, *, resumed):
+    """Build verified price objects and enforce the provider output caps."""
+    prices = {}
+    for name, s in live.items():
+        if "declared_price" in metadata[name]:
+            prices[name] = DeclaredPrices(**metadata[name]["declared_price"])
+            continue
+        if s.backend in {"google", "dashscope"}:
+            from haenv.runtime.native_accounting import NativePrices
+            prices[name] = NativePrices(**metadata[name]["native_tariff"])
+            if not resumed:
+                prices[name].validate_date()
+            continue
+        if s.backend == "relay":
+            from haenv.runtime.relay_accounting import RelayPrices
+            prices[name] = RelayPrices.from_metadata(metadata[name], s.model)
+            continue
+        prices[name] = PriceSchedule.from_metadata(metadata[name], s.model, require_reasoning=False)
+        maximum = (metadata[name].get("top_provider") or {}).get("max_completion_tokens")
+        if type(maximum) is not int or maximum <= 0:
+            raise ValueError(f"Provider output limit is unverified for {name}")
+        if s.max_tokens > maximum:
+            raise ValueError(f"Configured output cap for {name} exceeds provider limit {maximum}")
+    return prices
+
+
+class _PreflightPrices(dict):
+    """A price map retaining the verified inputs needed by the manifest writer."""
+
+    def __init__(self, prices, live, declared, metadata):
+        super().__init__(prices)
+        self.live, self.declared, self.metadata = live, declared, metadata
+
+
+@_refusals
+def preflight_accounting(solvers: list, cfg: dict, *, ledger_path: Path | None = None,
+                         share_catalog: bool = False) -> dict:
+    """Verify new-batch routes without creating a manifest, ledger or catalog.
+
+    By default (`--dry-plan`) this is read only, even inside a paid catalog scope.
+    `prepare_accounting` passes `share_catalog=True`, so a billed run reads the price
+    catalog through its ledger directory's shared snapshot exactly as before.
+    """
+    live, declared = _accounting_solvers(solvers, cfg)
+    if share_catalog:
+        catalog = (_catalog_for_ledger(cfg, ledger_path)
+                   if any(s.backend == "openrouter" for s in live.values()) else [])
+        metadata = {name: _route_metadata(cfg, s, name, catalog) for name, s in live.items()}
+        check_route_conditions(live, metadata, cfg)
+        return _PreflightPrices(_prices_for_routes(live, metadata, resumed=False), live, declared, metadata)
+    directory = _CATALOG_DIRECTORY.set(None)
+    settings = _CATALOG_CFG.set(cfg)
+    try:
+        catalog = _catalog_for_ledger(cfg, None) if any(s.backend == "openrouter" for s in live.values()) else []
+        metadata = {name: _route_metadata(cfg, s, name, catalog) for name, s in live.items()}
+    finally:
+        _CATALOG_CFG.reset(settings)
+        _CATALOG_DIRECTORY.reset(directory)
+    check_route_conditions(live, metadata, cfg)
+    return _PreflightPrices(_prices_for_routes(live, metadata, resumed=False), live, declared, metadata)
+
+
+@_refusals
+def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
+                       ledger_path: Path, limit_usd: str, identity: dict,
+                       legacy_roots: list[str] | None = None) -> BatchAccounting:
+    """Validate the complete requested set before any solver can spend money.
+
+    The manifest pins settings, price data, source provenance and the shared
+    ledger. Resume validates identity; it never changes the existing cap or
+    silently reissues a request with a changed payload.
+    """
+    root = Path(batch_dir) / "solver-accounting"
+    manifest = root / "manifest.json"
+    plan = None if manifest.is_file() else preflight_accounting(solvers, cfg, ledger_path=ledger_path,
+                                                                       share_catalog=True)
+    live, declared_prices = ((plan.live, plan.declared) if plan is not None
+                             else _accounting_solvers(solvers, cfg))
     ledger = BudgetLedger(Path(ledger_path).resolve(), limit_usd=limit_usd)
     if ledger.summary()["halt_reason"]:
         raise BudgetExceeded(ledger.summary()["halt_reason"])
-    root = Path(batch_dir) / "solver-accounting"
     root.mkdir(parents=True, exist_ok=True)
     settings = {name: wire_settings(s) for name, s in live.items()}
     source_hashes = {name: hashlib.sha256((Path(batch_dir) / name).read_bytes()).hexdigest()
                      for name in ("cases.jsonl", "slices.json") if (Path(batch_dir) / name).is_file()}
     code_rev = (identity or {}).get("haenv_git_sha")
-    manifest = root / "manifest.json"
     route_changes = []
     with (root / "manifest.lock").open("a") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
@@ -1371,31 +1442,13 @@ def prepare_accounting(solvers: list, cfg: dict, batch_dir: Path, *,
                         raise ValueError(f"The declared price of {name} changed since this batch "
                                          "was created; use a new batch (--fresh)")
         else:
-            catalog = _catalog_for_ledger(cfg, ledger_path) if any(s.backend == "openrouter" for s in live.values()) else []
-            metadata = {name: _route_metadata(cfg, s, name, catalog) for name, s in live.items()}
+            if plan is None:
+                plan = preflight_accounting([(name, lambda s=s: s) for name, s in live.items()],
+                                            cfg, ledger_path=ledger_path, share_catalog=True)
+            metadata = plan.metadata
         check_route_conditions(live, metadata, cfg)
         resumed = manifest.exists()
-        prices = {}
-        for name, s in live.items():
-            if "declared_price" in metadata[name]:
-                prices[name] = DeclaredPrices(**metadata[name]["declared_price"])
-                continue
-            if s.backend in {"google", "dashscope"}:
-                from haenv.runtime.native_accounting import NativePrices
-                prices[name] = NativePrices(**metadata[name]["native_tariff"])
-                if not resumed:
-                    prices[name].validate_date()
-                continue
-            if s.backend == "relay":
-                from haenv.runtime.relay_accounting import RelayPrices
-                prices[name] = RelayPrices.from_metadata(metadata[name], s.model)
-                continue
-            prices[name] = PriceSchedule.from_metadata(metadata[name], s.model, require_reasoning=False)
-            maximum = (metadata[name].get("top_provider") or {}).get("max_completion_tokens")
-            if type(maximum) is not int or maximum <= 0:
-                raise ValueError(f"Provider output limit is unverified for {name}")
-            if s.max_tokens > maximum:
-                raise ValueError(f"Configured output cap for {name} exceeds provider limit {maximum}")
+        prices = plan if not resumed else _prices_for_routes(live, metadata, resumed=True)
         if not manifest.exists():
             saved = {"identity": run_identity, "run_id": _hash([str(root.resolve()), run_identity]),
                      "code_rev": code_rev, "price_metadata": metadata,

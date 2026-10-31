@@ -659,6 +659,8 @@ def check_gold_matches_world(raw) -> list[str]:
     A change to `overlay.condition_registry()` therefore invalidates the gold of
     batches that depend on it; those cells `ABORT(iron_law)`.
     """
+    from haenv.i18n.identity import source
+
     bad: list[str] = []
     for name in ALL_GOLD_FIELDS:
         kind, fn = resolved_source(raw, name)
@@ -673,7 +675,7 @@ def check_gold_matches_world(raw) -> list[str]:
         except GoldNotDerivable as e:
             bad.append(str(e))
             continue
-        if _json_norm(derived) != _json_norm(authored):
+        if _json_norm(source(derived)) != _json_norm(source(authored)):
             bad.append(f"{world_id(raw)}: {name} was written as {authored!r}, "
                        f"but derives from W as {derived!r} (per {deriv[0]}) -- the gold standard contradicts itself")
     return bad

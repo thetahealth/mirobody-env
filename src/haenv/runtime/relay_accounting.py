@@ -5,9 +5,11 @@ from dataclasses import dataclass
 from decimal import Decimal
 import fnmatch
 import json
+import re
 import threading
 import time
 import urllib.request
+from types import MappingProxyType
 
 from haenv.runtime.budget import _amount
 from haenv.locations import output_root as _output_root
@@ -48,6 +50,156 @@ def get_json(base: str, key: str, path: str, *, proxy=None) -> dict:
     return result
 
 
+_NUMBER = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
+_BILLING_TOKEN = re.compile(
+    rf'{_NUMBER}|"(?:[^"\\]|\\.)*"|[A-Za-z_][A-Za-z_0-9]*|<=|>=|==|!=|\|\||&&|[()?:,+*<>]')
+_BILLING_PRECEDENCE = MappingProxyType({"||": 1, "&&": 2, "<": 3, ">": 3, "<=": 3, ">=": 3,
+                                      "==": 3, "!=": 3, "*": 4})
+
+
+class _BillingExpression:
+    """Parse the small New API tariff grammar, without executing conditions."""
+
+    def __init__(self, expression):
+        if not isinstance(expression, str) or not expression.strip():
+            raise ValueError("Missing expression")
+        self.tokens = []
+        pos = 0
+        while pos < len(expression):
+            if expression[pos].isspace():
+                pos += 1
+                continue
+            token = _BILLING_TOKEN.match(expression, pos)
+            if token is None:
+                raise ValueError("Unknown billing token")
+            self.tokens.append(token.group())
+            pos = token.end()
+        self.pos, self.tiers = 0, []
+
+    def peek(self):
+        return self.tokens[self.pos] if self.pos < len(self.tokens) else None
+
+    def take(self, expected=None):
+        token = self.peek()
+        if token is None or expected is not None and token != expected:
+            raise ValueError("Unexpected billing token")
+        self.pos += 1
+        return token
+
+    def number(self):
+        token = self.take()
+        if re.fullmatch(_NUMBER, token) is None:
+            raise ValueError("Expected billing number")
+        value = Decimal(token)
+        if not value.is_finite():
+            raise ValueError("Nonfinite billing number")
+        return value
+
+    def string(self):
+        token = self.take()
+        if not token.startswith('"'):
+            raise ValueError("Expected billing string")
+        return json.loads(token)
+
+    def primary(self):
+        token = self.peek()
+        if token == "(":
+            self.take("(")
+            result = self.conditional()
+            self.take(")")
+            return result
+        if token == "tier":
+            self.take("tier")
+            self.take("(")
+            self.string()
+            self.take(",")
+            rates = dict.fromkeys(("p", "c", "cr", "cc"), Decimal(0))
+            while True:
+                var = self.take()
+                if var not in rates:
+                    raise ValueError("Unknown billing variable")
+                self.take("*")
+                coefficient = self.number()
+                if coefficient < 0:
+                    raise ValueError("Negative billing coefficient")
+                rates[var] += coefficient
+                if self.peek() != "+":
+                    break
+                self.take("+")
+            self.take(")")
+            if rates["p"] <= 0 or rates["c"] <= 0:
+                raise ValueError("Missing positive input or output price")
+            self.tiers.append(rates)
+            return ("tier",)
+        if token == "len":
+            self.take("len")
+            return ("len",)
+        if token == "hour":
+            self.take("hour")
+            self.take("(")
+            zone = self.string()
+            self.take(")")
+            return ("hour", zone)
+        return ("number", self.number())
+
+    def binary(self, minimum=1):
+        left = self.primary()
+        while self.peek() in _BILLING_PRECEDENCE and _BILLING_PRECEDENCE[self.peek()] >= minimum:
+            op = self.take()
+            left = (op, left, self.binary(_BILLING_PRECEDENCE[op] + 1))
+        return left
+
+    def conditional(self):
+        left = self.binary()
+        if self.peek() == "?":
+            self.take("?")
+            yes = self.conditional()
+            self.take(":")
+            return ("?", left, yes, self.conditional())
+        return left
+
+    @staticmethod
+    def condition(node):
+        op = node[0]
+        if op in {"||", "&&"}:
+            return all(_BillingExpression.condition(child) for child in node[1:])
+        if op in {"<", ">", "<=", ">=", "==", "!="}:
+            kinds = {child[0] for child in node[1:]}
+            return kinds <= {"len", "hour", "number"} and bool(kinds & {"len", "hour"})
+        return False
+
+    @staticmethod
+    def tier_tree(node):
+        return node[0] == "tier" or (node[0] == "?" and _BillingExpression.condition(node[1])
+                                    and all(_BillingExpression.tier_tree(child) for child in node[2:]))
+
+    def bound(self):
+        tree = self.conditional()
+        if self.peek() is not None:
+            raise ValueError("Trailing billing tokens")
+        multiplier = Decimal(1)
+        if tree[0] == "*":
+            _, tree, factor = tree
+            if (factor[0] != "?" or not self.condition(factor[1])
+                    or any(child[0] != "number" for child in factor[2:])):
+                raise ValueError("Unsupported billing multiplier")
+            multiplier = max(child[1] for child in factor[2:])
+            if multiplier < 0:
+                raise ValueError("Negative billing multiplier bound")
+        if not self.tier_tree(tree):
+            raise ValueError("Unsupported billing shape")
+        return (max(max(t["p"], t["cr"], t["cc"]) for t in self.tiers) * multiplier,
+                max(t["c"] for t in self.tiers) * multiplier)
+
+
+def _tiered_rates(expression, model):
+    from decimal import DecimalException
+    try:
+        return _BillingExpression(expression).bound()
+    except (ValueError, TypeError, RecursionError, DecimalException):
+        raise ValueError(f"Unsupported relay billing expression for {model}") from None
+
+
 @dataclass(frozen=True)
 class RelayPrices:
     model: str
@@ -70,6 +222,14 @@ class RelayPrices:
         if not isinstance(groups, dict) or not groups:
             raise ValueError("Relay group rate upper bound is missing")
         group = max(_amount(r, positive=True) for r in groups.values())
+        if item.get("billing_mode") == "tiered_expr":
+            inputs, outputs = _tiered_rates(item.get("billing_expr"), model)
+            return cls(model, inputs * group / unit, outputs * group / unit, unit)
+        if item.get("billing_mode") not in (None, "ratio"):
+            raise ValueError(f"Unsupported relay billing mode for {model}")
+        for field in ("completion_ratio", "cache_ratio"):
+            if item.get(field) is None:
+                raise ValueError(f"Relay pricing for {model} has null {field}")
         base = _amount(item["model_ratio"], positive=True) * group / unit
         cache = _amount(item["cache_ratio"])
         output = _amount(item["completion_ratio"], positive=True)
@@ -102,7 +262,8 @@ def fetch_metadata(cfg: dict, solver) -> dict:
         raise ValueError("Relay has no unique exact-model tariff")
     item = matches[0]
     result = {"model": {k: item.get(k) for k in ("model_name", "quota_type", "model_ratio",
-                                                "completion_ratio", "cache_ratio")},
+                                                "completion_ratio", "cache_ratio", "billing_mode",
+                                                "billing_expr")},
               "group_ratio": prices.get("group_ratio"),
               "billing_rule_summaries": prices.get("billing_rule_summaries"),
               "pricing_version": prices.get("pricing_version"),

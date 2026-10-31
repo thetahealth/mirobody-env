@@ -308,6 +308,15 @@ def _dry_plan(args, job, cfg, *, workers):
         if isinstance(spec, dict) and spec.get("retired"):
             raise ValueError(f"Cannot plan retired model: {model}")
         names.append(model)
+    if not args.offline:
+        from haenv.world.generation.baselines import BASELINE_NAMES
+        from haenv.runtime.solver_accounting import preflight_accounting
+        live = {name: make() for name, make in build_solvers(job, cfg) if name not in BASELINE_NAMES}
+        if live:
+            preflight_accounting([(name, lambda s=s: s) for name, s in live.items()], cfg,
+                                 ledger_path=args.judge_budget_ledger)
+            for name, solver in live.items():
+                print(f"[haenv] accounting preflight: {name} (backend {solver.backend}): verified")
     tasks = [(cid, name) for cid in cases for name in names if f"{cid}|{name}" not in done]
 
     def backend_for(model):

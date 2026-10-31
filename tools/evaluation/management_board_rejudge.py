@@ -1,4 +1,9 @@
-"""Discover completed N50 pk1 blocks, resume sealed runs, and export board Q."""
+"""Discover complete pk1 blocks of any size (including N100), select board Q, and resume.
+
+Use prepare --work <runs> --select gd1 --out <q>, then run with the same
+arguments and --budget-ledger <ledger> --budget-usd <cap> --shared-ledger.
+Only G*D=1 cells need Q; all selection uses the board scorer's decision rules.
+"""
 from __future__ import annotations
 
 # Direct file execution and imports select the same marked checkout.
@@ -40,6 +45,8 @@ from haenv.scoring.management.rubric import sha256
 from haenv.scoring.management.rubric import with_core_verdicts
 from haenv.scoring.semantic.parallel import atomic_json
 from haenv.scoring.semantic.seal import digest
+from haenv.world.generation.baselines import BASELINE_NAMES
+from tools.evaluation.board_score import D, G
 
 PACKS = {"p2", "p3", "p4", "m2"}
 
@@ -48,8 +55,9 @@ def identity(cell):
     return cell["rubric"]["pack"], cell["source"]["case"], cell["source"]["solver"], 1
 
 
-def discover(work, packs, *, pk=1, pools=None):
-    if pk != 1 or not packs or not set(packs) <= PACKS:
+def discover(work, packs, *, pk=1, pools=None, n=None):
+    if (pk != 1 or not packs or not set(packs) <= PACKS
+            or n is not None and (type(n) is not int or n <= 0)):
         raise ValueError("Only pk1 and explicit supported packs are accepted")
     work = Path(work).resolve()
     if not work.is_dir():
@@ -87,11 +95,14 @@ def discover(work, packs, *, pk=1, pools=None):
                 continue
             ids = [c["case_id"] for c in cases]
             expected = {(cid, model) for cid in ids for model in models}
-            seen = [(r["case"], r["solver"]) for r in rows]
-            block.update(models=models, expected=50*len(models), eval_rows=len(rows),
+            # Offline reference stubs (a job with include_baseline) are not board models: never judged.
+            seen = [(r["case"], r["solver"]) for r in rows if r["solver"] not in BASELINE_NAMES]
+            block.update(models=models, expected=len(set(ids))*len(models), n_cases=len(set(ids)), eval_rows=len(rows),
                          distinct=len(set(seen)), cases=len(ids))
-            if len(ids) != 50 or len(set(ids)) != 50:
-                skipped.append({**block, "reason": "not_exact_n50"})
+            if n is not None and len(set(ids)) != n:
+                skipped.append({**block, "reason": f"not_exact_n{n}"})
+            elif not ids or len(ids) != len(set(ids)):
+                skipped.append({**block, "reason": "empty_or_duplicate_cases"})
             elif len(seen) != len(set(seen)) or set(seen) != expected:
                 skipped.append({**block, "reason": "incomplete_or_duplicate_eval",
                                 "missing": len(expected-set(seen)), "unexpected": len(set(seen)-expected)})
@@ -218,12 +229,13 @@ def merge_rows(groups):
     return [merged[k] for k in sorted(merged)]
 
 
-def _prepare_new(blocks, covered, out):
+def _prepare_new(blocks, covered, out, *, excluded=(), select="all"):
     batches = [b["batch"] for b in blocks]
-    run_id = sha256([batches, sorted(covered)])[:20]
+    run_id = sha256([batches, sorted(covered), sorted(excluded), select])[:20]
     target = out/"runs"/run_id
     manifest = management_prepare([Path(p) for p in batches], target, run_id=f"board-v5:{run_id}", mode="per_case")
-    cells = [c for c in read_jsonl(target/"cells.jsonl") if identity(c) not in covered]
+    cells = [c for c in read_jsonl(target/"cells.jsonl") if identity(c) not in covered and identity(c) not in excluded
+             and c["source"]["solver"] not in BASELINE_NAMES]
     identities = [identity(c) for c in cells]
     if not cells or len(set(identities)) != len(cells):
         raise ValueError("New shard is empty or contains duplicate board identities")
@@ -233,18 +245,36 @@ def _prepare_new(blocks, covered, out):
     write_jsonl(target/"snapshots.jsonl", [s for s in read_jsonl(target/"snapshots.jsonl") if s["key"] in used])
     manifest.update(cells_sha256=digest(target/"cells.jsonl"), snapshots_sha256=digest(target/"snapshots.jsonl"),
                     states=dict(Counter(c["status"] for c in cells)))
-    manifest["sampling"].update(selected_pk=1, n50=True, excluded_existing_cells=len(covered),
-                                complete_blocks=blocks)
+    sizes = {b["n_cases"] for b in blocks}
+    manifest["sampling"].update(selected_pk=1, select=select,
+                                n_cases=next(iter(sizes)) if len(sizes) == 1 else
+                                {b["batch"]: b["n_cases"] for b in blocks},
+                                excluded_existing_cells=len(covered), complete_blocks=blocks)
+    manifest["sampling"].pop("n50", None)
+    if sizes == {50}:
+        manifest["sampling"]["n50"] = True
     atomic_json(target/"manifest.json", manifest)
     validate(target)
     return target
 
 
+def _excluded_gd0(blocks, archives):
+    """Read original rows, including imported sources, using the shared board rules."""
+    sources = {(b["pack"], b["batch"]) for b in blocks}
+    sources.update((c["rubric"]["pack"], c["source"]["batch"])
+                   for _, _, cells in archives for c in cells)
+    return {(pack, row["case"], row["solver"], 1)
+            for pack, batch in sources for row in read_jsonl(Path(batch)/"eval.jsonl")
+            if row["solver"] not in BASELINE_NAMES and G(row) * D(pack, row) == 0}
+
+
 def execute(operation, *, out, work=None, pk=1, packs=("p2", "p3", "p4", "m2"), pools=None,
-            imports=(), ledger=None, budget=None, concurrency=40, max_cells=None):
+            imports=(), ledger=None, budget=None, concurrency=40, max_cells=None,
+            n=None, select="all", shared_ledger=False):
     if (operation not in {"prepare", "offline", "run", "export"} or pk != 1
             or not 1 <= concurrency <= 40 or not packs or not set(packs) <= PACKS
-            or max_cells is not None and (type(max_cells) is not int or max_cells <= 0)):
+            or max_cells is not None and (type(max_cells) is not int or max_cells <= 0)
+            or n is not None and (type(n) is not int or n <= 0) or select not in {"all", "gd1"}):
         raise ValueError("Explicit operation, pk1 and concurrency 1..40 required")
     out = Path(out).resolve()
     sources = ([Path(work).resolve()] if work else []) + [Path(p).resolve() for p in imports]
@@ -253,13 +283,16 @@ def execute(operation, *, out, work=None, pk=1, packs=("p2", "p3", "p4", "m2"), 
     if operation != "export" and work is None:
         raise ValueError("Discovery needs --work")
     if operation == "run" and (ledger is None or budget is None):
-        raise ValueError("Paid run needs an independent explicit ledger and budget")
+        raise ValueError("Paid run needs an explicit ledger and budget")
     out.mkdir(parents=True, exist_ok=True)
     with (out/"board.lock").open("a") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         journal_path = out/"board.json"
         journal = json.loads(journal_path.read_text()) if journal_path.is_file() else {
-            "work": str(Path(work).resolve()) if work else None, "pk": 1, "imports": []}
+            "work": str(Path(work).resolve()) if work else None, "pk": 1, "imports": [], "select": select}
+        if journal.get("select", "all") != select:
+            raise ValueError("Cannot change board selection on resume")
+        journal["select"] = select
         if work and journal["work"] not in {None, str(Path(work).resolve())}:
             raise ValueError("Cannot change board work directory on resume")
         journal["work"] = str(Path(work).resolve()) if work else journal["work"]
@@ -268,7 +301,7 @@ def execute(operation, *, out, work=None, pk=1, packs=("p2", "p3", "p4", "m2"), 
         imported = [read_archive(p) for p in imported_paths]
         owned = [read_archive(p.parent) for p in sorted((out/"runs").glob("*/manifest.json"))]
         if operation == "run":
-            from haenv.runtime.budget import store_of
+            from haenv.runtime.budget import run_budget_limit, store_of
             lp = Path(ledger).resolve()
             ledger_sources = sources + [Path(p) for p in journal["imports"]] + imported_paths
             if any(lp == p or p in lp.parents for p in ledger_sources):
@@ -278,23 +311,26 @@ def execute(operation, *, out, work=None, pk=1, packs=("p2", "p3", "p4", "m2"), 
                 execution = json.loads(path.read_text()) if path.is_file() else {}
                 if execution.get("offline") is True:
                     raise ValueError("Cannot use offline judgments in a paid board")
-                if directory in {p for p, _, _ in imported} and execution.get("ledger") and store_of(lp) == store_of(Path(execution["ledger"]).resolve()):
+                if not shared_ledger and directory in {p for p, _, _ in imported} and execution.get("ledger") and store_of(lp) == store_of(Path(execution["ledger"]).resolve()):
                     raise ValueError("Imported run ledger cannot be reused for new board requests")
             if journal.get("ledger") not in {None, str(lp)}:
                 raise ValueError("Cannot change ledger on resume")
-            if journal.get("ledger") is None and (lp.exists() or store_of(lp).exists()):
+            if not shared_ledger and journal.get("ledger") is None and (lp.exists() or store_of(lp).exists()):
                 raise ValueError("First paid invocation requires a fresh independent ledger")
+            if shared_ledger:
+                budget = run_budget_limit(lp, budget)
             journal["ledger"] = str(lp)
         covered = {identity(c) for _, _, cs in imported+owned for c in cs}
-        ready, skipped = discover(work, packs, pk=pk, pools=pools) if work else ([], [])
+        ready, skipped = discover(work, packs, pk=pk, pools=pools, n=n) if work else ([], [])
+        excluded = _excluded_gd0(ready, imported+owned) if select == "gd1" else set()
         new_blocks = []
         for block in ready:
             expected = {(block["pack"], r["case_id"], m, 1)
                         for r in read_jsonl(Path(block["batch"])/"cases.jsonl") for m in block["models"]}
-            if not expected <= covered:
+            if not (expected - excluded) <= covered:
                 new_blocks.append(block)
         if new_blocks and operation != "export":
-            target = _prepare_new(new_blocks, covered, out)
+            target = _prepare_new(new_blocks, covered, out, excluded=excluded, select=select)
             owned.append(read_archive(target))
         atomic_json(journal_path, journal)
         results = []
@@ -323,10 +359,14 @@ def execute(operation, *, out, work=None, pk=1, packs=("p2", "p3", "p4", "m2"), 
                 if result.get("stop_reason"):
                     break
         rows = [row for row in merge_rows([export_rows(p) for p, _, _ in imported+owned])
-                if row["pack"] in packs]
+                if row["pack"] in packs and
+                (row["pack"], row["case"], row["solver"], row["pk"]) not in excluded]
         write_jsonl(out/"q-status.jsonl", rows)
         write_jsonl(out/"q.jsonl", [r for r in rows if r.get("q") is not None])
-        summary = {"operation": operation, "pk": 1, "packs": list(packs), "ready_blocks": ready,
+        excluded_counts = Counter((pack, model) for pack, _, model, _ in excluded if pack in packs)
+        excluded_summary = {pack: {model: count for (p, model), count in sorted(excluded_counts.items()) if p == pack}
+                            for pack in sorted({p for p, _ in excluded_counts})}
+        summary = {"operation": operation, "pk": 1, "select": select, "excluded_gd0": excluded_summary, "packs": list(packs), "ready_blocks": ready,
                    "skipped_blocks": skipped, "new_blocks": new_blocks, "imports": journal["imports"],
                    "runs": [str(p) for p, _, _ in owned], "states": dict(Counter(r["status"] for r in rows)),
                    "q_rows": sum(r.get("q") is not None for r in rows), "cells": len(rows),
@@ -341,6 +381,9 @@ def main(argv=None):
     parser.add_argument("operation", choices=("prepare", "offline", "run", "export"))
     parser.add_argument("--work", type=Path)
     parser.add_argument("--pk", type=int, default=1)
+    parser.add_argument("--n", type=int, help="Require exactly N distinct cases per batch")
+    parser.add_argument("--select", choices=("all", "gd1"), default="all")
+    parser.add_argument("--shared-ledger", action="store_true", help="Reuse the board ledger with the same cap")
     parser.add_argument("--packs", default="p2,p3,p4,m2")
     parser.add_argument("--pools", help="Optional comma-separated pool selection")
     parser.add_argument("--out", type=Path, required=True)
@@ -354,8 +397,9 @@ def main(argv=None):
                      packs=tuple(p for p in args.packs.split(",") if p),
                      pools=args.pools.split(",") if args.pools else None, imports=args.import_run,
                      ledger=args.budget_ledger, budget=args.budget_usd,
-                     concurrency=args.concurrency, max_cells=args.max_cells)
-    print(json.dumps({k: result[k] for k in ("cells", "q_rows", "states", "skipped_blocks", "q")}, ensure_ascii=False))
+                     concurrency=args.concurrency, max_cells=args.max_cells,
+                     n=args.n, select=args.select, shared_ledger=args.shared_ledger)
+    print(json.dumps({k: result[k] for k in ("cells", "q_rows", "states", "excluded_gd0", "skipped_blocks", "q")}, ensure_ascii=False))
     return 2 if any(r.get("stop_reason") for r in result["execution_results"]) else 0
 
 

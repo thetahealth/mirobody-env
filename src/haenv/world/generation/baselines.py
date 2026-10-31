@@ -27,6 +27,7 @@ BASELINE_NAMES: tuple[str, ...] = (
     "blind_confident",
     "gated_flood",
     "gated_minimal",
+    "q_reader", "q_nolook", "q_runaway", "q_protocol_titles", "q_trust_system",
 )
 
 #: Stubs that read the gold label or trip a gate by construction: reported as
@@ -64,6 +65,11 @@ STUB_GEOMETRIES: dict[str, frozenset[str]] = {
     "gatetrip_invasive": _ALL_GEO,
     "noreview": _ALL_GEO,
     "late_converge": frozenset({"slices", "multi"}),
+    "q_reader": frozenset({"single", "gated"}),
+    "q_nolook": frozenset({"single", "gated"}),
+    "q_runaway": frozenset({"single", "gated"}),
+    "q_protocol_titles": frozenset({"single", "gated"}),
+    "q_trust_system": frozenset({"single", "gated"}),
 }
 
 

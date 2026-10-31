@@ -73,6 +73,15 @@ or overwrite archived answers, criteria, verdicts or scores.
 
 `tools/evaluation/management_rejudge.py` prepares independent saved-answer runs.
 `management_board_prepare.py` and `management_board_rejudge.py` support board inputs
-and export the complete dimension profile. `management_input_audit.py` renders
+and export the complete dimension profile. For N100/k1, prepare only cells with
+G*D=1, then run all judges against the board's shared ledger (with the same cap):
+
+```sh
+python tools/evaluation/management_board_rejudge.py prepare --work <runs> --select gd1 --out <q>
+python tools/evaluation/management_board_rejudge.py run --work <runs> --select gd1 --out <q> --budget-ledger <ledger> --budget-usd <cap> --shared-ledger
+```
+
+Discovery accepts each batch's own case count; `--n 100` optionally enforces N100.
+`management_input_audit.py` renders
 stored blind-review answers in both languages without model calls. Their offline
 controls verify plumbing and contracts, not semantic judge accuracy.

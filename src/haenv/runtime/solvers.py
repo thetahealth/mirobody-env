@@ -942,7 +942,8 @@ def build_solvers(job, cfg) -> list[tuple[str, object]]:
                 ("humble_ref", _const(HumbleSolver())),
                 # Oracle: orders exactly the gold tests (a ceiling, labeled oracle in reports).
                 ("oracle_tests", _const(OracleTestsSolver())),
-                # Every name in `BASELINE_NAMES` must be constructed here. `onelong` is the reference for the
+                # Query stubs use interaction.query.build_solvers_for; the other baselines are built here.
+                # `onelong` is the reference for the
                 # degenerate ceilings of `disc_recall` / `tests_precision`.
                 ("onelong", _const(OneLongTestSolver())),
                 # Right/wrong oracle answers for the Q-side probes, so the checks are shown to pass and to fail.

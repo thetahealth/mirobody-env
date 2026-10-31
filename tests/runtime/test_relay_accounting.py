@@ -1,8 +1,10 @@
 """Relay charges are matched to exact gateway request receipts, never guessed."""
 from decimal import Decimal
 import json
+from pathlib import Path
 
 import pytest
+from _contract_rows import load_rows
 
 from haenv.runtime.completion import AccountedCompletion
 from haenv.runtime.relay_accounting import RelayPrices, RelayBilling
@@ -15,6 +17,56 @@ def metadata():
                       "completion_ratio": 5, "cache_ratio": .1},
             "group_ratio": {"default": 1, "second": 1}, "billing_rule_summaries": {},
             "quota_per_unit": 500000, "quota_display_type": "USD", "pricing_version": "test"}
+
+
+TARIFFS = load_rows(Path(__file__).with_name("relay_tariffs.json"), "tariffs")
+
+
+@pytest.mark.parametrize("row", TARIFFS, ids=lambda row: row["id"])
+def test_relay_tariff_contract(row, monkeypatch):
+    import haenv.runtime.relay_accounting as relay
+    from haenv.runtime import solvers
+    from types import SimpleNamespace
+    doc = metadata()
+    model = row.get("model", "kimi-k3")
+    doc["model"].update(model_name=model, billing_mode=row.get("mode", "tiered_expr"))
+    if doc["model"]["billing_mode"] == "tiered_expr":
+        doc["model"].update(billing_expr=row.get("expr"), completion_ratio=None, cache_ratio=None)
+    if "null_field" in row:
+        doc["model"][row["null_field"]] = None
+    doc["group_ratio"]["second"] = row.get("group", 1)
+    monkeypatch.setattr(solvers, "_ensure_backends_registered", lambda cfg: None)
+    monkeypatch.setitem(solvers.BACKENDS, "relay", {"quota_url": "https://relay.example"})
+    calls = []
+    def get(base, key, path, **kwargs):
+        calls.append(path)
+        if path == "/api/pricing":
+            return {"success": True, "data": [doc["model"]], "group_ratio": doc["group_ratio"],
+                    "billing_rule_summaries": {}, "pricing_version": "test"}
+        assert path == "/api/status"
+        return {"success": True, "data": {k: doc[k] for k in ("quota_per_unit", "quota_display_type")}}
+    monkeypatch.setattr(relay, "get_json", get)
+    solver = SimpleNamespace(model=model, api_key="mock-key", backend="relay", proxy="direct")
+    if "error" in row:
+        with pytest.raises(ValueError, match=row["error"]) as error:
+            RelayPrices.from_metadata(doc, model)
+        assert model in str(error.value)
+        with pytest.raises(ValueError, match=row["error"]):
+            relay.fetch_metadata({}, solver)
+        return
+    fetched = relay.fetch_metadata({}, solver)
+    assert calls == ["/api/pricing", "/api/status"]
+    assert fetched["model"]["billing_mode"] == doc["model"]["billing_mode"]
+    assert fetched["model"]["billing_expr"] == row.get("expr")
+    prices = RelayPrices.from_metadata(fetched, model)
+    assert prices.input_rate == Decimal(row["input"]) / 500000
+    assert prices.output_rate == Decimal(row["output"]) / 500000
+    if row["id"] == "deepseek":
+        receipt = RelayBilling(prices, lambda: [{"request_id": "real-receipt", "type": 2,
+            "model_name": model, "prompt_tokens": 15213, "completion_tokens": 3925, "quota": 4637}])(
+                {"_gateway_request_id": "real-receipt"})
+        assert receipt["actual_usd"] == "0.009274"
+        assert 15213 * prices.input_rate + 3925 * prices.output_rate >= Decimal(receipt["actual_usd"])
 
 
 def response():

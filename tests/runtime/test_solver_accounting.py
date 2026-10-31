@@ -15,6 +15,53 @@ from haenv.runtime.completion import AccountedCompletion
 from _patch_bound import patch_bound  # noqa: E402
 
 
+@pytest.mark.parametrize("backend,verified,operation", [
+    ("openrouter", True, "prepare"), ("unverified", False, "prepare"),
+    ("openrouter", True, "preflight"), ("unverified", False, "preflight"),
+])
+def test_query_stubs_are_excluded_from_paid_accounting(tmp_path, monkeypatch, backend, verified, operation):
+    from haenv.interaction.query.stubs import QUERY_STUBS
+    from haenv.world.generation.baselines import BASELINE_NAMES, ORACLE_NAMES, STUB_GEOMETRIES
+    import haenv.runtime.solver_accounting as accounting
+    names = {name for name, _ in QUERY_STUBS}
+    assert names <= set(BASELINE_NAMES)
+    assert names <= set(STUB_GEOMETRIES)
+    assert not names & set(ORACLE_NAMES)
+    assert all(STUB_GEOMETRIES[name] == {"single", "gated"} for name in names)
+    solver = ev.OpenAICompatSolver("real", "model", "secret", 10, max_tokens=1000, backend=backend)
+    metadata = {"id": "model", "pricing": {"prompt": ".000001", "completion": ".000002"},
+                "context_length": 100000, "top_provider": {"max_completion_tokens": 2000}}
+    priced = []
+    if operation == "preflight":
+        from urllib.request import Request
+        monkeypatch.setattr(accounting, "_read_with_retries", lambda *a, **k: [metadata])
+        monkeypatch.setattr(accounting, "fetch_catalog", lambda cfg: accounting.catalog_request(
+            Request("https://catalog.example/models"), cfg))
+    else:
+        monkeypatch.setattr(accounting, "fetch_catalog", lambda cfg: [metadata])
+    def endpoints(cfg, model):
+        priced.append(model)
+        return [{"provider_name": "only", "pricing": metadata["pricing"]}]
+    monkeypatch.setattr(accounting, "fetch_endpoints", endpoints)
+    solvers = [(n, lambda f=f: f({})) for n, f in QUERY_STUBS] + [("real", lambda: solver)]
+    def prepare():
+        if operation == "preflight":
+            before = set(tmp_path.rglob("*"))
+            with accounting.catalog_scope(tmp_path / "budget.json", {}):
+                prices = accounting.preflight_accounting(solvers, {}, ledger_path=tmp_path / "budget.json")
+            assert set(tmp_path.rglob("*")) == before
+            return SimpleNamespace(prices=prices)
+        return prepare_accounting(solvers, {}, tmp_path, ledger_path=tmp_path / "budget.json",
+                                  limit_usd="1", identity={})
+    if verified:
+        assert set(prepare().prices) == {"real"}
+        assert priced == ["model"]
+    else:
+        with pytest.raises(ValueError, match="unverified.*real"):
+            prepare()
+        assert not priced
+
+
 def bound(tmp_path, *, limit="1", cell="a"):
     solver = ev.OpenAICompatSolver("s", "model", "secret", 10, retries=2,
                                    max_tokens=1000, reasoning_effort="medium")
