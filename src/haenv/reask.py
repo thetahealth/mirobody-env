@@ -83,6 +83,9 @@ def prepare(source, *, sources=(), questions=None, repeats=None, models=None,
         raise ValueError("arms must be unique names from resample,decisive,placebo,half")
     paths = batch_paths(source)
     all_paths = sorted(set(paths) | {p for root in sources for p in batch_paths(root)})
+    from haenv.i18n.runtime import select_batch_language, require_assets
+    language = select_batch_language(all_paths)
+    require_assets(language)
     batches = {p: Batch(p) for p in all_paths}
     worlds = {}
     for path in paths:
@@ -134,6 +137,7 @@ def prepare(source, *, sources=(), questions=None, repeats=None, models=None,
                               seed=seed, half_seed=half_seed)
             plan["baseline_D"] = baseline["D"]
             plan["payload_sha256"] = digest(json.dumps([asdict(sp), asdict(vp)], ensure_ascii=False, sort_keys=True))
+            plan['language'] = language
             plan["source_world"] = batch.world_identity(question)
             plan["source_answer_settings"] = batch.original_answer_settings(question, model, plan["prefix_sha"])
             units.append(Unit(plan, sp, vp, path))
@@ -182,6 +186,17 @@ def run(units, output, *, cfg=None, workers=64, model_caps=None,
         raise ValueError("tool_choice must be auto or none")
     if not units:
         raise ValueError("no eligible failed diagnosis units selected")
+    from haenv.i18n import LanguageError, batch_language
+    from haenv.i18n.runtime import select_saved_language, require_assets
+    languages = {batch_language(u.plan) for u in units}
+    if len(languages) != 1:
+        raise LanguageError('A re-ask run cannot mix batch languages')
+    language = select_saved_language(units[0].plan)
+    require_assets(language)
+    from haenv.i18n.text import render_fingerprint, judge_fingerprints
+    from haenv.provenance.anchor import judging_fp_cached
+    stamps = {'language': language, 'render_sha16': render_fingerprint(language),
+              'judging_sha16': judging_fp_cached(), **judge_fingerprints(language)}
     cfg = cfg if cfg is not None else load_cfg()
     output = Path(output)
     if any(u.source is not None and output.resolve() == u.source.resolve() for u in units):
@@ -204,7 +219,7 @@ def run(units, output, *, cfg=None, workers=64, model_caps=None,
             raise ValueError(f"{p['question']}/{p['model']}: {reason}; use --allow-settings-override "
                              "to proceed without claiming exact settings replay")
         replay[id(unit)] = state
-    manifest = {"version": 2, "units": [u.plan for u in units], "answer_settings": actual,
+    manifest = {"version": 2, **stamps, "units": [u.plan for u in units], "answer_settings": actual,
                 "models": {m: {"model": s.model, "backend": s.backend} for m, s in live.items()},
                 "allow_settings_override": bool(allow_settings_override),
                 "tool_choices": {m: tool_choice or tool_choice_for(m, cfg) for m in names}}
@@ -265,7 +280,7 @@ def run(units, output, *, cfg=None, workers=64, model_caps=None,
         if scored.get("error_stage"):
             scalar.update({k: scored[k] for k in ("error_stage", "error")})
         # Runtime cell ids distinguish repeats and arms for accounting and recovery.
-        return {"case": cell, "solver": model, "overall": "ERROR" if status == "error" else status,
+        return {**stamps, "case": cell, "solver": model, "overall": "ERROR" if status == "error" else status,
                 "scalar": scalar, "answer": text, "finish": turn.finish, "usage": turn.usage,
                 "failed_attempts": failed, "score": scored, "tool_calls": turn.tool_calls,
                 "latency_s": round(time.monotonic() - started, 3)}

@@ -29,6 +29,8 @@ import haenv.world.overlay as overlay                                    # noqa:
 from haenv.judges import SINGLE, run_judges                  # noqa: E402
 from haenv.scoring.tracks import alias_hit_asserted
 from haenv.scoring.tracks import thread_aliases  # noqa: E402
+from haenv.scoring.tracks import judging_names
+from haenv.i18n.text import lexicon
 
 
 class FakeOut:
@@ -127,6 +129,18 @@ def test_pending_after_a_bare_no_counts_as_listed():
     ("HD-UNI-06", "胰腺导管腺癌（或胰腺神经内分泌肿瘤）导致内、外分泌功能不全"),
     ("JD-LADA", "糖尿病(空腹胰岛素极低提示自身免疫性糖尿病可能,需与T2DM鉴别)"),
     ("JD-LADA", "Autoimmune diabetes of adults"),
+    # the drug-class wording of statin myopathy, gallstones, MASLD fibrosis without "伴"
+    ("HD-UNI-19", "他汀类相关肌病"),
+    ("HD-UNI-19", "他汀类药物相关肌病(阿托伐他汀,老年+合并用药背景下)"),
+    ("HD-UNI-19", "他汀类相关肌肉症状(阿托伐他汀相关肌痛/肌病,SAMS)"),
+    ("HD-UNI-11", "胆囊炎/胆结石"),
+    ("HD-UNI-11", "胆结石伴胆囊炎"),
+    ("HD-UNI-13", "MASLD进展期纤维化（伴乏力、食欲减退）"),
+    # the exclusions below leave the unipolar forms matched
+    ("HD-UNI-18", "抑郁发作(中度)"),
+    ("HD-UNI-18", "重性抑郁障碍,不排除双相障碍"),
+    # the exclusion below leaves overt hypothyroidism matched
+    ("JD-HYPO", "甲减(桥本甲状腺炎)"),
 ])
 def test_synonym_names_the_gold(sid, text):
     assert _listed(sid, text) == 1.0, (sid, text)
@@ -143,6 +157,20 @@ def test_synonym_names_the_gold(sid, text):
     # negation still applies to a synonym
     ("HD-UNI-06", "已排除胰腺癌"),
     ("JD-ADDISON", "不支持肾上腺皮质功能不全"),
+    # HD-UNI-18's registered rivals (bipolar depression; fatigue without depression) are not the gold 抑郁
+    ("HD-UNI-18", "双相障碍抑郁发作"),
+    ("HD-UNI-18", "双相抑郁"),
+    ("HD-UNI-18", "双相情感障碍，目前为中度抑郁发作"),
+    ("HD-UNI-18", "躁狂抑郁症"),
+    ("HD-UNI-18", "躯体疾病相关乏力而无抑郁障碍"),
+    ("HD-UNI-18", "慢性疲劳，没有抑郁症状"),
+    ("HD-UNI-18", "躯体疾病所致乏力，不伴抑郁障碍"),
+    # subclinical hypothyroidism is excluded under the abbreviation as under the full name
+    ("JD-HYPO", "亚临床甲减"),
+    ("JD-HYPO", "亚临床甲状腺功能减退"),
+    # gallstone pancreatitis is the rival acute pancreatitis
+    ("HD-UNI-11", "胆结石性急性胰腺炎"),
+    ("HD-UNI-11", "胆结石所致急性胰腺炎"),
 ])
 def test_synonym_does_not_reach_rivals_or_negations(sid, text):
     assert _listed(sid, text) == 0.0, (sid, text)
@@ -171,6 +199,10 @@ def test_synonym_does_not_reach_rivals_or_negations(sid, text):
     # "类狼疮表现" is lupus-like features, not lupus
     ("HD-COM-62", "自身免疫线", "系统性自身免疫/风湿性疾病（如未分化结缔组织病早期或类狼疮表现）", False),
     ("HD-COM-62", "自身免疫线", "系统性红斑狼疮伴狼疮肾炎", True),
+    # stored 1.3.1 wordings: subclinical hypothyroidism does not name the hypothyroid thread
+    ("HD-COM-67", "甲状腺线", "甲状腺功能异常（亚临床甲减）", False),
+    ("HD-COM-67", "甲状腺线", "甲状腺功能减退(桥本/亚临床甲减)", True),
+    ("HD-COM-67", "甲状腺线", "桥本甲状腺炎伴甲减", True),
 ])
 def test_synonyms_on_registered_threads(sid, thread, text, want):
     assert alias_hit_asserted(text, thread_aliases(_thread(sid, thread))) is want, (sid, thread, text)
@@ -190,14 +222,16 @@ def test_synonym_entries_are_explained_and_well_formed():
     assert tab
     for anchor, e in tab.items():
         assert str((e or {}).get("why") or "").strip(), f"{anchor}: missing why"
-        assert set(e) <= {"why", "names"}, f"{anchor}: unregistered fields {sorted(set(e) - {'why', 'names'})}"
+        allowed = {"why", "names", "source"}
+        assert set(e) <= allowed, f"{anchor}: unregistered fields {sorted(set(e) - allowed)}"
         assert e.get("names"), f"{anchor}: no names"
 
 
 def test_every_synonym_anchor_is_a_registered_alias():
     """An anchor no spec or thread carries is dead weight (and hides a typo)."""
     used = set()
-    for sid, spec in overlay.condition_registry().items():
+    for sid, spec in overlay.condition_registry(include_draft=True).items():
+        used.add(str(spec["diagnosis"]).lower())
         used |= {str(a).lower() for a in spec.get("aliases") or ()}
         for t in overlay.threads_for(sid, spec) or ():
             used |= {str(a).lower() for a in t["aliases"]}
@@ -219,6 +253,25 @@ def test_no_synonym_names_a_registered_rival():
         for r in overlay.rivals_for(sid, spec) or ():
             if alias_hit_asserted(r["name"], syn):
                 bad.append((sid, r["name"]))
+    assert not bad, bad
+
+
+def test_expanded_names_do_not_name_a_rival():
+    english = lexicon("en")
+    bad = []
+    for sid, spec in overlay.condition_registry(include_draft=True).items():
+        raw = [spec["diagnosis"], *spec["aliases"]]
+        gold_sets = [("diagnosis", raw, judging_names(raw))]
+        for thread in overlay.threads_for(sid, spec) or ():
+            raw = list(thread["aliases"])
+            gold_sets.append((thread["name"], raw, thread_aliases(raw)))
+        for rival in overlay.rivals_for(sid, spec) or ():
+            names = [rival["name"], *rival.get("aliases", ())]
+            texts = names + [english[n] for n in names if english.get(n)]
+            for text in dict.fromkeys(texts):
+                for label, raw, expanded in gold_sets:
+                    if not alias_hit_asserted(text, raw) and alias_hit_asserted(text, expanded):
+                        bad.append((sid, label, text))
     assert not bad, bad
 
 

@@ -18,6 +18,16 @@ def _tv(a, b):
 def distribution(docs=None):
     docs = catalog() if docs is None else docs
     meta, cfg = table(), table()["distribution_gate"]
+    # Preserve the registered Chinese calibration. English uses equally narrow
+    # doubling bins centred on the median of its own complete, unmodified edition.
+    # The reference is independent of `docs`, so a mutation cannot recalibrate it.
+    from haenv.i18n import current
+    from statistics import median
+    from haenv.i18n.text import Msg
+    edges = cfg["length_edges"]["value"]
+    if current() != "zh":
+        centre = median(len(render(d)) for d in catalog())
+        edges = [centre * 2 ** exponent for exponent in (-0.5, 0.5, 1.5)]
     other = {m["protocol_id"] for m in meta["other"]}
     b = [d for d in docs if d["protocol_id"] in other]
     if not b:
@@ -29,10 +39,11 @@ def distribution(docs=None):
         if len(a) != len(ids) or len(b) != len(other):
             return {"error": "missing catalog entries"}
         fmt = lambda d: (tuple(sorted(d)), tuple(type(d[k]).__name__ for k in sorted(d)),
-                         bool(d.get("sources")) and all(s.startswith("参考：") and "；链接：" in s and "；本院约定：" in s for s in d["sources"]))
+                         bool(d.get("sources")) and all(isinstance(s, Msg) and s.kind == "tpl" and s.key == "protocol.source"
+                                                        and set(s.slots) == {"cite", "url", "policy"} for s in d["sources"]))
         out[family] = {
-            "length_tv": _tv([bisect_left(cfg["length_edges"]["value"], len(render(d))) for d in a],
-                             [bisect_left(cfg["length_edges"]["value"], len(render(d))) for d in b]),
+            "length_tv": _tv([bisect_left(edges, len(render(d))) for d in a],
+                             [bisect_left(edges, len(render(d))) for d in b]),
             "step_tv": _tv([bisect_left(cfg["step_edges"]["value"], len(d["steps"])) for d in a],
                            [bisect_left(cfg["step_edges"]["value"], len(d["steps"])) for d in b]),
             "format_tv": _tv([fmt(d) for d in a], [fmt(d) for d in b]),
@@ -56,7 +67,8 @@ def receipt_hits(block, case_id):
     from haenv.world.protocols.scoring import trusted_assessment
     from haenv.p2.rules import assess
     rec, kind, _ = expected(block, case_id)
-    actual = block.get("home_check_today", {}).get("system_news2")
+    from haenv.i18n.identity import source
+    actual = source(block.get("home_check_today", {}).get("system_news2"))
     bad = [] if actual == rec else ["automatic receipt differs from registered sampler and NEWS2 inputs"]
     if actual == rec and kind != "correct" and trusted_assessment(block, actual)["set"][0] in assess(block)["set"]:
         bad.append("automatic error does not defeat the blind-system stub")

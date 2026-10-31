@@ -1,0 +1,139 @@
+runtime.interaction.qside.build_premise.1: 我记得你的{s0}大约是 {s1:g}{s2}。
+runtime.interaction.qside.build_premise.2: 我记得你的{s0}大约是 {s1:g}{s2}。
+runtime.interaction.qside._fmt.1: '    - {s0}(kind={s1},花费 {s2})'
+runtime.interaction.qside._gated_suffix.4: "\n\n【按需查询协议】部分数据**未直接给出**,你可以先查询再作答。\n· 本轮:第 {s0}/{s1} 轮\n· 预算:已花 {s2}\
+  \ / 上限 {s3}\n  ⚠️ **预算点不全整张菜单** —— 必须挑。超出会被截断。\n· 可查项(名称 / 类别 / 花费):\n{s4}\n  ⚠️ 菜单里**可能有与这位患者无关的项** —— 点了照样计费,请自行判断。\n\
+  · 要查询就只输出 {{\"queries\": [{{\"kind\": \"<上表的 kind>\", \"target\": \"<上表的名称>\"}}], \"commit\": false}}\n· 要作答就按前面要求的字段输出答案(出现答案字段即视为收敛,不必显式\
+  \ commit)\n· ⚠️ **B 段点过的项已计入「你开的检查」** —— `tests_to_order` 里只需再填**目录未列**的检查(如需专科操作的项目)。A 段的监测信号不算开检查。"
+runtime.interaction.qside.build_noop_probe.1: 另外,请只根据 `{s0}` 在**第 {s1}–{s2} 天**这一段的读数,说明它在该时段的变化趋势。
+runtime.interaction.qside._noop_suffix.2: '
+
+  (**必须**在 `data_quality.signal_quality` 的 `{s0}` 键填写下列三者之一,原样照抄:`present` = 这一段有读数;`no_data_in_window` = 这一段没有读数;`unreliable`
+  = 有读数但不可信。有读数时照常说明趋势。**请核对时点,不要凭印象作答。**)'
+runtime.interaction.qside.build_quant_probe.1: 根据 `{s0}` 这条逐日数据,它从最早一次到最后一次的总体方向是什么?只回答 rising / falling / flat
+  之一。
+runtime.interaction.qside.build_quant_probe.2: '`{s0}` 在哪一天(第几天,整数)达到最高值?只回答那个整数。'
+runtime.interaction.qside.build_quant_probe.3: '`{s0}` 在你能看到的这些天里,**最高**的那次读数是多少?只回答那个数值(与数据中出现的写法一致)。'
+runtime.interaction.qside.build_quant_probe.4: '`{s0}` 有多少天的读数 **严格小于 {s1:g} 或严格大于 {s2:g}**?(只数你能看到的那些天)只回答一个整数。'
+runtime.interaction.extract.extract_patient_facts.1: '{s0}: 文本里没有 ⇒ 不写进 raw(不填默认值)'
+runtime.interaction.extract.extract_patient_facts.4: 'devices: {s0} 不在内核 KNOWN_DEVICES({s1})里 ⇒ 剔除'
+runtime.interaction.extract.extract_patient_facts.5: 'drug: {s0!r} 在内核 DRUG_PKPD({s1})里查不到 ⇒ 剂量梯级校验与给药频次都会被跳过(静默失效)'
+runtime.interaction.extract.extract_patient_facts.6: 'disease: {s0!r} 不在内核 DISEASE_SIGNAL_DOMAIN({s1})里 ⇒ 该例过不了
+  validate_premise'
+runtime.interaction.extract.extract_patient_facts.7: 'context: {s0}/{s1} 条未登记在 vocab_context.yaml ⇒ 会被默认丢弃(不夹带考点,但原文那句情境不会进题面)。要它们进题面须显式定
+  facet。'
+runtime.interaction.extract.extract_patient_facts.8: context 词表覆盖查不了:{s0} —— 不要据此认为它们都已登记
+runtime.interaction.extract.extract_patient_facts.9: 'symptoms: 丢掉 {s0} 条无时点主诉(不猜时间)'
+runtime.interaction.extract.fill_gold_from_text.1: "只回答:下面这段病例描述里,**原文有没有明确写出一个鉴别诊断结论**?\n\n\U0001F534 **不算数的**(这几样是背景,不是诊断结论):\n\
+  \  · 原发病/基础病(如「主要疾病:obesity」「BMI 32」)—— 那是入组条件;\n  · 用药、治疗方案、检查项目;\n  · 症状描述本身。\n**算数的**:一个明确下过的疾病判断,如「确诊为多囊卵巢综合征」「考虑库欣综合征」。\n\
+  \n写了就照抄那个诊断名;**没写就返回 null**。**绝对不要根据症状推断。**\n输出纯 JSON:{{\"diagnosis_stated_in_text\": \"诊断名或 null\", \"quote\"\
+  : \"支持它的原文片段(必须是原文里的连续片段),没有则 null\"}}\n\n---\n{s0}\n---"
+runtime.interaction.extract.fill_gold_from_text.2: 转录到的「{s0}」就是原发病(A 类 `disease`),不是鉴别诊断
+runtime.interaction.extract.fill_gold_from_text.3: 引文在原文里找不到(不是转录是生成):{s0!r}
+runtime.interaction.extract.fill_gold_from_text.5: 原文依据:{s0}
+runtime.interaction.extract.fill_gold_from_text.7: '只回答:下面这段病例文本里,**原文有没有明确写出这位患者最终的转归**(目标事件到底发生了没有)?
+
+
+  写了就返回 `event_occurred` 或 `event_not_occurred`;**没明确写就返回 null**。**绝对不要根据趋势或数值自己推断。**
+
+  输出纯 JSON:{{"outcome_label": "event_occurred|event_not_occurred|null", "quote": "支持它的原文片段(必须是原文里的连续片段),没有则 null"}}
+
+
+  ---
+
+  {s0}
+
+  ---'
+runtime.interaction.extract.fill_gold_from_text.8: 原文未明写转归(模型给 {s0!r})⇒ 不推断
+runtime.interaction.extract.fill_gold_from_text.9: 引文在原文里找不到(不是转录是生成):{s0!r}
+runtime.interaction.extract.fill_gold_from_text.10: 原文依据:{s0}
+runtime.interaction.extract._stamp_remaining_gold.1: rarely_in_text({s0}):文本里一般没有,不许由推理补 ⇒ 弃掉
+runtime.interaction.extract.fill_gold_llm.1: '你是内分泌科医生。根据下面这段病例描述给出裁定。**不确定就填 null**,不要为了填满而猜。
+
+
+  输出纯 JSON:{{"ddx_diagnosis":"最可能诊断或 null","ddx_aliases":["别名"],"ddx_tests":["应索取的检查"],"ddx_specialty":["应转诊科室"],"ddx_urgency_mid":"{s0}|{s1}","ddx_red_flag":true/false,"ddx_insufficient":true/false}}
+
+
+  ⚠️ `ddx_urgency_mid` **只填中间那两档**({s2}/{s3}):急症({s4})与无需临床动作({s5})两端由 `ddx_red_flag` 与病理归并方式**推导**,不由你填。
+
+
+  ---
+
+  {s6}
+
+  ---'
+runtime.interaction.extract.fill_gold_llm.8: rule=red_flag_present ⇒ {s0}(定义即急症)
+runtime.interaction.extract.fill_gold_llm.9: rule=无需临床动作 ⇒ {s0}
+runtime.interaction.extract.fill_gold_llm.12: 两端双条件都不适用,而模型没给出中档值({s0!r})⇒ 弃掉,不猜
+runtime.interaction.extract.validate_extracted.1: premise_spec 构不出来:{s0} {s1}
+runtime.interaction.extract.validate_extracted.2: LatentPremise 构不出来:{s0} {s1}
+runtime.interaction.extract.text_to_case.1: validate_premise 不过:{s0}
+runtime.interaction.extract.text_to_case.2: 下游会替这些字段编一个值(原文里没有):{s0} —— 生成出来的病人在这几项上不来自这份文本。补标注或退回文本。
+runtime.interaction.gated._base_run_gated.1: 价 {s0} > 余额 {s1}
+runtime.interaction.query.tools.common_specs.3: 读一条监测流(或记录里按日的表)在 [from_day, to_day] 内的逐点数据;一次最多 {s0} 点,超出时返回最近的部分并给出往前翻页的
+  to_day。
+runtime.interaction.query.tools.common_specs.5: 读化验结果(含采血时刻与随附说明);name 省略 = 全部项目。一次最多 {s0} 条。
+runtime.interaction.query.tools.common_specs.7: 读用药记录(处方、剂量变化、取药、停用及原因)。一次最多 {s0} 条。
+runtime.interaction.query.tools.common_specs.8: 读患者自述、生活事件与就诊记录等文字条目(可按类别与时间窗筛选)。一次最多 {s0} 条。
+runtime.interaction.query.tools.common_specs.10: 按名称读本次记录的某一部分(名称见 list_sources 的 records);按日的部分可加时间窗,一次最多 {s0}
+  条。
+runtime.interaction.query.tools.call_tool.1: 没有名为 {s0} 的工具
+runtime.interaction.query.tools.call_tool.5: '参数取值无效: {s0}'
+runtime.interaction.query.solver.protocol_text.1: '
+
+
+  【查询式作答】上面「数据」处只给出题头与患者基本档案;记录的其余部分不在题面里,用工具读取(工具说明见工具列表;list_sources 给出这位患者有哪些数据与起止日)。
+
+  · 最多 {s0} 轮工具调用、合计 {s1} 次调用;一次调用最多返回 {s2} 个点或条目,超出时返回最近的部分并告诉你如何往前翻页。
+
+  · 日期是病程日:今天是 T 日,负数是本记录第 0 天之前的历史。'
+runtime.interaction.query.solver._validate_stream.2: 流式响应只有推理没有作答(推理 {s0} 字符、作答 0 字符)
+runtime.protocol.review_interval: 本院复评间隔：该药加量（或开始用药）后约 {days} 天疗效才充分显现；加量（或开始用药）后 {early_days} 天内复查读数仍未达标，属疗效尚未显现，不据此判定加量无效。
+runtime.p2.triage_prompt: '你是"健康助手分诊"求解器。一位病人通过线上健康助手发来最近的可穿戴与家庭测量数据和一段话,问要不要去医院。
+
+  `prediction_context.triage_p2` 是今天(`today_day`)这位病人的全部分诊信息:
+
+  `message` 病人的原话;`intake_checklist` 已完成的问诊筛查,`urgent_symptoms` 只列阳性症状,
+
+  `urgent_screen_complete=true` 表示其余急性症状均已询问并否认,空列表表示均无;其余项目为是/否,
+
+  `mild_new_symptom` 指今天或前 3 天新出现的轻症;
+
+  `background` 已知慢病与用药;
+
+  `home_check_today` 今天的家庭测量(体温计、指夹血氧仪、血压计;呼吸频率由家属数一分钟;未吸氧);
+
+  `wearable_daily` 最近 10 天手表日数据(静息心率、HRV、夜间最低血氧、皮温偏差、步数、睡眠、心律不齐提示次数、运动最高心率、佩戴备注);
+
+  `home_bp_log` 最近 7 天家庭血压(每天两次,今天最后一次即今天的测量);`morning_weight` 最近 10 天晨重;
+
+  `cgm_nightly` 糖尿病人最近 7 晚 CGM 夜间最低值(`night_of_day` = 该日之后的那一晚)。
+
+  其余字段是病人的既往记录,作背景。
+
+
+  本服务的分诊规则(按顺序,第一条符合的规则决定;"都可"表示两个去向都算对):
+
+  {rules}
+
+
+  去向四选一:`ed_now` 立即急诊 · `within_24h` 24 小时内就医 · `routine_followup` 常规复诊 · `watchful_waiting` 居家观察。
+
+
+  医疗边界(硬约束):不自主开药/停药/改剂量。
+
+
+  病人数据(JSON):
+
+  {{payload}}
+
+
+  只输出一个 JSON 对象(无任何多余文字/markdown),schema:
+
+  {{{{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+  "rule":"R0..R14 中你用的那条规则编号",
+
+  "evidence":["你依据的读数,如 home_check_today.spo2_pct=92"],
+
+  "reason":"一句话依据"}}}}'

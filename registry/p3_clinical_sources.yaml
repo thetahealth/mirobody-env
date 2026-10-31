@@ -26,3 +26,170 @@ levothyroxine_followup:
     order does not read a response label, an audit effect or a published ID.
     No candidate may invent an increase unsupported by its prior TSH.
     Physical response and gold rules are unchanged.
+
+question_update:
+  version: 18
+  interactions:
+    published_share: 0.40
+    candidate_share: 0.65
+    source: Authored HAEnv coverage specification, version 18
+    ours: true
+    review: pending
+    rule: >-
+      Freeze before generating. Exactly 40 of 100 (20 of the nested 50)
+      are allocated to certified two-factor intersections within unchanged
+      sourced drug/action/subtype quotas. Other items retain ordinary coverage.
+      Each designated item must have two separate record interventions with
+      non-null, mutually disjoint accepted gold decisions. Gray-band refusals
+      do not count. Candidate share is supply headroom, not prevalence.
+      Neither model scores nor free baselines enter allocation or emission.
+    ablation_scope: >-
+      Local interventions on decision records, holding the other premises
+      fixed; not a rerun of the pharmacokinetic simulator. Refills, dose dates,
+      onset and current clinical course stay explicit. The gold ignores the
+      interaction designation. Unchanged-record and deliberately inert-factor
+      controls accompany every family.
+    crossed_worlds: >-
+      Split the on-target maintain subfamily equally into normal and low
+      coverage (on_low); low coverage alone does not determine escalation.
+      Split non-LT4 dose-adverse-effect reductions equally into on-target and
+      off-target control (off_ae); above-target control does not override a
+      current dose-limiting adverse effect. These are coverage allocations,
+      not measured clinical frequencies. Keep all five sourced class weights.
+    accepted_interval_control:
+      source: https://www.nice.org.uk/guidance/ng136/chapter/recommendations
+      section: response reassessment; exact interval and gray bands remain the registered clinic policy
+      review: pending
+      ours: true
+      rule: >-
+        A completed full reassessment interval cannot be reclassified as an
+        early visit by the accepted-set helper. Only the existing half-interval
+        boundary may carry an alternative action. The neighbouring band below
+        the full interval is excluded/gray, not early. Both ablations must have
+        accepted sets disjoint from the original, never merely a different
+        primary label.
+    clinical_rules:
+      absolute_contraindication_anchor:
+        source: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=39631f1f-5d19-43c1-b504-bf56d991ed97
+        section: VASOTEC contraindications; history of ACE-inhibitor-related angioedema
+        review: pending
+        rule: >-
+          Verified active ACEI-associated angioedema requires replacing an
+          ongoing enalapril regimen independently of BP control. Keep it as a
+          single-factor safety anchor. Certified response-by-dose-limit items
+          use dose-specific renal/potassium intolerance instead; absolute
+          contraindications cannot be counted as response intersections.
+      control_adherence:
+        source: https://www.nice.org.uk/guidance/cg76/chapter/Recommendations
+        section: 1.2.1-1.2.3; review medicine taking and dispensing before escalating an uncontrolled regimen
+        review: pending
+        rule: uncontrolled response plus low coverage calls for investigation before escalation; coverage cutoff remains the registered provisional clinic rule
+      control_administration:
+        source: https://pmc.ncbi.nlm.nih.gov/articles/PMC4267409/
+        section: ATA recommendation 3b; calcium and LT4 separation; see levothyroxine_absorption
+      control_limit:
+        source: https://www.nice.org.uk/guidance/ng136/chapter/recommendations
+        section: 1.4.40-1.4.45; uncontrolled BP on optimal tolerated treatment; drug-specific dose-limit sources in difficulty_r2.yaml
+        review: pending
+        rule: missed target together with maximum approved or documented tolerated dose requires an alternative or additional agent
+      control_headroom:
+        source: https://www.nice.org.uk/guidance/ng136/chapter/recommendations
+        section: 1.4.40-1.4.45; titration uses the drug-specific labels in p3_meds.yaml
+        review: pending
+        rule: missed target and remaining tolerated dose headroom permit titration; changing either premise changes the action
+      symptom_timing:
+        source: https://pmc.ncbi.nlm.nih.gov/articles/PMC4416140/
+        section: EAS 2015; assessment of symptom nature, temporal relationship, and withdrawal/rechallenge
+        additional_sources:
+        - https://labeling.pfizer.com/ShowLabeling.aspx?id=562
+        - https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=39631f1f-5d19-43c1-b504-bf56d991ed97
+        review: pending
+        rule: symptom presence and onset relative to exposure are separate premises; exact timing windows and cross-drug attribution remain provisional clinic policy
+      course_control:
+        source: https://labeling.pfizer.com/ShowLabeling.aspx?id=562
+        section: 2.1 and 6.1; response-guided dosing and dose-related edema
+        additional_source: https://pmc.ncbi.nlm.nih.gov/articles/PMC4416140/
+        review: pending
+        rule: >-
+          Resolved non-hypoglycemic symptoms with control on target permit
+          continuation; ongoing dose-related symptoms require reduction, and
+          resolved symptoms with inadequate control permit intensification.
+          Resolution on the same regimen is recorded, not inferred from onset.
+          This benchmark synthesis does not assert proven drug causality.
+      safety_priority:
+        source: https://pmc.ncbi.nlm.nih.gov/articles/PMC11635034/
+        section: ADA recommendations 6.6 and 6.18; reassess hypoglycemia-causing medicines after events
+        additional_source: https://www.nice.org.uk/guidance/ng136/chapter/recommendations
+        review: pending
+        rule: actionable adverse effects or overtreatment precede low-coverage escalation review; low adherence cannot justify continued unsafe dosing
+  selection:
+    source: Authored HAEnv question generation protocol, version 18
+    rule: nested largest-remainder quotas; hash order within clinical cells; stop at N; no evaluated-model
+      outcomes
+  class_mix:
+    source: https://pmc.ncbi.nlm.nih.gov/articles/PMC1884656/
+    section: Table 2, actions suggested after medication reviews (747 recommendations)
+    observed_percent:
+      monitoring_laboratory: 21.0
+      no_recommendation: 6.4
+      dose_change: 8.7
+      substitution: 12.6
+      add_drug: 6.4
+    weights:
+      check_adherence_or_adverse_effect: 21.0
+      maintain: 6.4
+      downtitrate: 4.35
+      uptitrate: 4.35
+      switch: 19.0
+    review: pending
+    ours: true
+    rule: Conditional benchmark mix of the compatible action categories above, normalised by largest remainder.
+      Substitution plus addition maps to switch. Monitoring maps to investigation before changing dose.
+      Dose change is split equally by direction because the study does not separate increases and decreases.
+      This split and the transport from an older polypharmacy cohort to these chronic-drug reviews await
+      clinical review; these are not estimated population probabilities or independent per-visit outcomes.
+      Other reported actions are outside this five-option contract.
+  levothyroxine_absorption:
+    source: https://pmc.ncbi.nlm.nih.gov/articles/PMC4267409/
+    section: ATA 2014, recommendation 3b and discussion of calcium/ferrous sulfate
+    minimum_separation_hours: 4
+    absorption_fraction: 0.8
+    source_scope: calcium coadministration lowers absorption by about 20%; traditional 4-hour separation
+      is untested
+    supplements:
+    - calcium_carbonate
+    subtype_weights:
+      adh_low: 0.5
+      unattributed: 0.25
+      absorption: 0.25
+    control_record_share: 0.35
+    review: pending
+    ours: true
+    synthesis: Calcium is a potential absorption interaction, not proven nonadherence. In a symptomatic
+      or biochemically uncontrolled review, verify administration and separate calcium before escalating
+      LT4. The 0.8 fraction is a synthetic application of the reported absorption effect to this first-order
+      model. Subtype and control-record shares are benchmark coverage choices, not prevalence.
+  symptom_course:
+    source: https://pmc.ncbi.nlm.nih.gov/articles/PMC4267409/
+    section: ATA 2014 recommendations 1b, 3b and 4b
+    rule: current symptoms with normal TSH require evaluation of other causes; record their current course
+    recurrent_event_drugs:
+    - gliclazide
+    recurrent_event_source: https://pmc.ncbi.nlm.nih.gov/articles/PMC11635034/
+    recurrent_event_section: ADA 2025 recommendations 6.6 and 6.18; reassess hypoglycemia-causing medication
+      after events, even after recovery
+  surface:
+    source: https://www.nice.org.uk/guidance/cg76/chapter/Recommendations
+    section: recommendations 1.2.1-1.2.4, assessing adherence using patient discussion and prescription
+      records
+    pill_count_templates:
+    - p3.pill_count.box
+    - p3.pill_count.blister
+    - p3.pill_count.bottle
+    - p3.pill_count.reconciliation
+    - p3.pill_count.pharmacy
+    - p3.pill_count.home
+    review: pending
+    ours: true
+    rule: equivalent synthetic reconciliation channels, same dates and quantities; patient-keyed draw
+      independent of decision; wording is authored, not a quote

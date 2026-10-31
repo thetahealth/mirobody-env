@@ -9,6 +9,7 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L, text_of
 from haenv.interaction.query.adapter import KeyLookup
 from haenv.interaction.query.adapter import QueryAdapter
 from haenv.interaction.query.adapter import register
@@ -70,12 +71,12 @@ class P3Adapter(QueryAdapter):
         blk = clinical_view(blk)
         change = d in ("uptitrate", "downtitrate", "switch")
         return {"med_decision": d, "target_drug": blk.get("drug"), "new_dose": None, "rationale_evidence": [],
-                "action": {"selected_action_class": "A3", "specific_action": "按本院印出的规则处理",
+                "action": {"selected_action_class": "A3", "specific_action": text_of("p3.stub.printed_rules"),
                            "clinician_review_required": change}}
 
     def blind_answer(self, payload=None) -> dict:
         return {"med_decision": "maintain", "target_drug": None, "new_dose": None, "rationale_evidence": [],
-                "action": {"selected_action_class": "A3", "specific_action": "未查看记录",
+                "action": {"selected_action_class": "A3", "specific_action": text_of("p3.stub.not_read"),
                            "clinician_review_required": False}}
 
 
@@ -89,27 +90,29 @@ ADAPTER = register(P3Adapter(
                 "home_measurements": "Observation", "visits": "Encounter",
                 "refill_record": "MedicationDispense", "other_medications": "MedicationStatement"},
     sections={
-        "current_medications": ("meds", "复诊时核对的在用药物清单"),
-        "lab_results": ("labs", "检验结果，按采样日期"),
-        "prescription_record": ("meds", "处方流水，按开具日期"),
-        "dispensing_record": ("meds", "取药流水，按发药日期"),
-        "medication_review": ("meds", "门诊用药核对记录，按日期"),
-        "home_measurements": ("series", "患者提交的家庭测量记录，按日期"),
-        "clinic_documents": ("record", "院内诊疗文档"),
-        "home_pressure_record": ("series", "复诊时提交的七日家庭收缩压均值，来自本次控制轴的同一份原始记录"),
-        "documented_course_only": ("record", "症状经过仅按原始记录登记"),
-        "adverse_event_record": ("record", "带日期的既往用药、症状、CK 检验与停药及再用经过"),
-        "review_from_day": ("record", "当前复评病程的起始日"),
-        "condition": ("record", "被调整的药所治疗的疾病"), "drug": ("record", "被调整的药"),
-        "dose_ladder": ("record", "该药的剂量阶梯"), "control_axis": ("record", "控制指标"),
-        "clinic_target": ("record", "本院对该患者的目标值"), "clinic_protocol": ("record", "本院复评与调药规程"),
-        "today": ("record", "今天的病程日"), "note": ("record", "说明"),
-        "visits": (("labs", "meds"), "历次复诊:控制指标读数、处方剂量、起始/加量/续方"),
-        "refill_record": ("meds", "本药的取药记录"),
-        "pill_count_today": ("meds", "今天的药盒计数"),
-        "other_medications": ("meds", "患者其他药的完整带日期用药记录(不在本题调整范围)"),
-        "symptom_diary": ("notes", "症状日记:症状、起病日、程度、现状"),
-        "event_history_record": ("notes", "患者自述问诊记录，按日期"),
-        "encounter_record": ("notes", "门诊病程记录，按就诊日期"),
-        "known_comorbidity": ("profile", "已知合并症"),
+        "administration_record": ("meds", L("p3.menu.administration_record")),
+        "medication_instructions": ("meds", L("p3.menu.medication_instructions")),
+        "current_medications": ("meds", L("p3.menu.current_medications")),
+        "lab_results": ("labs", L("p3.menu.lab_results")),
+        "prescription_record": ("meds", L("p3.menu.prescription_record")),
+        "dispensing_record": ("meds", L("p3.menu.dispensing_record")),
+        "medication_review": ("meds", L("p3.menu.medication_review")),
+        "home_measurements": ("series", L("p3.menu.home_measurements")),
+        "clinic_documents": ("record", L("p3.menu.clinic_documents")),
+        "home_pressure_record": ("series", L("p3.menu.home_pressure_record")),
+        "documented_course_only": ("record", L("p3.menu.documented_course_only")),
+        "adverse_event_record": ("record", L("p3.menu.adverse_event_record")),
+        "review_from_day": ("record", L("p3.menu.review_from_day")),
+        "condition": ("record", L("p3.menu.condition")), "drug": ("record", L("p3.menu.drug")),
+        "dose_ladder": ("record", L("p3.menu.dose_ladder")), "control_axis": ("record", L("p3.menu.control_axis")),
+        "clinic_target": ("record", L("p3.menu.clinic_target")), "clinic_protocol": ("record", L("p3.menu.clinic_protocol")),
+        "today": ("record", L("p3.menu.today")), "note": ("record", L("p3.menu.note")),
+        "visits": (("labs", "meds"), L("p3.menu.visits")),
+        "refill_record": ("meds", L("p3.menu.refill_record")),
+        "pill_count_today": ("meds", L("p3.menu.pill_count_today")),
+        "other_medications": ("meds", L("p3.menu.other_medications")),
+        "symptom_diary": ("notes", L("p3.menu.symptom_diary")),
+        "event_history_record": ("notes", L("p3.menu.event_history_record")),
+        "encounter_record": ("notes", L("p3.menu.encounter_record")),
+        "known_comorbidity": ("profile", L("p3.menu.known_comorbidity")),
     }))

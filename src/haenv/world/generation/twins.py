@@ -761,6 +761,10 @@ def _mutate_family(raw, d):
             if len(removed) != 1 or len(before) - len(after) != 1 or any(p not in before for p in after):
                 raise ValueError("must remove exactly one existing source, never invent parameters")
             p = removed[0]
+            if g.get("diversity_version"):
+                # The 1.4 exposure rows are rendered from the registered cause, so the record
+                # would still show the exposure; a removal twin needs an exposure-record rewrite.
+                raise ValueError("source removal on a 1.4 record would leave its exposure record in place")
             if kind == "p4-remove-source" and (not p.get("acts") or p.get("role") != "cause"):
                 raise ValueError("not an existing acting source")
             if kind == "p4-remove-candidate" and (p.get("acts") or p.get("role") not in ("background", "decoy")):
@@ -818,8 +822,6 @@ def _regold_family(raw, pack):
         import math
         from haenv.p4.gold import next_step
         from haenv.p4.gold import pair_rcv
-        from haenv.p4.render import report_row
-        from haenv.p4.render import diet_rows
         if out["class"] is None:
             raise ValueError(f"invalid G4: {out['reason']}")
         recs = {int(r["day"]): r for r in g["records"]}
@@ -831,15 +833,38 @@ def _regold_family(raw, pack):
         g["plan"]["class"] = out["class"]
         # The production block captured medication history before the builder
         # pruned the base-world dose stream. It is independent of these edits.
-        b = raw.prediction_context[block]
-        b["report"] = [report_row(g, r, str(raw.case_id)) for r in sorted(g["records"], key=lambda r: int(r["day"]))]
-        b["diet_record"] = [diet_rows(g, recs[int(day)], str(raw.case_id)) for day in (g["t0"], g["t1"])]
+        _p4_rerender(raw, g)
     # Class/tier/subtype are dependent descriptions, not a second intervention.
     raw.latent_premise["meta"][_family_slot()][pack] = copy.deepcopy(g["plan"])
     if pack == "p3" and "open_management" in raw.adjudication:
         from haenv.scoring.management.plan import finalize
         finalize(raw, str(raw.case_id), pack)
     return out
+
+
+def _p4_rerender(raw, g):
+    """Re-render what the edited compared records determine, with the renderer that produced the block.
+
+    1.4 records (`diversity_version`) render through `haenv.p4.diversity.render`: report rows are
+    built from the records and then annotated per registered rule, and the diet, medication and
+    method sections are rendered from the registered cause, never from a record's `e` or its
+    perturbations. Only each row's printed value follows the edited records there. Re-rendering
+    those sections with the legacy row functions rewrote every report row and the diet record in
+    another format (the undeclared `diet_record` change of every 1.4 P4 observation twin)."""
+    from haenv.p4.render import report_row
+    from haenv.p4.render import diet_rows
+    b = raw.prediction_context[FAMILY_BLOCKS["p4"]]
+    recs = {int(r["day"]): r for r in g["records"]}
+    if g.get("diversity_version"):
+        from haenv.p4.diversity import report_value
+        rows = {int(r["day"]): r for r in b["report"]}
+        if len(rows) != len(b["report"]) or set(rows) != set(recs):
+            raise ValueError("P4 report rows differ from the gold records")
+        for day, r in recs.items():
+            rows[day]["value"] = report_value(g, r)
+        return
+    b["report"] = [report_row(g, r, str(raw.case_id)) for r in sorted(g["records"], key=lambda r: int(r["day"]))]
+    b["diet_record"] = [diet_rows(g, recs[int(day)], str(raw.case_id)) for day in (g["t0"], g["t1"])]
 
 
 def _check_family(raw, pack):
@@ -1031,6 +1056,7 @@ M2_CONFIRMATION_KIND = "m2-confirmation"
 def _m2_line_fields(footprint_streams=()):
     from haenv.contracts.external_gold import SLOT
     return ("evidence_ledger", "adjudication/ddx", "adjudication/m2_frame", "adjudication/m2_workup",
+            "adjudication/m2_evidence",
             "adjudication/open_management", "adjudication/red_flag_present",
             "adjudication/clinician_action_warranted", "latent_premise/meta/ddx", "latent_premise/meta/red_flag",
             "latent_premise/meta/clinician_warranted", "latent_premise/meta/outcome_label",

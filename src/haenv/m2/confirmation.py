@@ -1,6 +1,8 @@
 """Matched confirmation challenges on the generation side; ordinary diagnostic gold."""
 from __future__ import annotations
 
+from haenv.i18n.text import J, L, T as tpl
+
 from copy import copy, deepcopy
 
 from haenv.resources.regpath import load_registry
@@ -16,12 +18,48 @@ def plan_of(raw):
     return ((meta.get("_external") or {}).get("m2") or {}).get("confirmation")
 
 
+def control_ddx(plan_or_profile, independent_spec, T):
+    """Independent registry gold with the matched presentation's sourced label."""
+    from haenv.world.generation.twins import m2_ddx_of_spec
+    profile = (plan_or_profile.get("profile", plan_or_profile)
+               if isinstance(plan_or_profile, dict) else plan_or_profile)
+    rule = rules()["profiles"][profile] if isinstance(profile, str) else profile
+    ddx, flags = m2_ddx_of_spec(independent_spec, T)
+    ddx["diagnosis"] = L(rule["control_label"])
+    return ddx, flags
+
+
+def emission(raw, cs, sp, T):
+    p = plan_of(raw)
+    if p and p["present"] is False:
+        from haenv.i18n.identity import source
+        expected, _ = control_ddx(p, p["independent_spec"], T)
+        if source(raw.adjudication.get("ddx", {}).get("diagnosis")) != expected["diagnosis"]:
+            return [{"kind": "m2_control_label", "severity": "gate",
+                     "detail": "confirmation control must carry its profile control label"}]
+    return []
+
+
+def gold_derivations():
+    from haenv.contracts import GoldDerivation
+    from haenv.world.wq import resolve_path
+    def applies(w, field):
+        p = resolve_path(w, "W.latent_premise.meta._external.m2.confirmation")
+        return field == "diagnosis" and isinstance(p, dict) and p.get("present") is False
+    def derive(w, field, value, deriv):
+        p = resolve_path(w, "W.latent_premise.meta._external.m2.confirmation")
+        T = int(resolve_path(w, "W.prediction_context.prediction_time_T"))
+        ddx, _ = control_ddx(p, p["independent_spec"], T)
+        return ddx["diagnosis"], deriv + ["registry/m2_confirmation.yaml: profile control_label"]
+    return (GoldDerivation("m2.confirmation_control", applies, derive),)
+
+
 def prepare(cases, prior):
     """Pair different patients before emission, retaining every source family.
 
     Match the actual regimen, demographics, symptom schedule and course. Each
     member has its own identity and its own draws of records and wording.
-    The control keeps its existing independent-event registry gold.
+    The control retains independent structure with its presentation-specific label.
     """
     from haenv.m2.core import scene_text
     profiles = rules()["profiles"]
@@ -69,6 +107,9 @@ def prepare(cases, prior):
         negative["raw"] = deepcopy(positive["raw"])
         negative["latent"] = deepcopy(positive["latent"])
         negative["latent"].update(control_gold)
+        ddx, flags = control_ddx(sid, control_gold["ddx_spec_id"], int(negative["latent"]["index_time_T"]))
+        negative["latent"].update({f"ddx_{k}": v for k, v in ddx.items()})
+        negative["latent"].update({f"ddx_{k}": v for k, v in flags.items()})
         pair = sorted([positive["case_id"], negative["case_id"]])
         for c, present in ((positive, True), (negative, False)):
             lat = c["latent"]
@@ -109,11 +150,10 @@ def prepare(cases, prior):
 
 
 def _control_view(raw, p):
-    from haenv.world.generation.twins import m2_ddx_of_spec
     view = copy(raw)
     view.adjudication = dict(raw.adjudication)
     view.latent_premise = {**raw.latent_premise, "meta": dict(raw.latent_premise["meta"])}
-    ddx, _ = m2_ddx_of_spec(p["independent_spec"], int(raw.prediction_context["prediction_time_T"]))
+    ddx, _ = control_ddx(p, p["independent_spec"], int(raw.prediction_context["prediction_time_T"]))
     view.adjudication["ddx"] = ddx
     view.latent_premise["meta"]["ddx"] = deepcopy(ddx)
     return view
@@ -140,26 +180,23 @@ def result(raw, fid, T):
             from haenv.m2.core import _findings
             return clinical_result_series(raw.case_id, p["profile"], fid, T, _findings(),
                                           _profiles()[p["profile"]], raw.user_profile)
-        text = "症状出现时采集十二导联心电图10秒：窦性心律，规则P波，RR间期规则，未记录到房颤。本次阴性不能排除其他时段阵发性心律失常。"
+        text = L("m2.confirm.ecg.negative")
     elif fid == "AHI":
         value = sample("positive_ahi" if present else "negative_ahi")
-        return [{**base, "value": value, "unit": "次/小时", "ref_low": 0, "ref_high": 5,
+        return [{**base, "value": value, "unit": L("m2.unit.per_hour"), "ref_low": 0, "ref_high": 5,
                  "flag": "H" if present else "NORMAL", "details": {
                      "acquisition": "attended_polysomnography", "technically_adequate": True,
-                     "report": "规范多导睡眠监测，呼吸事件由睡眠专科复核；阴性且持续高度怀疑时需考虑复评。"}}]
+                     "report": L("m2.confirm.psg.report")}}]
     elif fid == "BiliaryUltrasound":
-        text = ("空腹胆囊超声：腔内可移动强回声伴后方声影，胆囊壁增厚，探头局部压痛；结合当前病程评估。" if present
-                else "空腹胆囊超声：未见结石，胆囊壁不厚，无周围积液，超声Murphy征阴性；持续症状应复评其他病因。")
+        text = L("m2.confirm.biliary_us.positive" if present else "m2.confirm.biliary_us.negative")
     elif fid == "PostBDObstruction":
         value = sample("positive_ratio" if present else "negative_ratio")
-        text = f"按质量要求完成支气管舒张前后肺功能，舒张后FEV1/FVC={value:.2f}；三次可接受呼气，重复性合格。需结合症状及暴露史解释。"
+        text = tpl("m2.confirm.spirometry", ratio=value)
         base["details"] = {"post_bd_fev1_fvc": value, "quality_acceptable": True}
     elif fid == "DepressionAssessment":
-        text = ("临床访谈：过去至少两周几乎每日持续低落及兴趣减退，伴睡眠、精力、注意和自我评价改变，工作及家庭功能明显受损；未发现躁狂或轻躁狂史，需按此次症状持续时间与功能损害制定治疗和随访。" if present
-                else "临床访谈：睡眠和精力随当日压力波动，无连续两周大部分时间的心境低落或兴趣丧失，主要功能保留；分次处理睡眠与生活压力并随访。")
+        text = L("m2.confirm.depression.positive" if present else "m2.confirm.depression.negative")
     elif fid == "ChestFocalOpacity":
-        text = ("胸部正侧位X线：右下肺新发局灶气腔实变伴支气管充气征，结合咳嗽发热考虑感染性浸润，需随访吸收情况。" if present
-                else "胸部正侧位X线：未见局灶浸润或实变，无胸腔积液；如持续发热、气促或症状加重应复查。")
+        text = L("m2.confirm.cxr.positive" if present else "m2.confirm.cxr.negative")
     else:
         raise ValueError(f"confirmation finding has no acquisition model: {fid}")
     return [{**base, "value": text}]
@@ -191,11 +228,11 @@ def finalize(raw):
     if not notes:
         return
     if p:
-        notes[-1]["text"] += " " + rules()["profiles"][p["profile"]]["context"]
+        notes[-1]["text"] = J("space", [notes[-1]["text"], rules()["profiles"][p["profile"]]["context"]])
     sid = p["profile"] if p else ddx["spec_id"]
     note = rules()["competition"]["notes"].get(sid)
     if note:
-        notes[-1]["text"] += " " + note
+        notes[-1]["text"] = J("space", [notes[-1]["text"], note])
     # All text is clinical; the private pairing declaration is never serialized
     # into a public record, header, directory, menu or purchase result.
 
@@ -205,8 +242,8 @@ def twin_fields():
     return ("latent_premise/meta/_external/m2/confirmation/present",
             "latent_premise/meta/_external/m2/arm", "latent_premise/meta/_external/m2/f2", "latent_premise/meta/ddx",
             "latent_premise/meta/red_flag", "latent_premise/meta/clinician_warranted",
-            "latent_premise/meta/outcome_label", "adjudication/ddx", "adjudication/m2_frame",
-            "adjudication/m2_workup", "adjudication/open_management",
+            "latent_premise/meta/outcome_label", "outcome_label", "adjudication/ddx", "adjudication/m2_frame",
+            "adjudication/m2_workup", "adjudication/m2_evidence", "adjudication/open_management",
             "adjudication/red_flag_present", "adjudication/clinician_action_warranted")
 
 
@@ -220,7 +257,9 @@ def mutate_twin(raw, declaration):
     meta = raw.latent_premise["meta"]
     meta["_external"]["m2"]["arm"] = "positive" if p["present"] else "negative"
     sid = p["profile"] if p["present"] else p["independent_spec"]
-    ddx, flags = m2_ddx_of_spec(sid, int(raw.prediction_context["prediction_time_T"]))
+    T = int(raw.prediction_context["prediction_time_T"])
+    ddx, flags = (m2_ddx_of_spec(sid, T) if p["present"]
+                  else control_ddx(p, sid, T))
     from haenv.m2.workup import workup_tests
     from haenv.m2.workup import workup_alternatives
     ddx["tests"] = workup_tests(sid)
@@ -229,6 +268,7 @@ def mutate_twin(raw, declaration):
     raw.adjudication["ddx"] = ddx
     raw.adjudication["red_flag_present"] = flags["red_flag"]
     raw.adjudication["clinician_action_warranted"] = flags["clinician_warranted"]
+    raw.outcome_label = flags["outcome_label"]
     if meta["_external"]["m2"]["frame"] == "F2":
         from haenv.m2.core import f2_direction
         basics = raw.latent_premise["patient_basics"]

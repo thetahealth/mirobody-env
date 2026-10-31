@@ -491,6 +491,10 @@ def register(job, cfg: dict, n_cases: int, n_emitted: int, cmd: str,
     job.results_dir.mkdir(parents=True, exist_ok=True)
     p = job.results_dir / "batch.json"
     meta = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    from haenv.i18n import DEFAULT, LanguageError, batch_language, check
+    language = (batch_language(meta) if meta else check(getattr(job, 'language', None) or DEFAULT))
+    if getattr(job, 'language', None) and language != check(job.language):
+        raise LanguageError('Cannot mix job and batch languages')
     # Must be read before any `setdefault` fills `meta`.
     _meta_was_empty = not meta
     meta.setdefault("batch", job.batch)
@@ -546,6 +550,13 @@ def register(job, cfg: dict, n_cases: int, n_emitted: int, cmd: str,
         meta.update(batch_fingerprint_fields(_judging_rows))
     for _k, _v in _sticky.items():
         meta.setdefault(_k, _v)
+    # Language of the batch's text and the fingerprint of its rendering (sticky: they describe
+    # the items, like `world_sha`).
+    from haenv.i18n.text import render_fingerprint, judge_fingerprints
+    meta.setdefault('language', language)
+    meta.setdefault('render_sha16', render_fingerprint(language))
+    for field, stamps in judge_fingerprints(language).items():
+        meta.setdefault(field, stamps)
     # haenv version at item-generation time: sticky, unlike `haenv_git_sha`
     # (the version of this run).
     meta.setdefault("generation_git_sha", meta.get("haenv_git_sha", "unknown"))
@@ -603,20 +614,25 @@ def latest(root: Path, task_type: str, job_id: str) -> str | None:
 
 #: What a rebuild must share with an earlier batch before any per-case difference
 #: counts as nondeterminism rather than a legitimate change.
-REPRODUCIBLE_KEYS = ("world_sha", "world_knobs", "job_sha256", "generator")
+REPRODUCIBLE_KEYS = ("world_sha", "world_knobs", "job_sha256", "generator", "language", "render_sha16")
 
 
 def same_generation_inputs(prev_meta: dict, job, cfg: dict, generator: str) -> tuple[bool, str]:
     """Whether rebuilding `job` now must reproduce the batch `prev_meta` describes
-    byte for byte: same generation code, world knobs, job file and generator.
+    byte for byte: same world inputs, generator, language and rendering assets.
 
     Returns ``(same, why_not)``. An unknown value on either side counts as
     different, so the caller stays in report-only mode when it cannot tell.
     """
     cur = provenance_fields(cfg, job_path=str(getattr(job, "path", "") or ""))
     cur["generator"] = generator
+    from haenv.i18n import batch_language, resolve
+    from haenv.i18n.text import render_fingerprint
+    cur['language'] = resolve(cli=getattr(job, 'language', None), cfg=cfg)
+    cur['render_sha16'] = render_fingerprint(cur['language'])
+    previous = {**prev_meta, 'language': batch_language(prev_meta)}
     for k in REPRODUCIBLE_KEYS:
-        a, b = prev_meta.get(k), cur.get(k)
+        a, b = previous.get(k), cur.get(k)
         if not a or a == "unknown" or a != b:
             return False, f"{k}: {a} -> {b}"
     return True, ""

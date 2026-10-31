@@ -35,6 +35,42 @@ ACEI_RISE_MAX_PCT = 30.0
 _KIND_TO_CLASS = {"preanalytical": "preanalytical", "method": "method_difference"}
 
 
+
+from haenv.resources.regpath import load_registry, registry_cached
+
+
+@registry_cached("p4_interpretation.yaml")
+def contract_table():
+    return load_registry("p4_interpretation.yaml")["answer_contract"]
+
+
+def ingested_interference(factor):
+    from haenv.p4.diversity import table
+    return (table()["rules"].get(factor) or {}).get("mechanism_family") == "ingested_assay_interference"
+
+
+def exposure_ended(block):
+    """Use the dated exposure and completed verification, never rendered words."""
+    exposure = block.get("ingested_exposure")
+    if exposure is None:
+        return None  # legacy records retain their previous/current-draw policy
+    ended = exposure.get("end_day")
+    return (ended is not None and int(ended) <= int(block["review_day"]) and
+            bool(exposure.get("clean_followup")))
+
+
+def contract_fingerprint():
+    """Include the new policy and its interpreter in the pack's existing stamps."""
+    import hashlib
+    import json
+    from haenv.p4.diversity import table
+    families = {key: value["mechanism_family"] for key, value in table()["rules"].items()
+                if value.get("mechanism_family")}
+    policy = load_registry("p4_interpretation.yaml")["answer_contract"]
+    data = json.dumps({"contract": policy, "families": families}, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(data.encode()).hexdigest()[:16]
+
+
 def acting(rec: dict) -> list[dict]:
     return [p for p in rec.get("perturbations") or () if p.get("acts")]
 
@@ -146,6 +182,9 @@ def next_step(blk: dict) -> tuple[str, tuple[str, ...]]:
     * noise: no action, a standardized repeat accepted;
     * pre-analytical / method source on the previous draw: today's reading is the standard one, so no
       action (a repeat accepted); on today's draw: a standardized repeat;
+    * ingested assay interference on today's draw: the registered exposure policy
+      (`answer_contract.ingested_interference_next`); interference only on the previous draw takes
+      the previous-draw branch above, whether or not intake continues (registered `scope`);
     * ACEI stop: the fall is the expected reversal of the drug's haemodynamic effect, no action
       (acting on it accepted);
     * ACEI start: a printed rise of at most 30% takes a repeat as primary; no action remains
@@ -161,6 +200,12 @@ def next_step(blk: dict) -> tuple[str, tuple[str, ...]]:
     recs = {int(r["day"]): r for r in blk.get("records") or ()}
     r0, r1 = recs[int(blk["t0"])], recs[int(blk["t1"])]
     if cls in ("preanalytical", "method_difference"):
+        ended = exposure_ended(blk) if ingested_interference(blk.get("factor", blk.get("cause"))) else None
+        policies = contract_table()["ingested_interference_next"]
+        today_only = policies["scope"]["applies_when"] == "current_draw_affected"
+        if ended is not None and (acting(r1) or not today_only):
+            policy = policies["ended" if ended else "ongoing"]
+            return policy["primary"], tuple(policy["accept"])
         if acting(r0) and not acting(r1):
             return "no_action", ("no_action", "repeat_standardized")
         return "repeat_standardized", ("repeat_standardized",)

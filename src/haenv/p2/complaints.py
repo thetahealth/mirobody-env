@@ -10,6 +10,8 @@ from contextvars import ContextVar
 from dataclasses import replace
 from functools import lru_cache, wraps
 from types import FunctionType
+from haenv.i18n.text import L, rewrap
+from haenv.i18n.identity import source
 
 _ACTIVE = ContextVar("p2_complaint_sampling", default=False)
 
@@ -27,7 +29,7 @@ def extra_pool():
         # Borrow only the established relevance tags. These are ordinary
         # adult complaints, not the parent's injury, effort or age restriction;
         # their text carries the stated circumstances, with no invented context.
-        rows.append({"topic": r["topic"], "text": r["text"], "context": "",
+        rows.append({"topic": r["topic"], "text": L(r["text"]), "context": L(r["context"]) if r.get("context") else "",
                      "tags": parent["tags"], "exertion": False, "age_w": (1., 1., 1.), "cond": {}})
     return tuple(rows)
 
@@ -36,8 +38,13 @@ def vocabulary():
     """Canonical topics, including every authored lay form, for clone controls."""
     from haenv.resources.regpath import registry_path
     from haenv.resources.yamlcache import load_yaml
-    return {text: r["topic"] for r in load_yaml(registry_path("p2_complaint_pool.yaml"))["complaints"]
-            for text in [r["text"], *r["lay"]]}
+    vocabulary = {}
+    for r in load_yaml(registry_path("p2_complaint_pool.yaml"))["complaints"]:
+        for key in [r["text"], *r["lay"]]:
+            text = L(key)
+            entered = str(text).replace("，", ",").replace("。", ",").strip().rstrip("、,")
+            vocabulary[text] = vocabulary[rewrap(text, entered)] = r["topic"]
+    return vocabulary
 
 
 @lru_cache(maxsize=1)
@@ -51,6 +58,20 @@ def prior():
     if not weights or any(w <= 0 for w in weights.values()):
         raise ValueError("P2 complaint prior needs positive sourced family weights")
     return weights
+
+
+def physiology_schedule(schedule):
+    """Keep the registered carrier when an event receives a new surface id.
+
+    The same declared mapping applies to original patient reports and injected
+    background events. Existing kernel amplitudes remain pending clinical review.
+    """
+    from haenv.resources.regpath import load_registry
+    aliases = {r["topic"]: r["physio_topic"] for r in
+               load_registry("p2_complaint_pool.yaml")["complaints"] if r.get("physio_topic")}
+    for event in schedule:
+        event["topic"] = aliases.get(event.get("topic"), event.get("topic"))
+    return schedule
 
 
 def install():
@@ -105,12 +126,13 @@ def install():
             result = dict(result)
             from haenv.resources.regpath import registry_path
             from haenv.resources.yamlcache import load_yaml
-            result.update({r["text"]: r["lay"] for r in load_yaml(registry_path("p2_complaint_pool.yaml"))["complaints"]})
+            result.update({L(r["text"]): [L(s) for s in r["lay"]]
+                           for r in load_yaml(registry_path("p2_complaint_pool.yaml"))["complaints"]})
         return result
 
     @wraps(topic)
     def source_topic(text):
-        return vocabulary().get(text) or topic(text) if _ACTIVE.get() else topic(text)
+        return vocabulary().get(source(text)) or topic(text) if _ACTIVE.get() else topic(text)
 
     @wraps(effects)
     def source_effects(drugs):
@@ -124,6 +146,15 @@ def install():
 
     E.event_pools, E.plan_benign_evs, E.symptom_lay, E.symptom_topic = source_pools, source_plan, source_lay, source_topic
     E.side_effect_topics = source_effects
+    physiology = E._apply_physio_if_enabled
+
+    @wraps(physiology)
+    def source_physiology(raw, cid, schedule):
+        if _ACTIVE.get():
+            physiology_schedule(schedule)
+        return physiology(raw, cid, schedule)
+
+    E._apply_physio_if_enabled = source_physiology
     import haenv.scoring.verify as verify
     import haenv.world.validation.invariants as invariants
     import haenv.world.validation.shared_audit as shared_audit
@@ -136,8 +167,8 @@ def install():
         if item["pack"] != "p2":
             return canonical
         vocab = vocabulary()
-        return canonical | frozenset(vocab[e["symptom"]] for e in item["sp"].get("evidence_ledger") or ()
-                                      if e.get("symptom") in vocab)
+        return canonical | frozenset(vocab[phrase] for e in item["sp"].get("evidence_ledger") or ()
+                                      if (phrase := source(e.get("symptom"))) in vocab)
 
     invariants.benign_set = source_benign_set
     sentences, effect_check = shared_audit.said_sentences, shared_audit.side_effect_complaint
@@ -154,7 +185,8 @@ def install():
         import json
         from haenv.resources.regpath import registry_path
         from haenv.resources.yamlcache import load_yaml
-        blob = json.dumps(item["sp"], ensure_ascii=False, default=str).lower()
+        from haenv.i18n.identity import source
+        blob = json.dumps(source(item["sp"]), ensure_ascii=False, default=str).lower()
         drugs = [d for d in (E._cached_yaml(E._rp("drug_side_effects.yaml")) or {}).get("drugs") or () if d.lower() in blob]
         hit = effects(drugs)
         profiles = {r["topic"]: r["profile"] for r in load_yaml(registry_path("p2_complaint_pool.yaml"))["complaints"]}

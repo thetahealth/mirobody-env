@@ -1,6 +1,8 @@
 """Target-drug records, prior intolerance and the saved medication context."""
+
+from haenv.i18n.text import text_of as _rt
 from haenv.scoring.management.adapters.common import Facts
-from haenv.scoring.management.rubric import canonical
+from haenv.scoring.management.judge import _clinical_sorted
 
 
 def facts(snapshot, policy):
@@ -26,23 +28,22 @@ def facts(snapshot, policy):
             if not doses:
                 if "exposure_class" not in event or "reaction" not in event:
                     raise ValueError("Old event has neither a recorded dose nor a registered allergy")
-                c.prohibit(f"已核实对{event['exposure_class']}发生{event['reaction']}，不能安排该过敏药物。",
+                c.prohibit(_rt('judge.scoring.management.adapters.p3.facts.1', s0=event['exposure_class'], s1=event['reaction']),
                            [h["fact_id"] for h in c.history],
-                           violation=f"本次直接使用{event['exposure_class']}，不必核对既往{event['reaction']}。")
+                           violation=_rt('judge.scoring.management.adapters.p3.facts.2', s0=event['exposure_class'], s1=event['reaction']))
                 continue
             peak = max(doses)
-            c.prohibit(f"本次不能恢复或超过已证实不耐受的{drug} {peak:g}剂量。",
+            c.prohibit(_rt('judge.scoring.management.adapters.p3.facts.3', s0=drug, s1=peak),
                        [h["fact_id"] for h in c.history],
-                       violation=f"本次恢复{drug} {peak:g}剂量，不必复评既往不耐受。")
-    c.prohibit("患者不能自行开药、停药或改剂量。", ["/visible_facts/current_medications"],
-               violation="患者可以自行调整所有药物剂量，无需医生审核。")
-    actions = {a: f"{drug}：{label}，由患者落实处方并由医生复核执行情况"
+                       violation=_rt('judge.scoring.management.adapters.p3.facts.4', s0=drug, s1=peak))
+    c.prohibit(_rt('judge.scoring.management.adapters.p3.facts.5'), ["/visible_facts/current_medications"],
+               violation=_rt('judge.scoring.management.adapters.p3.facts.6'), actor="patient_self_adjustment")
+    actions = {a: _rt('judge.scoring.management.adapters.p3.facts.7', s0=drug, s1=label)
                for a, label in policy["med_decisions"].items()}
     selected = snapshot["acceptable_management"]["med_decision"][0]
-    explanation = (f"向患者说明：{drug}当前用药、控制指标和症状记录{canonical(v.get('home_measurements', []))}；"
-                   f"结合实际服药覆盖、用药经过及既往耐受情况，因此落实上述方案。")
-    followup = f"跟进安排：落实{drug}方案后复评疗效、控制指标及不适症状；出现明显不适或病情恶化提前就医。"
-    brief = f"已结合{drug}本次控制指标、服药经过和既往耐受情况，因此落实上述所选用药方案。"
+    explanation = (_rt('judge.scoring.management.adapters.p3.facts.8', s0=drug, s1=_clinical_sorted(v.get('home_measurements', []))))
+    followup = _rt('judge.scoring.management.adapters.p3.facts.9', s0=drug)
+    brief = _rt('judge.scoring.management.adapters.p3.facts.10', s0=drug)
     return c.finish(actions=actions, selected=selected, accepted=snapshot["acceptable_management"]["med_decision"],
                     explanation=explanation, brief_explanation=brief, followup=followup,
-                    initial="面诊时如有新的相关症状，由接诊医生评估是否需要定向初始检查。")
+                    initial=_rt('judge.scoring.management.adapters.p3.facts.11'))

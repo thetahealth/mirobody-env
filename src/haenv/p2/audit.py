@@ -21,6 +21,7 @@ ledger characters, wording, beta-blocker. Pack gates (design §6, zero calls):
 SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
+from haenv.i18n.text import is_text
 
 import collections
 
@@ -181,7 +182,7 @@ def offline_oracle(block: dict) -> dict:
     vital3 = (named["rr"] == 3 or (named["hr"] == 3 and not slow)
               or (named["sbp"] == 3 and home["systolic_bp_mmHg"] <= 90)
               or home["temperature_c"] < th["hypothermia_temp_lt"])
-    prior = {r.get("condition") for r in block.get("clinical_history_record") or () if r.get("conclusion") == "已记录"}
+    prior = {r.get("condition") for r in block.get("clinical_history_record") or () if is_text(r.get("conclusion"), "hist.recorded")}
     hf = "heart_failure" in block["background"]["known_conditions"] or "heart_failure" in prior
     headache = screen.get(R.HTN_SYMPTOM)
     if headache is None:
@@ -196,11 +197,22 @@ def offline_oracle(block: dict) -> dict:
                    and x.get("baseline_asymptomatic") is True and x.get("rate_medication_unchanged") is True
                    and isinstance(x.get("baseline_rate_bpm"), list)
                    and x["baseline_rate_bpm"][0] <= home["heart_rate_bpm"] <= x["baseline_rate_bpm"][1] for x in prior_rows)
+    usual = [x["usual_systolic_bp_mmHg"] for x in prior_rows
+             if x.get("baseline_assessed") is True and x.get("day", T + 1) < T
+             and isinstance(x.get("usual_systolic_bp_mmHg"), (int, float))]
+    relative = bool(screen.get("suspected_infection_today") is True and usual
+                    and min(usual) - home["systolic_bp_mmHg"] > th["sepsis_sbp_drop_gt"])
+    medium = th["ng253_medium"]
+    infection_medium = screen.get("suspected_infection_today") is True and (
+        medium["hr"][0] <= home["heart_rate_bpm"] <= medium["hr"][1]
+        or medium["rr"][0] <= home["respiratory_rate_per_min"] <= medium["rr"][1]
+        or medium["sbp"][0] <= home["systolic_bp_mmHg"] <= medium["sbp"][1]
+        or home["temperature_c"] < medium["temp_lt"])
     triggers = [bool(urgent), bool(screen.get("head_injury_today") and anticoag
                                   and screen.get("current_prescriptions_reconciled") is True
                                   and screen.get("following_current_prescriptions") is True),
                 bool(screen.get("systemically_unwell_today") and screen.get(R.MILD) and chemo),
-                total >= 7, total >= 5, vital3, named["spo2"] == 3, slow, max(parts) >= 3,
+                total >= 7, total >= 5, vital3, relative, named["spo2"] == 3, slow, max(parts) >= 3,
                 bool(screen.get(R.HYPO_HELP)), l2 >= th["hypo_level2_nights_ge"],
                 severe >= th["htn_readings_ge"] and bool(headache),
                 severe >= th["htn_readings_ge"] and hf,
@@ -210,7 +222,7 @@ def offline_oracle(block: dict) -> dict:
                 baseline and total == 1 and named["hr"] == 1 and home["heart_rate_bpm"] <= 50
                 and screen.get("rate_medication_changed_recently") is False
                 and not screen.get(R.DIZZY) and not urgent,
-                sum(parts) >= 1, bool(nights) and l1 >= 1 and l2 == 0,
+                total >= 1 and infection_medium, sum(parts) >= 1, bool(nights) and l1 >= 1 and l2 == 0,
                 raised >= th["htn_readings_ge"], bool(screen.get(R.MILD)), True]
     rule = tab["rules"][triggers.index(True)]
     accepted = list(rule["set"])
@@ -249,6 +261,8 @@ def pseudo_models(items: list[dict]) -> dict:
 
 
 def _features(blk: dict, kind: str) -> list[float]:
+    from haenv.i18n.identity import source
+    blk = source(blk)
     c = blk["home_check_today"]
     ck = R.checklist_of(blk)
     if kind == "vitals":

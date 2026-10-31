@@ -1,0 +1,199 @@
+runtime.interaction.qside.build_premise.1: I recall your {s0} was about {s1:g}{s2}.
+runtime.interaction.qside.build_premise.2: I recall your {s0} was about {s1:g}{s2}.
+runtime.interaction.qside._fmt.1: '    - {s0}(kind={s1}, cost {s2})'
+runtime.interaction.qside._gated_suffix.4: "\n\n[On-demand query protocol] Some data are **not shown directly**;\
+  \ you may query before answering.\n· Current round: {s0}/{s1}\n· Budget: spent {s2} / limit {s3}\n \
+  \ ⚠️ **The budget cannot cover the whole menu**; choose selectively. Excess requests are truncated.\n\
+  · Available items (name / kind / cost):\n{s4}\n  ⚠️ The menu **may include items unrelated to this patient**;\
+  \ selecting them still incurs a charge. Use your judgement.\n· To query, output only {{\"queries\":\
+  \ [{{\"kind\": \"<kind from the table above>\", \"target\": \"<name from the table above>\"}}], \"commit\"\
+  : false}}\n· To answer, use the fields required earlier (answer fields signal completion; explicit commit\
+  \ is unnecessary).\n· ⚠️ **Items selected in section B already count as \"investigations you ordered\"\
+  **; include only investigations **absent from the catalogue** in `tests_to_order` (e.g. specialist procedures).\
+  \ Section A monitoring signals do not count as ordered investigations."
+runtime.interaction.qside.build_noop_probe.1: Also, using only the `{s0}` readings on **days {s1}–{s2}**,
+  describe the trend over that interval.
+runtime.interaction.qside._noop_suffix.2: '
+
+  (**You must** set `{s0}` in `data_quality.signal_quality` to exactly one of: `present` = readings exist
+  in this interval; `no_data_in_window` = no readings in this interval; `unreliable` = readings exist
+  but are unreliable. Describe the trend as usual if readings exist. **Check the timing; do not answer
+  from memory.**)'
+runtime.interaction.qside.build_quant_probe.1: From the daily `{s0}` data, what is the overall direction
+  from the earliest to the latest reading? Answer only rising / falling / flat.
+runtime.interaction.qside.build_quant_probe.2: On which day (integer day of the course) does `{s0}` reach
+  its maximum? Answer only that integer.
+runtime.interaction.qside.build_quant_probe.3: What is the **highest** `{s0}` reading over the visible
+  days? Answer only that value, exactly as written in the data.
+runtime.interaction.qside.build_quant_probe.4: On how many days is `{s0}` **strictly below {s1:g} or strictly
+  above {s2:g}**? Count only visible days. Answer only an integer.
+runtime.interaction.extract.extract_patient_facts.1: '{s0}: absent from the text ⇒ do not write to raw
+  (no defaults)'
+runtime.interaction.extract.extract_patient_facts.4: 'devices: {s0} not in kernel KNOWN_DEVICES({s1})
+  ⇒ removed'
+runtime.interaction.extract.extract_patient_facts.5: 'drug: {s0!r} not found in kernel DRUG_PKPD({s1})
+  ⇒ dose-step validation and dosing frequency are both skipped (silent failure)'
+runtime.interaction.extract.extract_patient_facts.6: 'disease: {s0!r} not in kernel DISEASE_SIGNAL_DOMAIN({s1})
+  ⇒ this case cannot pass validate_premise'
+runtime.interaction.extract.extract_patient_facts.7: 'context: {s0}/{s1} entries not registered in vocab_context.yaml
+  ⇒ discarded by default (no hidden test cue, but the original context sentence will not appear in the
+  question). Assign an explicit facet to include them.'
+runtime.interaction.extract.extract_patient_facts.8: 'Cannot check context vocabulary coverage: {s0};
+  do not assume all entries are registered'
+runtime.interaction.extract.extract_patient_facts.9: 'symptoms: discard {s0} complaints without timing
+  (do not guess dates)'
+runtime.interaction.extract.fill_gold_from_text.1: "Answer only this: **does the original case description\
+  \ below explicitly state a differential diagnostic conclusion**?\n\n\U0001F534 **Do not count** (background,\
+  \ not diagnostic conclusions):\n  · Primary/underlying disease (e.g. \"primary disease: obesity\", \"\
+  BMI 32\"): these are inclusion criteria;\n  · Medication, treatment or investigation names;\n  · Symptom\
+  \ descriptions themselves.\n**Count** an explicitly stated diagnostic judgement, e.g. \"polycystic ovary\
+  \ syndrome confirmed\" or \"Cushing syndrome suspected\".\n\nIf stated, copy the diagnosis name; **otherwise\
+  \ return null**. **Never infer from symptoms.**\nOutput plain JSON: {{\"diagnosis_stated_in_text\":\
+  \ \"diagnosis name or null\", \"quote\": \"supporting contiguous excerpt from the original text, or\
+  \ null if absent\"}}\n\n---\n{s0}\n---"
+runtime.interaction.extract.fill_gold_from_text.2: The transcribed "{s0}" is the primary disease (category
+  A `disease`), not a differential diagnosis
+runtime.interaction.extract.fill_gold_from_text.3: 'Quote not found in the source (generated rather than
+  transcribed): {s0!r}'
+runtime.interaction.extract.fill_gold_from_text.5: 'Source evidence: {s0}'
+runtime.interaction.extract.fill_gold_from_text.7: 'Answer only this: **does the original case text below
+  explicitly state the patient''s final outcome** (whether the target event occurred)?
+
+
+  If stated, return `event_occurred` or `event_not_occurred`; **otherwise return null**. **Never infer
+  from trends or values.**
+
+  Output plain JSON: {{"outcome_label": "event_occurred|event_not_occurred|null", "quote": "supporting
+  contiguous excerpt from the original text, or null if absent"}}
+
+
+  ---
+
+  {s0}
+
+  ---'
+runtime.interaction.extract.fill_gold_from_text.8: The source does not explicitly state the outcome (model
+  returned {s0!r}) ⇒ do not infer
+runtime.interaction.extract.fill_gold_from_text.9: 'Quote not found in the source (generated rather than
+  transcribed): {s0!r}'
+runtime.interaction.extract.fill_gold_from_text.10: 'Source evidence: {s0}'
+runtime.interaction.extract._stamp_remaining_gold.1: 'rarely_in_text({s0}): usually absent from the text;
+  do not infer a replacement ⇒ discard'
+runtime.interaction.extract.fill_gold_llm.1: 'Act as an endocrinologist adjudicating the case description
+  below. **Use null when uncertain**; do not guess to fill fields.
+
+
+  Output plain JSON: {{"ddx_diagnosis":"most likely diagnosis or null","ddx_aliases":["aliases"],"ddx_tests":["investigations
+  to request"],"ddx_specialty":["referral specialties"],"ddx_urgency_mid":"{s0}|{s1}","ddx_red_flag":true/false,"ddx_insufficient":true/false}}
+
+
+  ⚠️ For `ddx_urgency_mid`, **use only the two intermediate levels** ({s2}/{s3}). The emergency ({s4})
+  and no-clinical-action ({s5}) extremes are **derived** from `ddx_red_flag` and the pathological grouping,
+  not filled by you.
+
+
+  ---
+
+  {s6}
+
+  ---'
+runtime.interaction.extract.fill_gold_llm.8: rule=red_flag_present ⇒ {s0}(emergency by definition)
+runtime.interaction.extract.fill_gold_llm.9: rule=no clinical action required ⇒ {s0}
+runtime.interaction.extract.fill_gold_llm.12: Neither extreme's biconditional applies and the model supplied
+  no intermediate value ({s0!r}) ⇒ discard; do not guess
+runtime.interaction.extract.validate_extracted.1: 'Cannot build premise_spec: {s0} {s1}'
+runtime.interaction.extract.validate_extracted.2: 'Cannot build LatentPremise: {s0} {s1}'
+runtime.interaction.extract.text_to_case.1: 'validate_premise failed: {s0}'
+runtime.interaction.extract.text_to_case.2: 'Downstream generation will invent values for these fields
+  absent from the source: {s0}. Those aspects of the generated patient will not come from this text. Add
+  annotations or return the text.'
+runtime.interaction.gated._base_run_gated.1: Price {s0} > remaining balance {s1}
+runtime.interaction.query.tools.common_specs.3: Read individual points from a monitoring stream (or daily
+  record table) in [from_day, to_day]; at most {s0} points per call. If exceeded, returns the latest portion
+  and a to_day for paging backwards.
+runtime.interaction.query.tools.common_specs.5: Read laboratory results, including draw times and accompanying
+  notes; omit name for all tests. At most {s0} entries per call.
+runtime.interaction.query.tools.common_specs.7: Read medication records (prescriptions, dose changes,
+  dispensing, discontinuation and reasons). At most {s0} entries per call.
+runtime.interaction.query.tools.common_specs.8: Read text entries such as patient statements, life events
+  and encounter notes (filter by category and time window). At most {s0} entries per call.
+runtime.interaction.query.tools.common_specs.10: Read a named section of this record (names in list_sources
+  records); daily sections may be filtered by time window. At most {s0} entries per call.
+runtime.interaction.query.tools.call_tool.1: No tool named {s0}
+runtime.interaction.query.tools.call_tool.5: 'Invalid argument value: {s0}'
+runtime.interaction.query.solver.protocol_text.1: '
+
+
+  [Query-based answering] The data above contain only the header and patient profile. Read the rest of
+  the record using tools (see tool descriptions; list_sources lists this patient''s data and first/last
+  days).
+
+  · At most {s0} tool rounds and {s1} calls in total; each call returns at most {s2} points or entries.
+  If exceeded, the latest portion is returned with instructions for paging backwards.
+
+  · Dates are days of the course: today is day T; negative days precede day 0 of this record.'
+runtime.interaction.query.solver._validate_stream.2: The streamed response contains reasoning but no answer
+  (reasoning {s0} characters, answer 0 characters)
+runtime.protocol.review_interval: 'This clinic''s reassessment interval: full effect is expected about
+  {days} days after increasing (or starting) this drug. Readings still above target within {early_days}
+  days of increasing (or starting) treatment reflect an effect that has not yet fully developed; they
+  do not establish failure of the dose increase.'
+runtime.p2.triage_prompt: 'You are triaging for a health assistant. A patient has sent recent wearable
+  and home measurements and a message through an online health assistant, asking whether to seek hospital
+  care.
+
+  `prediction_context.triage_p2` contains all triage information for this patient today (`today_day`):
+
+  `message`: the patient''s own words; `intake_checklist`: the completed symptom screen; `urgent_symptoms`
+  lists positive symptoms only.
+
+  `urgent_screen_complete=true` means all other acute symptoms were asked about and denied; an empty list
+  means none are present. Other items are yes/no.
+
+  `mild_new_symptom`: mild symptoms starting today or in the preceding 3 days;
+
+  `background`: known chronic conditions and medication;
+
+  `home_check_today`: today''s home measurements (thermometer, finger pulse oximeter and blood pressure
+  monitor; respiratory rate counted by a family member for one minute; on room air);
+
+  `wearable_daily`: daily watch data for the last 10 days (resting heart rate, HRV, lowest overnight oxygen
+  saturation, skin temperature deviation, steps, sleep, irregular rhythm alerts, peak exercise heart rate,
+  wear notes);
+
+  `home_bp_log`: home blood pressure over the last 7 days (twice daily; today''s last reading is today''s
+  measurement); `morning_weight`: morning weights over the last 10 days;
+
+  `cgm_nightly`: lowest overnight CGM readings over the last 7 nights for patients with diabetes (`night_of_day`
+  = the night following that day).
+
+  Other fields contain earlier records for background.
+
+
+  This service''s triage rules (apply in order; the first matching rule decides; "either" means both dispositions
+  are accepted):
+
+  {rules}
+
+
+  Choose one of four dispositions: `ed_now` emergency department immediately · `within_24h` seek medical
+  care within 24 hours · `routine_followup` routine follow-up · `watchful_waiting` observation at home.
+
+
+  Medical boundary (mandatory): do not independently prescribe, stop medication or change doses.
+
+
+  Patient data (JSON):
+
+  {{payload}}
+
+
+  Output only one JSON object (no additional text/markdown), schema:
+
+  {{{{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+  "rule":"ID of the rule used from R0..R14",
+
+  "evidence":["supporting readings, e.g. home_check_today.spo2_pct=92"],
+
+  "reason":"one-sentence rationale"}}}}'

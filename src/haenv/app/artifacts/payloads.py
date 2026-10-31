@@ -72,14 +72,19 @@ def load_payloads(path: Path) -> dict[str, tuple]:
     "the model cited nothing".
     """
     from haenv_kernel.schema import SolverPayload, VerifierPayload      # kernel
+    from haenv.i18n.identity import load as load_messages, restore
+    messages = load_messages(path)
     out: dict[str, tuple] = {}
     for line in path.read_text(encoding="utf-8").split("\n"):
         if not line.strip():
             continue
         rec = json.loads(line)
         try:
-            sp = SolverPayload(**rec["sp"])
-            vp = VerifierPayload(**rec["vp"])
+            original = messages.get(rec['case_id'])
+            verifier_source = ({**original, 'future_data': original.get('longitudinal_data')}
+                               if original else None)
+            sp = SolverPayload(**restore(rec["sp"], original))
+            vp = VerifierPayload(**restore(rec["vp"], verifier_source))
         except (KeyError, TypeError) as e:
             raise ValueError(
                 f"{path.name}: {rec.get('case_id')}'s payload does not match the current schema "

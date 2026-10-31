@@ -17,9 +17,13 @@ BLOCK = "triage_p2"
 LATENT = "p2"
 
 EN_TOKENS = ("ed_now", "within_24h", "routine_followup", "watchful_waiting", "acceptable", "borderline",
-             "inf_n7", "inf_n56", "inf_v3", "inf_s3", "inf_t35", "af_rvr", "htn_lowbp", "brady", "hf_htn_severe", "inf_n14", "inf_n0", "red_normal", "htn_emerg", "htn_severe",
+             "inf_n7", "inf_n56", "inf_v3", "inf_s3", "inf_t35", "af_rvr", "htn_lowbp", "brady", "hf_htn_severe", "inf_n14m", "inf_n14", "inf_n0", "red_normal", "htn_emerg", "htn_severe",
              "htn_raised", "htn_sbp220", "hf_rest", "hf_gain", "hf_stable", "af_unstable", "af_stable", "hypo_l3", "hypo_l2x",
-             "hypo_l1", "ben_exercise", "ben_spo2", "ben_sleep", "masked", "atypical")
+             "hypo_l1", "ben_exercise", "ben_spo2", "ben_sleep", "masked", "atypical",
+             "watchful waiting", "routine follow-up", "emergency department now", "assessment within 24 hours",
+             "gold disposition", "correct disposition", "standard answer", "ground truth", "gold label",
+             "Watchful waiting", "Routine follow-up", "Emergency department now", "Assessment within 24 hours",
+             "Gold disposition", "Correct disposition", "Standard answer", "Ground truth", "Gold label")
 ZH_TOKENS = ("急诊", "急救", "24小时", "24 小时", "常规复诊", "常规随访", "居家观察", "继续观察", "无需就医", "不用就医",
              "危急值", "红旗", "金标", "可接受")
 _RULE_ID = re.compile(r"\bR\d{1,2}\b")
@@ -77,7 +81,15 @@ def leak_hits(block: dict) -> list[str]:
     except ValueError as exc:
         return out + [str(exc)]
     for k in R.R0_KEYS + (R.HTN_SYMPTOM, R.DIZZY, R.HYPO_HELP):
-        if not ck.get(k) and any(s in msg for s in RD.say_pool(k)):
+        from haenv.i18n.text import render, MissingText
+        candidates = []
+        for phrase in RD.say_pool(k):
+            for lang in ("zh", "en"):
+                try:
+                    candidates.append(render(phrase, lang))
+                except MissingText:
+                    pass
+        if not ck.get(k) and any(s in msg for s in candidates):
             out.append(f"message names {k} but the checklist says no")
     return out
 
@@ -85,7 +97,8 @@ def leak_hits(block: dict) -> list[str]:
 def ledger_red_flags(g: dict, raw) -> list[tuple[str, str]]:
     out = []
     for e in _get(raw, "evidence_ledger") or ():
-        s = str(e.get("symptom") or "") if isinstance(e, dict) else ""
+        from haenv.i18n.identity import source
+        s = source(e.get("symptom") or "") if isinstance(e, dict) else ""
         for w in RED_FLAG_WORDS:
             if w in s:
                 out.append(("ledger_red_flag", f"{e.get('evidence_id')}: {w}"))
@@ -173,6 +186,12 @@ def measurement_conflicts(block: dict) -> list[str]:
         R.checklist_of(block)
         T = int(block["today_day"])
         c = block["home_check_today"]
+        for row in block.get("clinical_history_record") or ():
+            if "usual_systolic_bp_mmHg" in row:
+                if (not row.get("source") or row.get("baseline_assessed") is not True
+                        or not isinstance(row.get("day"), int) or row["day"] >= T
+                        or not isinstance(row["usual_systolic_bp_mmHg"], (int, float))):
+                    out.append("usual blood pressure lacks a dated assessed source")
         if c.get("on_oxygen") is not False:
             from haenv.p2.history import scale2
             if c.get("on_oxygen") is not True or not scale2(block.get("clinical_history_record")):

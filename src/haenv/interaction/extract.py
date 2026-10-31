@@ -11,6 +11,9 @@ SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.runtime import runtime_text
+from haenv.i18n.text import L as _L, text_of as _rt
+
 from haenv.resources.yamlcache import load_yaml as _cached_yaml
 
 import json
@@ -62,33 +65,7 @@ class ExtractedCase:
 
 #: The extraction prompt: only what the text states, never gold or knobs, `null` when unsure.
 #: Enumerations are filled from the kernel's tables at call time, never hard-coded.
-EXTRACT_PROMPT = """你是一个**信息抽取器**,不是医生。只从下面这段病例描述里**摘录**事实。
-
-严格规则:
-1. **只摘录文本里明确写了的**。文本没写的一律填 `null`,**绝对不要推断、不要补常识**。
-2. **不要给诊断、不要判断严重程度、不要建议检查** —— 那些不是你的任务。
-3. 日期一律转成「距病程起点的第几天」的整数。文本只给相对描述(如"两周后")时按之换算;
-   完全无法定位时间的主诉,`day` 填 null。
-
-输出**纯 JSON**,不要 ```、不要解释:
-{{
-  "disease": "{diseases} 之一,或 null",
-  "age_range": "如 45-49,或 null",
-  "sex": "M|F|null",
-  "bmi": 数字或 null,
-  "comorbidities": ["..."] 或 [],
-  "drug": "**必须是这几个之一**(病例里若是中文名/商品名,换成对应的这个英文名):{drugs};都不是则 null",
-  "dose_steps": [数字] 或 [],
-  "devices": [{devices} 的子集] 或 [],
-  "start_weight": 数字或 null,
-  "nadir_weight": 数字或 null,
-  "symptoms": [{{"day": 整数或 null, "text": "主诉原话", "context": "补充情境,没有则空串"}}]
-}}
-
-病例描述:
----
-{text}
----"""
+EXTRACT_PROMPT = _L('runtime.interaction.extract.module.1')
 
 
 def _parse_json(s: str) -> dict:
@@ -210,7 +187,7 @@ def extract_patient_facts(text: str, case_id: str, model: str = "gemini-3.1-pro"
     # The prompt lists the kernel's drug names: an unrecognized name makes `drug_pkpd()` return
     # None, which silently skips the dose-rung check and the dosing-frequency lookup.
     _drg = "|".join(sorted(k for k in DRUG_PKPD if k != "glp1"))   # glp1 is a drug family name, not a drug
-    _resp, _src = _complete(EXTRACT_PROMPT.format(
+    _resp, _src = _complete(runtime_text(EXTRACT_PROMPT).format(
         text=text, diseases=_dis, devices=_dev, drugs=_drg),
         model, cfg, offline=offline)
     got = _parse_json(_resp)
@@ -220,25 +197,23 @@ def extract_patient_facts(text: str, case_id: str, model: str = "gemini-3.1-pro"
               "dose_steps", "devices", "start_weight", "nadir_weight", "symptoms"):
         v = got.get(k)
         if v is None or v == [] or v == "":
-            warns.append(f"{k}: 文本里没有 ⇒ 不写进 raw(不填默认值)")
+            warns.append(_rt('runtime.interaction.extract.extract_patient_facts.1', s0=k))
             continue
         raw[k] = v
         led.stamp(k, "source_text", by=_src,
-                  note="LLM 抽取,非判定"
-                       + ("(重放:这一份不是本次调模型得到的)"
+                  note=_rt('runtime.interaction.extract.extract_patient_facts.2')
+                       + (_rt('runtime.interaction.extract.extract_patient_facts.3')
                           if _src.startswith("replay:") else ""))
     # `symptoms` without a day are dropped, never given a guessed day. Values outside the kernel
     # vocabulary are reported, never silently dropped.
     _bad_dev = [d for d in (raw.get("devices") or []) if d not in KNOWN_DEVICES]
     if _bad_dev:
-        warns.append(f"devices: {_bad_dev} 不在内核 KNOWN_DEVICES({_dev})里 ⇒ 剔除")
+        warns.append(_rt('runtime.interaction.extract.extract_patient_facts.4', s0=_bad_dev, s1=_dev))
         raw["devices"] = [d for d in raw["devices"] if d in KNOWN_DEVICES]
     if raw.get("drug") and not drug_pkpd(str(raw["drug"])):
-        warns.append(f"drug: {raw['drug']!r} 在内核 DRUG_PKPD({_drg})里查不到 ⇒ "
-                     f"剂量梯级校验与给药频次都会被跳过(静默失效)")
+        warns.append(_rt('runtime.interaction.extract.extract_patient_facts.5', s0=raw['drug'], s1=_drg))
     if raw.get("disease") and raw["disease"] not in DISEASE_SIGNAL_DOMAIN:
-        warns.append(f"disease: {raw['disease']!r} 不在内核 DISEASE_SIGNAL_DOMAIN"
-                     f"({_dis})里 ⇒ 该例过不了 validate_premise")
+        warns.append(_rt('runtime.interaction.extract.extract_patient_facts.6', s0=raw['disease'], s1=_dis))
     # Context values not registered in `registry/vocab_context.yaml` are dropped at render time;
     # report them so the caller knows they will not reach the question.
     if raw.get("symptoms"):
@@ -248,17 +223,13 @@ def extract_patient_facts(text: str, case_id: str, model: str = "gemini-3.1-pro"
                            for s in raw["symptoms"] if s.get("context")})
             _unreg = _cv(_ctx) if _ctx else []
             if _unreg:
-                warns.append(f"context: {len(_unreg)}/{len(_ctx)} 条未登记在 "
-                             f"vocab_context.yaml ⇒ 会被默认丢弃(不夹带考点,但"
-                             f"原文那句情境不会进题面)。要它们进题面须显式定 facet。")
+                warns.append(_rt('runtime.interaction.extract.extract_patient_facts.7', s0=len(_unreg), s1=len(_ctx)))
         except Exception as _e:                                # noqa: BLE001
-            warns.append(f"context 词表覆盖查不了:{type(_e).__name__} —— "
-                         f"不要据此认为它们都已登记")
+            warns.append(_rt('runtime.interaction.extract.extract_patient_facts.8', s0=type(_e).__name__))
     if raw.get("symptoms"):
         keep = [s for s in raw["symptoms"] if isinstance(s.get("day"), int)]
         if len(keep) != len(raw["symptoms"]):
-            warns.append(f"symptoms: 丢掉 {len(raw['symptoms']) - len(keep)} 条无时点主诉"
-                         f"(不猜时间)")
+            warns.append(_rt('runtime.interaction.extract.extract_patient_facts.9', s0=len(raw['symptoms']) - len(keep)))
         raw["symptoms"] = keep
     return ExtractedCase(case_id, raw, {}, led, warns, extract_source=_src)
 
@@ -274,8 +245,7 @@ def extract_patient_facts(text: str, case_id: str, model: str = "gemini-3.1-pro"
 #: `distractor_level` is not sampled: high-intensity distraction injects events the density
 #: declaration does not account for (`event_density_mismatch`). Cases take the pipeline default.
 DISTRACTOR_NOT_SAMPLED_WHY = (
-    "高强度干扰会注入额外事件而密度声明未计入 ⇒ event_density_mismatch。"
-    "需先建模其对密度的贡献,另案处理。")
+    _L('runtime.interaction.extract.module.2'))
 
 
 def sample_knobs(case_id: str, n_symptoms: int, course_end_day: int | None = None,
@@ -325,7 +295,7 @@ def sample_knobs(case_id: str, n_symptoms: int, course_end_day: int | None = Non
     # Knobs are stamped `sampled`, never `source_text`: they are not in the text.
     for k in knobs:
         led.stamp(k, "sampled", by=f"rng:{case_id}",
-                  note="确定性抽样(同一 case_id 永远同一组),非文本抽取")
+                  note=_rt('runtime.interaction.extract.sample_knobs.1'))
     return knobs
 
 
@@ -338,7 +308,7 @@ def fill_gold_absent(case_id: str, ledger: ProvenanceLedger | None = None,
     """B-1: every gold field is recorded as `absent`; returns an empty `latent` fragment."""
     led = ledger or ProvenanceLedger(case_id)
     for f in fields:
-        led.stamp(f, "absent", note="B 路①:弃掉")
+        led.stamp(f, "absent", note=_rt('runtime.interaction.extract.fill_gold_absent.1'))
     return {}, led
 
 
@@ -365,16 +335,7 @@ def fill_gold_from_text(case_id: str, text: str, model: str = "gemini-3.1-pro",
 
     cfg = cfg or _cached_yaml(ROOT / "config.yaml")
     prompt = (
-        "只回答:下面这段病例描述里,**原文有没有明确写出一个鉴别诊断结论**?\n\n"
-        "🔴 **不算数的**(这几样是背景,不是诊断结论):\n"
-        "  · 原发病/基础病(如「主要疾病:obesity」「BMI 32」)—— 那是入组条件;\n"
-        "  · 用药、治疗方案、检查项目;\n"
-        "  · 症状描述本身。\n"
-        "**算数的**:一个明确下过的疾病判断,如「确诊为多囊卵巢综合征」「考虑库欣综合征」。\n\n"
-        "写了就照抄那个诊断名;**没写就返回 null**。**绝对不要根据症状推断。**\n"
-        '输出纯 JSON:{"diagnosis_stated_in_text": "诊断名或 null", '
-        '"quote": "支持它的原文片段(必须是原文里的连续片段),没有则 null"}\n\n'
-        f"---\n{text}\n---")
+        _rt('runtime.interaction.extract.fill_gold_from_text.1', s0=text))
     got = _parse_json(_complete(prompt, model, cfg, offline=offline)[0])
     led = ledger or ProvenanceLedger(case_id)
     latent: dict = {}
@@ -386,44 +347,38 @@ def fill_gold_from_text(case_id: str, text: str, model: str = "gemini-3.1-pro",
     _dx = (dx or "").strip()
     _reject = None
     if _dx and _base and _dx.lower() == _base:
-        _reject = f"转录到的「{_dx}」就是原发病(A 类 `disease`),不是鉴别诊断"
+        _reject = _rt('runtime.interaction.extract.fill_gold_from_text.2', s0=_dx)
     elif _dx and quote and not _quote_is_verbatim(quote, text):
-        _reject = f"引文在原文里找不到(不是转录是生成):{str(quote)[:50]!r}"
+        _reject = _rt('runtime.interaction.extract.fill_gold_from_text.3', s0=str(quote)[:50])
     elif _dx and not quote:
-        _reject = "给了诊断却给不出原文依据"
+        _reject = _rt('runtime.interaction.extract.fill_gold_from_text.4')
     if _dx and not _reject:
         latent["ddx_diagnosis"] = _dx
         led.stamp("ddx_diagnosis", "source_text", by=f"llm-transcribe:{model}",
-                  note=f"原文依据:{str(quote)[:60]}")
+                  note=_rt('runtime.interaction.extract.fill_gold_from_text.5', s0=str(quote)[:60]))
     else:
         led.stamp("ddx_diagnosis", "absent",
-                  note=_reject or "文本未明写诊断 ⇒ 不推断")
+                  note=_reject or _rt('runtime.interaction.extract.fill_gold_from_text.6'))
     # ---- fields opened by the input kind: the same verbatim check ----
     _rare = rarely_in_text(input_kind)
     _opened = RARELY_IN_TEXT - _rare
     if "ddx_outcome_label" in _opened:
         p2 = (
-            "只回答:下面这段病例文本里,**原文有没有明确写出这位患者最终的转归**"
-            "(目标事件到底发生了没有)?\n\n"
-            "写了就返回 `event_occurred` 或 `event_not_occurred`;"
-            "**没明确写就返回 null**。**绝对不要根据趋势或数值自己推断。**\n"
-            '输出纯 JSON:{"outcome_label": "event_occurred|event_not_occurred|null", '
-            '"quote": "支持它的原文片段(必须是原文里的连续片段),没有则 null"}\n\n'
-            f"---\n{text}\n---")
+            _rt('runtime.interaction.extract.fill_gold_from_text.7', s0=text))
         g2 = _parse_json(_complete(p2, model, cfg, offline=offline)[0])
         _ol = (g2.get("outcome_label") or "").strip()
         _q2 = g2.get("quote")
         if _ol not in ("event_occurred", "event_not_occurred"):
             # outside the binary enum => transcription failed; no normalization
             led.stamp("ddx_outcome_label", "absent",
-                      note=f"原文未明写转归(模型给 {_ol or 'null'!r})⇒ 不推断")
+                      note=_rt('runtime.interaction.extract.fill_gold_from_text.8', s0=_ol or 'null'))
         elif not _quote_is_verbatim(_q2, text):
             led.stamp("ddx_outcome_label", "absent",
-                      note=f"引文在原文里找不到(不是转录是生成):{str(_q2)[:50]!r}")
+                      note=_rt('runtime.interaction.extract.fill_gold_from_text.9', s0=str(_q2)[:50]))
         else:
             latent["ddx_outcome_label"] = _ol
             led.stamp("ddx_outcome_label", "source_text", by=f"llm-transcribe:{model}",
-                      note=f"原文依据:{str(_q2)[:60]}")
+                      note=_rt('runtime.interaction.extract.fill_gold_from_text.10', s0=str(_q2)[:60]))
     _stamp_remaining_gold(led, case_id, _rare, _opened, input_kind)
     return latent, led
 
@@ -439,8 +394,8 @@ def _stamp_remaining_gold(led: ProvenanceLedger, case_id: str,
         if f == "ddx_diagnosis" or f in opened:
             continue
         led.stamp(f, "absent",
-                  note=f"rarely_in_text({input_kind}):文本里一般没有,不许由推理补 ⇒ 弃掉"
-                  if f in rare else "本路只转录诊断名")
+                  note=_rt('runtime.interaction.extract._stamp_remaining_gold.1', s0=input_kind)
+                  if f in rare else _rt('runtime.interaction.extract._stamp_remaining_gold.2'))
     _unstamped = [f for f in GOLD_FIELDS if f not in led.stamps]
     if _unstamped:
         raise ExtractionError(
@@ -470,18 +425,7 @@ def fill_gold_llm(case_id: str, text: str, model: str = "gemini-3.1-pro",
     from haenv.world.wq import NO_ACTION_URGENCY
     from haenv.world.wq import RED_FLAG_URGENCY
     prompt = (
-        "你是内分泌科医生。根据下面这段病例描述给出裁定。**不确定就填 null**,"
-        "不要为了填满而猜。\n\n"
-        '输出纯 JSON:{"ddx_diagnosis":"最可能诊断或 null",'
-        '"ddx_aliases":["别名"],"ddx_tests":["应索取的检查"],'
-        '"ddx_specialty":["应转诊科室"],'
-        f'"ddx_urgency_mid":"{MID_URGENCY[0]}|{MID_URGENCY[1]}",'
-        '"ddx_red_flag":true/false,'
-        '"ddx_insufficient":true/false}\n\n'
-        f"⚠️ `ddx_urgency_mid` **只填中间那两档**({MID_URGENCY[0]}/{MID_URGENCY[1]}):"
-        f"急症({RED_FLAG_URGENCY})与无需临床动作({NO_ACTION_URGENCY})两端"
-        "由 `ddx_red_flag` 与病理归并方式**推导**,不由你填。\n\n"
-        f"---\n{text}\n---")
+        _rt('runtime.interaction.extract.fill_gold_llm.1', s0=MID_URGENCY[0], s1=MID_URGENCY[1], s2=MID_URGENCY[0], s3=MID_URGENCY[1], s4=RED_FLAG_URGENCY, s5=NO_ACTION_URGENCY, s6=text))
     got = _parse_json(_complete(prompt, model, cfg, offline=offline)[0])
     led = ledger or ProvenanceLedger(case_id)
     latent: dict = {}
@@ -489,43 +433,42 @@ def fill_gold_llm(case_id: str, text: str, model: str = "gemini-3.1-pro",
               "ddx_red_flag", "ddx_insufficient"):
         v = got.get(f)
         if v is None or v == [] or v == "":
-            led.stamp(f, "absent", note="模型自称不确定 ⇒ 弃掉,不补默认值")
+            led.stamp(f, "absent", note=_rt('runtime.interaction.extract.fill_gold_llm.2'))
             continue
         latent[f] = v
-        led.stamp(f, "llm", by=model, note="LLM 判定,非转录")
+        led.stamp(f, "llm", by=model, note=_rt('runtime.interaction.extract.fill_gold_llm.3'))
     # `clinician_action_warranted`: same rule and constant as `wq.derive_clinician_warranted`.
     from haenv.world.wq import NO_UNIFIED_PATHOLOGY
     _dx = str(latent.get("ddx_diagnosis") or "")
     _independent = bool(_dx) and NO_UNIFIED_PATHOLOGY in _dx
     latent["ddx_clinician_warranted"] = not _independent
     led.stamp("ddx_clinician_warranted", "derived",
-              by="wq.derive_clinician_warranted(同规则)",
-              note=("rule=join_gold=" + ("independent(无统一病理)⇒ 无需临床动作"
-                                         if _independent else "unified(存在可抓的病)⇒ 需要临床动作")
-                    + " —— 与 wq.derive_clinician_warranted 同一条规则,不问模型"))
+              by=_rt('runtime.interaction.extract.fill_gold_llm.4'),
+              note=("rule=join_gold=" + (_rt('runtime.interaction.extract.fill_gold_llm.5')
+                                         if _independent else _rt('runtime.interaction.extract.fill_gold_llm.6'))
+                    + _rt('runtime.interaction.extract.fill_gold_llm.7')))
     # `urgency`: the three branches of `wq.derive_urgency`.
     _mid = got.get("ddx_urgency_mid")
     if latent.get("ddx_red_flag") is True:
         latent["ddx_urgency"] = RED_FLAG_URGENCY
-        _u_note = f"rule=red_flag_present ⇒ {RED_FLAG_URGENCY}(定义即急症)"
+        _u_note = _rt('runtime.interaction.extract.fill_gold_llm.8', s0=RED_FLAG_URGENCY)
     elif latent["ddx_clinician_warranted"] is False:
         latent["ddx_urgency"] = NO_ACTION_URGENCY
-        _u_note = f"rule=无需临床动作 ⇒ {NO_ACTION_URGENCY}"
+        _u_note = _rt('runtime.interaction.extract.fill_gold_llm.9', s0=NO_ACTION_URGENCY)
     elif _mid in MID_URGENCY:
         latent["ddx_urgency"] = _mid
-        _u_note = ("primitive=中档轻重由病种决定(两条双条件都不适用);"
-                   "模型只判了这一档,两端仍是推出来的")
+        _u_note = (_rt('runtime.interaction.extract.fill_gold_llm.10'))
     else:
         _u_note = None
     if _u_note:
         _derived = (latent.get("ddx_red_flag") is True
                     or latent["ddx_clinician_warranted"] is False)
         led.stamp("ddx_urgency", "derived" if _derived else "llm",
-                  by=("wq.derive_urgency(同规则)" if _derived else model),
+                  by=(_rt('runtime.interaction.extract.fill_gold_llm.11') if _derived else model),
                   note=_u_note)
     else:
         led.stamp("ddx_urgency", "absent",
-                  note=f"两端双条件都不适用,而模型没给出中档值({_mid!r})⇒ 弃掉,不猜")
+                  note=_rt('runtime.interaction.extract.fill_gold_llm.12', s0=_mid))
     # ---- check both dual conditions before emitting ----
     _u, _rf, _cw = (latent.get("ddx_urgency"), latent.get("ddx_red_flag"),
                     latent["ddx_clinician_warranted"])
@@ -540,7 +483,7 @@ def fill_gold_llm(case_id: str, text: str, model: str = "gemini-3.1-pro",
                 f"({NO_ACTION_URGENCY} ⟺ no clinical action needed) — refusing to emit self-contradictory gold")
     for f in GOLD_FIELDS:
         if f not in led.stamps:
-            led.stamp(f, "absent", note="本路不产出该字段")
+            led.stamp(f, "absent", note=_rt('runtime.interaction.extract.fill_gold_llm.13'))
     return latent, led
 
 
@@ -566,7 +509,7 @@ def fill_gold_clinician(case_id: str, annotations: dict,
             latent[f] = annotations[f]
             led.stamp(f, "clinician", by=annotator)
         else:
-            led.stamp(f, "absent", note="医生未标注该字段")
+            led.stamp(f, "absent", note=_rt('runtime.interaction.extract.fill_gold_clinician.1'))
     return latent, led
 
 
@@ -596,11 +539,11 @@ def validate_extracted(ec: ExtractedCase, cfg: dict | None = None
     try:
         spec = premise_spec(cs, T=int(ec.latent.get("index_time_T") or 84))
     except Exception as e:                                        # noqa: BLE001
-        return False, [f"premise_spec 构不出来:{type(e).__name__} {e}"]
+        return False, [_rt('runtime.interaction.extract.validate_extracted.1', s0=type(e).__name__, s1=e)]
     try:
         ok, v = validate_premise(LatentPremise(**spec))
     except Exception as e:                                        # noqa: BLE001
-        return False, [f"LatentPremise 构不出来:{type(e).__name__} {e}"]
+        return False, [_rt('runtime.interaction.extract.validate_extracted.2', s0=type(e).__name__, s1=e)]
     return ok, list(v)
 
 
@@ -643,12 +586,11 @@ def text_to_case(text: str, case_id: str, gold_path: str = "absent",
     ec.ledger = led
     ok, viol = validate_extracted(ec, cfg=cfg)
     if not ok:
-        ec.warnings.append(f"validate_premise 不过:{viol}")
+        ec.warnings.append(_rt('runtime.interaction.extract.text_to_case.1', s0=viol))
     inv = invented_fields(ec, cfg=cfg)
     if inv:
         ec.warnings.append(
-            f"下游会替这些字段编一个值(原文里没有):{inv} —— "
-            f"生成出来的病人在这几项上不来自这份文本。补标注或退回文本。")
+            _rt('runtime.interaction.extract.text_to_case.2', s0=inv))
     return ec
 
 

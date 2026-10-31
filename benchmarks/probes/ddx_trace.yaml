@@ -14,7 +14,7 @@ retired_reason: >-
 retired_record: 见本文件抬头
 framing_ref: DDX_TRACE_PROMPT
 # Pinned to `DDX_PROMPT`'s fingerprint; loading fails if the two diverge.
-framing_sha256: 6a83f123127e8d7b
+framing_sha256: 9872c795895671d7
 answer_space: free            # the diagnosis name is free text (no disease names in the driver vocabulary)
 hint_level: 0                 # only requires "writing out the process", with no solving hints given
 budget: {max_rounds: 1}

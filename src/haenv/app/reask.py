@@ -7,6 +7,7 @@ from pathlib import Path
 
 from haenv.app.arguments import model_cap, positive_int
 from haenv.interaction.reask import ARMS
+from haenv.i18n.text import MissingText
 
 
 def parser():
@@ -65,5 +66,5 @@ def main(argv=None):
                        tool_choice=args.tool_choice, allow_settings_override=args.allow_settings_override)
             print(json.dumps({"rows_written": len(rows), "output": str(args.out)}, ensure_ascii=False))
         return 0
-    except (ValueError, OSError) as error:
+    except (ValueError, OSError, MissingText) as error:
         ap.exit(2, f"haenv reask: {error}\n")

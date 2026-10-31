@@ -1,0 +1,9 @@
+# Medication lines and medication-record events (zh).
+med.line: "{name} {dose} {unit} {freq}"
+med.line_per_day: "{name} {dose} {unit}/日"
+med.event.before_record: "长期服用 {dose} {unit}（记录起点前已在用）"
+med.event.start: "起用 {dose} {unit}"
+med.event.restart: "恢复 {dose} {unit}"
+med.event.hold: "暂停（原剂量 {dose} {unit}）"
+med.event.stop: "停用（原剂量 {dose} {unit}）"
+med.event.dose_change: "剂量 {prev} → {new}"

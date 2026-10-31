@@ -221,12 +221,26 @@ def _run_tasks(fn, tasks: list, out_path, key_of=None, geometry_of=None, *,
     they complete, so a killed run keeps every finished cell; the returned list is in task
     order.
     """
+    from haenv.i18n.runtime import read_batch_language, validate_rows_language
+    from haenv.i18n.text import render_fingerprint, judge_fingerprints
+    batch_path = Path(out_path).parent
+    language = read_batch_language(batch_path)
+    meta_path = batch_path / 'batch.json'
+    meta = json.loads(meta_path.read_text(encoding='utf-8')) if meta_path.is_file() else {}
+    render_sha = meta.get('render_sha16') or render_fingerprint(language)
+    judge_stamps = judge_fingerprints(language)
+
     def _emit(row: dict) -> dict:
         """Persist and flush one row. Also stamps `judging_sha16`, so a resumed run that spans a
         judging-code change can be detected (`report.rank_ddx`).
         """
         from haenv.provenance.anchor import judging_fp_cached
         row.setdefault("judging_sha16", judging_fp_cached())
+        row.setdefault('language', language)
+        validate_rows_language([row], language)
+        row.setdefault('render_sha16', render_sha)
+        for field, stamps in judge_stamps.items():
+            row.setdefault(field, stamps)
         row.setdefault("geometry", "<unrecorded>")
         with _WRITE_LOCK:
             with open(out_path, "a", encoding="utf-8") as f:
@@ -253,6 +267,9 @@ def run_eval(job, cfg, built: dict, resume: bool = True, *,
     ctx.single_cases.clear()
     out_path = job.results_file
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    from haenv.i18n.runtime import select_batch_language, require_assets
+    language = select_batch_language([out_path.parent], requested=getattr(job, 'language', None))
+    require_assets(language)
     ctx.resp_path = out_path.parent / "responses.jsonl"      # raw responses persist in the same batch as eval
     from haenv.app.artifacts.batch import provenance_fields
     _wref = provenance_fields(cfg, job_path=getattr(job, "path", None), root=job.root)

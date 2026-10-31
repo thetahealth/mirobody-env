@@ -10,6 +10,8 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import J, L
+
 import hashlib
 
 from haenv.p2 import background as B
@@ -60,7 +62,7 @@ BANDS = {
 #: ("vital": a single 3 in respiratory rate, heart rate or systolic BP and no SpO2 3, R3a;
 #: "temp": a single 3 with suspected hypothermia (<35.0, not merely NEWS2 <=35.0), R3a)
 INF_TARGET = {"inf_n7": (7, 9, None), "inf_n56": (5, 6, None), "inf_v3": (3, 4, "vital"), "inf_s3": (3, 4, True),
-              "inf_t35": (3, 4, "temp"), "inf_n14": (1, 4, False), "inf_n0": (0, 0, False)}
+              "inf_t35": (3, 4, "temp"), "inf_n14": (1, 4, False), "inf_n14m": (1, 4, False), "inf_n0": (0, 0, False)}
 
 
 def _points_vector(tier: str, stratum: str, rng: _Rng, beta_blocker: bool = False) -> dict:
@@ -89,6 +91,11 @@ def _points_vector(tier: str, stratum: str, rng: _Rng, beta_blocker: bool = Fals
             continue
         if need3 is False and top >= 3:
             continue
+        # These interiors map directly to NG253 medium-risk bands. Atypical
+        # temperature is zero here, so masked items need RR or SBP instead.
+        medium = p["hr"] in (1, 2) or p["rr"] == 2 or p["sbp"] == 2
+        if tier in ("inf_n14", "inf_n14m") and medium != (tier == "inf_n14m"):
+            continue
         return p
     raise Unrealizable(f"no NEWS2 vector for {tier}/{stratum}")
 
@@ -103,9 +110,9 @@ def _value(q: str, pts: int, rng: _Rng, atypical: bool = False):
 # ------------------------------------------------------------------------------ the block
 
 SCENARIO_CONDITION = {"heart_failure": "heart_failure", "hypoglycaemia": "T2D", "hypertension": "hypertension"}
-MEDS = {"bb": "比索洛尔 5 mg 每日一次", "bb2": "美托洛尔缓释片 47.5 mg 每日一次", "insulin": "甘精胰岛素 每晚皮下注射",
-        "su": "格列美脲 每日早餐前", "furosemide": "呋塞米 20 mg 每日一次", "amlodipine": "氨氯地平 5 mg 每日一次",
-        "metformin": "二甲双胍 每日两次", "sglt2i": "达格列净 10 mg 每日一次"}
+MEDS = {"bb": L("p2.med.bb"), "bb2": L("p2.med.bb2"), "insulin": L("p2.med.insulin"),
+        "su": L("p2.med.su"), "furosemide": L("p2.med.furosemide"), "amlodipine": L("p2.med.amlodipine"),
+        "metformin": L("p2.med.metformin"), "sglt2i": L("p2.med.sglt2i")}
 #: how each listed drug shows on the visible block (this module renders every visible stream of the item)
 STREAM_EFFECT = {
     "bb": "resting heart rate 6 bpm lower; the AF rate lower",
@@ -220,7 +227,19 @@ def age_hi(patient: dict) -> int:
 
 
 DIZZY_SHARE = 0.5
-ANTIHTN = ("氨氯地平", "氯沙坦", "依那普利", "比索洛尔", "美托洛尔")
+#: antihypertensives of the world's drug table (a treated patient's blood-pressure notes)
+ANTIHTN = ("amlodipine", "losartan", "enalapril", "bisoprolol", "metoprolol")
+#: drugs that can cause the CGM lows of R4 / R5 / R11
+HYPO_DRUGS = ("insulin_glargine", "glimepiride", "gliclazide")
+
+
+def _drug_of(line) -> str | None:
+    """The world drug key of a medication-list line (a `MEDS` phrase or a `med_course.display` line)."""
+    from haenv.i18n.text import Msg
+    from haenv.world.clinical.med_course import line_drug
+    if isinstance(line, Msg) and line.kind == "lex" and line.key.startswith("p2.med."):
+        return WORLD_DRUG[line.key[len("p2.med."):]][0]
+    return line_drug(line)
 
 
 def realize(case_id: str, T: int, plan: dict, patient: dict) -> dict:
@@ -228,12 +247,19 @@ def realize(case_id: str, T: int, plan: dict, patient: dict) -> dict:
     want = R.table()["tiers"][plan["tier"]]["rule"]
     last = None
     for attempt in range(MAX_ATTEMPTS):
-        blk = _draw(case_id, T, plan, patient, attempt)
+        surface = {}
+        blk = _draw(case_id, T, plan, patient, attempt, surface)
         a = R.assess(blk)
         # An actionable single level-2 night cannot realize a watchful-waiting
         # scenario, even when its original first matching rule is unchanged.
         needs_history = plan["stratum"] != "trend" or R.assess(R.last_day_only(blk))["set"][0] not in a["set"]
         if a["rule"] == want and R.floor_of(a["set"]) == R.table()["tiers"][plan["tier"]]["floor"] and needs_history:
+            # The gold is fixed from structured patient state, before prose.
+            ck, bg = surface["checklist"], surface["background"]
+            blk["message"] = message(case_id, attempt, plan["tier"], plan["stratum"], plan["wording"],
+                                     ck, B.says(case_id, bg), B.on(plan))
+            from haenv.p2.context import render_message
+            render_message(blk, case_id, plan, _Rng("p2-context-message", case_id))
             return {"block": blk, "assess": a, "attempt": attempt}
         last = a["rule"]
     raise Unrealizable(f"{case_id}: {plan['tier']} wants {want}, last draw fired {last}")
@@ -244,7 +270,7 @@ def _mild_final(patient: dict, ck: dict) -> bool:
     return bool(ck.get(R.MILD) or patient.get("new_symptom_recent"))
 
 
-def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int) -> dict:
+def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: dict | None = None) -> dict:
     tier, stratum, wording = plan["tier"], plan["stratum"], plan["wording"]
     sc = R.table()["tiers"][tier]["scenario"]
     tier = R.table()["tiers"][tier].get("render_as", tier)
@@ -298,7 +324,7 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int) -> dict:
         ck[R.MILD] = True
     if sc == "af" and tier != "af_unstable" and u01("p2-palpitation", cid) < PALPITATION_SHARE:
         ck[R.MILD] = True                            # new palpitations: a mild new symptom (the item is not infection-only)
-    bg = B.active(cid, plan, set(known), diabetic, _mild_final(patient, ck), diabetic and any(m in a for a in meds for m in ("胰岛素", "格列")))   # the background factors of this item
+    bg = B.active(cid, plan, set(known), diabetic, _mild_final(patient, ck), diabetic and any(_drug_of(a) in HYPO_DRUGS for a in meds))   # the background factors of this item
     # ---- today's home check
     if sc == "infection":
         pv = _points_vector(tier, stratum, rng, bool(bb))
@@ -330,7 +356,7 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int) -> dict:
                 kind = "raised"
             s, di = _bp_pair(rng, kind)
             bp.append({"day": d, "time": tm, "systolic_mmHg": s, "diastolic_mmHg": di})
-    treated = any(a in m for m in meds for a in ANTIHTN)
+    treated = any(_drug_of(m) in ANTIHTN for m in meds)
     for r in bp:
         # a note on the way the reading was taken; drawn blind to the value, the day and the tier
         if B.on(plan) and u01("p2-bp-note", cid, r["day"], r["time"]) < B.spec()["notes"]["bp_row_rate"]:
@@ -403,7 +429,7 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int) -> dict:
         spo2n, skin = spo2n0 + rng.unif(-1, 1, 0), rng.unif(-0.2, 0.2, 1)
         alerts, wmax, note = 0, None, None
         if sc == "infection" and k > 0 and tier != "inf_n0":
-            sev = {"inf_n7": 1.0, "inf_n56": 0.8, "inf_v3": 0.6, "inf_s3": 0.6, "inf_t35": 0.6, "inf_n14": 0.4}[tier] * k / onset
+            sev = {"inf_n7": 1.0, "inf_n56": 0.8, "inf_v3": 0.6, "inf_s3": 0.6, "inf_t35": 0.6, "inf_n14": 0.4, "inf_n14m": 0.4}[tier] * k / onset
             rhr += (3 if bb else 14) * sev
             hrv -= 14 * sev
             steps *= max(0.15, 1 - 0.8 * sev)
@@ -441,18 +467,26 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int) -> dict:
                    **{k: None for k in nulls}})
     if sc == "af" and sum(r["irregular_rhythm_alerts"] for r in wd[-3:]) < 2:
         wd[-2]["irregular_rhythm_alerts"] = 2
-    said = dict(ck)                                   # the message speaks for the scenario only
+    if surface is not None:
+        # A symptom in the ledger updates the screen below; it does not invent
+        # another symptom in the current message (e.g. a cough for wrist pain).
+        surface.update(checklist=dict(ck), background=bg)
     if patient.get("new_symptom_recent"):
         ck[R.MILD] = True                             # a symptom the ledger records for today or the 3 days before
     compact_ck = {k: ck[k] for k in (R.HTN_SYMPTOM, R.DIZZY, R.HYPO_HELP, R.MILD)}
+    # Saved screens without this optional item remain readable: checklist_of
+    # requires the urgent/other symptom screen, and infection readers require
+    # explicit True. Absence means no evidence of suspicion, not a negative screen.
+    if sc == "infection":
+        compact_ck["suspected_infection_today"] = True
     compact_ck.update(urgent_screen_complete=True, urgent_symptoms=[k for k in R.R0_KEYS if ck[k]])
     device_notes = [{"day": r["day"], "text": r.pop("fit_note")} for r in wd if r.get("fit_note")]
     for r in wd:
         r.pop("fit_note", None)
-    block = {"today_day": T, "message": message(cid, attempt, tier, stratum, wording, said, B.says(cid, bg), B.on(plan)),
+    block = {"today_day": T,
             "intake_checklist": compact_ck, "background": {"known_conditions": known, "medications": meds},
             "home_check_today": check, "wearable_daily": wd, "home_bp_log": bp, "morning_weight": weights,
-            "cgm_nightly": cgm, "device_record": [{"day": T, "source": "佩戴与护理记录", "entries": device_notes}],
+            "cgm_nightly": cgm, "device_record": [{"day": T, "source": L("record.source.device_care"), "entries": device_notes}],
             "data_note": "SYNTHETIC data, evaluation only"}
     from haenv.p2.context import decorate
     return decorate(block, cid, plan, rng)
@@ -460,35 +494,60 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int) -> dict:
 
 # ------------------------------------------------------------------------------ the message
 
-OPEN = {"calm": ["应该没什么大事,就是顺便问一下。", "可能是我想多了,不想麻烦大家。", "家里人非让我来问问,我觉得还好。",
-                 "也不是什么急事,有空帮我看看就行。", "我自己感觉还行,就是想确认一下。"],
-        "neutral": ["想咨询一下最近的情况。", "把这几天的数据发过来,想听听建议。", "最近有点情况想问问。",
-                    "想请您帮忙看看最近的记录。", "这几天的情况跟您说一下。"],
-        "alarming": ["我真的很担心,是不是出什么大问题了?", "看着这些数据我心里特别慌,吓得睡不着。", "我很害怕,会不会很严重?",
-                     "家里人都说不对劲,我心里没底。", "我越看越紧张,一晚上没睡好。"]}
-CLOSE = {"calm": ["歇歇应该就好了吧。", "过两天大概就好了。", "估计就是最近累着了。", "不行我再观察观察。"],
-         "neutral": ["想知道下一步该怎么办。", "请帮我看看。", "麻烦给个建议。", "需要的话我再补充。"],
-         "alarming": ["我该怎么办啊?", "求求帮我看看。", "越想越怕。", "是不是要马上去医院?"]}
-LEAD = ["把记录发过来,请帮我看看。", "家里的测量和手表记录都在下面。", "想问问这些记录该怎么处理。",
-        "数据都在这里了,麻烦看一下。", "这几天的记录我都整理好了。", "不知道这些数要不要紧。"]
+OPEN = {"calm": [L("p2.say.open.calm.0"), L("p2.say.open.calm.1"), L("p2.say.open.calm.2"),
+                 L("p2.say.open.calm.3"), L("p2.say.open.calm.4")],
+        "neutral": [L("p2.say.open.neutral.0"), L("p2.say.open.neutral.1"), L("p2.say.open.neutral.2"),
+                    L("p2.say.open.neutral.3"), L("p2.say.open.neutral.4")],
+        "alarming": [L("p2.say.open.alarming.0"), L("p2.say.open.alarming.1"), L("p2.say.open.alarming.2"),
+                     L("p2.say.open.alarming.3"), L("p2.say.open.alarming.4")]}
+CLOSE = {"calm": [L("p2.say.close.calm.0"), L("p2.say.close.calm.1"), L("p2.say.close.calm.2"), L("p2.say.close.calm.3")],
+         "neutral": [L("p2.say.close.neutral.0"), L("p2.say.close.neutral.1"), L("p2.say.close.neutral.2"), L("p2.say.close.neutral.3")],
+         "alarming": [L("p2.say.close.alarming.0"), L("p2.say.close.alarming.1"), L("p2.say.close.alarming.2"), L("p2.say.close.alarming.3")]}
+LEAD = [L("p2.say.lead.0"), L("p2.say.lead.1"), L("p2.say.lead.2"),
+        L("p2.say.lead.3"), L("p2.say.lead.4"), L("p2.say.lead.5")]
 #: share of AF items (no red flag) whose patient has noticed new palpitations; AF is often silent
 PALPITATION_SHARE = 0.5
 #: mild new symptom sentences of a scenario other than infection (default `MILD_SAY`)
-MILD_SAY_BY_SCENARIO = {"af": ["这两天偶尔觉得心慌,心跳有点乱。", "最近有时候心里扑腾扑腾的。", "这几天总觉得心跳不太规律。"]}
-MILD_SAY = ["偶尔咳两声,嗓子有点不舒服。", "最近有点咳嗽。", "这两天嗓子有点干痒。", "有点流鼻涕,鼻子不通气。",
-            "这两天有点咳嗽,痰不多。", "嗓子有点疼,别的还好。", "身上有点乏,嗓子也不太舒服。"]
+MILD_SAY_BY_SCENARIO = {"af": [L("p2.say.mild.af.0"), L("p2.say.mild.af.1"), L("p2.say.mild.af.2")]}
+MILD_SAY = [L("p2.say.mild.any.0"), L("p2.say.mild.any.1"), L("p2.say.mild.any.2"), L("p2.say.mild.any.3"),
+            L("p2.say.mild.any.4"), L("p2.say.mild.any.5"), L("p2.say.mild.any.6")]
 #: checklist symptom -> sentences; "*" = any wording
 SAY = {
-    "chest_pain_or_pressure": {"calm": ["胸口有点发紧,坐一会儿好像好点。"], "neutral": ["胸口像压着东西一样难受。"],
-                               "alarming": ["胸口压得特别难受。"], "atypical": ["胸口闷闷的,一直出虚汗,还有点想吐。"]},
-    "fainted": {"*": ["今天早上起床时眼前一黑晕倒了一下,很快就醒了。", "今天上厕所时突然晕过去了,家里人扶起来的。"]},
-    "new_confusion": {"*": ["家里人说我今天说话有点前言不搭后语。", "家里人说我今天有点糊涂,认错了人。"]},
-    "breathless_at_rest": {"*": ["坐着不动也觉得气不够用。", "躺着也觉得喘,晚上得垫高枕头。"]},
-    "one_sided_weakness_or_slurred_speech": {"*": ["右手拿筷子没劲,说话也有点含糊。", "左边胳膊腿发软,嘴角有点歪。"]},
-    R.HTN_SYMPTOM: {"*": ["头痛得厉害,看东西有点模糊。", "后脑勺胀痛得厉害,眼前发花。"]},
-    R.DIZZY: {"*": ["这两天站起来有点头晕。", "有时候觉得头晕晕的。", "头有点昏沉。"]},
-    R.HYPO_HELP: {"*": ["前几天夜里低血糖,是家里人喂了糖水才缓过来。", "前两天半夜低血糖,迷迷糊糊的,是老伴给我喂的糖。"]},
+    "chest_pain_or_pressure": {"calm": [L("p2.say.symptom.chest_pain_or_pressure.calm.0")], "neutral": [L("p2.say.symptom.chest_pain_or_pressure.neutral.0")],
+                               "alarming": [L("p2.say.symptom.chest_pain_or_pressure.alarming.0")], "atypical": [L("p2.say.symptom.chest_pain_or_pressure.atypical.0")]},
+    "fainted": {"*": [L("p2.say.symptom.fainted.k.0"), L("p2.say.symptom.fainted.k.1")]},
+    "new_confusion": {"*": [L("p2.say.symptom.new_confusion.k.0"), L("p2.say.symptom.new_confusion.k.1")]},
+    "breathless_at_rest": {"*": [L("p2.say.symptom.breathless_at_rest.k.0"), L("p2.say.symptom.breathless_at_rest.k.1")]},
+    "one_sided_weakness_or_slurred_speech": {"*": [L("p2.say.symptom.one_sided_weakness_or_slurred_speech.k.0"), L("p2.say.symptom.one_sided_weakness_or_slurred_speech.k.1")]},
+    R.HTN_SYMPTOM: {"*": [L("p2.say.symptom.r_htn_symptom.k.0"), L("p2.say.symptom.r_htn_symptom.k.1")]},
+    R.DIZZY: {"*": [L("p2.say.symptom.r_dizzy.k.0"), L("p2.say.symptom.r_dizzy.k.1"), L("p2.say.symptom.r_dizzy.k.2")]},
+    R.HYPO_HELP: {"*": [L("p2.say.symptom.r_hypo_help.k.0"), L("p2.say.symptom.r_hypo_help.k.1")]},
 }
+
+
+def r0_say_contract(say=None, table=None) -> list[str]:
+    """Every chest-pain SAY variant declares a sourced emergency qualifier.
+
+    A registry contract next to the phrase pool it checks, guarded by mutation
+    controls; it lives here so the judging segment imports no new world symbol.
+    """
+    say = SAY if say is None else say
+    table = R.table() if table is None else table
+    contract = table["r0_symptom_qualifiers"]["chest_pain_or_pressure"]
+    declared, allowed = contract["say"], contract["allowed"]
+    out = []
+    for variants in say["chest_pain_or_pressure"].values():
+        for phrase in variants:
+            key = getattr(phrase, "key", phrase)
+            if key not in declared:
+                out.append(f"{key}: no declared chest-pain qualifier")
+            elif declared[key] not in allowed:
+                out.append(f"{key}: unsupported chest-pain qualifier {declared[key]}")
+    # Invalid declarations are also defects when their variant is retired.
+    for key, qualifier in declared.items():
+        if qualifier not in allowed and not any(problem.startswith(f"{key}:") for problem in out):
+            out.append(f"{key}: unsupported chest-pain qualifier {qualifier}")
+    return out
 
 
 def say_pool(k: str) -> list[str]:
@@ -512,7 +571,7 @@ def message(cid: str, attempt: int, tier: str, stratum: str, wording: str, ck: d
             sym.append(rng.pick(say.get(key) or say["*"]))
     closing = rng.pick(CLOSE[wording])
     if not layer_on:
-        return "".join([opening, lead] + sym + [closing])
+        return J("sentences", [opening, lead] + sym + [closing])
     sym += list(extra)
     style, cut = u01("p2-msg-style", cid), B.spec()["message_shapes"]   # blind to the tier
     if style < cut["full"]:
@@ -523,4 +582,4 @@ def message(cid: str, attempt: int, tier: str, stratum: str, wording: str, ck: d
         parts = [B.pick(B.pool("who"), "p2-msg-who", cid), lead] + sym + [closing]
     else:
         parts = [B.pick(B.pool("log_lead"), "p2-msg-log", cid)] + sym + [closing]
-    return "".join(parts)
+    return J("sentences", parts)

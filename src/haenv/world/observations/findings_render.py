@@ -16,6 +16,8 @@ SYNTHETIC, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L, T as _tpl
+
 import functools
 import logging
 import math
@@ -1231,8 +1233,8 @@ def render_findings(case_id: str, profile: dict, vocab: dict, index_T: int,
             if normal_before_day is not None and int(day) < int(normal_before_day):
                 d = "normal"
             if spec.get("qualitative") or direction in QUALITATIVE_DIRECTIONS:
-                val = ("阴性" if d == "normal" else
-                       ("阳性" if direction == "positive" else "阴性"))
+                val = L("m2.obs.negative" if d == "normal" else
+                        ("m2.obs.positive" if direction == "positive" else "m2.obs.negative"))
             else:
                 if traj == "episodic" and k == 0:
                     d = "normal"
@@ -1576,10 +1578,12 @@ def _flag(case_id: str, val, ref: dict) -> str:
 
 def _panel_text(case_id: str, fid: str | None, spec: dict, val) -> str:
     ref = spec.get("ref") or {}
-    txt = (f"{spec.get('name_cn', fid)} {_fmt(fid, val)} {spec.get('unit', '')}"
-           + (f"(参考 {ref.get('low')}–{ref.get('high')})" if ref else ""))
-    fl = _flag(case_id, val, ref)
-    return (txt.strip() + (f" {fl}" if fl else "")).strip()
+    reference = _tpl("m2.panel.reference", low=ref.get("low"), high=ref.get("high")) if ref else ""
+    unit = spec.get("unit", "")
+    flag = _flag(case_id, val, ref)
+    return _tpl("m2.panel.body" if unit or ref else "m2.panel.without_unit",
+                name=spec.get("name_cn", fid), value=_fmt(fid, val), unit=unit,
+                reference=reference, flag=f" {flag}" if flag else "")
 
 
 def _entry(case_id: str, spec: dict, p: dict, day: int, val, k: int) -> dict:

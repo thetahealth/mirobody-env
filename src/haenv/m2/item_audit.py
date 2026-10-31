@@ -411,6 +411,10 @@ def collect(batch: pathlib.Path, job_path: pathlib.Path = M2_JOB) -> list[dict]:
     fx = core._findings()
     out = []
     for cid, raw in sorted(built.items()):
+        from haenv.i18n.identity import source
+        from dataclasses import asdict
+        from haenv_kernel.schema import RawCase
+        raw = RawCase(**source(asdict(raw)))
         T = int(raw.prediction_context["prediction_time_T"])
         src = lambda e, m=srcmap.get(cid, {}): m.get(str(e.get("evidence_id")), str(e.get("symptom")))
         sp, vp = build_instance(raw, T)
@@ -423,7 +427,7 @@ def collect(batch: pathlib.Path, job_path: pathlib.Path = M2_JOB) -> list[dict]:
                 reach.update(core.m2_menu_findings(m["target"], fx) if core.is_m2_case(raw)
                              else menu_findings(m["target"], fx))
         from haenv.m2.history import archive_keys
-        reach.update(archive_keys(pc=getattr(sp, "prediction_context", None) or {}))
+        reach.update(archive_keys(pc=getattr(sp, "prediction_context", None) or {}, ddx=ddx))
         jr = J[cid]["raw"]
         from haenv.world.generation.build import clinical_plan
         cp = clinical_plan(jr["disease"], jr["devices"], jr.get("comorbidities") or [], cid)
@@ -501,9 +505,16 @@ def bridge(batch: pathlib.Path, ref: pathlib.Path, frames: dict) -> dict:
         return {json.loads(x)["case_id"]: json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()}
 
     def gold(case):
+        from haenv.i18n.identity import source
+        case = source(case)
         adj = case['adjudication']
         out = {k: v for k, v in adj.items() if k not in ADJ_BOOKKEEPING
                and not (k == "history_dependency" and isinstance(v, dict) and v.get("active") is False)}
+        if "m2_evidence" in out:
+            from haenv.m2.evidence import gold as evidence_gold
+            expected = evidence_gold({"_external": {"m2_bridge": True}, "ddx": out.get("ddx") or {}})
+            if out["m2_evidence"] == expected:
+                out.pop("m2_evidence")
         if isinstance(out.get("m2_workup"), dict):
             from haenv.contracts.external_gold import SLOT
             from haenv.m2.core import workup_gold
@@ -532,6 +543,11 @@ def bridge(batch: pathlib.Path, ref: pathlib.Path, frames: dict) -> dict:
         return out
     A, B = load(ref / "payloads.jsonl"), load(batch / "payloads.jsonl")
     CA, CB = load(ref / "cases.jsonl"), load(batch / "cases.jsonl")
+    from haenv.i18n.identity import load as messages, restore
+    for directory, rows in ((ref, CA), (batch, CB)):
+        sources = messages(directory / "cases.jsonl")
+        for cid, row in rows.items():
+            row["case"] = restore(row["case"], sources.get(cid))
     res = {}
     for cid, f in frames.items():
         if cid not in A:

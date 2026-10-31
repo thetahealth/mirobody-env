@@ -45,6 +45,8 @@ def save_cases(path: Path, built: dict[str, RawCase], workers: int = 1) -> tuple
     from haenv.world.generation.build_pool import map_ordered
     path.parent.mkdir(parents=True, exist_ok=True)
     digests: dict[str, str] = {}
+    from haenv.i18n.identity import save
+    save(path, built)
     lines = map_ordered(_case_line, built.items(), workers)
     with open(path, "w", encoding="utf-8") as f:
         for cid, (digest, line) in zip(built, lines):
@@ -115,13 +117,15 @@ def load_cases(path: Path) -> dict[str, RawCase]:
     out: dict[str, RawCase] = {}
     if not path.is_file():
         return out
+    from haenv.i18n.identity import load, restore
+    messages = load(path)
     legacy = 0
     for line in path.read_text(encoding="utf-8").split("\n"):
         if not line.strip():
             continue
         try:
             rec = json.loads(line)
-            raw = RawCase(**rec["case"])
+            raw = RawCase(**restore(rec["case"], messages.get(rec["case_id"])))
             out[rec["case_id"]] = raw
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             log.error("[store] %s has a line that could not be read back (%s); that case will be regenerated", path, e)

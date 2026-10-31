@@ -5,9 +5,9 @@ from haenv.reporting.pack_readout import path
 
 
 def main_score(rows):
-    from haenv.p4.score import cc
+    from haenv.p4.score import cc, _credited
     rows = [r for r in rows if r.get("p4_class_gold") is not None]
-    return cc([r["p4_class_gold"] for r in rows], [r.get("p4_class_said") for r in rows]) if rows else None
+    return cc([r["p4_class_gold"] for r in rows], [_credited(r) for r in rows]) if rows else None
 
 
 def pack():

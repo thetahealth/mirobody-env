@@ -26,6 +26,8 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L
+
 import math
 
 from haenv.p3.gold import accepted
@@ -45,7 +47,7 @@ REFILL_WINDOW = 180    # the refill printout lists every pickup of the last 180 
 RENEWAL_MIN = 14       # a renewal visit comes 14 days to half the reassessment interval after the change before it
 K_SD = 0.075           # potassium visit-to-visit CV: real calibration split, adjacent-value abs difference median 0.31 mmol/L (SD ~0.33 at 4.2)
 K_TWO_DIGITS = 0.63    # share of laboratories reporting potassium to 0.01 mmol/L (real calibration split, decimal mix)
-OFF = ("off", "top_off", "early", "adh_low")
+OFF = ("off", "top_off", "early", "adh_low", "absorption", "off_ae")
 BENIGN_WINDOW = 365    # taken from the ledger's complaints of the last year
 PREDATING_PERSISTS = 0.4   # share of predating decoys that never stopped (ours: a pre-existing symptom that persists)
 AE_MILD = 0.3          # share of adverse-effect entries a patient calls mild (the rest moderate)
@@ -88,6 +90,8 @@ def _layout(case_id: str, plan: dict, T: int, j: int):
     tau = int(d["tau_rule_days"])
     timing = d["attribution"] == "timing"
     sub, pos = plan["subtype"], plan["position"]
+    if sub == "off_ae" or plan.get("interaction_family") == "course_control":
+        sub = "ae_dose"  # same exposure/onset distribution in active and resolved courses
     key = (case_id, j)
     xi = 0 if pos == "min" or (pos == "mid" and n == 2) else n - 1 if pos == "top" else 1 + int(_u("mid", *key) * (n - 2))
     if "tolerated_rung" in plan:
@@ -95,6 +99,8 @@ def _layout(case_id: str, plan: dict, T: int, j: int):
     if (sub == "early" or (sub == "ae_dose" and timing)) and xi == 0:
         xi = 1                          # the decisive change is an increase: not on the lowest rung
     starts = [k for k in d["start_rungs"] if k <= xi]
+    if not starts:
+        return None
     want = xi - int(plan["n_inc"])
     si = min(starts, key=lambda k: (abs(k - want), k))
     if (sub == "early" or (sub == "ae_dose" and timing)) and si == xi:
@@ -115,7 +121,7 @@ def _layout(case_id: str, plan: dict, T: int, j: int):
         else:
             si = min(max(0, xi - sum(steps)), max(d["start_rungs"]))
             xi = si + sum(steps)
-        if enabled(plan) and plan["drug"] in ("enalapril", "gliclazide"):
+        if enabled(plan) and (plan["drug"] in ("enalapril", "gliclazide") or d.get("preserve_requested_dose")):
             # A desired history count cannot silently replace today's dealt
             # dose with a higher one. Realize only the increases reachable
             # from a permitted starting dose to the actual requested rung.
@@ -269,7 +275,7 @@ def _refills(case_id: str, plan: dict, lay: dict, T: int, j: int):
     from haenv.world.labworld.meds import carry_in
     from haenv.world.labworld.meds import rule
     sub = plan["subtype"]
-    low = sub == "adh_low"
+    low = sub in ("adh_low", "on_low")
     supply = int(plan["supply"])
     a_norm = round(0.88 + 0.10 * _u("an", case_id, j), 3)
     a_low = round(0.50 + 0.249 * _u("al", case_id, j), 3)
@@ -277,6 +283,7 @@ def _refills(case_id: str, plan: dict, lay: dict, T: int, j: int):
     p = [T - (15 + int(_u("last", case_id, j) * 11))]
     i = 0
     t0 = int(lay["t0"])
+    p[0] = max(t0, p[0])  # No dispensing can precede the initial prescription.
     lower = max(T - REFILL_WINDOW, t0)                   # the printout lists the last 180 days or since the start
     w0 = T - int(rule()["adherence_window_days"]) + 1
     from haenv.world.validation.difficulty_r2 import enabled
@@ -342,10 +349,14 @@ def _benign(case_id: str, ledger, T: int, drug_name: str, n: int, sex: str = "")
     from haenv.world.observations.events import symptom_lay_every
     from haenv.world.labworld.meds import meds
     from haenv.p3.plan import background_ok
+    from haenv.p3.textread import canonical
     reg, every, says = meds()["benign_complaints"], symptom_lay_every(), symptom_lay(sex)
+    reg = {canonical(k): v for k, v in reg.items()}
+    every = {canonical(k): v for k, v in every.items()}
+    says = {canonical(k): v for k, v in says.items()}
     seen, cand = set(), []
     for e in ledger or ():
-        t, day = e.get("symptom"), e.get("source_timestamp")
+        t, day = canonical(e.get("symptom")), e.get("source_timestamp")
         if (e.get("source_type") != "patient_reported_symptom" or t not in reg or t in seen
                 or not isinstance(day, int) or not T - BENIGN_WINDOW <= day < T
                 or not background_ok(drug_name, t, e.get("context"), *every.get(t, ()), sex=sex)):
@@ -356,20 +367,21 @@ def _benign(case_id: str, ledger, T: int, drug_name: str, n: int, sex: str = "")
         return None
     out = []
     for _h, t, day, ctx in sorted(cand)[:n]:
-        lay = says.get(t) or [t]
+        lay = says.get(t) or [L(t)]
         out.append({"kind": "benign", "symptom": lay[int(_u("lay", case_id, t) * len(lay))], "onset": int(day),
-                    "context": ctx, "cause": "unrelated", "severity": "轻",
-                    "status": "已缓解" if int(day) + int(reg[t]["days"]) < T else "持续至今"})
+                    "context": ctx, "cause": "unrelated", "severity": L("p3.severity.mild"),
+                    "status": L("p3.status.resolved" if int(day) + int(reg[t]["days"]) < T else "p3.status.ongoing")})
     return out
 
 
 def context_fits(d: dict, word: str, ctx: str) -> bool:
     """A predating situation is registered with the wordings it fits (`fits`; a bare situation fits
     every wording): orthostatic dizziness is told on standing up, not during a climb."""
+    from haenv.p3.textread import canonical
     for c in d.get("predating_contexts") or ():
         name, fits = (c, None) if isinstance(c, str) else (c["context"], c.get("fits"))
-        if name == ctx:
-            return fits is None or word in fits
+        if canonical(name) == canonical(ctx):
+            return fits is None or canonical(word) in {canonical(x) for x in fits}
     return False
 
 
@@ -416,7 +428,7 @@ def _confounders(case_id: str, plan: dict, lay: dict, T: int, others: list[tuple
     from haenv.p3.gold import natural_status
     reg = meds()["confounders"]
     d = drug(plan["drug"])
-    sev = lambda *k: "轻" if _u("cfsev", case_id, *k) < AE_MILD else "中"
+    sev = lambda *k: L("p3.severity.mild" if _u("cfsev", case_id, *k) < AE_MILD else "p3.severity.moderate")
     out = []
     for key, dose in others:
         spec = (reg["other_drug"] or {}).get(key)
@@ -425,7 +437,7 @@ def _confounders(case_id: str, plan: dict, lay: dict, T: int, others: list[tuple
             out.append({"kind": "confounder", "cause": "other_drug", "source_drug": key,
                         "symptom": sy[int(_u("odw", case_id, key) * len(sy))],
                         "onset": T - AE_AGO[0] - int(_u("odon", case_id, key) * (AE_AGO[1] - AE_AGO[0] + 1)),
-                        "context": "无明显诱因", "severity": sev(key), "status": "持续至今"})
+                        "context": L("p3.context.no_trigger"), "severity": sev(key), "status": L("p3.status.ongoing")})
     ill = reg["intercurrent"]
     win = int(ill["window_days"])
     if h01("p3cold", case_id) < 1.0 - math.exp(-float(ill["episodes_per_year"]) * win / 365.0):
@@ -435,7 +447,8 @@ def _confounders(case_id: str, plan: dict, lay: dict, T: int, others: list[tuple
                     "context": ill["settings"][int(_u("coldc", case_id) * len(ill["settings"]))],
                     "severity": sev("cold"), "status": natural_status(on, x["days"], T)})
     bg = (reg["background_symptom"] or {}).get(plan["drug"])
-    names = sorted(documented_contexts(d))
+    from haenv.p3.textread import canonical
+    names = sorted(documented_contexts(d), key=canonical)
     lo = int(lay["t0"]) + int(rule()["start_gray_days"])
     if bg and T - 1 >= lo and h01("p3bgs", case_id) < float(bg["rate"]):
         on = lo + int(_u("bgon", case_id) * (T - lo))
@@ -456,7 +469,7 @@ def _illness_visit(case_id: str, diary: list[dict], lay: dict, T: int) -> dict |
     taken = [int(x) for x in lay["visits"]] + [int(x) for x in lay["inc"]]
     if day <= int(lay["t0"]) or day >= T or any(abs(day - x) < 3 for x in taken):
         return None
-    return {"day": day, "reason": "感冒"}
+    return {"day": day, "reason": L("p3.illness.cold")}
 
 
 def _diary(case_id: str, plan: dict, lay: dict, T: int, j: int, ledger=None, sex: str = "", others=()) -> list[dict]:
@@ -466,7 +479,7 @@ def _diary(case_id: str, plan: dict, lay: dict, T: int, j: int, ledger=None, sex
     out = []
     words = list(d["ae_symptoms"])
     word = words[int(_u("aew", case_id) * len(words))]          # the patient's own wording (A17)
-    if sub == "ae_dose":
+    if sub in ("ae_dose", "off_ae") or plan.get("interaction_family") == "course_control":
         out.append({"kind": "drug_symptom", "symptom": word, "onset": lay["onset"], "cause": "dose_related"})
     elif sub == "unattributed":
         out.append({"kind": "drug_symptom", "symptom": word, "onset": lay["onset"], "cause": "unattributed"})
@@ -479,16 +492,18 @@ def _diary(case_id: str, plan: dict, lay: dict, T: int, j: int, ledger=None, sex
         persists = bg and _u("prep", case_id) < PREDATING_PERSISTS
         pw = words[int(_u("pre2", case_id) * len(words))] if bg else word
         out.append({"kind": "drug_symptom", "symptom": pw, "onset": on, "cause": "predating",
-                    "context": "无明显诱因" if persists else predating_context(d, pw, case_id), **({"persists": persists} if bg else {})})
+                    "context": L("p3.context.no_trigger") if persists else predating_context(d, pw, case_id), **({"persists": persists} if bg else {})})
     for e in out:
         # an adverse-effect entry is ongoing, mild (AE_MILD of them) or moderate, so the cause is not always the
         # most severe entry of the diary; the predating decoy is a resolved episode with a harmless cause
-        e["status"] = "已缓解" if e["cause"] == "predating" and not e.get("persists") else "持续至今"
+        e["status"] = L("p3.status.resolved" if e["cause"] == "predating" and not e.get("persists") else "p3.status.ongoing")
+        if plan.get("interaction_family") == "course_control" and e["cause"] == "dose_related":
+            e["status"] = L("p3.status.resolved")
         from haenv.world.validation.difficulty_r2 import enabled
         if enabled(plan) and plan["drug"] == "gliclazide" and e["cause"] in ("dose_related", "unattributed"):
-            e["status"] = "已缓解"
-            e["context"] = "当次进食后症状缓解，处方尚未调整"
-        e["severity"] = "轻" if bg and _u("aesev", case_id, e["cause"]) < AE_MILD else "中"
+            e["status"] = L("p3.status.resolved")
+            e["context"] = L("p3.context.food_relieved")
+        e["severity"] = L("p3.severity.mild" if bg and _u("aesev", case_id, e["cause"]) < AE_MILD else "p3.severity.moderate")
     # A20: the diary holds min(dealt count, the ledger's registered complaints) entries -- both
     # independent of the class -- and a drug symptom takes an ordinary entry's place; a ledger
     # without a registered complaint gives no diary (not emitted)
@@ -498,7 +513,7 @@ def _diary(case_id: str, plan: dict, lay: dict, T: int, j: int, ledger=None, sex
     n = min(int(plan.get("n_diary", 1)), len(ben))
     if not bg:
         return out[:n] + ben[:n - len(out[:n])]
-    return out + ben[:max(0, n - len(out))] + _confounders(case_id, plan, lay, T, list(others))
+    return out[:n] + ben[:max(0, n - len(out))] + _confounders(case_id, plan, lay, T, list(others))
 
 
 def k_digits(case_id: str) -> int:
@@ -697,6 +712,17 @@ def _realize_course(raw, case_id: str, plan: dict) -> dict:
             continue
         visits = _visits(case_id, lay, T, sub, j)
         seg = coverage_segments(rf["refills"], rf["a_before"], rf["a_last"], rf["supply"], lay["inc"])
+        administration = None
+        if enabled(plan) and plan["drug"] == "levothyroxine":
+            from haenv.p3.plan import specification
+            cfg = specification()["levothyroxine_absorption"]
+            if sub == "absorption" or _u("p3-supplement-record", case_id) < cfg["control_record_share"]:
+                administration = {"day": int(lay["t0"]), "drug": "levothyroxine",
+                                  "supplement": "calcium_carbonate", "drug_hour": 7,
+                                  "supplement_hour": 7 if sub == "absorption" else 12,
+                                  "text": L("p3.administration.calcium")}
+                if sub == "absorption":
+                    seg = [(day, value * cfg["absorption_fraction"]) for day, value in seg]
         steps = input_steps(plan["drug"], lay["line"], seg)
         X_T = response(steps, T, float(d["tau_truth_days"]))
         cm_j = cm and {**cm, "uacr": [cm["uacr"][0], _uacr_today(cm, d, X_T)]}
@@ -723,6 +749,11 @@ def _realize_course(raw, case_id: str, plan: dict) -> dict:
                        "background": True} if bg else {}), "subtype": sub, "class": plan["class"], "upper": upper, "supply": rf["supply"],
                    **({"comorbidity": cm_j} if cm else {}),
                    "params": {"r": round(r, 6), "y_u": round(y_u, 4), "y_T": round(y_T, 4), "zone": zone}}
+            blk["record_key"] = str(case_id)
+            if plan.get("interaction_family"):
+                blk["interaction_family"] = plan["interaction_family"]
+            if administration:
+                blk["administration_record"] = administration
             if enabled(plan):
                 blk["documented_course_only"] = True
                 blk["course_documentation_key"] = str(case_id)
@@ -758,6 +789,12 @@ def _realize_course(raw, case_id: str, plan: dict) -> dict:
                 continue                # no item sits on a rule line the clinic itself chose (w14-bg-p3)
             blk.update(**({"accept": accepted(blk, g)} if contract16 else {}), dip=rf["dip"], position=plan["position"], band=round(R, 6),
                        tau_rule=lay["tau"], s=lay["s"], start=lay["t0"], g3=g, layout_attempt=j, level_attempt=k)
+            if blk.get("interaction_family"):
+                from haenv.p3.interactions import receipt
+                control = receipt(blk)
+                if not control["pass"]:
+                    why["interaction_control"] = why.get("interaction_control", 0) + 1
+                    continue
             if d.get("renal_labs"):
                 blk["renal"] = _renal_ckd(case_id, visits, lay["t0"], cm, j) if cm else _renal(case_id, visits, j)
                 blk["k_digits"] = k_digits(case_id)

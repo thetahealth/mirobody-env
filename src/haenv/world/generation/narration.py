@@ -182,7 +182,8 @@ def append_chatter(ev: dict, case_id: str, used: set[str]) -> bool:
     opts = [t for t in pool if t not in used] or pool
     t = rng.pick(opts, "w4_chatter_text", case_id, eid)
     used.add(t)
-    ev[key] = f"{base}{d['chatter_joiner']}{t}"
+    from haenv.i18n.text import T, wrap
+    ev[key] = T("world.narration.chatter", base=wrap(base), aside=wrap(t))
     return True
 
 

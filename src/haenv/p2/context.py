@@ -5,6 +5,7 @@ No episode role is placed on the solver view. The clinical record carries the
 prescription dates, actual administration or the assessed baseline instead.
 """
 from __future__ import annotations
+from haenv.i18n.text import J, L
 
 from haenv.p2 import rules as R
 
@@ -25,7 +26,7 @@ def decorate(block, cid, plan, rng):
     sources = table()["phrasing"]["encounter_sources"]
     source = sources[int(uniform("history-source", cid) * len(sources))]
     titles = cfg["procedure_notes"][family]
-    row = dict(day=day, source=source, test=titles[int(uniform("p2-context-title", cid) * len(titles))])
+    row = dict(day=day, source=source, test=L(titles[int(uniform("p2-context-title", cid) * len(titles))]))
     acts = spec["acts"]
     check, screen = block["home_check_today"], block["intake_checklist"]
     if family == "head":
@@ -36,49 +37,69 @@ def decorate(block, cid, plan, rng):
                                               vomiting=False, persistent_headache=False))
         row.update(medication_name=rng.pick(cfg["anticoagulants"]), medication_class="anticoagulant",
                    treatment_start_day=day - 180, treatment_end_day=None if acts else day,
-                   result="处方延续，按原方案服用。" if acts else "既往处方已结束，后续不再服用。")
-        block["message"] += rng.pick(cfg["head_statement"])
+                   result=L("p2.ctx.result.rx_continued" if acts else "p2.ctx.result.rx_ended"))
     elif family == "chemo":
         screen.update(systemically_unwell_today=True, mild_new_symptom=True)
         check["temperature_c"] = rng.unif(*cfg["chemo_temp_c"])
-        row.update(condition="cancer", conclusion="已记录", treatment_class="systemic_anticancer",
+        row.update(condition="cancer", conclusion=L("hist.recorded"), treatment_class="systemic_anticancer",
                    treatment_given_day=day if acts else T - rng.unif(*cfg["chemo_recovered_age_days"], dp=0),
                    treatment_administered=True, course_ongoing=acts,
-                   result="本周期系统治疗已给药，仍在治疗期。" if acts else "系统治疗疗程已结束，血象复查恢复；目前未再接受治疗。")
-        block["message"] += rng.pick(cfg["unwell_statement"])
+                   result=L("p2.ctx.result.chemo_ongoing" if acts else "p2.ctx.result.chemo_ended"))
     elif family == "oxygen":
-        row.update(condition="hypercapnic_respiratory_failure", conclusion="已记录" if acts else "未记录",
+        row.update(condition="hypercapnic_respiratory_failure", conclusion=L("hist.recorded" if acts else "hist.not_recorded"),
                    blood_gas_confirmed=acts, clinical_scale=2 if acts else 1,
                    target_spo2=[88, 92] if acts else None,
-                   result="血气确认高碳酸呼衰，临床人员登记血氧目标；平时指夹读数在目标范围。" if acts else
-                          "慢阻肺随访，血气未证实高碳酸呼衰，无量表二授权。")
+                   result=L("p2.ctx.result.hypercapnia_target" if acts else "p2.ctx.result.copd_no_scale2"))
         check["spo2_pct"] = rng.unif(*cfg["oxygen_pct"], dp=0)
     elif family == "rate":
         screen["rate_medication_changed_recently"] = False
-        row.update(condition="sinus_bradycardia", conclusion="已记录", baseline_assessed=True,
+        row.update(condition="sinus_bradycardia", conclusion=L("hist.recorded"), baseline_assessed=True,
                    baseline_rate_bpm=cfg["assessed_rate_baseline_bpm"] if acts else cfg["recovered_rate_baseline_bpm"],
                    baseline_asymptomatic=True, rate_medication_unchanged=True,
-                   result="心电图为窦性慢心率，临床评估长期稳定，无相关症状，原随访计划延续。" if acts else
-                          "既往用药期间窦性慢心率，停用减慢心率的药后已恢复，随后多次心率在复核范围内。")
+                   result=L("p2.ctx.result.brady_stable" if acts else "p2.ctx.result.brady_recovered"))
         check["heart_rate_bpm"] = rng.unif(*cfg["sinus_rate_bpm"], dp=0)
     elif family == "rhythm":
-        row.update(condition="atrial_fibrillation", conclusion="已记录" if acts else "未记录",
-                   result="心电图证实房颤，心室率已控制，持续随访；症状和活动能力无变化。" if acts else
-                          "心电图为窦性心律伴房性早搏，未记录房颤。")
+        row.update(condition="atrial_fibrillation", conclusion=L("hist.recorded" if acts else "hist.not_recorded"),
+                   result=L("p2.ctx.result.af_confirmed" if acts else "p2.ctx.result.sinus_pac"))
         for r in block["wearable_daily"][-2:]:
             r["irregular_rhythm_alerts"] = 1
+    elif family == "pressure":
+        values = cfg["relative_bp_examples"]
+        screen.update(suspected_infection_today=True, mild_new_symptom=True)
+        usual = rng.unif(*values["usual_sbp_drop" if acts else "usual_sbp_unchanged"], dp=0)
+        current = rng.unif(*values["current_sbp"], dp=0)
+        row.update(baseline_assessed=True, usual_systolic_bp_mmHg=usual,
+                   result=L("p2.ctx.result.usual_pressure"))
+        # Repeated resting cuff observations show the trajectory independently
+        # of the archived usual value. Both roles use the same dates and fields.
+        for r in block["home_bp_log"]:
+            progress = max(0, r["day"] - (T - 3)) / 3
+            r.update(systolic_mmHg=round(usual + (current - usual) * progress),
+                     diastolic_mmHg=68)
+        check.update(systolic_bp_mmHg=current, **values["quiet_check"])
     elif family == "volume":
-        row.update(condition="heart_failure", conclusion="已记录",
-                   result="超声心动图结合专科评估，记录心力衰竭，持续随访。")
-        course = dict(day=course_day, source=source, test="用药核对", discharge_day=course_day,
-                   medication_name="呋塞米", previous_dose_mg=cfg["hf_diuretic_before_mg"],
+        row.update(condition="heart_failure", conclusion=L("hist.recorded"),
+                   result=L("p2.ctx.result.hf_documented"))
+        course = dict(day=course_day, source=source, test=L("p2.ctx.test.med_reconciliation"), discharge_day=course_day,
+                   medication_name=L("drug.furosemide"), previous_dose_mg=cfg["hf_diuretic_before_mg"],
                    current_dose_mg=cfg["hf_diuretic_current_mg"], dose_change_day=course_day,
-                   result="心衰出院后容量复评，原利尿剂按医嘱减量，继续每日晨重记录。")
+                   result=L("p2.ctx.result.hf_diuretic_reduced"))
     else:
         raise ValueError(f"unknown P2 clinical context {family}")
     block["clinical_history_record"] = [row]
     if family == "volume":
         block["clinical_history_record"].append(course)
+    return block
+
+
+def render_message(block, cid, plan, rng):
+    """Attach narrative only after the state has produced an accepted gold."""
+    family = R.table()["tiers"][plan["tier"]].get("context")
+    cfg = R.table()["clinical_context"]
+    key = {"head": "head_statement", "chemo": "unwell_statement",
+           "pressure": "unwell_statement"}.get(family)
+    if key:
+        block["message"] = J("sentences", [block["message"], rng.pick(cfg[key])])
     return block
 
 
@@ -100,10 +121,23 @@ def facts(block):
                         and isinstance(r.get("baseline_rate_bpm"), list)
                         and r["baseline_rate_bpm"][0] <= hr <= r["baseline_rate_bpm"][1] for r in rows)
     ck = R.checklist_of(block)
-    return dict(head_anticoag=bool(ck.get("head_injury_today") and current_anticoag
+    home = block["home_check_today"]
+    medium = R.table()["thresholds"]["ng253_medium"]
+    infection_medium = ck.get("suspected_infection_today") is True and (
+        any(medium[key][0] <= home[field] <= medium[key][1] for key, field in (
+            ("hr", "heart_rate_bpm"), ("rr", "respiratory_rate_per_min"), ("sbp", "systolic_bp_mmHg")))
+        or home["temperature_c"] < medium["temp_lt"])
+    usual = [r["usual_systolic_bp_mmHg"] for r in rows
+             if r.get("baseline_assessed") is True and r.get("day", T + 1) < T
+             and isinstance(r.get("usual_systolic_bp_mmHg"), (int, float))]
+    return dict(infection_medium_risk=infection_medium,
+                head_anticoag=bool(ck.get("head_injury_today") and current_anticoag
                                  and ck.get("current_prescriptions_reconciled") is True
                                  and ck.get("following_current_prescriptions") is True),
                 chemo_unwell=bool(ck.get("systemically_unwell_today") and ck[R.MILD] and recent_chemo),
+                relative_hypotension=bool(ck.get("suspected_infection_today") is True and usual
+                    and min(usual) - block["home_check_today"]["systolic_bp_mmHg"]
+                    > R.table()["thresholds"]["sepsis_sbp_drop_gt"]),
                 stable_rate=baseline_rate and ck.get("rate_medication_changed_recently") is False
                 and not (ck.get(R.DIZZY) or any(ck[k] for k in R.R0_KEYS)))
 

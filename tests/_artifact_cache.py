@@ -90,7 +90,8 @@ def inherited_inputs(world):
         path = Path(label)
         if path.is_relative_to(ROOT):
             rel = path.relative_to(ROOT).as_posix()
-            if any(rel == item or rel.startswith(item.rstrip("/") + "/") for item in prefixes):
+            if (any(rel == item or rel.startswith(item.rstrip("/") + "/") for item in prefixes)
+                    or world and rel.startswith("src/") and path.name == "__init__.py"):
                 paths.add(path)
     if not paths:  # Isolated cache-unit roots do not share the controller snapshot.
         for rel in prefixes:

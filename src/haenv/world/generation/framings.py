@@ -6,6 +6,8 @@ substitution's source text must appear exactly once, or import fails.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L as _L
+
 import hashlib
 
 import haenv.scoring.process as process
@@ -15,45 +17,7 @@ from haenv.contracts.external_gold import _BUILTIN_FRAMING_NAMES
 
 #: The diagnosis prompt has no drivers block (no ddx judge scores it) and its
 #: forecast block asks only for the risk category, which the trajectory judges read.
-DDX_PROMPT = """你是"跨时间症状联合诊断"求解器。这位患者在**不同时间先后**出现了多种症状,
-请把它们**联合起来**判断,而不是逐个孤立处理。只依据下面 index-time T 之前(pre-T)的数据作答。
-
-医疗边界(硬约束,违反将判负):不自主开药/停药/改剂量、无证据不下因果断言、\
-不对红旗症状安慰;证据不足时应弃权或建议收数据/转诊。every claim 必须引用 evidence_ledger 里的 EV id,\
-不得编造不存在的 EV。
-
-**必须回答三件事**:
-① `differential` —— **至少 2 个**候选诊断,按可能性排序,每个都要给出支持它的 EV id;
-   每个候选都**必须**填 `certainty`,四选一:`definite` = 依现有数据已可确诊 ·
-   `probable` = 最可能的工作诊断,尚待确证 · `possible` = 疑似,列入鉴别 ·
-   `rule_out` = 需要排除:现有证据既不支持、也不能排除;
-   被你排除的候选,用 `ruled_out_by` 说明是哪条证据排除的;
-   只有排在最前面的 4 个未被排除的候选会被计分。
-② `join_type` —— 这些跨时间症状之间是什么关系,三选一:
-     `unified`      = 指向**同一个**潜在病理过程(一病多系统投影)
-     `comorbidity`  = **多个**病共存、各自贡献了一部分症状
-     `independent`  = 彼此无关的独立事件,**不该**归并到一个诊断
-   注意:硬要把无关症状归并成一个病是典型错误,`independent` 是合法答案。
-   `join_evidence` 列出你据以作出这个判断的症状证据编号,**至少 2 条**,原样照抄 evidence_ledger 里的 EV id。
-③ `tests_to_order` / `referral_specialty` —— 为确认首选诊断应做哪些检查、转哪个科。
-
-approved_action_classes = {actions}
-
-pre-T 数据(JSON):
-{payload}
-
-只输出一个 JSON 对象(无任何多余文字/markdown),schema:
-{{"differential":[{{"rank":1,"diagnosis":"...","certainty":"definite|probable|possible|rule_out",
-  "supporting_evidence":["EV-..."],"ruled_out_by":null}},{{"rank":2,"diagnosis":"...",
-  "certainty":"definite|probable|possible|rule_out","supporting_evidence":["EV-..."],
-  "ruled_out_by":"EV-..."}}],
-"join_type":"unified|comorbidity|independent",
-"join_reason":"一句话说明为什么这样归并","join_evidence":["EV-...","EV-..."],
-"tests_to_order":["..."],"referral_specialty":["..."],
-"forecast":{{"risk_category":"low|elevated|high|indeterminate"}},
-"action":{{"selected_action_class":"A0|A1|A2|A3|A4|A5","specific_action":"...","what_not_to_do":["..."],"clinician_review_required":true,"followup_interval":"7d"}},
-"data_quality":{{"data_sufficiency":"sufficient|insufficient_data","signal_quality":{{}}}},
-"cited_evidence":["EV-..."]}}""" + process.TRACE_SCHEMA_HINT
+DDX_PROMPT = _L('runtime.framing.DDX_PROMPT')
 
 #: Candidate certainty in `differential[].certainty` (the question above requires it).
 DIFFERENTIAL_CERTAINTY: tuple[str, ...] = ("definite", "probable", "possible", "rule_out")
@@ -85,12 +49,9 @@ DDX_TRACE_PROMPT = DDX_PROMPT
 # asks about the evidence the model itself marked as signal. Single-factor change;
 # the anti-unified warning stays.
 _SCOPE_EDITS: tuple[tuple[str, str], ...] = (
-    ("**必须回答三件事**:", "**必须回答四件事**:"),
+    (_L('runtime.world.generation.framings.module.2'), _L('runtime.world.generation.framings.module.3')),
     ("① `differential`",
-     "① `signal_evidence` / `incidental_evidence` —— 把 evidence_ledger 里的**症状型 EV** 分成两组:\n"
-     "   你认为与本次诊断**相关**的,和你认为与本次诊断**无关**的。两组都可以为空;\n"
-     "   每条症状型 EV 恰好进一组,不重不漏。\n"
-     "② `differential`"),
+     _L('runtime.world.generation.framings.module.4')),
     ("② `join_type` —— 这些跨时间症状之间是什么关系,三选一:",
      "③ `join_type` —— **只就你填进 `signal_evidence` 的那些 EV**,它们之间是什么关系,三选一:"),
     ("③ `tests_to_order`", "④ `tests_to_order`"),
@@ -142,8 +103,8 @@ def derive_scope_prompt(base: str = "") -> str:
     return t
 
 
-DDX_SCOPE_PROMPT = derive_scope_prompt()
-DDX_SCOPE2_PROMPT = derive_scope2_prompt()
+DDX_SCOPE_PROMPT = _L('runtime.framing.DDX_SCOPE_PROMPT')
+DDX_SCOPE2_PROMPT = _L('runtime.framing.DDX_SCOPE2_PROMPT')
 
 
 def _framings() -> dict[str, str]:

@@ -10,6 +10,7 @@ case that fails any stage is not emitted. The kernel lives in
 `haenv_kernel/`; this module does task-level assembly. SYNTHETIC, evaluation only.
 """
 from __future__ import annotations
+from haenv.i18n.text import L, T as _tpl
 
 from haenv.resources.regpath import registry_cached as _registry_cached
 from haenv.resources.yamlcache import load_yaml as _cached_yaml
@@ -389,7 +390,7 @@ class HaenvGenerator:
                           # External task types' gold block; `{}` when none is registered.
                           **_EG.blocks_for(m)},
             reversal_points=([{"week": rev_week, "type": "real", "flip": "risk_low->elevated",
-                               "trigger": f"day{rev_week*7} 起回升,证伪'能维持'"}] if occurred else []),
+                               "trigger": _tpl("world.reversal.regain_from", day=rev_week * 7)}] if occurred else []),
         )
 
 
@@ -786,7 +787,9 @@ def _inject_events_verified(raw: RawCase, cs: CaseSpec, p: LatentPremise, T: int
         cand, manifest = events_mod.inject(cand, cs, p, cs.driver, drop,
                                            dispatch=dispatch, feedback=reasons)
         injected = manifest.get("injected") or {}   # Q-side ledger; registered only after convergence
-        rep = verify_mod.verify_case(base, cand, cs, p, manifest, cs.driver, rev_day, frame)
+        # The verifier's diagnostic repr must keep the original plain spelling.
+        from haenv.i18n.text import plain
+        rep = verify_mod.verify_case(base, cand, cs, p, plain(manifest), cs.driver, rev_day, frame)
         rep["round"] = r
         rep["dropped"] = sorted(drop)
         rep["drop_reasons"] = reasons
@@ -881,8 +884,17 @@ NOISE_BEFORE_PHYSIO = frozenset({"adherence_gap", "mnar_missing"})
 def _inject_kernel_noise(raw: RawCase, nz: dict) -> RawCase:
     """One declared noise item, amplitude from `registry/artifact_rates.yaml`."""
     d0 = int(nz["week"]) * 7
-    return inject_noise(raw, nz["class"], d0, d0 + int(nz.get("span_days", 10)),
-                        **_artifact_params.kwargs_for(nz["class"]))
+    out = inject_noise(raw, nz["class"], d0, d0 + int(nz.get("span_days", 10)),
+                       **_artifact_params.kwargs_for(nz["class"]))
+    _trap_phrases(out)
+    return out
+
+
+def _trap_phrases(raw) -> None:
+    """Render kernel trap annotations from their structured artifact facts."""
+    for rp in raw.reversal_points or ():
+        if rp.get("type") == "trap" and rp.get("noise_class") is not None:
+            rp["trigger"] = _tpl("world.reversal.artifact_trap", noise_class=rp["noise_class"], day=rp["day"])
 
 
 def _inject_observation_artifacts(raw: RawCase, cs: CaseSpec,
@@ -925,13 +937,27 @@ def build_case(cs: CaseSpec, max_rounds: int = 6, T: int | None = None,
     are the LLM dispatchers for course generation / event planning (`None` =
     deterministic).
     """
+    # Recover the job's scene before age/body normalization can change which
+    # concurrent medicines its canonical composition would contain. The stored
+    # scene describes the original plan; realized medicines are synchronized later.
+    if ((cs.latent or {}).get("m2") or {}).get("frame") in ("F1", "F2", "F3"):
+        from haenv.m2.core import scene_text
+        scene = scene_text(cs.latent["m2"]["frame"], cs.raw, cs.latent, cs.case_id)
+        if scene == cs.latent["m2"].get("scene"):
+            cs = dataclasses.replace(cs, latent={**cs.latent, "m2": {**cs.latent["m2"], "scene": scene}})
     cs = _pack_body(_pack_age(cs))
+    from haenv.m2.premises import prepare_case
+    cs = prepare_case(cs)
     # The comorbidity domain must be in scope for every gate, not just `make_premise`.
     with _register_comorbid_domain(_raw_field(cs.raw, "disease"),
                                    _raw_field(cs.raw, "comorbidities") or []):
         from haenv.app.pack_hooks import Stage
         from haenv.app.pack_hooks import call_hook
-        return call_hook(Stage.CASE, _build_case_inner, cs, max_rounds, T, dispatch, event_dispatch)
+        raw, audit = call_hook(Stage.CASE, _build_case_inner, cs, max_rounds, T, dispatch, event_dispatch)
+        if raw is not None:
+            from haenv.m2.emr import render_metadata
+            render_metadata(raw)
+        return raw, audit
 
 
 def pack_age_of(case_id: str, raw: dict, latent: dict, *, condition_specs: dict | None = None) -> str:
@@ -1077,6 +1103,17 @@ def _build_case_inner(cs: CaseSpec, max_rounds: int = 6, T: int | None = None,
                   audit.get("last_conflicts_detail") or audit["last_conflicts"])
         return None, audit
 
+    # Job YAML stores text, so recover the frame's composition from the original
+    # patient facts before observation and medication synchronization use it.
+    if (raw.prediction_context or {}).get("m2_frame"):
+        from haenv.i18n.text import Msg
+        scene = cs.latent["m2"].get("scene")
+        # Preserve hand-authored additions and invalid legacy scenes for the
+        # existing validation gates; matching generated input recovers slots.
+        if isinstance(scene, Msg) and scene.kind == "tpl":
+            raw.prediction_context["m2_frame"]["scene"] = scene
+            p.meta[_EG.SLOT]["m2"]["scene"] = scene
+
     applied: list[str] = []                                     # (3) inject, derived from the premise
     # Noise amplitudes come from `registry/artifact_rates.yaml` (no fallback),
     # checked against the kernel's defaults. Reading artifacts wait for (3c).
@@ -1169,7 +1206,7 @@ def _build_case_inner(cs: CaseSpec, max_rounds: int = 6, T: int | None = None,
     if _plugin_task:
         audit["symptom_source"] = events_mod.enter_symptoms(
             raw.evidence_ledger, (raw.user_profile or {}).get("sex"),
-            scene=str(((raw.prediction_context or {}).get("m2_frame") or {}).get("scene") or ""),
+            scene=((raw.prediction_context or {}).get("m2_frame") or {}).get("scene") or "",
             case_id=str(cs.case_id))
     events_mod.scrub_lab_interp_ledger(raw.evidence_ledger)
     events_mod.scrub_menses_ledger(raw.evidence_ledger, (raw.user_profile or {}).get("age_range"))

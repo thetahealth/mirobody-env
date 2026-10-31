@@ -28,14 +28,9 @@ CHANGE = ("uptitrate", "downtitrate", "switch")
 
 
 def parse_drug(said) -> str | None:
-    """Exact registered names or IDs; a different drug or a list is not an identification."""
-    from haenv.world.labworld.meds import drug
-    s = str(said or "").strip()
-    for key in ("gliclazide", "atorvastatin", "enalapril", "levothyroxine"):
-        name = drug(key)["display"]
-        if s.casefold() in (key, name.casefold(), name.split("（")[0].casefold()):
-            return key
-    return None
+    """Exact registry names or IDs; a different drug or a list is refused."""
+    from haenv.p3.policy import identify_drug
+    return identify_drug(said)
 
 
 def parse_class(said) -> str | None:

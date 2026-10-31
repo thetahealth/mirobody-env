@@ -13,8 +13,9 @@ design:
   measurement: 独立每次总CV对数误差，沿用三标准差界限；无按目标变化幅度调噪声。
   significance:
     ours: true
-    source: 主会话2026-10-15裁定；RCV沿用EFLM及EuBIVAS配对方法参数
-    reason: 每道非噪声题的打印表观变化必须严格超过原配对RCV；真实变化经适用方法校正与独立复核仍越线，方法或标本题校正/标准化复核后回到RCV内。不按题号删题，不修改原患者响应或偏差范围，由原供应规则补足。
+    source: p4_interpretation.yaml#answer_contract.sources.rcv; sources.comparison; analytical_cv
+    review: pending
+    reason: RCV是统计变化参考，不是来源分类边界。真实变化经适用方法校正与独立复核仍有同向支持；方法或标本题校正/标准化复核后回到RCV内，表观变化可在RCV内。不放大已登记患者响应或偏差范围。
   verification:
     ours: true
     source: sources.comparison; sources.glucose; sources.exercise; sources.biotin; sources.meat;
@@ -32,6 +33,8 @@ design:
     - biotin_tsh
     conditions: 新采血复核；按所列实际时刻采集，空腹且前12小时无熟肉、此前14日无剧烈运动，非输液侧闭合采血，无跨管转移、无溶血，30分钟内分离；所列平台和批号经比对，不使用生物素结合体系。结果按实际采血日登记，与所列原常规报告配对；急性异常当天复核并由医生评估。
   calendar:
+    source: ours; synthetic calendar, not an empirical frequency
+    review: pending
     ours: true
     reason: 新项目无可复用的患者级间隔估计；合成常规随访与既往复查间隔，按日期找最近同项目报告，不声明为经验分布。
     recent_gap_days: [28, 120]
@@ -39,6 +42,8 @@ design:
     remote_share: 0.6
     history_draws: [3, 9]
   effect_sampling:
+    source: rules (mechanism directions only); ours (synthetic response distributions)
+    review: pending
     ours: true
     reason: 文献支持方向和作用条件，通常不提供可跨患者外推的概率分布；以下范围用于合成患者响应或标本偏移，不冒称真实分布或额外临床阈值。真实病程/药物响应从0起连续采样：有暴露并不保证较大化验反应，不设置任意最小升降幅；零或不能从独立观测辨认的反应不发射为真实变化题。
 sources:
@@ -131,6 +136,8 @@ sources:
     url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=0178ea2e-2c79-b97b-e063-6394a90ac145
 analytes:
   creatinine:
+    source: sources.eucr; rules; ours (synthetic baseline)
+    review: pending
     cv_source: eucr
     note: 保留原酶法CVA1.1%、Jaffe4.4%、CVI4.5%（原合成近似）。
     baseline: [55, 110]
@@ -138,6 +145,8 @@ analytes:
     pre: [meat_meal, infusion_sampling]
     method: [jaffe_enzymatic_switch, platform_calibration, reagent_lot]
   potassium:
+    source: sources.eflm; rules; ours (synthetic baseline)
+    review: pending
     cv_source: eflm
     cvi: 0.039
     cva: 0.0041
@@ -147,6 +156,8 @@ analytes:
     pre: [hemolysis, edta_contamination, cold_delayed_separation, infusion_sampling]
     method: [platform_calibration, reagent_lot]
   glucose:
+    source: sources.eflm; rules; ours (synthetic baseline)
+    review: pending
     cv_source: eflm
     cvi: 0.049
     cva: 0.0058
@@ -157,6 +168,8 @@ analytes:
     pre: [nonfasting, glucose_glycolysis, infusion_sampling]
     method: [platform_calibration, reagent_lot]
   tsh:
+    source: sources.eflm; rules; ours (synthetic baseline)
+    review: pending
     cv_source: eflm
     cvi: 0.179
     cva: 0.0146
@@ -166,6 +179,8 @@ analytes:
     pre: [sampling_time, infusion_sampling]
     method: [biotin_tsh, platform_calibration, reagent_lot]
   alt:
+    source: sources.eflm; rules; ours (synthetic baseline)
+    review: pending
     cv_source: eflm
     cvi: 0.124
     cva: 0.067
@@ -175,6 +190,8 @@ analytes:
     pre: [recent_exercise, infusion_sampling]
     method: [platform_calibration, reagent_lot]
   ck:
+    source: sources.eflm; rules; ours (synthetic baseline)
+    review: pending
     cv_source: eflm
     cvi: 0.141
     cva: 0.009
@@ -184,6 +201,8 @@ analytes:
     pre: [recent_exercise, infusion_sampling]
     method: [platform_calibration, reagent_lot]
   triglycerides:
+    source: sources.eflm; rules; ours (synthetic baseline)
+    review: pending
     cv_source: eflm
     cvi: 0.198
     cva: 0.018
@@ -231,32 +250,32 @@ medication_world_design:
   prior_established_days: 180
   acute_comparison_scope: 急性病/短程用药仅在新发状态与此前稳定读数之间判起病方向；当前1月至多年复查间隔不能把已结束的短程或急病恢复解释成相对于当时正常基线的反向改变。慢性处方中断则要求上次采血已在治疗中。
 rules:
-  meat_meal: {class: preanalytical, source: meat, sign: 1, effect_log: [0.08, 0.22], section: diet_record, exposure: 熟肉, window_hours: [1, 4], resting_hours: 36, rule: 熟肉在采血前1–4小时；两日前餐食不解释当日变化。}
-  infusion_sampling: {class: preanalytical, source: infusion, sign: -1, effect_log: [0.06, 0.25], section: report, rule: 同侧正在输生理盐水且采血在输液点近心侧；对侧采血不受此污染影响。}
-  hemolysis: {class: preanalytical, source: potassium, sign: 1, effect_log: [0.08, 0.25], section: report, rule: 钾报告游离血红蛋白超过该方法已验证界限；正常指数或其它项目不据此判断钾释放。}
-  edta_contamination: {class: preanalytical, source: edta, sign: 1, effect_log: [0.10, 0.30], section: report, rule: 从含K-EDTA管转移血液至生化管，有转移记录及异常低钙支持；仅采血管顺序异常不足以诊断。}
-  cold_delayed_separation: {class: preanalytical, source: potassium, sign: 1, effect_log: [0.08, 0.23], section: report, rule: 未分离细胞的标本冷藏并延迟分离；分离后的血浆冷藏不据此认定钾外漏。}
-  nonfasting: {class: preanalytical, source: lipids, secondary_source: glucose, sign: 1, effect_log: [0.05, 0.20], section: diet_record, exposure: 含热量餐食, window_hours: [1, 3], resting_hours: 12, rule: 两次采血前进食状态不一致，近期餐食会影响血糖/TG；不把常规非空腹TG称为错误，解释的是条件改变。}
-  glucose_glycolysis: {class: preanalytical, source: glucose, sign: -1, effect_log: [0.10, 0.28], section: report, rule: 普通未分离全血室温放置2–4小时；柠檬酸缓冲抑制管或30分钟内分离时不据此判定糖酵解。}
-  recent_exercise: {class: preanalytical, source: exercise, sign: 1, effect_log: [0.20, 0.80], section: outpatient_record, exposure: 抗阻训练, window_days: [1, 7], resting_days: 21, rule: 采血前1–7日不习惯的高强度抗阻运动与短暂CK/ALT释放；三周前运动不解释新变化，持续损伤另归真实变化。}
-  sampling_time: {class: preanalytical, source: tsh_time, sign: -1, effect_log: [0.20, 0.45], section: report, rule: TSH早晨与下午时段不同，可有昼夜节律差；时段一致时不凭存在下午记录定性。}
-  platform_calibration: {class: method_difference, source: comparison, sign: 1, effect_log: [0.025, 0.12], section: laboratory_method_record, exposure: 平台比对, rule: 报告平台不同，适用文件中可交换患者标本比对有同向偏移；无差异的平台互换不命名来源。}
-  reagent_lot: {class: method_difference, source: lot, sign: 1, effect_log: [0.025, 0.12], section: laboratory_method_record, exposure: 试剂批间比对, rule: 同方法不同试剂批号，适用患者标本比对支持同向偏移；已核实无差异的新批号不命名来源。}
-  jaffe_enzymatic_switch: {class: method_difference, source: jaffe, sign: 1, effect_log: [0.04, 0.20], section: laboratory_method_record, exposure: Jaffe/酶法比对, rule: 肌酐Jaffe与酶法不同且适用患者标本比对支持差异；不假定所有Jaffe恒高或恒差固定百分比。}
-  biotin_tsh: {class: method_difference, source: biotin, sign: -1, effect_log: [0.20, 0.42], section: medication_record, exposure: 生物素, window_hours: [1, 5], resting_hours: 72, rule: 10mg生物素后1–5小时且本次使用经核实敏感的链霉亲和素-生物素夹心TSH法，读数可偏低；无此架构的平台或72小时后不据此认定。}
-  acei_start_or_stop: {class: true_change, event_lead_days: [7, 14], source: acei, sign: 1, effect_log: [0.0, 0.25], section: medication_record, exposure: 依那普利（ACEI）, indication: hypertension, rule: 有适应证的ACEI起用/停用发生在两次报告之间；稳定用药不能解释新差。肌酐升幅≤30%首选按适应证风险复查，不自主停药。}
-  dehydration: {class: true_change, allowed_signs: [1], event_lead_days: [2, 7], source: volume, sign: 1, effect_log: [0.0, 0.40], section: outpatient_record, exposure: 容量不足, rule: 两次采血间新发脱水或补液恢复并有病程支持；已恢复很久的旧腹泻不作用。}
-  thiazide: {class: true_change, event_lead_days: [7, 28], source: thiazide, sign: -1, effect_log: [0.0, 0.22], section: medication_record, exposure: 氢氯噻嗪, indication: hypertension, rule: 有高血压适应证的噻嗪利尿剂起用后钾下降，医生停用后恢复；稳定剂量不能解释新变化。}
-  gastrointestinal_loss: {class: true_change, allowed_signs: [-1], event_lead_days: [2, 7], source: gastrointestinal, sign: -1, effect_log: [0.0, 0.28], section: outpatient_record, exposure: 胃肠道丢失, rule: 新发持续腹泻/呕吐或医生治疗后的恢复改变钾水平；旧已恢复事件无效。}
-  glucocorticoid: {class: true_change, allowed_signs: [1], event_lead_days: [3, 14], source: steroid, sign: 1, effect_log: [0.0, 0.40], section: medication_record, exposure: 地塞米松, rule: 近期医生起用长效全身糖皮质激素后血糖升高，停用后回落；局部用药或两次前已停用的短程不作用。}
-  acute_illness: {class: true_change, allowed_signs: [1], event_lead_days: [2, 7], source: steroid, sign: 1, effect_log: [0.0, 0.40], section: outpatient_record, exposure: 急性感染, rule: 采血间新发发热感染应激或恢复有病程支持；已恢复的旧感染不解释本次血糖变化。}
-  thyroiditis: {class: true_change, event_lead_days: [42, 84], source: thyroid, sign: 1, effect_log: [0.0, 0.75], section: outpatient_record, exposure: 甲状腺炎病程, rule: 门诊记录FT4与TSH相符的甲状腺炎甲减阶段或恢复；没有病程/伴随结果不得仅用TSH差值命名。}
-  thyroxine_adherence: {class: true_change, event_lead_days: [42, 84], source: thyroid, sign: -1, effect_log: [0.0, 0.75], section: medication_record, exposure: 左甲状腺素, rule: 有甲减治疗记录，漏服或恢复服药持续至少6周，FT4方向支持；很久以前的漏服不作用。}
-  hepatotoxic_drug: {class: true_change, allowed_signs: [1], event_lead_days: [14, 42], source: liver, sign: 1, effect_log: [0.0, 0.65], section: medication_record, exposure: 阿莫西林克拉维酸, rule: 处方后相符时间窗有持续肝酶变化及医生排除其它常见原因的记录；单有药名不能诊断药物性肝损伤。}
-  alcohol_change: {class: true_change, event_lead_days: [28, 84], source: alcohol, secondary_source: lipids, sign: 1, effect_log: [0.0, 0.55], section: outpatient_record, exposure: 持续饮酒改变, rule: 数周饮酒量变化与ALT或TG方向相符；一次旧聚餐不足以归因。}
-  statin_myopathy: {class: true_change, event_lead_days: [14, 56], source: statin, sign: 1, effect_log: [0.0, 0.80], section: medication_record, exposure: 阿托伐他汀, rule: 已有适应证，用药后新发持续肌症状及CK升高有时间关系且排除剧烈运动；旧稳定用药不是充分病因。}
-  muscle_injury: {class: true_change, allowed_signs: [1], event_lead_days: [1, 7], source: exercise, sign: 1, effect_log: [0.0, 0.85], section: outpatient_record, exposure: 肌肉损伤, rule: 有持续外伤肌损伤或其恢复记录；短暂采血前运动状态另按规程归采样条件。}
-  fibrate_adherence: {class: true_change, event_lead_days: [42, 84], source: fibrate, sign: -1, effect_log: [0.0, 0.60], section: medication_record, exposure: 非诺贝特, rule: 有高TG适应证，数周漏服或恢复用药与TG相符；旧稳定用药不解释新差。}
+  meat_meal: {review: pending, class: preanalytical, source: meat, sign: 1, effect_log: [0.08, 0.22], section: diet_record, exposure: 熟肉, window_hours: [1, 4], resting_hours: 36, rule: 熟肉在采血前1–4小时；两日前餐食不解释当日变化。}
+  infusion_sampling: {review: pending, class: preanalytical, source: infusion, sign: -1, effect_log: [0.06, 0.25], section: report, rule: 同侧正在输生理盐水且采血在输液点近心侧；对侧采血不受此污染影响。}
+  hemolysis: {review: pending, class: preanalytical, source: potassium, sign: 1, effect_log: [0.08, 0.25], section: report, rule: 钾报告游离血红蛋白超过该方法已验证界限；正常指数或其它项目不据此判断钾释放。}
+  edta_contamination: {review: pending, class: preanalytical, source: edta, sign: 1, effect_log: [0.10, 0.30], section: report, rule: 从含K-EDTA管转移血液至生化管，有转移记录及异常低钙支持；仅采血管顺序异常不足以诊断。}
+  cold_delayed_separation: {review: pending, class: preanalytical, source: potassium, sign: 1, effect_log: [0.08, 0.23], section: report, rule: 未分离细胞的标本冷藏并延迟分离；分离后的血浆冷藏不据此认定钾外漏。}
+  nonfasting: {review: pending, class: preanalytical, source: lipids, secondary_source: glucose, sign: 1, effect_log: [0.05, 0.20], section: diet_record, exposure: 含热量餐食, window_hours: [1, 3], resting_hours: 12, rule: 两次采血前进食状态不一致，近期餐食会影响血糖/TG；不把常规非空腹TG称为错误，解释的是条件改变。}
+  glucose_glycolysis: {review: pending, class: preanalytical, source: glucose, sign: -1, effect_log: [0.10, 0.28], section: report, rule: 普通未分离全血室温放置2–4小时；柠檬酸缓冲抑制管或30分钟内分离时不据此判定糖酵解。}
+  recent_exercise: {review: pending, class: preanalytical, source: exercise, sign: 1, effect_log: [0.20, 0.80], section: outpatient_record, exposure: 抗阻训练, window_days: [1, 7], resting_days: 21, rule: 采血前1–7日不习惯的高强度抗阻运动与短暂CK/ALT释放；三周前运动不解释新变化，持续损伤另归真实变化。}
+  sampling_time: {review: pending, class: preanalytical, source: tsh_time, sign: -1, effect_log: [0.20, 0.45], section: report, rule: TSH早晨与下午时段不同，可有昼夜节律差；时段一致时不凭存在下午记录定性。}
+  platform_calibration: {review: pending, class: method_difference, source: comparison, sign: 1, effect_log: [0.025, 0.12], section: laboratory_method_record, exposure: 平台比对, rule: 报告平台不同，适用文件中可交换患者标本比对有同向偏移；无差异的平台互换不命名来源。}
+  reagent_lot: {review: pending, class: method_difference, source: lot, sign: 1, effect_log: [0.025, 0.12], section: laboratory_method_record, exposure: 试剂批间比对, rule: 同方法不同试剂批号，适用患者标本比对支持同向偏移；已核实无差异的新批号不命名来源。}
+  jaffe_enzymatic_switch: {review: pending, class: method_difference, source: jaffe, sign: 1, effect_log: [0.04, 0.20], section: laboratory_method_record, exposure: Jaffe/酶法比对, rule: 肌酐Jaffe与酶法不同且适用患者标本比对支持差异；不假定所有Jaffe恒高或恒差固定百分比。}
+  biotin_tsh: {review: pending, mechanism_family: ingested_assay_interference, class: method_difference, source: biotin, sign: -1, effect_log: [0.20, 0.42], section: medication_record, exposure: 生物素, window_hours: [1, 5], resting_hours: 72, rule: 10mg生物素后1–5小时且本次使用经核实敏感的链霉亲和素-生物素夹心TSH法，读数可偏低；无此架构的平台或72小时后不据此认定。}
+  acei_start_or_stop: {review: pending, class: true_change, event_lead_days: [7, 14], source: acei, sign: 1, effect_log: [0.0, 0.25], section: medication_record, exposure: 依那普利（ACEI）, indication: hypertension, rule: 有适应证的ACEI起用/停用发生在两次报告之间；稳定用药不能解释新差。肌酐升幅≤30%首选按适应证风险复查，不自主停药。}
+  dehydration: {review: pending, class: true_change, allowed_signs: [1], event_lead_days: [2, 7], source: volume, sign: 1, effect_log: [0.0, 0.40], section: outpatient_record, exposure: 容量不足, rule: 两次采血间新发脱水或补液恢复并有病程支持；已恢复很久的旧腹泻不作用。}
+  thiazide: {review: pending, class: true_change, event_lead_days: [7, 28], source: thiazide, sign: -1, effect_log: [0.0, 0.22], section: medication_record, exposure: 氢氯噻嗪, indication: hypertension, rule: 有高血压适应证的噻嗪利尿剂起用后钾下降，医生停用后恢复；稳定剂量不能解释新变化。}
+  gastrointestinal_loss: {review: pending, class: true_change, allowed_signs: [-1], event_lead_days: [2, 7], source: gastrointestinal, sign: -1, effect_log: [0.0, 0.28], section: outpatient_record, exposure: 胃肠道丢失, rule: 新发持续腹泻/呕吐或医生治疗后的恢复改变钾水平；旧已恢复事件无效。}
+  glucocorticoid: {review: pending, class: true_change, allowed_signs: [1], event_lead_days: [3, 14], source: steroid, sign: 1, effect_log: [0.0, 0.40], section: medication_record, exposure: 地塞米松, rule: 近期医生起用长效全身糖皮质激素后血糖升高，停用后回落；局部用药或两次前已停用的短程不作用。}
+  acute_illness: {review: pending, class: true_change, allowed_signs: [1], event_lead_days: [2, 7], source: steroid, sign: 1, effect_log: [0.0, 0.40], section: outpatient_record, exposure: 急性感染, rule: 采血间新发发热感染应激或恢复有病程支持；已恢复的旧感染不解释本次血糖变化。}
+  thyroiditis: {review: pending, class: true_change, event_lead_days: [42, 84], source: thyroid, sign: 1, effect_log: [0.0, 0.75], section: outpatient_record, exposure: 甲状腺炎病程, rule: 门诊记录FT4与TSH相符的甲状腺炎甲减阶段或恢复；没有病程/伴随结果不得仅用TSH差值命名。}
+  thyroxine_adherence: {review: pending, class: true_change, event_lead_days: [42, 84], source: thyroid, sign: -1, effect_log: [0.0, 0.75], section: medication_record, exposure: 左甲状腺素, rule: 有甲减治疗记录，漏服或恢复服药持续至少6周，FT4方向支持；很久以前的漏服不作用。}
+  hepatotoxic_drug: {review: pending, class: true_change, allowed_signs: [1], event_lead_days: [14, 42], source: liver, sign: 1, effect_log: [0.0, 0.65], section: medication_record, exposure: 阿莫西林克拉维酸, rule: 处方后相符时间窗有持续肝酶变化及医生排除其它常见原因的记录；单有药名不能诊断药物性肝损伤。}
+  alcohol_change: {review: pending, class: true_change, event_lead_days: [28, 84], source: alcohol, secondary_source: lipids, sign: 1, effect_log: [0.0, 0.55], section: outpatient_record, exposure: 持续饮酒改变, rule: 数周饮酒量变化与ALT或TG方向相符；一次旧聚餐不足以归因。}
+  statin_myopathy: {review: pending, class: true_change, event_lead_days: [14, 56], source: statin, sign: 1, effect_log: [0.0, 0.80], section: medication_record, exposure: 阿托伐他汀, rule: 已有适应证，用药后新发持续肌症状及CK升高有时间关系且排除剧烈运动；旧稳定用药不是充分病因。}
+  muscle_injury: {review: pending, class: true_change, allowed_signs: [1], event_lead_days: [1, 7], source: exercise, sign: 1, effect_log: [0.0, 0.85], section: outpatient_record, exposure: 肌肉损伤, rule: 有持续外伤肌损伤或其恢复记录；短暂采血前运动状态另按规程归采样条件。}
+  fibrate_adherence: {review: pending, class: true_change, event_lead_days: [42, 84], source: fibrate, sign: -1, effect_log: [0.0, 0.60], section: medication_record, exposure: 非诺贝特, rule: 有高TG适应证，数周漏服或恢复用药与TG相符；旧稳定用药不解释新差。}
 narratives:
   dehydration:
     source: volume
@@ -360,3 +379,99 @@ method_bias:
       max_bias_pct: 9.57
       locator: S-Triglyceride
       B=9.57%: null
+
+question_update_14:
+  source: rules (individual clinical sources); ours (fixed mechanism challenge allocation)
+  ours: true
+  review: pending
+  reason: Fixed 100-question mechanism challenge, not prevalence. Balance source mechanisms
+    before analytes; retain at least three observations per mechanism in the development
+    readout. No model outcomes or amplitude scores enter selection.
+  active_causes:
+    true_change:
+      creatinine:
+      - acei_start_or_stop
+      potassium:
+      - thiazide
+      glucose:
+      - glucocorticoid
+      tsh:
+      - thyroxine_adherence
+      alt:
+      - alcohol_change
+      ck:
+      - statin_myopathy
+      triglycerides:
+      - alcohol_change
+    preanalytical:
+      creatinine:
+      - meat_meal
+      potassium:
+      - hemolysis
+      glucose:
+      - glucose_glycolysis
+      tsh:
+      - sampling_time
+      alt:
+      - recent_exercise
+      ck:
+      - recent_exercise
+      triglycerides:
+      - nonfasting
+    method_difference:
+      creatinine:
+      - jaffe_enzymatic_switch
+      - platform_calibration
+      - reagent_lot
+      potassium:
+      - platform_calibration
+      - reagent_lot
+      glucose:
+      - platform_calibration
+      - reagent_lot
+      tsh:
+      - biotin_tsh
+      - platform_calibration
+      - reagent_lot
+      alt:
+      - platform_calibration
+      - reagent_lot
+      ck:
+      - platform_calibration
+      - reagent_lot
+      triglycerides:
+      - platform_calibration
+      - reagent_lot
+  retired_from_allocation:
+    dehydration: No quantified patient-specific course; cannot identify from an exposure
+      label alone.
+    gastrointestinal_loss: Same patient-specific causal identification limitation.
+    acute_illness: Same patient-specific causal identification limitation.
+    thyroiditis: TSH alone cannot resolve thyroiditis phase; FT4 trajectory not modelled.
+    hepatotoxic_drug: Alternative causes and full injury course not modelled.
+    muscle_injury: Persistent injury and recovery not modelled separately.
+    fibrate_adherence: Real multi-lipid response and ongoing indication not modelled.
+    edta_contamination: EDTA concentration and multi-analyte effects not modelled.
+    cold_delayed_separation: Temperature-dependent patient-specific leakage not modelled.
+    infusion_sampling: Contamination fraction and multi-analyte effects not modelled;
+      retain only documented historical comparator, not current attributed cases.
+  small_method_changes: Sourced method or sampling effects need not exceed RCV. Independent
+    standardized checks and applicable patient-sample comparisons must still support
+    the source; true changes need a matching dated clinical course and directionally concordant independent checks. RCV is reported as statistical evidence, not a minimum causal response.
+  ingested_interference_factors:
+  - biotin_tsh
+  wording:
+    source: sources.comparison; p4_interpretation.yaml#answer_contract.sources.comparison
+    protocol:
+    - p4.notice.batch_method
+    - p4.procedure.report_fields
+    commutable:
+    - p4.notice.commutable_comparison
+    - p4.notice.commutable_comparison.2
+    - p4.notice.commutable_comparison.3
+    - p4.notice.commutable_comparison.4
+    historical:
+    - p4.notice.historical_batches
+    - p4.notice.historical_batches.2
+    - p4.notice.historical_batches.3
+    - p4.notice.historical_batches.4

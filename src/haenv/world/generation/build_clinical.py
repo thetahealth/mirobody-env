@@ -1149,7 +1149,9 @@ def world_history(p, cid: str, T: int, ce: int) -> dict | None:
 def _overlay_kw(p) -> list[dict]:
     """The medicines the case's task packs prescribe (`med_course.overlay_medicines`); none for a v1.0.1 world."""
     import haenv.contracts.external_gold as _EG
-    return _med_course.overlay_medicines((p.meta or {}).get(_EG.SLOT), p.patient_basics)
+    from haenv.m2.premises import medication_overlay
+    return (_med_course.overlay_medicines((p.meta or {}).get(_EG.SLOT), p.patient_basics)
+            + medication_overlay(p))
 
 
 def _avoid_kw(p) -> dict:
@@ -1375,7 +1377,9 @@ def realign_reported_readings(ledger: list, ld: dict, T: int) -> list[dict]:
                                   "from": m.group(2), "to": new, "reading_day": ts})
                     return m.group(1) + new
                 txt = re.sub(rx, sub, txt)
-            ev[key] = txt
+            from haenv.i18n.text import numsub
+            ev[key] = numsub(ev.get(key), txt, [(m["from"], m["to"]) for m in moves
+                                               if m["evidence_id"] == str(ev.get("evidence_id")) and m["field"] == key])
     return moves
 
 

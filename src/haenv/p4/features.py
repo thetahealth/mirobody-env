@@ -11,8 +11,9 @@ SYNTHETIC data, evaluation only, not medical advice.
 from __future__ import annotations
 
 import math
-import re
 import statistics
+
+from haenv.p4.textmatch import from_template, is_any, is_text, same_field
 
 FACTORS = ("glp1_dose_change", "weight_change", "acei_start_or_stop", "postprandial_labelled_fasting",
            "delayed_processing", "meat_meal", "hemolysis_note", "poc_meter", "jaffe_enzymatic_switch",
@@ -20,8 +21,59 @@ FACTORS = ("glp1_dose_change", "weight_change", "acei_start_or_stop", "postprand
 from haenv.p4.diversity import table as _diversity_table
 FACTORS = tuple(dict.fromkeys((*FACTORS, *_diversity_table()["rules"])))
 ANALYTES = ("fasting_glucose", "creatinine", "potassium", "glucose", "tsh", "alt", "ck", "triglycerides")
-#: primary drug by the first three characters of its displayed name (scenario variable)
-DRUG_INDEX = {"司美格": 1, "利拉鲁": 2, "度拉糖": 3, "替尔泊": 4, "二甲双": 5, "氨氯地": 6, "阿托伐": 7}
+#: primary drug by its world key (scenario variable); read off the printed name in any language
+DRUG_INDEX = {"semaglutide": 1, "liraglutide": 2, "dulaglutide": 3, "tirzepatide": 4, "metformin": 5,
+              "amlodipine": 6, "atorvastatin": 7}
+#: templates of the process wait before centrifugation (`render.processing_text`)
+PROC_KEYS = tuple(f"p4.proc.wait{k}{w}" for k in range(3) for w in ("", "_warm"))
+
+
+def _drug_names() -> dict:
+    """Every printed drug name of a p4 medication record (phrase -> world key): the render table's
+    names and the world medicine names (`med_course.DISPLAY`)."""
+    import haenv.world.clinical.med_course as MC
+    from haenv.world.labworld import tables
+    out = {f"drug.{k}": k for k in MC.DISPLAY}
+    out.update({v: k for k, v in (tables()["render"].get("drugs") or {}).items()})
+    cfg = _diversity_table()
+    out.update({cfg["rules"][key]["exposure"]: spec["drug"] for key, spec in cfg["medication_world"].items()})
+    out["p4.drug.biotin"] = cfg["medication_world"]["biotin_tsh"]["drug"]
+    return out
+
+
+def _drug_key(name):
+    return next((k for m, k in _drug_names().items() if is_text(name, m)), None)
+
+
+def _drug_sort_key(name):
+    from haenv.world.labworld import tables
+    keys = tables()["render"]["drug_sort_keys"]
+    key = _drug_key(name)
+    return keys.index(key) if key in keys else len(keys)
+
+
+def method_family(method):
+    """Assay family from its registered phrase id and any reagent-notice slot."""
+    from haenv.p4.textmatch import slot
+    from haenv.world.labworld import tables
+    from haenv.world.labworld.perturb import factor
+    inner = slot(method, "p4.method.reagent_lot_b", "method")
+    if inner is not None:
+        return method_family(inner)
+    if is_any(method, (factor("jaffe_enzymatic_switch")["jaffe_method"], "p4.method.jaffe_picrate")):
+        return "jaffe"
+    if is_text(method, factor("poc_meter")["display"]):
+        return "poc"
+    for spec in tables()["analytes"].values():
+        if is_text(method, spec["default_method"]):
+            return spec.get("default_method_family", "standard")
+    return None
+
+
+def _is_acei(drug) -> bool:
+    from haenv.p4.textmatch import from_template
+    return (from_template(drug, "p4.med.acei_name") or
+            is_text(drug, _diversity_table()["rules"]["acei_start_or_stop"]["exposure"]))
 
 
 def _blk(sp) -> dict:
@@ -67,8 +119,8 @@ def factor_flags(sp, window_only: bool = False) -> dict[str, int]:
             rule = cfg["rules"][key]
             rows = b.get(rule["section"]) or []
             flags[key] = int(bool(rows) if rule["section"] in ("report", "diet_record") else
-                             any(r.get("exposure") == rule.get("exposure") or r.get("comparison") == rule.get("exposure") or
-                                 r.get("drug") == rule.get("exposure") for r in rows))
+                             any(is_text(r.get(field), rule["exposure"])
+                                 for r in rows for field in ("exposure", "comparison", "drug")))
         return flags
     t0, T = int(b["previous_draw_day"]), int(b["today"])
     r0, r1 = compared(sp)
@@ -79,34 +131,37 @@ def factor_flags(sp, window_only: bool = False) -> dict[str, int]:
     diets = {int(d["draw_day"]): d for d in b.get("diet_record") or ()}
     f = dict.fromkeys(FACTORS, 0)
     lo = t0 if window_only else min(int(r["day"]) for r in b.get("report") or ()) - 1
-    f["glp1_dose_change"] = int(any(m["drug"] in glp1_names and not m["event"].startswith("起始")
+    f["glp1_dose_change"] = int(any(is_any(m["drug"], glp1_names)
+                                    and not from_template(m["event"], "p4.med.start", "p4.med.start_unit")
                                     and lo < int(m["day"]) <= T for m in med))
-    f["acei_start_or_stop"] = int(any("ACEI" in m["drug"] and m["event"] != "" and not m["event"].startswith("长期")
+    f["acei_start_or_stop"] = int(any(_is_acei(m["drug"]) and m["event"] != ""
+                                      and not from_template(m["event"], "p4.med.long_term_dose", "p4.med.long_term")
                                       and lo < int(m["day"]) <= T for m in med))
     ld = _ld(sp)
     w0, w1 = _wmed(ld, t0), _wmed(ld, T)
     f["weight_change"] = int(bool(w0 and w1 and abs(math.log(w1 / w0)) >= 0.04))
     for d in (t0, T):
         ent = (diets.get(d) or {}).get("entries") or ()
-        if any(e.get("meal") == "早餐" and e.get("time") for e in ent):
+        if any(is_text(e.get("meal"), "p4.meal.breakfast") and e.get("time") for e in ent):
             f["postprandial_labelled_fasting"] = 1
-        if any(e.get("food") in meats for e in ent):
+        if any(is_any(e.get("food"), meats) for e in ent):
             f["meat_meal"] = 1
     for r in (r0, r1):
         sp_ = r.get("specimen") or {}
-        proc = str(sp_.get("processing") or "")
-        if "离心" in proc:
-            m = re.search(r"(\d+(?:\.\d+)?)\s*小时", proc)
-            if m and float(m.group(1)) >= 2.0:
+        proc = sp_.get("processing") or ""
+        if from_template(proc, *PROC_KEYS):
+            from haenv.p4.textmatch import slot
+            hours = next((slot(proc, key, "h") for key in PROC_KEYS if from_template(proc, key)), None)
+            if hours is not None and float(hours) >= 2.0:
                 f["delayed_processing"] = 1
-        if "轻度" in str(sp_.get("hemolysis_index") or ""):
+        if is_text(sp_.get("hemolysis_index"), "p4.hemo.mild"):
             f["hemolysis_note"] = 1
-        if "床旁" in str(r.get("method")) or "床旁" in str(r.get("note") or ""):
+        if method_family(r.get("method")) == "poc" or is_text(r.get("note"), "p4.note.poc_glucose"):
             f["poc_meter"] = 1
-        if "Jaffe" in str(r.get("method")) or "Jaffe" in str(r.get("note") or ""):
+        if method_family(r.get("method")) == "jaffe":
             f["jaffe_enzymatic_switch"] = 1
-    if (r0.get("lab") != r1.get("lab") and r0.get("method") == r1.get("method")) or (
-            r0.get("method") != r1.get("method") and not f["jaffe_enzymatic_switch"] and not f["poc_meter"]):
+    if (not same_field(r0.get("lab"), r1.get("lab")) and same_field(r0.get("method"), r1.get("method"))) or (
+            not same_field(r0.get("method"), r1.get("method")) and not f["jaffe_enzymatic_switch"] and not f["poc_meter"]):
         f["lab_switch_zero_bias"] = 1
     return f
 
@@ -124,14 +179,14 @@ def surface(sp, H: int) -> dict:
     kc = list(up.get("known_conditions") or ())
     import json as _json
     med = b.get("medication_record") or ()
-    drugs = sorted({m["drug"] for m in med if "ACEI" not in m["drug"]})
-    jf = lambda r: "jaffe" if "Jaffe" in str(r.get("method")) else None     # noqa: E731
+    drugs = sorted((m["drug"] for m in med if not _is_acei(m["drug"])), key=_drug_sort_key)
+    jf = lambda r: "jaffe" if method_family(r.get("method")) == "jaffe" else None     # noqa: E731
     return {"ratio": abs(dobs) / rcv95(cv_total(an, jf(r0)), cv_total(an, jf(r1))), "sign": 1 if dobs > 0 else -1,
             # text length and structure of what the solver reads (pack-1 review r3: length leaked)
             "block_chars": len(_json.dumps((sp.get("prediction_context") if isinstance(sp, dict) else sp.prediction_context)["followup_p4"], ensure_ascii=False)),
             "payload_chars": len(_json.dumps(sp, ensure_ascii=False, default=str)) if isinstance(sp, dict) else 0,
             "n_med_rows": len(med), "n_notes": sum(1 for r in b.get("report") or () if r.get("note")),
-            "drug": (DRUG_INDEX.get(drugs[0][:3], 9) if drugs else 0), "T": int(b["today"]),
+            "drug": (DRUG_INDEX.get(_drug_key(drugs[0]), 9) if drugs else 0), "T": int(b["today"]),
             "analyte": ANALYTES.index(an), "H": int(H),
             "interval": int(b["today"]) - int(b["previous_draw_day"]),
             "hour1": int(r1["time"][:2]), "hour0": int(r0["time"][:2]),
@@ -166,7 +221,7 @@ def visible_class(sp) -> tuple[str, list]:
     an = b["analyte"]
     t0, T = int(b["previous_draw_day"]), int(b["today"])
     r0, r1 = compared(sp)
-    jf = lambda r: "jaffe" if "Jaffe" in str(r.get("method")) else None     # noqa: E731
+    jf = lambda r: "jaffe" if method_family(r.get("method")) == "jaffe" else None     # noqa: E731
     d = math.log(float(r1["value"]) / float(r0["value"]))
     ratio = abs(d) / rcv95(cv_total(an, jf(r0)), cv_total(an, jf(r1)))
     clinical = bool(b.get("interpretation_rule"))
@@ -183,7 +238,7 @@ def visible_class(sp) -> tuple[str, list]:
             continue
         draw_min = int(dd["draw_time"][:2]) * 60 + int(dd["draw_time"][3:5])
         for e in dd.get("entries") or ():
-            if e.get("food") in meats and e.get("time"):
+            if is_any(e.get("food"), meats) and e.get("time"):
                 gap = (int(dd["draw_day"]) - int(e["day"])) * 24 + (draw_min - int(e["time"][:2]) * 60 - int(e["time"][3:5])) / 60
                 if READ_MEAL_WINDOW_H[0] <= gap <= READ_MEAL_WINDOW_H[1]:
                     cands.append(("preanalytical", 1 if int(dd["draw_day"]) == T else -1, "meat_meal"))
@@ -193,10 +248,10 @@ def visible_class(sp) -> tuple[str, list]:
         direction = (1 if d > 0 else -1) if clinical else (1 if jf(r1) else -1)
         cands.append(("method_difference", direction, "jaffe_enzymatic_switch"))
     for m in b.get("medication_record") or ():
-        if "ACEI" in m["drug"] and t0 < int(m["day"]) <= T:
-            if str(m["event"]).startswith("开始"):
+        if _is_acei(m["drug"]) and t0 < int(m["day"]) <= T:
+            if from_template(m["event"], "p4.med.begin"):
                 cands.append(("true_change", 1, "acei_start_or_stop"))
-            elif str(m["event"]).startswith("停用"):
+            elif is_text(m["event"], "p4.med.stop"):
                 cands.append(("true_change", -1, "acei_start_or_stop"))
     agree = [c for c in cands if c[1] == (1 if d > 0 else -1)]
     if not agree:

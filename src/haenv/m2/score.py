@@ -150,7 +150,8 @@ def r2_atoms(row: dict, plan: dict, *, push_weight: float = PUSH_WEIGHT,
     l2 = listed_flags(r2l["dx_listed_positions"], r2l["dx_listed_cap"]) if n else []
     bought = _bought(row.get("tool_targets"))
     keys_all = [k for t in threads for k in t.get("key_signals") or []]
-    self_bought = [all(k in bought for k in (threads[i].get("key_signals") if i < len(threads) else []) or ())
+    from haenv.m2.evidence import coverage
+    self_bought = [bool(coverage([threads[i]], bought)["complete"]) if i < len(threads) else False
                    for i in range(n)]
     # A line with no purchasable key signal (MENU-1 gap) says nothing about buying: it is left out
     # of the purchase-weighted mean rather than credited as bought (still in dx_listed_r2).
@@ -196,7 +197,7 @@ def r2_atoms(row: dict, plan: dict, *, push_weight: float = PUSH_WEIGHT,
         "revision_decision": dec or None,
         "revision_distracted": (int(dis_in_because or top1_dis) if did else None),
         "review_r2": (int(bool(rv) == bool(row.get("r2_warranted"))) if isinstance(rv, bool) else 0),
-        "key_acquired": (round(len(set(keys_all) & bought) / len(set(keys_all)), 4) if keys_all else None),
+        "key_acquired": coverage(threads, bought)["fraction"],
         "buy_efficiency": (round(menu_hits / len(uniq), 4) if uniq else None),
     }
 
@@ -205,12 +206,20 @@ def r1_atoms(row: dict, vp) -> dict:
     """Round-1 purchase atoms of an F1-F3 row: the share of the case's gold-line key signals
     (`core.threads_of`) the solver bought (`tool_targets`, read through the M2 menu rows)."""
     from haenv.m2.core import threads_of
-    keys = sorted({k for t in threads_of(((getattr(vp, "adjudication", None) or {}).get("ddx")) or {})
+    threads = threads_of(((getattr(vp, "adjudication", None) or {}).get("ddx")) or {})
+    keys = sorted({k for t in threads
                    for k in t.get("key_signals") or []})
     if not keys:
-        return {"m2_key_acquired": None, "m2_key_n": 0}
+        return {"m2_key_acquired": None, "m2_key_n": 0, "tool_key_covered": None,
+                "tool_key_signals": None, "tool_key_missed": None, "tool_concluded_blind": None}
     got = _bought(row.get("tool_targets")) | set(row.get("m2_historical_key_seen") or ())
-    return {"m2_key_acquired": round(len(set(keys) & got) / len(keys), 4), "m2_key_n": len(keys)}
+    from haenv.m2.evidence import coverage
+    cov = coverage(threads, got)
+    return {"m2_key_acquired": cov["fraction"], "m2_key_n": len(keys),
+            "tool_key_signals": keys,
+            "tool_key_signal_sets": [t.get("key_signal_sets") for t in threads],
+            "tool_key_covered": cov["fraction"], "tool_key_missed": cov["missed"] or None,
+            "tool_concluded_blind": not cov["complete"] and bool(row.get("tool_committed"))}
 
 
 # ------------------------------------------------------------------ M2 test precision (r2-2)

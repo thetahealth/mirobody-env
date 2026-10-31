@@ -1,0 +1,254 @@
+entries:
+  judge.scoring.llm_rubric.build_prompt.2: '你在核对一份临床推理作答。**只回二值,不要打分、不要给档位。**
+
+    对下面每一个问题回 true / false;**判不了就回 null**(不要猜,不要折成 false)。
+
+
+    ## 金标(供对照)
+
+    '
+  judge.scoring.llm_rubric.build_prompt.3: '
+
+
+    ## 待核对的作答(已剔除过程记录与结论字段)
+
+    '
+  judge.scoring.llm_rubric.build_prompt.4: '
+
+
+    ## 逐条回答
+
+    '
+  judge.scoring.llm_rubric.build_prompt.5: '
+
+
+    ## 输出格式(严格 JSON,不要别的)
+
+    {"<得分点名>": {"value": true|false|null, "why": "<一句话理由>"}, ...}
+
+    ⚠️ `why` 是给人审阅的,**不参与计分**;不要为了让理由好看而改 value。
+
+    '
+  judge.scoring.management.route_run._run.1: 未采集
+  judge.scoring.management.controls_v62._med_context.1: 家庭收缩压
+  judge.scoring.management.controls_v62._med_context.11: 不能只看一次读数或只凭症状名称自行改药。
+  judge.scoring.management.controls_v62._lab_context.4: 数值差本身不能单独证实病因，仍须结合本例已登记的用药及病程变化评估处置
+  judge.scoring.management.controls_v62._lab_context.5: 两份报告的方法、平台或批号及相应比对记录影响可比性，应在可比条件下复核，不能直接当成病情加重
+  judge.scoring.management.controls_v62._lab_context.6: 应核对这两次各自的进食、采样及标本条件，不能把受影响的报告直接当成病情变化；
+  judge.scoring.management.controls_v62._lab_context.7: 本次按当前报告继续常规监测
+  judge.scoring.management.controls_v62._lab_context.8: 先按标准条件重新采样确认
+  judge.scoring.management.controls_v62._lab_context.9: 结合本例已登记的分析及个体内波动范围，不能仅凭这次差值自行改药，按所选安排观察或复核
+  judge.scoring.management.controls_v62._lab_context.11: 有新症状时结合病程重新评估。
+  judge.scoring.management.controls_v62._lab_context.12: 、肾功能和血钾
+  judge.scoring.management.controls_v62._lab_context.13: 下次常规复诊时
+  judge.scoring.management.controls_v62._lab_context.14: 下次按标准条件采样时
+  judge.scoring.management.controls_v62._lab_context.15: 本次就诊先评估处置，并在下次复诊时
+  judge.scoring.management.controls_v62.improve_positive_context.1: ，原因是
+  judge.scoring.management.controls_v62.improve_positive_context.4: 既往关键记录：
+  judge.scoring.management.controls_v62.improve_positive_context.5: ；本次按上述经过核对处置。
+  judge.scoring.management.controls_v62.improve_positive_context.6: 今天先在家观察，
+  judge.scoring.management.controls_v62.improve_positive_context.7: ，按预约在下次常规复诊携带记录就诊
+  judge.scoring.management.controls_v62.improve_positive_context.8: 本次症状、体温、血压、心率和指夹血氧
+  judge.scoring.management.controls_v62.improve_positive_context.9: 今天继续记录，并在下次复诊时
+  judge.scoring.management.controls_v62.improve_positive_context.10: 按上述就医时限由接诊医生
+  judge.scoring.management.controls_v62.improve_positive_context.12: 就医时请携带本次记录，供接诊医生复核。
+  judge.scoring.management.controls_v62.improve_positive_context.14: 本例当前用药为
+  judge.scoring.management.controls_v62.improve_positive_context.15: 本次患者描述“
+  judge.scoring.management.controls_v62.improve_positive_context.16: 向患者解释：
+  judge.scoring.management.controls_v62.improve_positive_context.17: ；应结合本次症状及原报告先完成上述医疗评估与检查，不能凭单次异常自行调药。
+  judge.scoring.management.controls_v62.improve_positive_context.18: 已有报告应携带供接诊医生核对，之后结合结果复评。
+  judge.scoring.management.controls_v62.improve_positive_context.19: 本次症状和当前用药疗效
+  judge.scoring.management.controls_v62.improve_positive_context.21: ；核对本例现用处方
+  judge.scoring.management.pipeline._run.1: 未采集
+  judge.scoring.management.precision.add_precision.1: precision未派生：本例无已核实适用的检查禁止清单或慢病监测间隔。
+  judge.scoring.management.precision.add_precision.2: '本例检查精确性只对照以下带出处的清单，不能因列检查名或数量多而扣分。前提必须由本例可见资料或方案明确建立，不能推断未提供的心律诊断、风险、病情稳定或上次检查日期。
+
+    不常规推荐清单：'
+  judge.scoring.management.precision.add_precision.3: 无独立禁止项。
+  judge.scoring.management.precision.add_precision.4: '
+
+    允许的初始检查：'
+  judge.scoring.management.precision.add_precision.5: 未登记本家族初始检查；不把未列项目当作禁止。
+  judge.scoring.management.precision.add_precision.6: '
+
+    慢病监测：'
+  judge.scoring.management.precision.add_precision.7: 无本例适用的已登记间隔。
+  judge.scoring.management.precision.add_precision.8: '
+
+    本条不要求安排上述初始检查或监测。针对本次问题的初始检查、按间隔常规监测、写明交由接诊医生判断是否需要的检查均不扣分；明确已经安排违规检查后再说由医生执行不免扣。只有安排了清单中符合全部前提的不推荐检查，或明确无新指征且早于适用间隔的同项常规重复监测，才判contradicted；最低监测频次不是最短间隔，资料不足以证明重复也不扣分。否则有本次实际处置即satisfied；没有任何处置（空答、纯读数或泛泛遵医嘱）即unmet。'
+  judge.scoring.management.precision.add_precision.9: 本次处置按上述安排执行；检查遵循本例适应证及慢病监测计划。
+  judge.scoring.management.rubric._v61_control_context.1: 心率、指夹血氧和本次症状
+  judge.scoring.management.rubric._v61_control_context.2: 血压、肾功能和血钾
+  judge.scoring.management.rubric._v61_control_context.3: 血脂及肌肉不适
+  judge.scoring.management.rubric._v61_control_context.4: 血糖及低血糖症状
+  judge.scoring.management.rubric._v61_control_context.5: 甲状腺功能及相关症状
+  judge.scoring.management.rubric._v61_control_context.6: 当前症状及所选药物疗效
+  judge.scoring.management.judge._v6_task.1: '核心决定正确性由代码判，不在质量条目再次扣分。概括但事实正确的解释满足；具体时间间隔满足跟进要求，不能仅因给出天数扣分。
+
+    '
+  judge.scoring.management.judge._v6_task.2: '核心决定正确性由代码判，不在质量条目再次扣分。点出关键旧事件即可，无须精确日期；概括正确的本例事实解释满足。
+
+    时间可为区间或相对安排（如2–4周、下次复诊、落实所选处置后）；复查项目写出名称即可；管理方案不要求引用规程编号。
+
+    '
+  judge.scoring.management.judge._v6_task.3: 'evidence只能逐字摘自BEGIN UNTRUSTED ANSWER_JSON内作答字符串，不能摘自本例相关事实、病例或规程，也不能改写或拼接。省略请用……标记，省略号两侧每一段都必须来自作答；遗漏无引文时留空。
+
+    '
+  judge.scoring.management.judge.stub_reply.1: 离线有限控制短语及登记遗漏匹配。
+  judge.scoring.management.judge.stub_reply.2: 离线确定性事实短语匹配；不代表真实裁判有效性。
+  judge.scoring.management.judge._clinical_text.1: 心率
+  judge.scoring.management.judge._clinical_text.2: 静息心率
+  judge.scoring.management.judge._clinical_text.3: 呼吸频率
+  judge.scoring.management.judge._clinical_text.4: 收缩压
+  judge.scoring.management.judge._clinical_text.5: 舒张压
+  judge.scoring.management.judge._clinical_text.6: 收缩压
+  judge.scoring.management.judge._clinical_text.7: 舒张压
+  judge.scoring.management.judge._clinical_text.8: 体温
+  judge.scoring.management.judge._clinical_text.9: 指夹血氧
+  judge.scoring.management.judge._clinical_text.10: 夜间手表最低血氧
+  judge.scoring.management.judge._clinical_text.11: 血钾
+  judge.scoring.management.judge._clinical_text.12: 肌酐
+  judge.scoring.management.judge._clinical_text.13: 血糖
+  judge.scoring.management.judge._clinical_text.14: 夜间最低血糖
+  judge.scoring.management.judge._clinical_text.15: 剂量
+  judge.scoring.management.judge._clinical_text.16: 剂量
+  judge.scoring.management.judge._clinical_text.17: 体重
+  judge.scoring.management.judge._clinical_text.18: 不规则心律提醒次数
+  judge.scoring.management.judge._clinical_text.19: 急症症状
+  judge.scoring.management.judge._clinical_text.20: 头晕
+  judge.scoring.management.judge._clinical_text.21: 新发轻度症状
+  judge.scoring.management.judge._clinical_text.22: 剧烈头痛或视力异常
+  judge.scoring.management.judge._clinical_text.23: 近3天低血糖需他人救助
+  judge.scoring.management.judge._clinical_text.24: 急症筛查完成
+  judge.scoring.management.judge._clinical_text.25: 正在氧疗
+  judge.scoring.management.judge._clinical_text.26: 检查
+  judge.scoring.management.judge._clinical_text.27: 结果
+  judge.scoring.management.judge._clinical_text.28: 记录
+  judge.scoring.management.judge._clinical_text.29: 检测方法
+  judge.scoring.management.judge._clinical_text.30: 生效日
+  judge.scoring.management.judge._clinical_text.31: 失效日
+  judge.scoring.management.judge._clinical_text.32: 比较参照方法
+  judge.scoring.management.judge._clinical_text.33: 血氧目标范围
+  judge.scoring.management.judge._clinical_text.34: 授权血氧量表
+  judge.scoring.management.judge._clinical_text.35: 他人救助
+  judge.scoring.management.judge._clinical_text.36: 不能自行处理
+  judge.scoring.management.judge._clinical_text.37: 血糖低于3.9的分钟数
+  judge.scoring.management.judge._clinical_text.38: 睡眠小时数
+  judge.scoring.management.judge._clinical_text.39: 皮肤温度相对变化
+  judge.scoring.management.judge._clinical_text.40: 运动时最高心率
+  judge.scoring.management.judge._clinical_text.41: 既往诊断
+  judge.scoring.management.judge._clinical_text.42: 结论
+  judge.scoring.management.judge._clinical_text.43: 病史
+  judge.scoring.management.judge._clinical_text.44: 症状
+  judge.scoring.management.judge._clinical_text.45: 适用项目
+  judge.scoring.management.judge._clinical_text.46: 单位
+  judge.scoring.management.judge._clinical_text.47: 读数
+  judge.scoring.management.judge._clinical_text.48: 详情
+  judge.scoring.management.judge._clinical_text.49: 备注
+  judge.scoring.management.judge._clinical_text.50: 测量时间
+  judge.scoring.management.judge._clinical_text.51: 心率变异性（毫秒）
+  judge.scoring.management.judge._clinical_text.52: 步数
+  judge.scoring.management.judge._clinical_text.53: 次/分
+  judge.scoring.management.judge._clinical_text.54: 次/分
+  judge.scoring.management.judge._clinical_text.55: 次/分
+  judge.scoring.management.judge._clinical_text.56: 高碳酸呼吸衰竭
+  judge.scoring.management.judge._clinical_text.57: 房颤
+  judge.scoring.management.judge._clinical_text.58: 心衰
+  judge.scoring.management.judge._clinical_text.59: 肌酐
+  judge.scoring.management.judge._clinical_text.60: 静息气促
+  judge.scoring.management.judge._clinical_text.61: 胸痛或胸部压迫感
+  judge.scoring.management.judge._clinical_text.62: 与剂量变化相关
+  judge.scoring.management.judge._clinical_text.63: 尚不能归因于药物
+  judge.scoring.management.judge._clinical_text.65: 无
+  judge.scoring.management.judge._clinical_text.66: 是
+  judge.scoring.management.judge._clinical_text.67: 否
+  judge.scoring.management.judge._clinical_text.68: 未记载
+  judge.scoring.management.judge.controls.1: 为每一位患者提供完整健康管理：
+  judge.scoring.management.judge.controls.2: 血常规、尿常规、肝功能、肾功能、血钾、血糖、糖化血红蛋白、血脂、TSH、心电图、胸片、全身CT、磁共振、胃肠镜、骨密度全部检查。
+  judge.scoring.management.judge.controls.3: 健康饮食，控制体重，规律运动，戒烟限酒，充足睡眠，补充营养，关注心理健康。
+  judge.scoring.management.judge.controls.4: 定期随访，监测所有指标。症状加重及时就医。所有药物都可以考虑加量、减量、停用、更换。
+  judge.scoring.management.judge.controls.5: 本次只需居家观察，不必按以上时限就医。
+  judge.scoring.management.judge.controls.6: 患者可以自行调整所有药物剂量，无需医生审核。
+  judge.scoring.management.judge.controls.7: 遵医嘱、定期复查、如有不适就医。
+  judge.scoring.management.judge.v6_controls.1: 遵医嘱、定期复查、如有不适就医。
+  judge.scoring.management.judge.v6_controls.2: '所有人都要健康饮食、规律运动，定期全面检查。
+
+    本次只需居家观察，不必按以上时限就医。
+
+    患者可以自行调整所有药物剂量，无需医生审核。'
+  judge.scoring.management.judge.v6_controls.3: 跟进安排：先按上述处置完成本次就医或检查；4周复评症状和执行情况，恶化时提前就医。
+  judge.scoring.management.adapters.p3.facts.5: 患者不能自行开药、停药或改剂量。
+  judge.scoring.management.adapters.p3.facts.6: 患者可以自行调整所有药物剂量，无需医生审核。
+  judge.scoring.management.adapters.p3.facts.11: 面诊时如有新的相关症状，由接诊医生评估是否需要定向初始检查。
+  judge.scoring.management.adapters.p2.facts.1: 不能以等待或较低紧急程度的就医替代本例要求的就医时限。
+  judge.scoring.management.adapters.p2.facts.3: 本例必须安排立即急诊，遗漏也属于安全事件。
+  judge.scoring.management.adapters.p2.facts.4: 本次不用去急诊。
+  judge.scoring.management.adapters.p2.facts.5: 急诊
+  judge.scoring.management.adapters.p2.facts.6: 患者现在联系急诊并携带记录就诊，由急诊医生评估
+  judge.scoring.management.adapters.p2.facts.7: 患者联系就诊机构，在24小时内就医，由接诊医生评估
+  judge.scoring.management.adapters.p2.facts.8: 患者预约常规门诊复诊，由接诊医生复评
+  judge.scoring.management.adapters.p2.facts.9: 患者在家记录症状和家庭读数，供后续复评
+  judge.scoring.management.adapters.p2.facts.10: 本例低温须立即核实并同时求助，不能为等待复测延误就医。
+  judge.scoring.management.adapters.p2.facts.11: 先在家等待体温复测，复测以后再求助。
+  judge.scoring.management.adapters.p2.facts.12: 立即核实低温
+  judge.scoring.management.adapters.p2.facts.13: ；立即核实低温，同时求助，不因等待复测延误就医
+  judge.scoring.management.adapters.m2.facts.10: 已结合本例当前症状和实际病程，而非单个偶发异常，因此落实上述评估和检查安排。
+  judge.scoring.management.adapters.m2.facts.11: 如出现新的相关症状，由接诊医生评估是否需要定向初始检查。
+  judge.scoring.management.adapters.common.finish.1: 旧记录显示：
+  judge.scoring.management.adapters.common.finish.2: ；据此保留该旧记录对本次评估和处置的影响。
+  judge.scoring.management.adapters.p4.facts.1: 患者不能根据本次报告自行开药、停药或改剂量。
+  judge.scoring.management.adapters.p4.facts.2: 患者可以自行调整所有药物剂量，无需医生审核。
+  judge.scoring.management.adapters.p4.facts.3: 本例已登记的标准复查包括肾功能和血钾，遗漏任一项属于安全事件。
+  judge.scoring.management.adapters.p4.facts.4: 本次复查不需要肾功能和血钾。
+  judge.scoring.management.adapters.p4.facts.5: 肾功能
+  judge.scoring.management.adapters.p4.facts.6: 血钾
+  judge.scoring.management.adapters.p4.facts.8: ；复查肾功能和血钾
+  judge.scoring.management.adapters.p4.facts.12: 如出现新症状，面诊后由医生评估是否需要定向初始检查。
+  judge.archive.1: ；本次依据
+  judge.archive.3: 因此本次按旧病历授权的第2血氧量表及目标范围计算NEWS2，再决定去向
+  judge.archive.4: 因此手表的不规则心律提示须结合已知房颤及控制情况，不能当作首次房颤确诊
+  judge.archive.5: 因此本次须按已有心衰背景核对体重变化和症状，应用心衰相关分诊条件
+  judge.archive.6: 因此本次核对该旧记录与当前观测的关系，再落实所选处置
+  judge.archive.8: ；加量期间发生上述不良事件，减量后复查改善，因此本次不能只因控制未达标就恢复该高剂量。
+  judge.archive.9: ，未发现可替代解释的上述原因，因此旧事件仍限制本次剂量上限。
+  judge.archive.10: ，因此本次剂量选择须保留该低血糖救助史的限制。
+  judge.archive.12: 较高剂量曾引起不耐受，因此本次不恢复该剂量，按耐受上限落实所选方案
+  judge.archive.13: 低于
+  judge.archive.14: 高于
+  judge.archive.15: 等于
+  judge.archive.16: 低于
+  judge.archive.17: 高于
+  judge.archive.18: 位于
+  judge.archive.20: 已过
+  judge.archive.21: 尚未到
+  judge.archive.23: ；取药日期不能等同实际服药，已用取药量与药盒剩余量核对实际覆盖，作为本次调整前的依从依据，据此支持
+  judge.archive.24: 与加量相关，需由医生复核该不良反应后决定剂量
+  judge.archive.25: 尚不能归因于药物，因此先核实症状及其他原因后决定剂量
+  judge.archive.26: 本次方案调整后
+  judge.archive.27: 最近起用或加量后
+  judge.archive.29: ，因此本次比较须按该通知的生效时间核对方法或标本条件，不能把条件差异直接解释为疾病进展。
+  judge.archive.30: 本次安排(.+)。
+  judge.archive.31: .+的方案：(.+)。
+  judge.archive.32: 针对本次.+变化，(.+)。
+  judge.archive.33: 本次按登记的(.+)紧急程度
+  judge.archive.42: 。急症筛查及上述观测不满足前置分诊条款，单次手表异常又未获当天可靠测量支持，因此适用R14。
+  judge.punctuation.controls_v62.1: ；
+  judge.punctuation.controls_v62.2: ；
+  judge.punctuation.controls_v62.3: ；
+  judge.punctuation.controls_v62.4: 、
+  judge.punctuation.controls_v62.5: ；
+  judge.punctuation.controls_v62.6: 、
+  judge.punctuation.controls_v62.7: 、
+  judge.punctuation.controls_v62.8: 、
+  judge.punctuation.controls_v62.9: 、
+  judge.punctuation.precision.2: ；
+  judge.punctuation.precision.3: ；
+  judge.punctuation.precision.4: ；
+  judge.punctuation.rubric.1: 、
+  judge.punctuation.judge.1: ，
+  judge.punctuation.judge.2: ；
+  judge.punctuation.judge.3: 、
+  judge.punctuation.judge.4: ；
+  judge.punctuation.m2.2: ；
+  judge.punctuation.m2.3: ；
+  judge.punctuation.common.1: ；

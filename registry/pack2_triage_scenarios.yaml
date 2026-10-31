@@ -10,7 +10,7 @@
 # the question (`policy_text`, the same for every item) and carries `review: pending` (doctor
 # sign-off). A rule with no verified source is `source: none` and `review: pending`.
 # SYNTHETIC data, evaluation only, not medical advice.
-version: 2
+version: 3
 status: provisional
 
 # Ordinal dispositions, rank 0 = most urgent. Expected cost (design §4): an answer inside the
@@ -20,6 +20,30 @@ dispositions: [ed_now, within_24h, routine_followup, watchful_waiting]
 cost: {under: 3, over: 1, review: "pending (clinical sign-off: ratio 3:1 is the design draft)"}
 
 sources:
+  NHS_ACUTE_SYMPTOMS:
+    cite: "NHS, acute symptom advice"
+    url: "https://www.nhs.uk/symptoms/chest-pain/"
+    locator: >-
+      Chest pain, "Call 999 if: you get sudden pain or discomfort in your chest that does not go
+      away – the pain can feel like squeezing or pressure inside your chest, burning or indigestion;
+      you get pain that spreads to your left or right arm, or your neck, jaw, stomach or back;
+      you have chest pain and you feel sweaty, sick, light headed or short of breath."
+      Fainting; Sudden confusion; Shortness of breath; Stroke symptoms: Immediate action required sections
+    also_urls: ['https://www.nhs.uk/conditions/fainting/', 'https://www.nhs.uk/symptoms/confusion/', 'https://www.nhs.uk/symptoms/shortness-of-breath/', 'https://www.nhs.uk/conditions/stroke/symptoms/']
+    status: verified
+    verified_on: '2026-10-29'
+    note: "The generated chest-pain statements carry the NHS 999 qualifiers (sudden and not going away, spreading, or with sweating/nausea/light-headedness/breathlessness); the printed screen wording is shared by the hospital library and unchanged; broader symptom-to-disposition mappings remain pending clinical review."
+  NICE_NG136:
+    cite: NICE NG136 Hypertension in adults, recommendations 1.5.1-1.5.2 (2019 recommendations)
+    url: https://www.nice.org.uk/guidance/ng136/chapter/recommendations
+    status: verified
+    verified_on: '2026-10-29'
+    note: >-
+      Severe hypertension (clinic >=180/120) without signs or symptoms for same-day referral:
+      investigate target organ damage as soon as possible; if none, repeat measurement / clinical
+      review within 7 days. Same-day specialist assessment only with retinal haemorrhage or
+      papilloedema or life-threatening symptoms (new confusion, chest pain, signs of heart failure,
+      acute kidney injury).
   NEWS2_CHART2:
     cite: "RCP 2017, National Early Warning Score (NEWS) 2, Chart 2: thresholds and triggers"
     status: verified
@@ -79,6 +103,7 @@ sources:
 
 # NEWS2 parameter bands, inclusive [lo, hi] -> points (SpO2 scale 1, room air). source NEWS2_CHART1.
 news2:
+  source: NEWS2_CHART1
   rr:   [[-999, 8, 3], [9, 11, 1], [12, 20, 0], [21, 24, 2], [25, 999, 3]]
   spo2: [[-999, 91, 3], [92, 93, 2], [94, 95, 1], [96, 999, 0]]
   sbp:  [[-999, 90, 3], [91, 100, 2], [101, 110, 1], [111, 219, 0], [220, 999, 3]]
@@ -103,12 +128,23 @@ thresholds:
 # Rules, first match wins. `set` = the acceptable dispositions. `printed` = the line printed in the
 # question (`policy_text`). A borderline rule (`borderline: true`) is one where the verified source
 # names a response that two dispositions both satisfy.
+r0_symptom_qualifiers:
+  source: NHS_ACUTE_SYMPTOMS
+  chest_pain_or_pressure:
+    allowed: [sudden_not_easing, spreading, with_sweating_nausea_lightheaded_or_breathless]
+    say:
+      p2.say.symptom.chest_pain_or_pressure.calm.0: sudden_not_easing
+      p2.say.symptom.chest_pain_or_pressure.neutral.0: sudden_not_easing
+      p2.say.symptom.chest_pain_or_pressure.alarming.0: sudden_not_easing
+      p2.say.symptom.chest_pain_or_pressure.atypical.0: with_sweating_nausea_lightheaded_or_breathless
 rules:
   - id: R0_red_flag
     when: "intake checklist: chest pain or pressure, fainting, new confusion, breathless at rest, or one-sided weakness / slurred speech"
     set: [ed_now]
-    source: none
+    source: NHS_ACUTE_SYMPTOMS
+    mapping_review: pending
     review: pending
+    review_note: "2026-10 clinician review: the chest-pain character was not stated. Gold kept; generated chest-pain statements now state the NHS 999 qualifiers (see r0_symptom_qualifiers)."
     printed: "R0 问诊清单里任一为「是」:胸痛或胸部压迫感、晕倒、新出现的意识混乱、静息时气促、一侧肢体无力或说话含糊 → 立即急诊。"
   - id: R1_news2_high
     when: "NEWS2 on today's home check >= 7"
@@ -179,6 +215,7 @@ rules:
     when: "CGM nightly minimum < 3.0 mmol/L on 2 or more of the last 7 nights"
     set: [within_24h]
     source: ADA_2025_S6
+    review_note: "2026-10 clinician review: kept. ADA 2025 Section 6 asks for treatment-plan reevaluation after level 2 hypoglycaemia, defined by glucose rather than recognition; nocturnal CGM lows recur while the regimen is unchanged. The timing mapping remains ours and pending review."
     mapping_review: pending
     printed: "R5 近 7 晚里有 ≥ 2 晚 CGM 夜间最低值 < 3.0 mmol/L(ADA 2 级)→ 24 小时内就医,调整降糖方案。"
   - id: R6_htn_emergency
@@ -204,12 +241,15 @@ rules:
     set: [within_24h, routine_followup]
     borderline: true
     source: ESC_2024_HTN
+    also_sources: [NICE_NG136]
+    review_note: "2026-10 clinician review: kept. An immediate-emergency answer is not supported for asymptomatic severe readings; earlier review within 24 hours is already accepted."
     mapping_review: pending
     printed: "R7 今天 ≥ 2 次 ≥ 180/110 mmHg 但无上述症状 → 尽快复核(ESC 2024:最好一周内),24 小时内就医或常规复诊都可。"
   - id: R8_hf_gain
     when: "heart-failure patient, morning weight today minus 3 days ago > 2 kg"
     set: [within_24h]
     source: ESC_2021_HF
+    review_note: "2026-10 clinician review: kept. ESC 2021 Table 12 allows a diuretic increase and/or alerting the team; the printed rule accepts a pre-agreed increase with same-day contact. Unsupervised adjustment with routine follow-up is not supported, and these records show a clinician-made diuretic reduction."
     mapping_review: pending
     printed: "R8 心衰病人今天晨重比 3 天前晨重多 2 kg 以上 → 24 小时内就医(或按医嘱加利尿剂并当天联系医生)。"
   - id: R9_af_alerts
@@ -222,6 +262,7 @@ rules:
     when: "NEWS2 1-4, no single 3"
     set: [within_24h, routine_followup]
     source: NEWS2_CHART2
+    review_note: "2026-10 clinician review: watchful waiting proposed. Not supported: RCP NEWS2 Chart 4 asks for assessment by a competent registered nurse at NEWS2 1-4. Suspected infection with a NICE NG253 medium-risk sign now goes to R10b (within 24 hours only)."
     mapping_review: pending
     borderline: true
     printed: "R10 NEWS2 为 1–4 且无单项 3 分 → 常规复诊或 24 小时内由医生评估均可；持续症状、心衰等共病需结合病历及时复评。"

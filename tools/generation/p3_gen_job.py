@@ -74,6 +74,10 @@ WINDOW_EXTRA_MAX = 5
 WINDOW_FLOOR = 1.15
 
 
+class PlanSupplyShortage(ValueError):
+    """A registered scenario needs more eligible patient plans."""
+
+
 def grow(v: int, n: int) -> int:
     """A pool size at N = 50 scaled to N (never below its N = 50 value)."""
     return math.ceil(v * max(1.0, n / PS.DEFAULT_N) * POOL_MARGIN)
@@ -140,7 +144,10 @@ def build(n: int = PS.DEFAULT_N, seed: str = PS.PUBLIC_SEED, window_extra: int =
         print(f"[p3] window plans {len(plans)} < {WINDOW_FLOOR} x {POOL_FACTOR} x {m} or a cell short: "
               "one more variant per condition", file=sys.stderr)
         return build(n, seed, window_extra + 1, supply_multiplier, workers=workers)
-    PS.short(need, planned, "p3 plans")
+    try:
+        PS.short(need, planned, "p3 plans")
+    except SystemExit as exc:
+        raise PlanSupplyShortage(str(exc)) from exc
     if len(plans) < POOL_FACTOR * m:
         raise SystemExit(f"[pack] p3 plans: pool too small -- {len(plans)} planned cases, need >= {POOL_FACTOR} x {m}")
     kept = [world_case(c, plans[str(c["case_id"])], condition_specs=condition_specs)
@@ -194,11 +201,15 @@ def main() -> int:
     seed = PS.cli_seed(a.seed)
     from haenv.world.validation.difficulty_r2 import enabled
     if enabled():
-        from haenv.p3.plan import planned_scenarios
-        required = {scenario_key(k): v for k, v in planned_scenarios(PS.pool_n(a.n)).items()}
+        from haenv.p3.interactions import quotas
+        required = {scenario_key(k): v for k, v in quotas(PS.pool_n(a.n)).items()}
         attempts = []
         for multiplier in (1, 2, 4, 8):
-            txt, st = build(a.n, seed, supply_multiplier=multiplier)
+            try:
+                txt, st = build(a.n, seed, supply_multiplier=multiplier)
+            except PlanSupplyShortage as exc:
+                attempts.append({"multiplier": multiplier, "missing_plans": str(exc)})
+                continue
             counts, pool_count = supply_preview(txt, out.parent / "p3-gen", multiplier)
             missing = supply_gaps(counts, required, pool_count, POOL_FACTOR * PS.pool_n(a.n))
             attempts.append({"multiplier": multiplier, "pool": pool_count, "cells": counts, "missing": missing})
@@ -256,7 +267,8 @@ def supply_preview(text, scratch, multiplier):
         worlds.append({r["case_id"]: r["case"]["adjudication"]["meds_p3"]
                        for r in map(json.loads, files[-1].read_text(encoding="utf-8").splitlines())})
     common = set(worlds[0]) & set(worlds[1])
-    counts = collections.Counter(scenario_key((g["drug"], g["class"], (g.get("comorbidity") or {}).get("code"), g["subtype"]))
+    counts = collections.Counter(scenario_key((g["drug"], g["class"], (g.get("comorbidity") or {}).get("code"), g["subtype"],
+                                               bool(g.get("interaction_family"))))
                                  for cid, g in worlds[0].items() if cid in common)
     (attempt / "supply.json").write_text(json.dumps({"pool": len(common), "cells": counts}, sort_keys=True, indent=2) + "\n")
     return dict(counts), len(common)

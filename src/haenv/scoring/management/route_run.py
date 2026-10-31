@@ -5,6 +5,9 @@ core decisions and scores delegate to the unchanged management pipeline.
 """
 from __future__ import annotations
 
+from haenv.i18n.runtime import select_saved_language
+from haenv.i18n.text import text_of as _rt
+
 from haenv.locations import source_path
 from collections import Counter
 from dataclasses import asdict
@@ -32,6 +35,7 @@ def validate(out):
     from haenv.provenance.judging import current_fingerprints
     from haenv.provenance.judging import criterion_fingerprints
     manifest = json.loads((out / "manifest.json").read_text())
+    select_saved_language(manifest)
     recorded = manifest["code"].get("judging_criteria", {}).get("management_rubric")
     if recorded is None:
         # Unstamped prepared runs still have the strict old code check.
@@ -204,7 +208,7 @@ def _run(out, ledger_path, limit_usd, cfg, concurrency, max_cells):
         else:
             result = {"key": cell["key"], "source": cell["source"],
                 "collection_status": "pending" if cell["status"] == "ready" else
-                                     "未采集" if cell["status"] == "not_collected" else cell["status"],
+                                     _rt('judge.scoring.management.route_run._run.1') if cell["status"] == "not_collected" else cell["status"],
                 "rubric_version": manifest["rubric_version"], "facts_sha256": cell["snapshot_key"],
                 "code": manifest["code"], "plan_sha256": cell["plan_sha256"],
                 "core_decision": cell["core_decision"],

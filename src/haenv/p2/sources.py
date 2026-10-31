@@ -35,11 +35,8 @@ def install():
     def source_question(next_call, pack, block):
         if pack != "p2" or block.get("rules_delivery") != "library":
             return next_call(pack, block)
-        from haenv.p2.plugin import _TAIL
-        from haenv.scoring.management.plan import INSTRUCTION
-        tail = _TAIL.replace("R0..R14 中你用的那条规则编号", "所用规程的规则编号")
-        tail = tail.replace("你依据的读数,如 home_check_today.spo2_pct=92", "你依据的患者记录")
-        return "请根据患者记录与规程库给出就医去向。\n" + tail + INSTRUCTION
+        from haenv.i18n.text import text_of
+        return text_of('runtime.p2.source_question')
 
     from haenv.app.pack_hooks import Stage
     from haenv.app.pack_hooks import register_hook

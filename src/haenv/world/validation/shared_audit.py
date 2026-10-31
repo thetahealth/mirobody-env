@@ -120,7 +120,8 @@ def sex_hits(case) -> list[str]:
     out = []
     for e in _get(case, "evidence_ledger") or ():
         if e.get("source_type") == "patient_reported_symptom":
-            got = [w for w in words if w in str(e.get("symptom") or "")]
+            from haenv.i18n.identity import source
+            got = [w for w in words if w in source(e.get("symptom") or "")]
             if got:
                 out.append(f"sex={sex} {e.get('evidence_id')}: {got}")
     return out
@@ -471,7 +472,8 @@ def said_sentences() -> set[str]:
 
 
 def _patient_sentences(case) -> list[str]:
-    return [str(e.get("symptom") or "") for e in _get(case, "evidence_ledger") or ()
+    from haenv.i18n.identity import source
+    return [source(e.get("symptom") or "") for e in _get(case, "evidence_ledger") or ()
             if e.get("source_type") == "patient_reported_symptom"]
 
 
@@ -488,7 +490,8 @@ def side_effect_complaint(it) -> list[str]:
     E._sync_pools()
     lay = E.symptom_lay_every()
     topic = {s: x["topic"] for x in E.BENIGN_EVENTS for s in [x["text"], *lay.get(x["text"], ())]}
-    text = json.dumps(it["sp"], ensure_ascii=False, default=str).lower()
+    from haenv.i18n.identity import source
+    text = json.dumps(source(it["sp"]), ensure_ascii=False, default=str).lower()
     drugs = [d for d in (E._cached_yaml(E._rp("drug_side_effects.yaml")) or {}).get("drugs") or ()
              if d.lower() in text]
     hit = E.side_effect_topics(drugs)
@@ -604,15 +607,17 @@ def repro(b1: pathlib.Path, b2: pathlib.Path) -> dict:
 def load_items(batch: pathlib.Path, block: str, class_of: Callable) -> list[dict]:
     """Emitted items of a batch: the case (gold included), exactly what the solver saw, the gold
     block and its class, the condition spec as the group of the cross-validation."""
+    from haenv.i18n.identity import load as load_messages, restore
+    messages = load_messages(pathlib.Path(batch) / "cases.jsonl")
     cases, pays = {}, {}
     for line in open(pathlib.Path(batch) / "cases.jsonl", encoding="utf-8"):
         r = json.loads(line)
-        cases[r["case_id"]] = r["case"]
+        cases[r["case_id"]] = restore(r["case"], messages.get(r["case_id"]))
     pp = pathlib.Path(batch) / "payloads.jsonl"
     if pp.is_file():
         for line in open(pp, encoding="utf-8"):
             r = json.loads(line)
-            pays[r["case_id"]] = r["sp"]
+            pays[r["case_id"]] = restore(r["sp"], messages.get(r["case_id"]))
     out = []
     for cid, c in sorted(cases.items()):
         adj = c.get("adjudication") or {}

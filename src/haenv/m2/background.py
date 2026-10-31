@@ -7,6 +7,8 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L
+
 import haenv.world.generation.rng as rng
 from haenv.resources.regpath import load_registry
 
@@ -129,9 +131,9 @@ def laboratory_documents(raw) -> None:
     pc = dict(raw.prediction_context or {})
     T = int(pc["prediction_time_T"])
     day = T - 1 - int(rng.unit(str(raw.case_id), "m2-lab-procedure") * 90)
-    pc["laboratory_method_record"] = [{"day": day, "source": "检验科血脂方法文件", "scope": "LDL-C/TC/TG",
+    pc["laboratory_method_record"] = [{"day": day, "source": L("m2.source.lipid_method"), "scope": "LDL-C/TC/TG",
                                         "valid_from": day,
-                                        "text": "甘油三酯≥4.5 mmol/L 时 LDL-C 采用直接测定，Friedewald 计算不适用。"}]
+                                        "text": L("m2.lab.ldl_direct_method")}]
     raw.prediction_context = pc
     from haenv.world.observations.events_text import relocate_event_history
     relocate_event_history(raw)

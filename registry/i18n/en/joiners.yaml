@@ -1,0 +1,8 @@
+# Separators used by language-independent message joins.
+sentences: " "
+semicolon: "; "
+lines: "\n"
+slash: " / "
+enum: ", "
+space: " "
+m2.report_separator: "; "

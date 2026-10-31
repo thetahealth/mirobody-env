@@ -1,4 +1,7 @@
 """Saved visible facts and control renderings; no criteria or new thresholds."""
+
+from haenv.i18n.runtime import registry_phrase
+from haenv.i18n.text import text_of as _rt
 from haenv.scoring.management.rubric import canonical
 from haenv.scoring.management.rubric import pointer
 
@@ -29,24 +32,25 @@ class Facts:
         self.key.append({"fact_id": ref, "record": pointer(self.snapshot, ref)})
         self.refs.append(ref)
 
-    def prohibit(self, text, refs, *, violation, required=()):
+    def prohibit(self, text, refs, *, violation, required=(), actor="answer_endorsed_action",
+                 time_window="current_encounter"):
         self.prohibitions.append({"text": text, "fact_ids": list(refs),
-                                  "violation_control": violation, "required_controls": list(required)})
+                                  "violation_control": violation, "required_controls": list(required),
+                                  **({"actor": actor, "time_window": time_window}
+                                     if self.policy["version"] == "management-rubric-v7" else {})})
         self.refs.extend(refs)
 
     def finish(self, *, actions, selected, explanation, followup, initial=None,
-               brief_explanation=None, accepted=None):
-        from haenv.scoring.management.judge import _human_claim
+               brief_explanation=None, accepted=None, management_alternatives=()):
+        from haenv.scoring.management.judge import _clinical_sorted
         if not actions or selected not in actions:
             raise ValueError("Saved control has no registered selected action")
-        history = ("旧记录显示：" + "；".join(_human_claim(canonical(h["record"])) for h in self.history)
-                   + "；据此保留该旧记录对本次评估和处置的影响。") if self.history else None
+        history = (_rt('judge.scoring.management.adapters.common.finish.1') + _rt('judge.punctuation.common.1').join(_clinical_sorted(h["record"]) for h in self.history)
+                   + _rt('judge.scoring.management.adapters.common.finish.2')) if self.history else None
         control = {"actions": actions, "selected": selected, "accepted": accepted or [selected], "history": history,
-                   "explanation": _human_claim(explanation), "followup": followup, "initial": initial,
-                   "brief_explanation": brief_explanation or _human_claim(explanation)}
-        control["management_alternatives"] = [actions[selected].replace(test, alternative)
-            for test, alternatives in self.snapshot["check_alternatives"].items()
-            for alternative in alternatives if test in actions[selected]]
+                   "explanation": explanation, "followup": followup, "initial": initial,
+                   "brief_explanation": brief_explanation or explanation}
+        control["management_alternatives"] = list(management_alternatives)
         return {"history": self.history, "key_facts": self.key,
                 "prohibitions": self.prohibitions, "guidelines": self.guidelines,
                 "source_fact_ids": list(dict.fromkeys(self.refs)), "control": control}
@@ -62,6 +66,6 @@ def applicable_guidelines(snapshot):
     groups = [g for g in list(data["families"].values()) + list(data["chronic"].values())
               if _matches(g, f.get("tier", ""), set(background.get("known_conditions", [])),
                           canonical(background.get("medications", [])).casefold())]
-    return {kind: [{"text": r["text"], "source": data["sources"][r["source"]],
-                    "control": r.get("control")} for g in groups for r in g.get(kind, [])]
+    return {kind: [{"text": registry_phrase(r["text"]), "source": data["sources"][r["source"]],
+                    "control": registry_phrase(r["control"]) if r.get("control") else None} for g in groups for r in g.get(kind, [])]
             for kind in ("not_recommended", "initial")}

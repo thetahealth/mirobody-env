@@ -1,0 +1,485 @@
+entries:
+  p2.med.bb: Bisoprolol 5 mg once daily
+  p2.med.bb2: Metoprolol modified-release 47.5 mg once daily
+  p2.med.insulin: Insulin glargine by subcutaneous injection every evening
+  p2.med.su: Glimepiride before breakfast daily
+  p2.med.furosemide: Furosemide 20 mg once daily
+  p2.med.amlodipine: Amlodipine 5 mg once daily
+  p2.med.metformin: Metformin twice daily
+  p2.med.sglt2i: Dapagliflozin 10 mg once daily
+  p2.say.open.calm.0: It's probably nothing serious. I just thought I'd ask.
+  p2.say.open.calm.1: I could be overthinking it. I don't want to trouble anyone.
+  p2.say.open.calm.2: My family insisted I ask, but I feel all right.
+  p2.say.open.calm.3: It's nothing urgent. Could you have a look when you have time?
+  p2.say.open.calm.4: I feel okay myself. I just want to make sure.
+  p2.say.open.neutral.0: I'd like some advice about how things have been lately.
+  p2.say.open.neutral.1: I'm sending the last few days' readings to ask for your advice.
+  p2.say.open.neutral.2: There's something that's been happening lately that I'd like to ask about.
+  p2.say.open.neutral.3: Could you look at my recent records?
+  p2.say.open.neutral.4: I'd like to tell you how things have been these last few days.
+  p2.say.open.alarming.0: I'm really worried. Could something be seriously wrong?
+  p2.say.open.alarming.1: These readings make me so anxious I can't sleep.
+  p2.say.open.alarming.2: I'm frightened. Could it be serious?
+  p2.say.open.alarming.3: My family all say something's wrong, and I don't know what to think.
+  p2.say.open.alarming.4: The more I look at this, the more anxious I get. I didn't sleep well all night.
+  p2.say.close.calm.0: It should get better with a bit of rest, shouldn't it?
+  p2.say.close.calm.1: It'll probably be better in a couple of days.
+  p2.say.close.calm.2: I reckon I've just been tired lately.
+  p2.say.close.calm.3: If need be, I'll keep an eye on it a little longer.
+  p2.say.close.neutral.0: I'd like to know what to do next.
+  p2.say.close.neutral.1: Please have a look for me.
+  p2.say.close.neutral.2: I'd appreciate your advice.
+  p2.say.close.neutral.3: I can give you more information if you need it.
+  p2.say.close.alarming.0: What should I do?
+  p2.say.close.alarming.1: Please, could you help me look at this?
+  p2.say.close.alarming.2: The more I think about it, the more frightened I get.
+  p2.say.close.alarming.3: Do I need to go to hospital straight away?
+  p2.say.lead.0: I'm sending my records. Please have a look.
+  p2.say.lead.1: My home measurements and watch records are below.
+  p2.say.lead.2: I'd like to ask what to do about these records.
+  p2.say.lead.3: Here are all the readings. Could you take a look?
+  p2.say.lead.4: I've put together all my records from the last few days.
+  p2.say.lead.5: I'm not sure whether these numbers are anything to worry about.
+  p2.say.mild.af.0: Over the last couple of days, I've sometimes felt my heart racing and beating unevenly.
+  p2.say.mild.af.1: Lately I sometimes feel my heart going thump-thump.
+  p2.say.mild.af.2: These past few days my heartbeat keeps feeling uneven.
+  p2.say.mild.any.0: I cough a little now and then, and my throat feels a bit uncomfortable.
+  p2.say.mild.any.1: I've had a bit of a cough lately.
+  p2.say.mild.any.2: My throat has felt a bit dry and tickly these last couple of days.
+  p2.say.mild.any.3: I've got a bit of a runny nose and it's blocked up.
+  p2.say.mild.any.4: I've had a bit of a cough these last couple of days, with little phlegm.
+  p2.say.mild.any.5: My throat's a bit sore, but otherwise I'm okay.
+  p2.say.mild.any.6: I feel a bit tired, and my throat's not quite right either.
+  p2.say.symptom.chest_pain_or_pressure.calm.0: "My chest suddenly went tight this afternoon and it still hasn't eased after nearly half an hour; I expect it'll settle if I rest."
+  p2.say.symptom.chest_pain_or_pressure.neutral.0: "About an hour ago my chest suddenly started to feel as if something was pressing on it, and it hasn't let up since."
+  p2.say.symptom.chest_pain_or_pressure.alarming.0: "All of a sudden there's an awful pressure on my chest. It's been over twenty minutes and it isn't easing at all."
+  p2.say.symptom.chest_pain_or_pressure.atypical.0: My chest feels tight, I keep breaking out in a cold
+    sweat, and I feel a bit sick.
+  p2.say.symptom.fainted.k.0: When I got up this morning, everything went black and I passed out briefly.
+    I came round quickly.
+  p2.say.symptom.fainted.k.1: I suddenly passed out while using the toilet today. My family helped me
+    up.
+  p2.say.symptom.new_confusion.k.0: My family say I haven't been making sense when I talk today.
+  p2.say.symptom.new_confusion.k.1: My family say I've been a bit muddled today and mistook someone for
+    somebody else.
+  p2.say.symptom.breathless_at_rest.k.0: Even when I'm sitting still, I feel I can't get enough air.
+  p2.say.symptom.breathless_at_rest.k.1: I feel short of breath even lying down. At night I have to prop
+    myself up on pillows.
+  p2.say.symptom.one_sided_weakness_or_slurred_speech.k.0: My right hand feels too weak to hold my chopsticks,
+    and my speech is a bit slurred.
+  p2.say.symptom.one_sided_weakness_or_slurred_speech.k.1: My left arm and leg feel weak, and one side
+    of my mouth is drooping a little.
+  p2.say.symptom.r_htn_symptom.k.0: I've got a really bad headache, and my vision's a bit blurred.
+  p2.say.symptom.r_htn_symptom.k.1: The back of my head is aching badly, and things look blurry.
+  p2.say.symptom.r_dizzy.k.0: I've felt a bit dizzy when I stand up these last couple of days.
+  p2.say.symptom.r_dizzy.k.1: Sometimes I feel a bit dizzy.
+  p2.say.symptom.r_dizzy.k.2: My head feels a bit muzzy.
+  p2.say.symptom.r_hypo_help.k.0: My blood sugar went low one night a few days ago. I only felt better
+    after my family gave me sugar water.
+  p2.say.symptom.r_hypo_help.k.1: My blood sugar went low in the middle of the night a couple of days
+    ago. I was all muddled, and my partner gave me sugar.
+  p2.hist.test.echo_specialist: Echocardiography and specialist assessment
+  p2.hist.test.abg_oxygen: Inpatient arterial blood gas and oxygen assessment at discharge
+  p2.hist.test.prior_diagnosis: Previous outpatient diagnosis record
+  p2.hist.result.hf_history: Reduced cardiac function; findings and history consistent with heart failure.
+  p2.hist.result.hf_symptoms: Reduced cardiac function; findings and symptoms consistent with heart failure.
+  p2.hist.result.af_controlled_followup: Atrial fibrillation with good ventricular rate control; symptoms
+    unchanged on follow-up.
+  p2.hist.result.af_controlled: Atrial fibrillation with good ventricular rate control; no change in clinical
+    status at that follow-up.
+  p2.hist.result.hf_normal: Normal cardiac function; no evidence of heart failure.
+  p2.hist.result.sinus_pac: Sinus rhythm with no atrial fibrillation; the earlier irregular pulse was
+    due to premature atrial beats.
+  p2.hist.result.sinus_pac_no_af: Sinus rhythm with premature atrial beats; no atrial fibrillation.
+  p2.hist.result.hypercapnia_target: Blood gas confirmed hypercapnic respiratory failure; oxygen saturation
+    target documented by clinical staff.
+  p2.hist.result.hypercapnia_excluded: Suspected hypoventilation; repeat blood gas showed no hypercapnic
+    respiratory failure. Clinical staff retained the standard oxygen saturation scoring scale.
+  p2.ctx.result.rx_continued: Prescription continued; take as previously prescribed.
+  p2.ctx.result.rx_ended: Previous prescription ended; no further use thereafter.
+  p2.ctx.result.chemo_ongoing: Systemic treatment administered for this cycle; treatment remains ongoing.
+  p2.ctx.result.chemo_ended: Systemic treatment course completed and repeat blood counts recovered; not
+    currently receiving further treatment.
+  p2.ctx.result.hypercapnia_target: Blood gas confirmed hypercapnic respiratory failure; oxygen saturation
+    target documented by clinical staff. Usual finger oximeter readings within target.
+  p2.ctx.result.copd_no_scale2: COPD follow-up; blood gas did not confirm hypercapnic respiratory failure.
+    No authorisation for scale two.
+  p2.ctx.result.brady_stable: ECG shows sinus bradycardia, assessed clinically as longstanding and stable,
+    without related symptoms. Previous follow-up plan continued.
+  p2.ctx.result.brady_recovered: Sinus bradycardia during previous medication use resolved after withdrawal
+    of the rate-lowering medicine; subsequent repeated heart rates within the recheck range.
+  p2.ctx.result.af_confirmed: ECG-confirmed atrial fibrillation with controlled ventricular rate and ongoing
+    follow-up; symptoms and exercise tolerance unchanged.
+  p2.ctx.result.sinus_pac: ECG shows sinus rhythm with premature atrial beats; atrial fibrillation not
+    documented.
+  p2.ctx.result.hf_documented: Heart failure documented on echocardiography and specialist assessment;
+    follow-up ongoing.
+  p2.ctx.result.hf_diuretic_reduced: Volume status reassessed after discharge for heart failure. Previous
+    diuretic dose reduced as instructed by the clinician; continue daily morning weight records.
+  p2.ctx.test.med_reconciliation: Medication reconciliation
+  p2.policy.relative_hypotension: 'R3d Suspected infection today, with a verified usual systolic pressure
+    in the record and a reliable current systolic pressure more than 40 mmHg below usual: immediate emergency
+    assessment even if still above 90 mmHg and NEWS2 is low. Do not apply without a baseline or for nonspecific
+    symptoms alone.'
+  p2.ctx.result.usual_pressure: Usual systolic pressure verified at clinic against home cuff readings;
+    the value is recorded in this entry. See home measurements for the current blood pressure series.
+  p2.ctx.test.pressure.0: Review of home and clinic blood pressure measurements
+  p2.ctx.test.pressure.1: Blood pressure follow-up record
+  p2.ctx.test.pressure.2: Review of previous baseline blood pressure
+  p2.complaint.blister.0: I got a little blister on my palm from gripping a tool while doing housework;
+    it gradually dried up afterwards
+  p2.complaint.blister.0.context: Repeated friction on the palm during housework; use of the tool stopped
+  p2.complaint.blister.1: Sandals rubbed a little blister on the top of my foot; it improved with a soft
+    dressing
+  p2.complaint.blister.1.context: Shoe upper rubbed the top of the foot; no further friction after changing
+    shoes
+  p2.complaint.blister.2: I got a blister on the side of my toe after a long walk; changing socks and
+    resting helped
+  p2.complaint.blister.2.context: Friction on the toe while walking; no redness, swelling or pus from
+    the blister
+  p2.complaint.blister.3: Garden shears rubbed a little blister beside my thumb; it has been closing up
+    since I stopped using them
+  p2.complaint.blister.3.context: Repeated friction from a hand tool on the thumb; local recovery progressing
+  p2.complaint.blister.4: I got a little blister at the base of my index finger from sweeping with a broom;
+    it no longer hurts
+  p2.complaint.blister.4.context: Broom handle rubbed the finger; symptoms eased with reduced friction
+  p2.complaint.blister.5: I got a blister on the outside of my little toe from stiff leather shoes; it
+    has gradually healed since I changed to wider shoes
+  p2.complaint.blister.5.context: Pressure and friction from shoes on the little toe; no signs of infection
+  p2.complaint.ankle_sprain.0: I twisted my ankle on uneven ground while out walking; it has improved
+    with rest
+  p2.complaint.ankle_sprain.0.context: Mild ankle twist while walking; able to bear weight, with pain
+    and swelling gradually settling
+  p2.complaint.ankle_sprain.1: I twisted my ankle while turning; it hurt a little locally, then settled
+  p2.complaint.ankle_sprain.1.context: Twisted ankle while turning; no deformity, with movement gradually
+    recovering
+  p2.complaint.ankle_sprain.2: I slightly twisted my left ankle stepping off a kerb; I am walking again
+    now
+  p2.complaint.ankle_sprain.2.context: Ankle twisted at a kerb; recovered with support and rest
+  p2.complaint.ankle_sprain.3: My ankle ached after I stepped awkwardly walking in the yard; it eased
+    day by day afterwards
+  p2.complaint.ankle_sprain.3.context: Mild sprain on uneven ground; no marked swelling developed
+  p2.complaint.knee_pain.0: The front of my knee ached after squatting to sort things out; it gradually
+    eased when I squatted less
+  p2.complaint.knee_pain.0.context: Anterior knee discomfort associated with squatting; subsequently resolved
+  p2.complaint.knee_pain.1: The front of my knee hurt a little after kneeling to clean; it eased after
+    I stopped
+  p2.complaint.knee_pain.1.context: Anterior knee ache after kneeling; no swelling or limitation of movement
+  p2.complaint.knee_pain.2: The front of my knee ached after walking on slopes; it gradually eased with
+    rest
+  p2.complaint.knee_pain.2.context: Anterior knee discomfort after walking on slopes; normal weight bearing
+  p2.complaint.knee_pain.3: My knee ached after I suddenly became more active; it recovered when I cut
+    back
+  p2.complaint.knee_pain.3.context: Mild knee ache after a change in activity level; subsequently recovered
+  p2.complaint.eyelid_twitch.0: My right eyelid twitched now and then while I was busy and tired; it stopped
+    on its own after I rested
+  p2.complaint.eyelid_twitch.0.context: Brief eyelid twitching during fatigue; now resolved
+  p2.complaint.eyelid_twitch.1: My eyelid twitched for a while when I was drinking more coffee; since
+    I cut down, it no longer twitches
+  p2.complaint.eyelid_twitch.1.context: Eyelid twitching during increased caffeine intake; subsequently
+    resolved
+  p2.complaint.eyelid_twitch.2: My left eyelid twitched a few times when work was stressful; it eased
+    when I relaxed
+  p2.complaint.eyelid_twitch.2.context: Brief eyelid twitching during stress; no change in vision
+  p2.complaint.eyelid_twitch.3: My eyelid kept twitching on and off when I wasn't sleeping much; it got
+    better after I caught up on rest
+  p2.complaint.eyelid_twitch.3.context: Brief eyelid twitching during insufficient rest; now recovered
+  p2.complaint.wrist_strain.0: My wrist ached after repeatedly turning screws; it gradually eased when
+    I stopped and rested
+  p2.complaint.wrist_strain.0.context: Mild wrist ache after repetitive hand movements; subsequently resolved
+  p2.complaint.wrist_strain.1: My wrist ached after a lot of typing; it eased when I adjusted my work
+  p2.complaint.wrist_strain.1.context: Wrist discomfort after prolonged keyboard use; improved after reducing
+    repetitive movements
+  p2.complaint.wrist_strain.2: My forearm and wrist ached after a spell of painting walls; they got better
+    afterwards
+  p2.complaint.wrist_strain.2.context: Forearm and wrist ache after repetitive decorating movements; now
+    resolved
+  p2.complaint.wrist_strain.3: My wrist ached after spending a long time doing people's hair; it eased
+    when I took a break
+  p2.complaint.wrist_strain.3.context: Mild wrist ache after repetitive hairdressing movements; subsequently
+    recovered
+  p2.complaint.ear_water.0: My ear felt blocked for a short time after a shower; it cleared when the water
+    came out
+  p2.complaint.ear_water.0.context: Water entered the ear canal during a shower; subsequently recovered,
+    with no ear pain or discharge
+  p2.complaint.ear_water.1: I felt water sloshing in my ear after swimming; it went away on its own
+  p2.complaint.ear_water.1.context: Brief water entry into the ear canal after swimming; no discomfort
+    now
+  p2.complaint.ear_water.2: My ear felt a bit blocked after water splashed into it while washing my face;
+    it cleared once dry
+  p2.complaint.ear_water.2.context: Brief blocked sensation after a little clean water entered the ear;
+    subsequently recovered
+  p2.complaint.ear_water.3: My ear felt uncomfortable briefly after a shower; it gradually settled after
+    I dried the outside of my ear
+  p2.complaint.ear_water.3.context: Water entered the ear canal while showering; no persistent pain or
+    change in hearing afterwards
+  p2.complaint.rhinitis.0: My nose got itchy and I kept sneezing while sorting old books; it eased when
+    I moved away
+  p2.complaint.rhinitis.0.context: Nasal itching and sneezing on exposure to bookshelf dust; subsequently
+    resolved
+  p2.complaint.rhinitis.1: My nose ran with clear fluid after contact with cat fur; it gradually got better
+    when I moved away
+  p2.complaint.rhinitis.1.context: Brief nasal discomfort after exposure to animal dander; now resolved
+  p2.complaint.rhinitis.2: My nose was itchy and runny outside when there was a lot of pollen; it eased
+    indoors
+  p2.complaint.rhinitis.2.context: Nasal itching and sneezing on pollen exposure; subsequently resolved
+  p2.complaint.rhinitis.3: I kept sneezing while clearing out the store room; it eased after I washed
+  p2.complaint.rhinitis.3.context: Clear nasal discharge on dust exposure; no persistent symptoms now
+  p2.protocol.priority: Across procedures, apply R0, R0a, R0b, R1, R2, R3a, R3d, R3b, R3c, R3, R4, R5,
+    R6, R7a, R7, R8, R9, R10a, R10b, R10, R11, R12, R13, R14 in that order. The first applicable rule determines
+    the decision.
+  p2.protocol.baseline.excludes: Does not apply if the baseline is unverified or new symptoms develop.
+  p2.protocol.baseline.exceptions: Earlier acute rules take precedence.
+  drug.bisoprolol: Bisoprolol
+  drug.furosemide: Furosemide
+  drug.glimepiride: Glimepiride
+  drug.insulin_glargine: Insulin glargine
+  drug.metoprolol: Metoprolol modified-release
+  encounter.p2: Online triage of home monitoring
+  freq.before_breakfast: Daily before breakfast
+  freq.nightly_sc: Subcutaneous injection every evening
+  hist.not_recorded: Not documented
+  hist.recorded: Documented
+  news2.input_stage.first_upload: Initial upload of home measurements for this assessment (before additional
+    measurements)
+  news2.measurement_stage.completed: Additional measurements completed after the initial upload; the vital
+    signs below are today's completed readings
+  news2.missing.none: All fields received
+  news2.missing.zero: Fields not received score 0
+  news2.source.system: Calculated automatically by the home monitoring system
+  上周嗓子不舒服了两天,现在没事了。: My throat bothered me for a couple of days last week, but it's fine now.
+  上次复诊时医生说有变化就发给他们看看。: At my last follow-up, the doctor said to send them my readings if anything changed.
+  今天加班到很晚: Worked late today
+  今天有点发冷，人不太舒服，嗓子也疼。: I feel a bit shivery and unwell today, and my throat hurts too.
+  今天滑了一下，头碰到门框，现在清醒，没有吐。: I slipped today and hit my head on the door frame. I'm fully awake now and have
+    not been sick.
+  今天表一直在手腕上晃: My watch kept moving around on my wrist today
+  今天陪家人出去走了走: Went out for a walk with my family today
+  出差中,作息有变: On a work trip; daily routine has changed
+  出院后呼吸评估: Respiratory assessment after discharge
+  利伐沙班: Rivaroxaban
+  前些天有点鼻塞,早就好了。: I had a bit of a blocked nose a while ago, but it cleared up long ago.
+  前阵子有点感冒,已经好了。: I had a bit of a cold a while back, but I've recovered.
+  单位体检的医生建议我平时多关注数据。: The doctor at my workplace health check suggested I pay more attention to my readings
+    day to day.
+  呼吸病程复核: Review of respiratory clinical course
+  呼吸门诊与血气复评: Respiratory clinic and blood gas reassessment
+  女儿让我把数据发过来问问。: My daughter asked me to send my readings and ask about them.
+  左上臂: Left upper arm
+  右上臂: Right upper arm
+  坐位静息后测: Measured after resting seated
+  夜里表带没扣紧: My watch strap wasn't fastened securely overnight
+  心功能与用药随访: Cardiac function and medication follow-up
+  心律与抗凝用药核对: Review of heart rhythm and anticoagulant medication
+  心律随访: Heart rhythm follow-up
+  心率随访记录: Heart rate follow-up record
+  心电图与症状复核: Review of ECG and symptoms
+  心血管用药随访: Cardiovascular medication follow-up
+  心衰病程复核: Review of heart failure clinical course
+  手腕出汗,表有点滑: My wrist was sweaty and my watch was slipping a little
+  手臂放在桌上测的: Measured with my arm resting on the table
+  手表戴得有点松: My watch was a little loose
+  按要求把这几天的记录整理了一下,发在下面。: I've put together the last few days' records as requested and included them below.
+  早上绊了一下碰到头，之后一直清醒，没觉得恶心。: I tripped and hit my head this morning. I've been fully awake since, and haven't
+    felt sick.
+  服药前测: Measured before taking medication
+  服药后两小时测: Measured two hours after taking medication
+  测前坐了一会儿: Sat for a while before measuring
+  治疗经过与血象复核: Review of treatment course and blood counts
+  睡觉时手表松了: My watch came loose while I was asleep
+  睡觉翻身把表带蹭松了: My watch strap worked loose as I turned over in bed
+  社区医生让我平时多留意这些数据。: My community doctor asked me to keep an eye on these readings day to day.
+  系统治疗随访: Systemic treatment follow-up
+  老伴看我最近的记录,催我来问问。: My partner looked at my recent records and urged me to ask about them.
+  肿瘤科疗程复评: Oncology treatment-course review
+  血压、体重和手表的记录都在这里了。: Here are all my blood pressure, weight and watch records.
+  表带偏松: Watch strap slightly loose
+  表带松了一格: My watch strap had loosened by one notch
+  超声心动图与专科评估: Echocardiography and specialist assessment
+  这两天觉得乏力，今天开始发冷，有点咳嗽。: I've felt tired these last couple of days. Today I started feeling shivery and
+    have a bit of a cough.
+  这几天在外面吃得多: Have been eating out a lot these last few days
+  这是我这几天自己记的和手表上的数据。: These are my own notes and my watch readings from the last few days.
+  门诊处方与用药复核: Outpatient prescription and medication review
+  门诊心电图复核: Outpatient ECG review
+  门诊心电图随访: Outpatient ECG follow-up
+  阿哌沙班: Apixaban
+  静息心率与心电图复核: Review of resting heart rate and ECG
+  周末外出了半天: Went out for half a day at the weekend
+  两只眼睛有点痒,越揉越明显: Both my eyes are a bit itchy, and the more I rub them the more I notice it
+  两眼发痒揉了更明显: Both eyes itchy, worse with rubbing
+  从椅子上起身时髋部酸痛: Aching around the hip when getting up from a chair
+  从椅子起身时,胯那边酸酸的: My hip aches when I get up from a chair
+  伏案后两肩之间的背部酸痛: Aching in the back between the shoulders after desk work
+  低头坐久了,两边肩胛骨之间酸疼: It aches between my shoulder blades after sitting looking down for a long time
+  做手工后手掌和手指酸痛: Aching in the palm and fingers after craft work
+  刷牙会碰到一处牙龈,酸酸地疼: One patch of gum aches when my toothbrush touches it
+  刷牙时一处牙龈酸疼: Localised gum ache when brushing teeth
+  前臂上有一片小红疹,有点痒: There's a small patch of red rash on my forearm, and it's a bit itchy
+  前臂起了一片发痒的红疹: An itchy red rash on the forearm
+  前额隐隐作痛,歇一会儿轻些: I've got a dull ache across my forehead that eases after a bit of rest
+  半夜腿肚子抽筋,伸伸腿后缓过来了: My calf cramped in the middle of the night, then eased when I stretched my leg
+  口干需要频繁小口喝水: Dry mouth requiring frequent sips of water
+  口腔很干,常常得抿点水: My mouth feels very dry, and I often need a sip of water
+  吃完东西恶心了一阵,没有吐出来: I felt sick for a while after eating, but did not throw up
+  吃完饭老是嗳气,胃上边顶着胀: I keep burping after meals, with a full, bloated feeling at the top of my stomach
+  嘴唇边上有个小疱,进食时疼: There's a little blister beside my lip that hurts when I eat
+  嘴唇边起个小疱吃东西疼: Small blister beside the lip, painful when eating
+  嘴边长了个小水疱,吃饭时碰着疼: I've got a little blister by my mouth, and it hurts if food touches it
+  嘴里总觉得干,要不时喝几口水: My mouth keeps feeling dry, and I need a few sips of water now and then
+  坐久了站起来,髋关节那里酸痛: My hip joint aches when I stand up after sitting for a long time
+  坐在桌前时间长,背上靠肩胛骨那块疼: My back hurts around the shoulder blades after sitting at a desk for a long time
+  外耳道有点痒,没有分泌物: My ear canal feels a bit itchy, but there's no discharge
+  外耳道痒但没有流液: Itching in the ear canal without discharge
+  夜里小腿抽筋伸展后缓解: Calf cramp at night, relieved by stretching
+  大便干硬排便费力: Hard, dry stools with straining
+  头皮干干的,掉了不少皮屑: My scalp feels dry, and quite a lot of skin is flaking off
+  头皮干燥脱屑: Dry, flaky scalp
+  小臂出了一片红红的疹子,痒得想挠: I've got a patch of red rash on my forearm, and it's itchy enough to make me want
+    to scratch
+  手上忙了一下午,掌心和几个手指都酸疼: My palm and several fingers ache after an afternoon working with my hands
+  手工活做久了,手掌连着手指酸酸的: My palm and fingers ache after doing handwork for a long time
+  手碰到清洁用品,背面就冒红疹: A red rash comes up on the backs of my hands when I touch cleaning products
+  拎重一点的袋子,前臂会酸疼: My forearm aches when I carry a slightly heavier bag
+  拧毛巾时肘外侧疼: Pain on the outside of the elbow when wringing a towel
+  排便有点困难,便便干硬: It's a bit hard to go to the toilet; my stools are dry and hard
+  接触清洁剂后手背起红疹: Red rash on the backs of the hands after contact with cleaning agents
+  提东西后前臂肌肉酸痛: Aching forearm muscles after carrying things
+  提了东西后,小臂肌肉酸酸的: The muscles in my forearm ache after carrying things
+  早上几个关节不灵活,活动后好些: A few joints feel stiff in the morning, then loosen up when I move around
+  早上手指僵僵的,握拳不太顺: My fingers are stiff in the morning, and it's a bit awkward making a fist
+  早晨手指发僵握拳不灵活: Morning finger stiffness with difficulty making a fist
+  早晨起来关节有点僵,动一动就松了: My joints feel a bit stiff when I get up, but loosen up when I move them
+  晚上小腿抽了一阵筋,拉伸一下就好了: My calf cramped for a while at night, then got better with a stretch
+  晨起几个关节发僵活动后松开: Several joints stiff on waking, loosening with movement
+  最近几晚入睡慢,在床上翻来覆去: These last few nights I've been slow to get to sleep, tossing and turning in bed
+  最近指甲总裂,感觉比以前脆: My nails keep splitting lately; they seem more brittle than before
+  牙龈有一块刷到就疼: One patch of my gum hurts when I brush it
+  用力拧东西时,肘关节外侧有点疼: The outside of my elbow hurts a little when I twist something firmly
+  用完清洁剂后,手背起了些红疹: I've got some red spots on the backs of my hands after using cleaning fluid
+  眼睛痒痒的,揉一下反而更难受: My eyes are itchy, and rubbing them just makes them feel worse
+  耳朵嗡嗡了一会儿,后来自己停了: My ear buzzed for a while, then stopped on its own
+  耳朵里面痒,没看见流什么东西: It's itchy inside my ear, but I haven't seen anything coming out
+  耳边响了一阵,很快就没有了: I heard a ringing in my ear for a while, but soon it was no longer there
+  耳边短暂嗡响一会儿后消失: Brief buzzing in the ear, then resolved
+  舌头尖有一小块疼,吃东西会碰到: There's a small sore patch at the tip of my tongue that food touches when I eat
+  舌尖一点点地方疼,吃饭时挺明显: There's a tiny sore spot on the tip of my tongue, and I really notice it when eating
+  舌尖有个小痛点吃东西时疼: Small sore spot on the tongue tip, painful when eating
+  讲了一天话,声音哑哑的: My voice is hoarse after talking all day
+  话说得多了,嗓音变哑了: My voice has gone hoarse after a lot of talking
+  说话多以后声音发哑: Hoarseness after prolonged talking
+  走多了路,脚底中间的足弓会疼: The arch in the middle of my foot hurts when I do a lot of walking
+  走路较多后足弓疼: Pain in the arch after increased walking
+  起床时手指不灵活,攥拳有点费劲: My fingers feel stiff when I get up, and it's a bit hard to make a fist
+  路走得多时,脚底那道弓有些酸痛: The arch under my foot aches a little when I walk a lot
+  这几天大便很干,上厕所要费些劲: My stools have been very dry these last few days, and I have to strain to pass them
+  这几天拧毛巾会牵着胳膊肘外边疼: These last few days, wringing a towel gives me a pulling pain on the outside of my
+    elbow
+  这几天晚上躺着好久才能睡着: These last few nights I've been lying awake for a long time before falling asleep
+  这阵子头皮总脱屑,感觉很干: My scalp keeps flaking lately and feels very dry
+  进食后恶心一阵没有吐: Brief nausea after eating, without vomiting
+  连续几晚躺下很久才入睡: Taking a long time to fall asleep after lying down for several nights in a row
+  额头有些疼,休息之后好一点: My forehead aches a bit, then feels better after rest
+  额头隐隐疼休息后减轻: Dull forehead ache relieved by rest
+  饭后总打嗝,上腹有些胀: I keep burping after meals, and the top of my stomach feels a bit bloated
+  饭后有点犯恶心,过会儿好了,没吐: I felt a bit sick after eating, then it passed after a while. I didn't throw up
+  饭后频繁打嗝伴上腹顶胀: Frequent belching after meals with upper abdominal bloating and pressure
+  鼻塞时两颊发胀: Pressure in both cheeks with nasal blockage
+  鼻塞那阵两边脸有些压胀感: Both sides of my face felt a bit full and under pressure when my nose was blocked
+  鼻子堵的时候,脸颊两边胀胀的: My cheeks feel full on both sides when my nose is blocked
+  握工具做家务后掌心磨了个小水泡,后来逐渐干了: I got a little blister on my palm from gripping a tool while doing housework;
+    it gradually dried up afterwards
+  家务时手掌反复摩擦,已停止使用该工具: Repeated friction on the palm during housework; use of the tool stopped
+  穿凉鞋后脚背磨起一个小泡,垫软贴后好转: Sandals rubbed a little blister on the top of my foot; it improved with a soft
+    dressing
+  鞋面摩擦脚背,换鞋后不再摩擦: Shoe upper rubbed the top of the foot; no further friction after changing shoes
+  走远路后脚趾侧面磨出水泡,换袜休息后减轻: I got a blister on the side of my toe after a long walk; changing socks and resting
+    helped
+  步行时脚趾摩擦,水泡无红肿流脓: Friction on the toe while walking; no redness, swelling or pus from the blister
+  用园艺剪时拇指边磨起小泡,停用后在收口: Garden shears rubbed a little blister beside my thumb; it has been closing up since
+    I stopped using them
+  手工具反复摩擦拇指,局部逐渐恢复: Repeated friction from a hand tool on the thumb; local recovery progressing
+  握扫帚清扫后食指根磨出小泡,现在已不疼: I got a little blister at the base of my index finger from sweeping with a broom;
+    it no longer hurts
+  扫帚柄摩擦手指,减少摩擦后缓解: Broom handle rubbed the finger; symptoms eased with reduced friction
+  穿硬皮鞋后小趾外侧起泡,换宽鞋后逐渐恢复: I got a blister on the outside of my little toe from stiff leather shoes; it has
+    gradually healed since I changed to wider shoes
+  鞋子挤磨小趾,未见感染表现: Pressure and friction from shoes on the little toe; no signs of infection
+  散步踩到不平地面扭了脚踝,休息后已好转: I twisted my ankle on uneven ground while out walking; it has improved with rest
+  走路时踝部轻扭,能负重,肿痛逐渐消退: Mild ankle twist while walking; able to bear weight, with pain and swelling gradually
+    settling
+  转身时脚踝扭了一下,局部轻疼后来缓解: I twisted my ankle while turning; it hurt a little locally, then settled
+  转身扭伤踝部,无畸形,活动逐渐恢复: Twisted ankle while turning; no deformity, with movement gradually recovering
+  下路沿时左踝轻微扭伤,现已恢复走路: I slightly twisted my left ankle stepping off a kerb; I am walking again now
+  路沿处扭到踝部,支托休息后恢复: Ankle twisted at a kerb; recovered with support and rest
+  院里走路踩偏后脚踝酸疼,后来逐日减轻: My ankle ached after I stepped awkwardly walking in the yard; it eased day by day
+    afterwards
+  不平地面造成轻度扭伤,未出现明显肿胀: Mild sprain on uneven ground; no marked swelling developed
+  蹲着整理物品后膝前酸痛,少蹲后渐渐减轻: The front of my knee ached after squatting to sort things out; it gradually eased
+    when I squatted less
+  膝前不适与蹲姿有关,后已缓解: Anterior knee discomfort associated with squatting; subsequently resolved
+  跪地清扫后膝盖前面有点疼,停止后减轻: The front of my knee hurt a little after kneeling to clean; it eased after I stopped
+  跪姿后膝前酸痛,无肿胀或活动受限: Anterior knee ache after kneeling; no swelling or limitation of movement
+  走坡路后膝前隐痛,休息后逐渐缓解: The front of my knee ached after walking on slopes; it gradually eased with rest
+  坡路活动后膝前不适,能正常负重: Anterior knee discomfort after walking on slopes; normal weight bearing
+  活动突然多了后膝盖酸,减量后已恢复: My knee ached after I suddenly became more active; it recovered when I cut back
+  活动量改变后膝部轻度酸痛,后已恢复: Mild knee ache after a change in activity level; subsequently recovered
+  忙碌劳累那阵右眼皮偶尔跳,休息后自己停了: My right eyelid twitched now and then while I was busy and tired; it stopped on
+    its own after I rested
+  劳累期间短暂眼皮跳,现已消失: Brief eyelid twitching during fatigue; now resolved
+  喝咖啡较多时眼皮跳过一阵,减少后不再跳: My eyelid twitched for a while when I was drinking more coffee; since I cut down,
+    it no longer twitches
+  咖啡因摄入增加时眼皮抽动,后缓解: Eyelid twitching during increased caffeine intake; subsequently resolved
+  工作紧张时左眼皮跳了几回,放松后缓解: My left eyelid twitched a few times when work was stressful; it eased when I relaxed
+  紧张期间眼皮短暂抽动,无视力改变: Brief eyelid twitching during stress; no change in vision
+  睡得少那阵眼皮断续跳,补足休息后好了: My eyelid kept twitching on and off when I wasn't sleeping much; it got better after
+    I caught up on rest
+  休息不足时短暂眼睑抽动,现已恢复: Brief eyelid twitching during insufficient rest; now recovered
+  反复拧螺丝后手腕酸,停下休息后渐渐缓解: My wrist ached after repeatedly turning screws; it gradually eased when I stopped
+    and rested
+  重复手部动作后腕部轻度酸痛,后已缓解: Mild wrist ache after repetitive hand movements; subsequently resolved
+  打字较多后手腕发酸,调整工作后减轻: My wrist ached after a lot of typing; it eased when I adjusted my work
+  连续键盘操作后腕部不适,减少重复动作后好转: Wrist discomfort after prolonged keyboard use; improved after reducing repetitive
+    movements
+  刷墙忙了一阵后前臂连着腕部酸痛,后来好了: My forearm and wrist ached after a spell of painting walls; they got better afterwards
+  重复装修动作后前臂与腕部酸痛,现已消退: Forearm and wrist ache after repetitive decorating movements; now resolved
+  整理头发忙久了手腕发酸,歇下后缓解: My wrist ached after spending a long time doing people's hair; it eased when I took
+    a break
+  重复理发动作后腕部轻度酸痛,后已恢复: Mild wrist ache after repetitive hairdressing movements; subsequently recovered
+  淋浴后耳朵短时发闷,水流出后就好了: My ear felt blocked for a short time after a shower; it cleared when the water came
+    out
+  淋浴时耳道进水,后来恢复,无耳痛流液: Water entered the ear canal during a shower; subsequently recovered, with no ear
+    pain or discharge
+  游泳后耳内有水晃动感,后来自己消失: I felt water sloshing in my ear after swimming; it went away on its own
+  游泳后短暂耳道进水,现已无不适: Brief water entry into the ear canal after swimming; no discomfort now
+  洗脸溅水进耳后有点堵,干了以后恢复: My ear felt a bit blocked after water splashed into it while washing my face; it
+    cleared once dry
+  少量清水入耳后短暂堵塞感,后来恢复: Brief blocked sensation after a little clean water entered the ear; subsequently
+    recovered
+  冲澡后耳内短时不舒服,擦干耳廓后渐渐消失: My ear felt uncomfortable briefly after a shower; it gradually settled after I
+    dried the outside of my ear
+  冲澡时耳道进水,后无持续疼痛或听力变化: Water entered the ear canal while showering; no persistent pain or change in hearing
+    afterwards
+  整理旧书时鼻子发痒连着打喷嚏,离开后缓解: My nose got itchy and I kept sneezing while sorting old books; it eased when I
+    moved away
+  接触书架灰尘时鼻痒喷嚏,后已缓解: Nasal itching and sneezing on exposure to bookshelf dust; subsequently resolved
+  接触猫毛后流清鼻涕,离开后逐渐好了: My nose ran with clear fluid after contact with cat fur; it gradually got better
+    when I moved away
+  接触动物皮屑后短暂鼻部不适,现已消失: Brief nasal discomfort after exposure to animal dander; now resolved
+  花粉多时外出鼻痒流涕,进屋后减轻: My nose was itchy and runny outside when there was a lot of pollen; it eased indoors
+  花粉接触时鼻痒喷嚏,后已缓解: Nasal itching and sneezing on pollen exposure; subsequently resolved
+  清理储物间时连打喷嚏,洗漱后就缓解了: I kept sneezing while clearing out the store room; it eased after I washed
+  灰尘接触时流清涕,现无持续症状: Clear nasal discharge on dust exposure; no persistent symptoms now
+  指甲变脆容易裂开: Brittle nails that split easily
+  指甲变得很脆,边上容易开裂: My nails have become very brittle, and the edges split easily
+  p2.policy.infection_medium_risk: "R10b Suspected infection on today's intake checklist, NEWS2 1–4 with no individual score of 3, and any NICE medium-risk sign on today's home check (heart rate 91–130/min, respiratory rate 21–24/min, systolic BP 91–100 mmHg, temperature below 36.0 °C) → face-to-face medical assessment within 24 hours to reach a diagnosis and decide whether care outside hospital is safe; routine follow-up or watchful waiting alone is not enough. Low-NEWS2 infection without these signs stays under R10."
+  p2.protocol.infection_risk.name: "Review of community medium-risk signs in suspected infection"
+  p2.protocol.infection_risk.applies: "Adult home triage with suspected infection on today's intake checklist and low NEWS2, requiring review against community medium-risk signs"
+  p2.protocol.infection_risk.excludes: "Does not apply without suspected infection, with NEWS2 of 0, or when an earlier acute rule applies"
+  p2.protocol.infection_risk.exceptions: "Earlier acute and NEWS2 rules take precedence; cases without medium-risk signs remain under R10."
+  p2.protocol.infection_risk.keyword.0: "Suspected infection"
+  p2.protocol.infection_risk.keyword.1: "Medium risk"
+  p2.protocol.infection_risk.keyword.2: "Heart rate"
+  p2.protocol.infection_risk.keyword.3: "Respiratory rate"
+  p2.protocol.infection_risk.keyword.4: "Systolic blood pressure"
+  p2.protocol.infection_risk.keyword.5: "Temperature"

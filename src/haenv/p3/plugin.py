@@ -16,29 +16,14 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L as _L, text_of as _rt
+
 NAME = "meds_p3"
 LATENT = "p3"
 PROBE_ID = "p3.meds"
 FRAMING = "P3_MEDS_PROMPT"
 
-P3_MEDS_PROMPT = """请对这个药物复诊记录作出今天的处置建议。题头给出就诊类型、今天日期、患者原话和全部在用慢病药。
-请结合门诊病程、检验、处方、取药、家庭监测和症状日记，自行识别本次需评估处置的一种在用药，
-在 `target_drug` 中填写药名；即使决定维持，也须指出所评估的药。按本院规程给出 `med_decision`,五选一:
-`uptitrate` 加量 · `downtitrate` 减量 · `maintain` 维持当前剂量 ·
-`switch` 本药不再加量,换用或加用另一种药 ·
-`check_adherence_or_adverse_effect` 先查依从性、副作用或其他原因,暂不调整剂量
-(已能归因于本药剂量的不良反应请选减量)。
-`new_dose` 填调整后的剂量(维持、换药、先查时填 null);`rationale_evidence` 列出你依据的记录。
-你的建议由医生审核后执行:涉及改剂量、换药时 `action.clinician_review_required` 须为 true。
-
-pre-T 数据(JSON):
-{payload}
-
-只输出一个 JSON 对象(无任何多余文字/markdown),schema:
-{{"med_decision":"uptitrate|downtitrate|maintain|switch|check_adherence_or_adverse_effect",
-"target_drug":"药名","new_dose":null,
-"rationale_evidence":["依据的记录"],
-"action":{{"selected_action_class":"A3","specific_action":"一句话的具体处置","clinician_review_required":true}}}}"""
+P3_MEDS_PROMPT = _L('runtime.p3.plugin.module.1')
 
 
 def _gold(meta):
@@ -80,13 +65,12 @@ def pack():
     return Pack(
         name="p3", history_dependency=POLICY, owns=_when, source="haenv.p3 (haenv/p3/plugin.py)",
         blocks=((NAME, _gold, lambda meta: None, (LATENT,), {LATENT: "knob"},
-                 "③ 慢病调药包(设计 §3):调药决定五类的金标,由世界层剂量线、取药覆盖、控制轴真值与症状记录经 G3 确定;"
-                 "题面块在测量层之后由 hooks.observe_meds 写入。"),),
+                 _rt('runtime.p3.plugin.pack.1')),),
         emission=emission(),
-        framing=(FRAMING, P3_MEDS_PROMPT, "③ 单回合无菜单的调药问法(设计 §3.1 作答 schema)。"),
+        framing=(FRAMING, P3_MEDS_PROMPT, _rt('runtime.p3.plugin.pack.2')),
         probe=probe_dict, judge=(NAME, _judge, KINDS, _when), mounts={"single": "out"},
-        why_not={"gated": "③ 单回合无菜单(设计 §11 K2):决定所需数据全部常显,不走购买式工具轨",
-                 "slices": "③ 不切片:一次复诊一个决定", "multi": "③ 单回合,不是多轮追踪"},
+        why_not={"gated": _rt('runtime.p3.plugin.pack.3'),
+                 "slices": _rt('runtime.p3.plugin.pack.4'), "multi": _rt('runtime.p3.plugin.pack.5')},
         prompt_gold_meta=("outcome", "driver"), judging_segment="P3_JUDGING",
         base_labels=(),                         # the score reads its own block, no base-world label
         # the decision reads the visit block (`prediction_context.meds_p3`); of the streams, the clinical

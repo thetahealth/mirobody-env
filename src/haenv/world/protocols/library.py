@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+
+from haenv.i18n.text import J, L, T
 from haenv.resources.regpath import load_registry
 from haenv.resources.regpath import registry_cached
 
@@ -9,18 +11,34 @@ from haenv.resources.regpath import registry_cached
 @registry_cached("protocols.yaml", "difficulty_r2.yaml")
 def table():
     cfg = load_registry("protocols.yaml")
+    # Citations with only Latin text can still require localized punctuation.
+    # Route source fields explicitly; they are presentation, never identifiers.
+    def source_text(value):
+        if isinstance(value, dict):
+            return {k: L(v) if k in {"cite", "locator"} and isinstance(v, str)
+                    else source_text(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [source_text(v) for v in value]
+        return value
     # These are presentation entries for the already registered R2 policies.
     # Keep their sole clinical source in the generation-side R2 registry.
     from haenv.world.validation.difficulty_r2 import config
     cfg["medication"].extend(config("p3")["library_protocols"])
-    return cfg
+    return source_text(cfg)
 
 
-def render(doc: dict) -> str:
-    labels = (("name", "名称"), ("applies", "适用条件"), ("excludes", "排除条件"),
-              ("steps", "步骤"), ("exceptions", "例外"), ("sources", "出处"))
-    return "\n".join(f"{label}：" + ("\n".join(map(str, doc[key])) if isinstance(doc[key], list) else str(doc[key]))
-                     for key, label in labels)
+def render(doc: dict, lang: str | None = None) -> str:
+    """A protocol document as one text, in `lang` (default: the current language)."""
+    from haenv.i18n.text import render as _render
+    from haenv.i18n.text import text_of
+    import haenv.i18n as _i18n
+    lang = lang or _i18n.current()
+    out = []
+    for key in ("name", "applies", "excludes", "steps", "exceptions", "sources"):
+        v = _render(doc[key], lang)
+        body = "\n".join(map(str, v)) if isinstance(v, list) else str(v)
+        out.append(text_of("protocol.doc.field", lang, label=text_of(f"protocol.doc.{key}", lang), body=body))
+    return "\n".join(out)
 
 
 def _doc(meta, steps, sources, *, exceptions=None):
@@ -32,24 +50,30 @@ def _doc(meta, steps, sources, *, exceptions=None):
     return doc
 
 
-def _source(cite, url="", policy="本院操作映射暂定，需临床复核"):
-    return f"参考：{cite}；链接：{url or '原登记表'}；本院约定：{policy}。"
+def _source(cite, url="", policy=None):
+    return T("protocol.source", cite=cite, url=url or L("protocol.source.registry_table"),
+             policy=policy if policy is not None else L("protocol.source.provisional"))
 
 
 def _clauses(text):
     # Split presentation only: joining recovers the exact existing policy.
     import re
-    return re.findall(r"[^；。]+[；。]?", text)
+    from haenv.i18n.text import Msg
+    parts = re.findall(r"[^；。]+[；。]?", text)
+    if isinstance(text, Msg) and len(parts) > 1:
+        # each clause is a phrase of its own (its canonical text is its id)
+        return [L(x) for x in parts]
+    return [text] if len(parts) == 1 and isinstance(text, Msg) else parts
 
 
-@registry_cached("protocols.yaml", "pack2_triage_scenarios.yaml", "p3_meds.yaml", "control_targets.yaml", "history_dependency.yaml", "difficulty_r2.yaml", "system_scoring.yaml")
+@registry_cached("protocols.yaml", "pack2_triage_scenarios.yaml", "p3_meds.yaml", "p3_clinical_sources.yaml", "control_targets.yaml", "history_dependency.yaml", "difficulty_r2.yaml", "system_scoring.yaml")
 def catalog() -> list[dict]:
     from haenv.p2 import rules as R
     from haenv.p3.render import clinic_protocol
     from haenv.p3.render import attribution_rule
     from haenv.p3.render import adherence_rule
     from haenv.p3.render import _dose
-    from haenv.world.labworld.meds import drug
+    from haenv.world.labworld.meds import drug, meds
     from haenv.world.history.history_dependency import table as history_table
     from haenv.world.validation.difficulty_r2 import enabled
     from haenv.world.validation.difficulty_r2 import config as difficulty_config
@@ -62,43 +86,50 @@ def catalog() -> list[dict]:
         if "R5" in meta["rules"]:
             exceptions.append(triage["acceptance"]["single_level2"]["printed"])
         if meta.get("scoring"):
-            fields = {"rr": "呼吸频率", "spo2": "SpO2 Scale 1", "sbp": "收缩压", "hr": "心率", "temp": "体温"}
-            bands = [label + "：" + "；".join(f"{lo}–{hi}：{pts} 分" for lo, hi, pts in triage["news2"][k])
-                     for k, label in fields.items()]
-            bands.append(f"新发意识混乱 {triage['news2']['new_confusion_points']} 分，其余清醒 0 分。")
-            steps.append("NEWS2 各项相加（区间含端点），缺测不能当 0 分；先核对病历授权的 SpO2 量表。" + "\n".join(bands))
+            bands = [T("protocol.news2.bands", label=L(f"protocol.news2.field.{k}"),
+                       bands=J("semicolon", [T("protocol.news2.band", lo=lo, hi=hi, pts=pts)
+                                             for lo, hi, pts in triage["news2"][k]]))
+                     for k in ("rr", "spo2", "sbp", "hr", "temp")]
+            bands.append(T("protocol.news2.confusion", points=triage['news2']['new_confusion_points']))
+            steps.append(T("protocol.news2.sum", bands=J("lines", bands)))
             # The hospital catalog must not depend on the caller's generation
             # switch: clinical instructions remain available during retrieval.
             steps.append(difficulty_config("p2")["protocol"])
-            exceptions.append("所有 NEWS2 条款均按病历授权的 SpO2 量表计算，并计入吸氧加分；条款中的第1表、未吸氧是默认情形，不能覆盖已登记的量表2或实际氧疗。")
+            exceptions.append(L("protocol.news2.scale_exception"))
         if meta.get("history"):
             steps.extend(_clauses(history_table()["packs"]["p2"]["protocol"]))
         refs = []
         for r in rules:
             for key in [r.get("source"), *(r.get("also_sources") or [])]:
                 src = triage["sources"].get(key) or {}
-                refs.append(_source(src.get("cite") or "本院分诊处置表", src.get("url", "")))
+                refs.append(_source(src.get("cite") or L("protocol.source.triage_table"), src.get("url", "")))
         if meta.get("scoring"):
             src = difficulty_config("p2")["scale2"]
-            refs.append(_source("RCP NEWS2 2017；" + src["scope"], src["source"],
-                                "量表2资格、分段及氧疗加分逐项核对原文；家庭分诊去向沿用本院条款"))
+            refs.append(_source(T("protocol.cite_join", head="RCP NEWS2 2017", tail=src["scope"]), src["source"],
+                                L("protocol.source.scale2_policy")))
         docs.append(_doc(meta, steps, refs, exceptions=exceptions))
-    keys = ("gliclazide", "atorvastatin", "enalapril", "levothyroxine")
+    keys = meds()["drugs"]
     for meta in cfg["medication"]:
         gen = meta["generator"]
         if gen == "review":
-            steps = [drug(k)["display"].split("（")[0] + "：剂量阶梯 " +
-                     " / ".join(_dose(v, drug(k)["unit"]) for v in drug(k)["ladder"]) + "（每日）。" +
-                     clinic_protocol({"drug": k})[0] for k in keys]
+            steps = [T("protocol.med.ladder", name=L(f"drug.{k}"),
+                       ladder=J("slash", [_dose(v, drug(k)["unit"]) for v in drug(k)["ladder"]]),
+                       rule=clinic_protocol({"drug": k})[0]) for k in keys]
         elif gen == "adverse":
             steps = [attribution_rule(drug(k)) for k in keys]
             if enabled():
                 cfg3 = difficulty_config("p3")
                 steps.append(cfg3["protocol"])
                 steps.append(cfg3["allergy_record"]["protocol"])
-                steps.append("症状状态只登记原始记录明确记载的经过，未登记不表示已缓解或持续。一次症状后来缓解也不能替代对起病时用药、加量日期和其他原因的核对。")
+                steps.append(L("protocol.p3.documented_course_only"))
         elif gen == "adherence":
             steps = _clauses(adherence_rule())
+        elif gen == "levothyroxine":
+            src = meta["source"]
+            docs.append(_doc(meta, clinic_protocol({"drug": "levothyroxine"})[3:],
+                             [_source(T("protocol.cite_join", head=src["cite"], tail=src["locator"]),
+                                      src["url"], meta["ours_reason"])]))
+            continue
         elif gen == "statin":
             steps = _clauses(history_table()["packs"]["p3"]["protocol"])
             if enabled():
@@ -107,17 +138,17 @@ def catalog() -> list[dict]:
             steps = _clauses(str(drug("enalapril", ("CKD",))["clinic_policy"]))
         elif gen in ("sulfonylurea", "acei"):
             src = meta["source"]
-            docs.append(_doc(meta, meta["steps"], [_source(src["cite"] + "；" + src["locator"],
+            docs.append(_doc(meta, meta["steps"], [_source(T("protocol.cite_join", head=src["cite"], tail=src["locator"]),
                              src["url"], meta["ours_reason"])]))
             continue
         else:
             raise ValueError(f"unknown protocol generator: {gen}")
-        docs.append(_doc(meta, steps, [_source("本院慢病用药表与所登记的药品说明书、指南", "", "按原表生成复评、归因、依从与合并症条款；患者目标另查医嘱")]))
+        docs.append(_doc(meta, steps, [_source(L("protocol.source.med_table"), "", L("protocol.source.med_policy"))]))
     for meta in cfg["other"]:
         import re
         src = meta["source"]
         match = re.search(r"NICE (?:NG|CG)\d+", src["cite"])
-        cite = (match[0] if match else src["cite"].split(",")[0].split(" (")[0]) + "；" + src["locator"]
+        cite = T("protocol.cite_join", head=(match[0] if match else src["cite"].split(",")[0].split(" (")[0]), tail=src["locator"])
         docs.append(_doc(meta, meta["steps"], [_source(cite, src["url"])]))
     from haenv.world.protocols.followup import steps as followup_steps
     meta = cfg["followup"]
@@ -146,12 +177,15 @@ def bearing_ids(pack: str, block: dict) -> set[str]:
 
 
 def clinic_lines(block: dict) -> list[str]:
-    from haenv.world.labworld.meds import drug
-    keys = ("gliclazide", "atorvastatin", "enalapril", "levothyroxine")
+    from haenv.i18n.identity import source
+    block = source(block)
+    from haenv.world.labworld.meds import drug, meds
+    keys = meds()["drugs"]
     key = next(k for k in keys if drug(k)["display"] == block.get("drug"))
     name = drug(key)["display"].split("（")[0]
     docs = block.get("protocol_library") or ()
-    if docs == "本院规程库":
+    from haenv.i18n.text import is_text
+    if is_text(docs, "protocol.library"):
         docs = catalog()
     generators = {m["protocol_id"]: m["generator"] for m in table()["medication"]}
     out = []
@@ -162,6 +196,7 @@ def clinic_lines(block: dict) -> list[str]:
                        or gen == "adverse" and not line.startswith("本院不良反应归因："))
         elif (gen == "adherence" or gen == "statin" and key == "atorvastatin"
               or gen == "renal" and key == "enalapril" and block.get("known_comorbidity")
-              or gen == "sulfonylurea" and key == "gliclazide" or gen == "acei" and key == "enalapril"):
+              or gen == "sulfonylurea" and key == "gliclazide" or gen == "acei" and key == "enalapril"
+              or gen == "levothyroxine" and key == "levothyroxine"):
             out.append("".join(doc["steps"]))
     return out

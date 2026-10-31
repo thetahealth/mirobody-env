@@ -1,20 +1,20 @@
 """Collect free-text plans and retain rubric inputs on the generation side."""
 from __future__ import annotations
 
+from haenv.i18n.runtime import runtime_text
+from haenv.i18n.text import L as _L, text_of as _rt
+
 from copy import deepcopy
 import hashlib
 import json
 
-INSTRUCTION = ('\n作答 JSON 还必须包含 management_plan：中文自由文本，完整说明下一步处置、'
-               '需复查或购买的检查、给患者的说明及随访安排。没有需新增检查时也请说明。')
-STUB_PLAN = ('下一步：根据已读取记录及本院规程提交医生复核。检查：复核已得结果，'
-             '按适用规程安排复查或购买所需检查。患者说明：解释结果、处置理由与需及时就医的变化。'
-             '随访：按适用规程安排复评，症状加重时提前联系医生。')
+INSTRUCTION = (_L('runtime.scoring.management.plan.module.1'))
+STUB_PLAN = (_L('runtime.scoring.management.plan.module.2'))
 BLOCKS = {'p2': 'triage_p2', 'p3': 'meds_p3', 'p4': 'followup_p4', 'm2': 'm2_frame'}
 
 
 def answer(data):
-    return {**data, 'management_plan': STUB_PLAN}
+    return {**data, 'management_plan': runtime_text(STUB_PLAN)}
 
 
 def _record_refs(block, refs, role):
@@ -66,8 +66,8 @@ def finalize(raw, case_id, pack, *, derive_workup=True):
         checks, alternatives = workup.get('required') or [], workup.get('alternatives') or {}
         from haenv.m2.workup import pre_review_rules
         rules = pre_review_rules()
-        protocols.append({'protocol_id': 'initial-workup', 'applies': '当前初始诊断阶段及已存条件事实',
-                          'excludes': '确诊后的定位/分期项目不自动成为初始必需项',
+        protocols.append({'protocol_id': 'initial-workup', 'applies': _L('runtime.scoring.management.plan.finalize.1'),
+                          'excludes': _L('runtime.scoring.management.plan.finalize.2'),
                           'steps': deepcopy(workup), 'sources': deepcopy(rules)})
         accepted = {'urgency': g.get('urgency', (adj.get('ddx') or {}).get('urgency')),
                     'medication': g.get('med_accept') or [], 'followup': g.get('f3_accept') or []}
@@ -105,16 +105,26 @@ def finalize(raw, case_id, pack, *, derive_workup=True):
 def render_for(next_call, solver, payload):
     text, pid = next_call(solver, payload)
     pc = getattr(payload, 'prediction_context', None) or {}
-    if any(k in pc for k in BLOCKS.values()) or 'archived_laboratory_record' in pc:
-        if INSTRUCTION not in text:
-            text += INSTRUCTION
+    library = any(isinstance(pc.get(k), dict) and pc[k].get('rules_delivery') == 'library' for k in BLOCKS.values())
+    if not library and (any(k in pc for k in BLOCKS.values()) or 'archived_laboratory_record' in pc):
+        text += runtime_text(INSTRUCTION)
     return text, pid
+
+
+def protocol_question(next_call, pack, block):
+    if block.get("rules_delivery") == "library" and pack in {"p2", "p3", "p4"}:
+        from haenv.app.pack_hooks import HOOKS, Stage
+        if pack == 'p2' and (Stage.PROTOCOL_QUESTION, 'p2:sources') in HOOKS:
+            return next_call(pack, block)
+        return _rt("runtime.protocol_question." + pack)
+    return next_call(pack, block)
 
 
 def install_prompt():
     from haenv.app.pack_hooks import Stage
     from haenv.app.pack_hooks import register_hook
     register_hook(Stage.PROMPT, "management_plan", render_for)
+    register_hook(Stage.PROTOCOL_QUESTION, "management_plan:i18n", protocol_question)
 
 
 def register(pack):

@@ -1,0 +1,3 @@
+# World-layer annotations (zh).
+world.reversal.regain_from: "day{day} 起回升,证伪'能维持'"
+world.narration.chatter: '{base},另外{aside}'

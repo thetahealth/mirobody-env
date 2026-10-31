@@ -24,6 +24,9 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.runtime import runtime_text
+from haenv.i18n.text import text_of as _rt
+
 import hashlib
 import json
 import time
@@ -40,38 +43,43 @@ from haenv.interaction.query.tools import ToolSpec
 from haenv.interaction.query.tools import _obj
 from haenv.interaction.query.tools import call_tool
 
+from haenv.interaction.query.targets import target_id, canonical_target
+
 PURCHASE = "order_test"
 
 
 def _menu(gc: dict) -> dict:
-    items = [{"target": str(i["target"]), "kind": str(i["kind"]), "cost": i.get("cost"),
+    from haenv.i18n.runtime import registry_phrase
+    items = [{"target": target_id(i["target"]), "name": registry_phrase(i["target"]), "kind": str(i["kind"]), "cost": i.get("cost"),
               "section": "tests" if i.get("is_test") else "signals"} for i in gc.get("menu") or ()]
     budget, spent = float(gc.get("budget") or 0), float(gc.get("spent") or 0)
     return {"budget": budget, "spent": spent, "remaining": round(budget - spent, 2),
             "purchase_round": gc.get("round"), "max_purchase_rounds": gc.get("max_rounds"), "items": items,
-            **({"unavailable": dict(gc["unavailable_results"])} if gc.get("unavailable_results") else {})}
+            **({"unavailable": {target_id(k): runtime_text(v) for k, v in gc["unavailable_results"].items()}} if gc.get("unavailable_results") else {})}
 
 
 def _purchase_result(target: str, store: RecordStore, gc: dict) -> dict:
     """What one purchase returned, read off the round `run_gated` just ran: the bought stream or
     test result (as `get_series` shows it), else unavailable, refused past the budget, or nothing."""
+    target = canonical_target(target, gc)
+    shown = target_id(target)
     if store.streams.get(target):
-        return {"target": target, "ordered": True, **store.get_series(target)}
+        return {"target": shown, "ordered": True, **store.get_series(target)}
     if target in (gc.get("unavailable_results") or {}):
-        return {"target": target, "ordered": True, "found": False,
-                "result": "环境无法提供可解释结果(不是正常或阴性,不能据此排除疾病)"}
+        return {"target": shown, "ordered": True, "found": False,
+                "result": _rt('runtime.interaction.query.gated._purchase_result.1')}
     if target in (gc.get("truncated_last_round") or ()):
-        return {"target": target, "ordered": False, "found": False, "result": "超出余额,未执行",
+        return {"target": shown, "ordered": False, "found": False, "result": _rt('runtime.interaction.query.gated._purchase_result.2'),
                 "remaining": round(float(gc.get("budget") or 0) - float(gc.get("spent") or 0), 2)}
-    return {"target": target, "ordered": True, "found": False, "result": "无结果"}
+    return {"target": shown, "ordered": True, "found": False, "result": _rt('runtime.interaction.query.gated._purchase_result.3')}
 
 
 def _specs(store: RecordStore, gc: dict, can_order: bool) -> list[ToolSpec]:
-    specs = store.specs() + [ToolSpec("get_menu", "可购买的项目(监测信号与检查)、各自价格、预算、已花费与余额。",
+    specs = store.specs() + [ToolSpec("get_menu", _rt('runtime.interaction.query.gated._specs.1'),
                                       _obj({}), lambda: _menu(gc))]
     if can_order:
-        specs.append(ToolSpec(PURCHASE, "购买菜单上的一项(按菜单价格计费;超出余额不执行)。结果在本轮结束后返回。",
-                              _obj({"target": {"type": "string", "description": "菜单上的名称"}}, ("target",)),
+        specs.append(ToolSpec(PURCHASE, _rt('runtime.interaction.query.gated._specs.2'),
+                              _obj({"target": {"type": "string", "description": _rt('runtime.interaction.query.gated._specs.3')}}, ("target",)),
                               lambda target: {}))
     return specs
 
@@ -116,12 +124,12 @@ def solve_gated_round(solver, payload):
     if st is None or int(gc.get("round") or 1) == 1:
         question, pid = render_question(solver, QueryView(payload, ADAPTER, store))
         question += protocol_text(q, PROTOCOL)
-        v = guard.for_prompt().check(question) + guard.for_prompt().check(QUERY_SYSTEM)
+        v = guard.for_prompt().check(question) + guard.for_prompt().check(runtime_text(QUERY_SYSTEM))
         if v:
             raise QueryLeak(v)
         st = solver._gq = {"msgs": [{"role": "user", "content": question}], "pid": pid,
                            "sha": hashlib.sha256(question.encode()).hexdigest(), "pending": [], "n_calls": 0,
-                           "trace": QueryTrace(system=QUERY_SYSTEM), "answered": None, "t0": time.time()}
+                           "trace": QueryTrace(system=runtime_text(QUERY_SYSTEM)), "answered": None, "t0": time.time()}
         st["trace"].messages = st["msgs"]
         solver._failed_turns = []
     tr: QueryTrace = st["trace"]
@@ -143,8 +151,8 @@ def solve_gated_round(solver, payload):
         final = tr.rounds_used >= q["max_rounds"] or st["n_calls"] >= q["max_calls"]
         specs = _specs(store, gc, can_order and not final)
         if final:
-            st["msgs"].append({"role": "user", "content": FORCE_FINAL})
-        turn: Turn = solver.chat(QUERY_SYSTEM, st["msgs"], specs, "none" if final else "auto")
+            st["msgs"].append({"role": "user", "content": runtime_text(FORCE_FINAL)})
+        turn: Turn = solver.chat(runtime_text(QUERY_SYSTEM), st["msgs"], specs, "none" if final else "auto")
         tr.rounds_used += 1
         tr.usage.append(turn.usage)
         tr.finish.append(turn.finish)
@@ -178,7 +186,7 @@ def solve_gated_round(solver, payload):
                 st["pending"].append({"id": cid, "target": args["target"], "round": tr.rounds_used})
                 continue
             if st["n_calls"] >= q["max_calls"]:
-                res, err = {"error": "调用次数已用完"}, "over_budget"
+                res, err = {"error": _rt('runtime.interaction.query.gated.solve_gated_round.1')}, "over_budget"
             else:
                 res, err = call_tool(by_name, c.get("name"), args)
                 st["n_calls"] += 1
@@ -193,7 +201,7 @@ def solve_gated_round(solver, payload):
             st["msgs"].append({"role": "tool", "tool_call_id": cid, "name": str(c.get("name")), "content": res})
         if st["pending"]:
             menu_kind = {str(i["target"]): str(i["kind"]) for i in gc.get("menu") or ()}
-            text = json.dumps({"queries": [{"kind": menu_kind.get(p["target"], "test"), "target": p["target"]}
+            text = json.dumps({"queries": [{"kind": menu_kind.get(canonical_target(p["target"], gc), "test"), "target": canonical_target(p["target"], gc)}
                                            for p in st["pending"]], "commit": False}, ensure_ascii=False)
             solver._last_query = ({**tr.as_dict(), "pack": "m2", "T": T, "limits": dict(q)}, store)
             return _output(solver, payload, st, text, usages, finish)

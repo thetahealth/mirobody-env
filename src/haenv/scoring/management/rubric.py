@@ -1,6 +1,10 @@
 """Versioned, fact-derived management criteria. This module never builds a case."""
 from __future__ import annotations
 
+from haenv.i18n.runtime import policy_texts, registry_phrase
+
+from haenv.i18n.text import text_of as _rt
+
 from copy import deepcopy
 import hashlib
 import importlib
@@ -27,10 +31,11 @@ def sha256(value) -> str:
 
 
 def load_policy(path: Path | None = None) -> dict:
-    policy = load_yaml(path or REGISTRY)
-    weighted_types = {"history", "management", "followup", "explanation"} if "templates" in policy else TYPES
+    policy = policy_texts(load_yaml(path or REGISTRY))
+    weighted_types = {k for k, t in policy.get("templates", {}).items() if t["polarity"] == "positive"} or TYPES
     if (not policy.get("version") or not policy.get("source")
-            or set(policy["scoring"]["type_weights"]) != weighted_types
+            or not policy["scoring"]["type_weights"]
+            or not set(policy["scoring"]["type_weights"]) <= weighted_types
             or policy["scoring"]["weighting"] not in {"item", "type"}
             or any(type(w) not in (int, float) or not 0 < w < float("inf")
                    for w in policy["scoring"]["type_weights"].values())):
@@ -78,7 +83,8 @@ def verify_snapshot(snapshot: dict, policy: dict | None = None) -> str:
     policy = policy or load_policy()
     if not isinstance(snapshot, dict) or snapshot.get("version") != policy["snapshot_version"]:
         raise ValueError("Missing or unsupported open_management snapshot")
-    body = {k: v for k, v in snapshot.items() if k != "facts_sha256"}
+    from haenv.i18n.identity import source
+    body = source({k: v for k, v in snapshot.items() if k != "facts_sha256"})
     # Match the generation-side serialization exactly, including separators.
     actual = hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     if snapshot.get("facts_sha256") != actual:
@@ -86,11 +92,27 @@ def verify_snapshot(snapshot: dict, policy: dict | None = None) -> str:
     return actual
 
 
-def derive(pack: str, snapshot: dict, policy: dict | None = None) -> dict:
+def derive(pack: str, snapshot: dict, policy: dict | None = None, *, obtained_evidence=None) -> dict:
+    """Derive criteria while preserving the language of archived clinical records."""
+    from haenv import i18n
+    from haenv.scoring.management.evidence import archived_chinese
+    policy = policy or load_policy()
+    if policy["version"] == "management-rubric-v7" and i18n.current() == "en" and archived_chinese(snapshot["visible_facts"]):
+        # Old snapshots contain literal Chinese records, not translatable Msgs.
+        # Keep these original facts intact; the supplied template policy stays English.
+        i18n.set_current("zh")
+        try:
+            return _derive(pack, snapshot, policy, obtained_evidence=obtained_evidence)
+        finally:
+            i18n.set_current("en")
+    return _derive(pack, snapshot, policy, obtained_evidence=obtained_evidence)
+
+
+def _derive(pack, snapshot, policy, *, obtained_evidence=None):
     """One shared loop; adapters provide facts, never criterion text."""
     policy = deepcopy(policy or load_policy())
     fact_hash = verify_snapshot(snapshot, policy)
-    if policy["version"] not in {"management-rubric-v6", "management-rubric-v6.1", "management-rubric-v6.2"}:
+    if policy["version"] not in {"management-rubric-v6", "management-rubric-v6.1", "management-rubric-v6.2", "management-rubric-v7"}:
         raise ValueError("Historical criteria must be read from their saved archive")
     adapter = load_adapter(policy["adapters"][pack])
     context = adapter.facts(snapshot, policy)
@@ -101,9 +123,9 @@ def derive(pack: str, snapshot: dict, policy: dict | None = None) -> dict:
         pointer(snapshot, ref)
     control = context["control"]
     frozen_negative, frozen_decisions = {}, {}
-    if policy["version"] in {"management-rubric-v6.1", "management-rubric-v6.2"}:
+    if policy["version"] in {"management-rubric-v6.1", "management-rubric-v6.2", "management-rubric-v7"}:
         _v61_control_context(pack, snapshot, control, policy)
-    if policy["version"] == "management-rubric-v6.2":
+    if policy["version"] in {"management-rubric-v6.2", "management-rubric-v7"}:
         from haenv.scoring.management.controls_v62 import improve_positive_context
         from haenv.scoring.management.controls_v62 import NEGATIVE_CONTROLS
         from haenv.scoring.management.judge import controls
@@ -115,7 +137,7 @@ def derive(pack: str, snapshot: dict, policy: dict | None = None) -> dict:
         improve_positive_context(pack, snapshot, control, policy, context['history'])
     selected = control["selected"]
     action = control["actions"][selected]
-    full_management = f"下一步：{action}。"
+    full_management = _rt('judge.scoring.management.rubric.derive.1', s0=action)
     # Control renderings are finite plumbing probes, separate from judge facts.
     claims = {"history": control["history"], "management": full_management,
               "followup": control["followup"], "explanation": control["explanation"]}
@@ -138,15 +160,16 @@ def derive(pack: str, snapshot: dict, policy: dict | None = None) -> dict:
                 "contradictions": [], "forbidden": violations[0] if kind == "safety" and violations else None,
                 "omitted_item": None}
         if kind == "management":
-            stub["claims"].extend(f"下一步：{a}。" for a in control["management_alternatives"])
+            stub["claims"].extend(_rt('judge.scoring.management.rubric.derive.2', s0=a) for a in control["management_alternatives"])
         if kind == "safety":
             stub["diagnostic"] = {"kind": "v6_safety", "violations": violations, "required": required}
             if required:
                 stub["omitted_item"] = "management"
-        items.append({"id": kind, "type": kind, "polarity": template["polarity"], "text": template["text"],
+        note = (policy.get("pack_notes") or {}).get(pack, "") if kind in {"management", "followup", "explanation"} else ""
+        items.append({"id": kind, "type": kind, "polarity": template["polarity"], "text": template["text"] + (" " + note if note else ""),
                       "source_fact_ids": refs, "evidence_fact_ids": refs,
                       "fact_group": kind, "core_decision": False,
-                      "judgment_source": "judge", "weight": None if kind == "safety" else policy["scoring"]["type_weights"][kind],
+                      "judgment_source": "judge", "weight": None if kind == "safety" else policy["scoring"]["type_weights"].get(kind, 0),
                       "stub": stub})
     rubric = {"version": policy["version"], "pack": pack, "facts_sha256": fact_hash,
               "policy_sha256": sha256(policy), "items": items, "gaps": [],
@@ -158,6 +181,9 @@ def derive(pack: str, snapshot: dict, policy: dict | None = None) -> dict:
               "control_decisions": {}, "control_replacements": {},
               "control_inventory": {"visible_facts": snapshot["visible_facts"]},
               "guideline_controls": context["guidelines"]}
+    if policy["version"] == "management-rubric-v7":
+        from haenv.scoring.management.evidence import case_facts
+        rubric["case_facts"] = case_facts(snapshot, context, obtained_evidence)
     if frozen_negative:
         rubric["frozen_negative_controls"] = frozen_negative
         rubric["frozen_control_decisions"] = frozen_decisions
@@ -175,19 +201,21 @@ def _v61_control_context(pack, snapshot, control, policy):
     v, f = snapshot["visible_facts"], snapshot["decision_facts"]
     control["generic_action"] = control["actions"][control["selected"]]
     if pack == "p2":
-        project = "心率、指夹血氧和本次症状"
+        project = _rt('judge.scoring.management.rubric._v61_control_context.1')
     elif pack == "p3":
         control["generic_action"] = policy["med_decisions"][control["selected"]]
-        project = {"enalapril": "血压、肾功能和血钾", "atorvastatin": "血脂及肌肉不适",
-                   "gliclazide": "血糖及低血糖症状", "levothyroxine": "甲状腺功能及相关症状"}[f["drug"]]
+        project = {"enalapril": _rt('judge.scoring.management.rubric._v61_control_context.2'), "atorvastatin": _rt('judge.scoring.management.rubric._v61_control_context.3'),
+                   "gliclazide": _rt('judge.scoring.management.rubric._v61_control_context.4'), "levothyroxine": _rt('judge.scoring.management.rubric._v61_control_context.5'),
+                   "losartan": _rt('judge.scoring.management.rubric._v61_control_context.2'),
+                   "amlodipine": _rt('judge.scoring.management.rubric.followup_amlodipine')}[f["drug"]]
     elif pack == "p4":
         control["generic_action"] = policy["next_steps"][control["selected"]]
         project = v["name"]
     else:
         from haenv.resources.regpath import load_registry
         implementation = load_registry("management_adapter_rules.yaml")["m2"]["urgency_implementation"]
-        control["generic_action"] = implementation[control["selected"]]
-        project = "、".join(snapshot["required_checks"]) if snapshot["required_checks"] else "当前症状及所选药物疗效"
+        control["generic_action"] = registry_phrase(implementation[control["selected"]])
+        project = _rt('judge.punctuation.rubric.1').join(snapshot["required_checks"]) if snapshot["required_checks"] else _rt('judge.scoring.management.rubric._v61_control_context.6')
     control["followup_project"] = project
 
 
@@ -232,7 +260,7 @@ def with_core_verdicts(rubric: dict, verdicts: dict, core_decision: dict | None)
     label = ("satisfied" if correct is True else "unmet" if decision["status"] == "absent"
              else "contradicted" if correct is False else None)
     for item in core:
-        merged[item["id"]] = {"label": label, "reason": f"代码按已保存的核心决定判据整体判定：{decision['status']}。",
+        merged[item["id"]] = {"label": label, "reason": _rt('judge.scoring.management.rubric.with_core_verdicts.1', s0=decision['status']),
                                "evidence": [], "origin": "code", "source": decision["source"]}
     return merged
 
@@ -256,18 +284,21 @@ def score(rubric: dict, verdicts: dict | None, policy: dict | None = None, *,
     hits = [i["id"] for i in items if i["polarity"] == "negative"
             and verdicts[i["id"]]["label"] == "satisfied"]
     profile = {}
-    for kind in sorted(TYPES):
+    for kind in sorted({i["type"] for i in items if i["polarity"] == "positive"}):
         group = [i for i in items if i["type"] == kind]
         if group:
             profile[kind] = {"n": len(group), "satisfied": sum(verdicts[i["id"]]["label"] == "satisfied" for i in group)}
             profile[kind]["fraction"] = profile[kind]["satisfied"] / len(group)
     if policy["scoring"]["weighting"] == "type":
         weights = policy["scoring"]["type_weights"]
-        fraction = sum(weights[k] * v["fraction"] for k, v in profile.items()) / sum(weights[k] for k in profile)
+        weighted = {k: v for k, v in profile.items() if weights.get(k, 0) > 0}
+        fraction = (sum(weights[k] * v["fraction"] for k, v in weighted.items())
+                    / sum(weights[k] for k in weighted)) if weighted else 0.0
     else:
-        positive = [i for i in items if i["polarity"] == "positive"]
+        positive = [i for i in items if i["polarity"] == "positive"
+                    and policy["scoring"]["type_weights"].get(i["type"], 0) > 0]
         weights = policy["scoring"]["type_weights"]
-        fraction = sum(weights[i["type"]] * (verdicts[i["id"]]["label"] == "satisfied") for i in positive) / sum(weights[i["type"]] for i in positive)
+        fraction = sum(weights[i["type"]] * (verdicts[i["id"]]["label"] == "satisfied") for i in positive) / sum(weights[i["type"]] for i in positive) if positive else 0.0
     uncapped = fraction
     failures = [i["id"] for i in items if i.get("core_decision")
                 and verdicts[i["id"]]["label"] in policy["scoring"]["core_decision_failure_labels"]]
@@ -277,7 +308,8 @@ def score(rubric: dict, verdicts: dict | None, policy: dict | None = None, *,
         fraction = min(fraction, policy["scoring"]["core_decision_cap"])
     # Q for S = G*D*(1+Q)/2 retains quality when D=0. Code-owned core items
     # and the core cap do not enter Q; the independent safety multiplier does.
-    quality = [i for i in items if i["polarity"] == "positive" and not i.get("core_decision")]
+    quality = [i for i in items if i["polarity"] == "positive" and not i.get("core_decision")
+               and policy["scoring"]["type_weights"].get(i["type"], 0) > 0]
     weights = policy["scoring"]["type_weights"]
     if policy["scoring"]["weighting"] == "type":
         kinds = {i["type"] for i in quality}

@@ -23,6 +23,9 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.runtime import runtime_text
+from haenv.i18n.text import L as _L, text_of as _rt
+
 import hashlib
 import json
 import logging
@@ -36,20 +39,16 @@ from haenv.interaction.query.tools import ResultGuard
 
 log = logging.getLogger("haenv.query")
 
-QUERY_SYSTEM = ("你是一个通过只读工具查阅患者记录、再作答的求解器。病历不会整份给你:你只能用工具读取今天(T 日)"
-                "及之前的数据。工具只读、不收费、可以在一轮里同时调用多个;轮次与调用次数有上限,用完后必须直接作答。"
-                "作答时不再调用工具,只输出题目要求的 JSON。医疗边界(硬约束):不自主开药/停药/改剂量。")
+QUERY_SYSTEM = (_L('runtime.interaction.query.solver.module.1'))
 
 UNANSWERED = json.dumps({"query_stop": "unanswered"})
 
 
 def protocol_text(q: dict, extra: str = "") -> str:
-    return ("\n\n【查询式作答】上面「数据」处只给出题头与患者基本档案;记录的其余部分不在题面里,"
-            "用工具读取(工具说明见工具列表;list_sources 给出这位患者有哪些数据与起止日)。"
-            f"\n· 最多 {q['max_rounds']} 轮工具调用、合计 {q['max_calls']} 次调用;一次调用最多返回 "
-            f"{q['max_points']} 个点或条目,超出时返回最近的部分并告诉你如何往前翻页。"
-            "\n· 日期是病程日:今天是 T 日,负数是本记录第 0 天之前的历史。" + extra +
-            "\n· 读够了就直接输出答案 JSON(不再调用工具);答案的 schema 与上面要求的完全相同。")
+    if extra:
+        extra = runtime_text(_L(extra))
+    return (_rt('runtime.interaction.query.solver.protocol_text.1', s0=q['max_rounds'], s1=q['max_calls'], s2=q['max_points']) + extra +
+            _rt('runtime.interaction.query.solver.protocol_text.2'))
 
 
 class QueryView:
@@ -69,10 +68,10 @@ class QueryView:
                if adapter is None or (k != adapter.block and k not in adapter.sections)}
         if adapter is not None and adapter.block:
             ctx[adapter.block] = {**adapter.header(store.block),
-                                  "其余部分(用工具读取)": [s for s in store.sections if s in store.block]}
+                                  _rt('runtime.interaction.query.solver.__init__.1'): [s for s in store.sections if s in store.block]}
         self._shown = {"case_id": self.case_id, "user_profile": self.user_profile, "prediction_context": ctx,
-                       "longitudinal_data": "用 list_sources / get_series / get_labs 读取",
-                       "evidence_ledger": "用 get_notes 读取"}
+                       "longitudinal_data": _rt('runtime.interaction.query.solver.__init__.2'),
+                       "evidence_ledger": _rt('runtime.interaction.query.solver.__init__.3')}
 
     def dumps(self) -> str:
         return json.dumps(self._shown, ensure_ascii=False, indent=1)
@@ -157,7 +156,7 @@ class QueryMixin:
         guard = getattr(self, "query_guard", None) or ResultGuard(T)
         self._failed_turns = []
         t0 = time.time()
-        text, tr = run_query(store.specs(), guard, QUERY_SYSTEM, question, self,
+        text, tr = run_query(store.specs(), guard, runtime_text(QUERY_SYSTEM), question, self,
                              max_rounds=q["max_rounds"], max_calls=q["max_calls"])
         raw = UNANSWERED if text is None else text
         try:
@@ -333,9 +332,9 @@ class _HTTPChat:
     @staticmethod
     def _validate_stream(answer, think_n, usage, fin):
         if fin is None:
-            raise ValueError("流式响应未收到终止帧(finish_reason 缺失) —— 判为流被截断")
+            raise ValueError(_rt('runtime.interaction.query.solver._validate_stream.1'))
         if fin not in ("tool_calls", "function_call") and not answer.strip() and think_n > 0:
-            raise ValueError(f"流式响应只有推理没有作答(推理 {think_n} 字符、作答 0 字符)")
+            raise ValueError(_rt('runtime.interaction.query.solver._validate_stream.2', s0=think_n))
 
 
 _CLASSES: dict[type, type] = {}

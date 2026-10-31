@@ -1,0 +1,65 @@
+entries:
+  p4.followup.case.ingested_ongoing: 'Assay interference from an ingested substance
+    affects today''s reading, exposure ongoing and unconfirmed: repeat after the applicable
+    washout or use an unaffected method'
+  p4.followup.case.ingested_ended: Assay interference from prior intake affects today's
+    reading, but the exposure has ended and subsequent results under clean conditions
+    are available
+  1.1.3；1.2.2；1.3.2: 1.1.3;1.2.2;1.3.2
+  「How to treat a hypo」: '"How to treat a hypo"'
+  1.2.8；Table 1–2（1.4.20）；1.4.40；1.4.41；1.4.42: 1.2.8;Table 1–2(1.4.20);1.4.40;1.4.41;1.4.42
+  1.5.7；1.7.1；1.10.1；1.10.2；1.10.3: 1.5.7;1.7.1;1.10.1;1.10.2;1.10.3
+  1.5.1；1.5.3；1.5.4；1.5.7: 1.5.1;1.5.3;1.5.4;1.5.7
+  1.6.10；1.6.11；1.6.12；1.6.17: 1.6.10;1.6.11;1.6.12;1.6.17
+  1.2.1.3；1.2.1.7；1.2.1.8；1.2.1.10；1.2.3.2: 1.2.1.3;1.2.1.7;1.2.1.8;1.2.1.10;1.2.3.2
+  CG150 1.1.1；1.1.2；NHS「Immediate action required」: CG150 1.1.1;1.1.2;NHS"Immediate
+    action required"
+  1.3.1；1.3.2；1.3.3；1.3.5: 1.3.1;1.3.2;1.3.3;1.3.5
+  CG183 1.1.1；1.1.2；1.1.3；1.2.1–1.2.3；NHS「Immediate action required」: CG183 1.1.1;1.1.2;1.1.3;1.2.1–1.2.3;NHS"Immediate
+    action required"
+  「How to treat diarrhoea and vomiting yourself」，「Speak to a pharmacist if」: '"How
+    to treat diarrhoea and vomiting yourself","Speak to a pharmacist if"'
+  CG113 1.2.1；1.2.2；NHS「See a GP if」: CG113 1.2.1;1.2.2;NHS"See a GP if"
+  KDIGO 2024 CKD PP 3.6.2/3.6.4；NICE NG203 1.6.15/1.6.21/1.6.22；NHS SPS ACEI/ARB monitoring: KDIGO
+    2024 CKD PP 3.6.2/3.6.4;NICE NG203 1.6.15/1.6.21/1.6.22;NHS SPS ACEI/ARB monitoring
+  双侧踝部水肿: Bilateral ankle oedema
+  氨氯地平（钙通道阻滞剂）: Amlodipine (calcium channel blocker)
+  氯沙坦（ARB）: Losartan (ARB)
+  已登记药物复评，需要连续取药记录与今天药盒计数。先查原处方起始日、各次取药数量及日期、规格变化与今天剩余天数；取药日期本身不能证明已服用。: Review of
+    registered medicines requires consecutive dispensing records and today's pill
+    count. First check the prescription start date, dispensing amounts and dates,
+    strength changes and today's remaining days of supply; dispensing dates alone
+    do not prove intake.
+  氯沙坦（ARB，口服）: Losartan (ARB, oral)
+  Table 6.4；recommendations 6.6 and 6.18: Table 6.4;recommendations 6.6 and 6.18
+  NICE NG203；NHS SPS ACE inhibitors and ARBs monitoring: NICE NG203;NHS SPS ACE inhibitors
+    and ARBs monitoring
+  NG203 1.6.19 and 1.6.23；SPS Abnormal results, hypertension and heart failure: NG203
+    1.6.19 and 1.6.23;SPS Abnormal results, hypertension and heart failure
+  成人慢病用药复诊，复评本院已登记的慢病药物；目标药物、适应证及当前剂量另查患者处方。: Chronic medication follow-up for medicines
+    registered in this clinic; check the patient prescription for the target drug,
+    indication and current dose.
+  已登记药物复评，有症状、起病日期和处方剂量变化记录。: Review of registered medicines with symptoms, onset
+    dates and prescription dose-change records.
+  左甲状腺素服法与干扰复评: Levothyroxine administration and interference review
+  服药间隔: Separation of medication administration
+  成人复评左甲状腺素治疗，需核对本药和钙剂的实际服用时刻、当前 TSH、目标范围及症状经过。处方量与服药覆盖率已核实时仍不能省略服法复核。: For adults
+    receiving levothyroxine, check the actual administration times of this drug and
+    calcium, current TSH, target range and symptom course. A verified prescribed dose
+    and medication coverage do not remove the need to review administration.
+  未取得实际服药时刻时不能推断同服；近期停用的补充剂须核对停用日期和后续复查，不能当作当前仍在服用。: Do not infer concurrent intake
+    without actual administration times. For a recently stopped supplement, check
+    the stop date and subsequent tests; do not treat it as ongoing use.
+  其它药物的处方量与疗程不作为左甲状腺素的服药时刻；本条不授权自行加减药。: The prescribed dose and course of other medicines
+    do not establish levothyroxine administration times. This procedure does not authorize
+    independent dose changes.
+  传统推荐间隔尚未经直接试验验证，按适用药物及医生指导执行；控制不佳先核实服法及吸收干扰，不立即升级剂量。: The traditionally recommended
+    separation has not been directly tested. Follow the applicable drug instructions
+    and clinician guidance; with inadequate control, verify administration and absorption
+    interference before considering an increase.
+  服法与钙剂吸收相互作用据 ATA 指南；症状经过与先调查再复评沿用已登记的合成门诊政策，仍待临床复核。传统间隔不是已经试验证实的统一洗脱时间。: Administration
+    and the calcium absorption interaction follow ATA guidance. Symptom-course assessment
+    and investigation before reassessment follow the registered synthetic clinic policy,
+    pending clinical review. The traditional separation is not a universal washout
+    interval established by trials.
+  碳酸钙: Calcium carbonate

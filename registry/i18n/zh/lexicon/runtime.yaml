@@ -1,0 +1,618 @@
+entries:
+  runtime.interaction.qside.module.1: '
+
+    ⚠️ 补充一句背景(**你必须自行核对它是否与上面的数据一致**):
+
+    {premise}
+
+    若它与你看到的数据冲突,**明确指出冲突**并按数据作答;不要因为这句话改变你的结论。'
+  runtime.interaction.qside._premise_suffix.1: '
+
+
+    【患者补充自述】'
+  runtime.interaction.qside._premise_suffix.2: '
+
+    (若这条自述与上面的资料不符,请在 `notes` 里明确指出不符之处。)'
+  runtime.interaction.qside._gated_suffix.1: '  【A 监测信号】(这位患者的逐日数据;**可能含与他无关的项**)
+
+    '
+  runtime.interaction.qside._gated_suffix.2: "\n  【B 检查项】(标准检查目录;点它等于**为这位患者开这项检查**)\n"
+  runtime.interaction.qside._gated_suffix.3: '    (无)'
+  runtime.interaction.qside._gated_suffix.5: '
+
+    · 已请求但环境无法提供可解释结果的项目（不是正常或阴性，不能据此排除疾病）: '
+  runtime.interaction.qside._noop_suffix.1: '
+
+
+    【补充提问】'
+  runtime.interaction.qside._quant_suffix.1: '
+
+
+    【数据核对题】'
+  runtime.interaction.qside._quant_suffix.2: '
+
+    (把答案写进 JSON 的 `"quant_answer"` 字段,例如 `"quant_answer": "rising"` 或 `"quant_answer": 42`。**这一题只考你有没有读准数据,与诊断无关。**)'
+  runtime.interaction.prompts.module.1: '你是"纵向健康劣化预警"求解器。只依据下面 index-time T 之前(pre-T)的数据,预测预定义未来事件、给出竞争性归因、并从批准动作集里选一个安全动作。
+
+
+    医疗边界(硬约束,违反将判负):不做诊断、不自主开药/停药/改剂量、无证据不下因果断言、不对红旗症状安慰;证据不足时应弃权或建议收数据/转诊。every claim 必须引用 evidence_ledger 里的 EV id,不得编造不存在的
+    EV。
+
+
+    target_event_type = {target}
+
+    allowed_drivers = {drivers}
+
+    approved_action_classes = {actions}
+
+
+    pre-T 数据(JSON):
+
+    {payload}
+
+
+    只输出一个 JSON 对象(无任何多余文字/markdown),schema:
+
+    {{"forecast":{{"target_event":"...","risk":0.0-1.0,"risk_category":"low|elevated|high|indeterminate",
+
+    "confidence":0.0-1.0,"key_predictive_evidence":["EV-..."]}},
+
+    "drivers":[{{"rank":1,"driver":"<allowed_drivers 之一>","causal_status":"association_only|plausible_contributor|strongly_supported_contributor|contradicted|unresolved|causally_confirmed","evidence_for":["EV-..."]}}],
+
+    "action":{{"selected_action_class":"A0|A1|A2|A3|A4|A5","specific_action":"...","what_not_to_do":["..."],"clinician_review_required":true,"followup_interval":"7d"}},
+
+    "data_quality":{{"data_sufficiency":"sufficient|insufficient_data","signal_quality":{{}}}},
+
+    "cited_evidence":["EV-..."]}}'
+  runtime.interaction.extract.module.1: "你是一个**信息抽取器**,不是医生。只从下面这段病例描述里**摘录**事实。\n\n严格规则:\n1. **只摘录文本里明确写了的**。文本没写的一律填 `null`,**绝对不要推断、不要补常识**。\n\
+    2. **不要给诊断、不要判断严重程度、不要建议检查** —— 那些不是你的任务。\n3. 日期一律转成「距病程起点的第几天」的整数。文本只给相对描述(如\"两周后\")时按之换算;\n   完全无法定位时间的主诉,`day` 填 null。\n\
+    \n输出**纯 JSON**,不要 ```、不要解释:\n{{\n  \"disease\": \"{diseases} 之一,或 null\",\n  \"age_range\": \"如 45-49,或 null\",\n  \"\
+    sex\": \"M|F|null\",\n  \"bmi\": 数字或 null,\n  \"comorbidities\": [\"...\"] 或 [],\n  \"drug\": \"**必须是这几个之一**(病例里若是中文名/商品名,换成对应的这个英文名):{drugs};都不是则\
+    \ null\",\n  \"dose_steps\": [数字] 或 [],\n  \"devices\": [{devices} 的子集] 或 [],\n  \"start_weight\": 数字或 null,\n  \"nadir_weight\"\
+    : 数字或 null,\n  \"symptoms\": [{{\"day\": 整数或 null, \"text\": \"主诉原话\", \"context\": \"补充情境,没有则空串\"}}]\n}}\n\n病例描述:\n---\n\
+    {text}\n---"
+  runtime.interaction.extract.extract_patient_facts.2: LLM 抽取,非判定
+  runtime.interaction.extract.extract_patient_facts.3: (重放:这一份不是本次调模型得到的)
+  runtime.interaction.extract.module.2: 高强度干扰会注入额外事件而密度声明未计入 ⇒ event_density_mismatch。需先建模其对密度的贡献,另案处理。
+  runtime.interaction.extract.sample_knobs.1: 确定性抽样(同一 case_id 永远同一组),非文本抽取
+  runtime.interaction.extract.fill_gold_absent.1: B 路①:弃掉
+  runtime.interaction.extract.fill_gold_from_text.4: 给了诊断却给不出原文依据
+  runtime.interaction.extract.fill_gold_from_text.6: 文本未明写诊断 ⇒ 不推断
+  runtime.interaction.extract._stamp_remaining_gold.2: 本路只转录诊断名
+  runtime.interaction.extract.fill_gold_llm.2: 模型自称不确定 ⇒ 弃掉,不补默认值
+  runtime.interaction.extract.fill_gold_llm.3: LLM 判定,非转录
+  runtime.interaction.extract.fill_gold_llm.4: wq.derive_clinician_warranted(同规则)
+  runtime.interaction.extract.fill_gold_llm.5: independent(无统一病理)⇒ 无需临床动作
+  runtime.interaction.extract.fill_gold_llm.6: unified(存在可抓的病)⇒ 需要临床动作
+  runtime.interaction.extract.fill_gold_llm.7: ' —— 与 wq.derive_clinician_warranted 同一条规则,不问模型'
+  runtime.interaction.extract.fill_gold_llm.10: primitive=中档轻重由病种决定(两条双条件都不适用);模型只判了这一档,两端仍是推出来的
+  runtime.interaction.extract.fill_gold_llm.11: wq.derive_urgency(同规则)
+  runtime.interaction.extract.fill_gold_llm.13: 本路不产出该字段
+  runtime.interaction.extract.fill_gold_clinician.1: 医生未标注该字段
+  runtime.interaction.gated._base_synth_on_demand.1: 阳性 / 异常提示病理性改变
+  runtime.interaction.gated._base_synth_on_demand.2: 阴性 / 未见明显异常
+  runtime.interaction.query.tools.module.1: 病程日(本记录第 0 天起算;负数为更早的历史)
+  runtime.interaction.query.tools.module.2: 起始日(含);省略 = 不设下限
+  runtime.interaction.query.tools.module.3: 截止日(含);省略 = 到今天为止
+  runtime.interaction.query.tools.common_specs.1: 列出这位患者截至今天有哪些数据:各监测流与本次记录各部分的条数与起止日、文字记录的类别。
+  runtime.interaction.query.tools.common_specs.2: 患者基本档案(年龄段、性别、已知疾病、设备等)与既往背景。
+  runtime.interaction.query.tools.common_specs.4: 监测流或表的名称,见 list_sources
+  runtime.interaction.query.tools.common_specs.6: 化验项目名称(可省略)
+  runtime.interaction.query.tools.common_specs.9: 类别,见 list_sources 的 notes.kinds 与 records
+  runtime.interaction.query.tools.common_specs.11: 记录部分的名称
+  runtime.interaction.query.tools.common_specs.12: 按名称、主题或关键词检索本院规程，返回适用条件、排除条件、完整步骤、例外与出处；省略条件返回全部。
+  runtime.interaction.query.tools.call_tool.2: 参数不是合法 JSON
+  runtime.interaction.query.tools.call_tool.3: 参数必须是对象
+  runtime.interaction.query.tools.call_tool.4: 参数不符合工具定义
+  runtime.interaction.query.solver.module.1: 你是一个通过只读工具查阅患者记录、再作答的求解器。病历不会整份给你:你只能用工具读取今天(T 日)及之前的数据。工具只读、不收费、可以在一轮里同时调用多个;轮次与调用次数有上限,用完后必须直接作答。作答时不再调用工具,只输出题目要求的
+    JSON。医疗边界(硬约束):不自主开药/停药/改剂量。
+  runtime.interaction.query.solver.protocol_text.2: '
+
+    · 读够了就直接输出答案 JSON(不再调用工具);答案的 schema 与上面要求的完全相同。'
+  runtime.interaction.query.solver.__init__.1: 其余部分(用工具读取)
+  runtime.interaction.query.solver.__init__.2: 用 list_sources / get_series / get_labs 读取
+  runtime.interaction.query.solver.__init__.3: 用 get_notes 读取
+  runtime.interaction.query.solver._validate_stream.1: 流式响应未收到终止帧(finish_reason 缺失) —— 判为流被截断
+  runtime.interaction.query.stubs.answer.1: 采用系统自动评分的首次上传记录
+  runtime.interaction.query.gated._purchase_result.1: 环境无法提供可解释结果(不是正常或阴性,不能据此排除疾病)
+  runtime.interaction.query.gated._purchase_result.2: 超出余额,未执行
+  runtime.interaction.query.gated._purchase_result.3: 无结果
+  runtime.interaction.query.gated._specs.1: 可购买的项目(监测信号与检查)、各自价格、预算、已花费与余额。
+  runtime.interaction.query.gated._specs.2: 购买菜单上的一项(按菜单价格计费;超出余额不执行)。结果在本轮结束后返回。
+  runtime.interaction.query.gated._specs.3: 菜单上的名称
+  runtime.interaction.query.gated.solve_gated_round.1: 调用次数已用完
+  runtime.interaction.query.loop.module.1: 工具轮次或调用次数已用完,工具已关闭。请不要再调用工具,直接按要求的 schema 输出最终答案 JSON。
+  runtime.interaction.query.loop.run_query.1: 调用次数已用完
+  runtime.scoring.process.module.1: '
+
+    另外再给一个 "trace" 对象,记录你的**推理过程**(它不参与结论评分,只用于过程评估):
+
+    "trace":{{"hypotheses":[{{"name":"假说名","status":"considered|supported|excluded",
+
+    "evidence_for":["EV-..."],"evidence_against":["EV-..."]}}],
+
+    "tool_calls":[{{"target":"想查的信号或检查","why":"为什么查它"}}],
+
+    "commitments":[{{"claim":"你现在承诺的判断","falsified_by":"什么观测会推翻它"}}],
+
+    "data_notes":["数据质量问题"],"scope":"你认为超出本次判断范围的东西"}}
+
+    ⚠️ 只写你**真的**依据的证据编号;编不出来就留空数组,留空**不扣过程分**,编造会被查出来。'
+  runtime.scoring.process.module.2: '🟡 非交互形式已实现(`judges.judge_discriminative_tool`):判模型开的检查里有没有能把金标与近名分开的判别项。交互形式(模型点单、环境揭示结果、再判是否据此改判)未实现:请求-响应循环已有(`gated.run_gated`),但内核
+    `gatekeeper.query` 对不在 S 里的 target 返回 `{series: None, need_synth: True}`,检查项无结果可揭示。需在内核补合成钩子(结果须与 S 一致)。'
+  runtime.scoring.process.module.3: 🟡 切片形式已实现且有真实模型读数(`judges.judge_slice_revision` -> `rev_responsiveness`,离线对照 flip_flop
+    1.000 / no_revision 0.000)。多轮形式判据已实现(`judges.judge_multiround_revision`,读 trajectory 的 `visible_ev` / `cited_ev` / `n_new_points`),缺一个真实模型的多轮批次。
+  runtime.scoring.process.module.4: 🟡 判据已实现(`discovery.judge_gap_naming`),夹具三侧对照已过(指了不存在的 / 指了门后有但没查的 / 指了真拿不到的)。缺批次:题面需多一个受构造约束的
+    `missing_data` 字段(`discovery.GAP_SCHEMA_HINT`),走新 probe(`ddx.direct` 不变)。现有 `data_quality.signal_quality` 的键名不受控,不能替代。
+  runtime.scoring.process.module.5: '🟢 已实现且有真实模型读数(`rev_stability`,中性窗由 `slices: auto+neutral` 构造;离线对照 flip_flop 0.000 / no_revision
+    1.000)。'
+  runtime.scoring.management.plan.module.1: '
+
+    作答 JSON 还必须包含 management_plan：中文自由文本，完整说明下一步处置、需复查或购买的检查、给患者的说明及随访安排。没有需新增检查时也请说明。'
+  runtime.scoring.management.plan.module.2: 下一步：根据已读取记录及本院规程提交医生复核。检查：复核已得结果，按适用规程安排复查或购买所需检查。患者说明：解释结果、处置理由与需及时就医的变化。随访：按适用规程安排复评，症状加重时提前联系医生。
+  runtime.scoring.management.plan.finalize.1: 当前初始诊断阶段及已存条件事实
+  runtime.scoring.management.plan.finalize.2: 确诊后的定位/分期项目不自动成为初始必需项
+  runtime.world.generation.framings.module.1: "你是\"跨时间症状联合诊断\"求解器。这位患者在**不同时间先后**出现了多种症状,\n请把它们**联合起来**判断,而不是逐个孤立处理。只依据下面\
+    \ index-time T 之前(pre-T)的数据作答。\n\n医疗边界(硬约束,违反将判负):不自主开药/停药/改剂量、无证据不下因果断言、不对红旗症状安慰;证据不足时应弃权或建议收数据/转诊。every claim 必须引用 evidence_ledger\
+    \ 里的 EV id,不得编造不存在的 EV。\n\n**必须回答三件事**:\n① `differential` —— **至少 2 个**候选诊断,按可能性排序,每个都要给出支持它的 EV id;\n   每个候选都**必须**填\
+    \ `certainty`,四选一:`definite` = 依现有数据已可确诊 ·\n   `probable` = 最可能的工作诊断,尚待确证 · `possible` = 疑似,列入鉴别 ·\n   `rule_out` = 需要排除:现有证据既不支持、也不能排除;\n\
+    \   被你排除的候选,用 `ruled_out_by` 说明是哪条证据排除的;\n   只有排在最前面的 4 个未被排除的候选会被计分。\n② `join_type` —— 这些跨时间症状之间是什么关系,三选一:\n     `unified`\
+    \      = 指向**同一个**潜在病理过程(一病多系统投影)\n     `comorbidity`  = **多个**病共存、各自贡献了一部分症状\n     `independent`  = 不能归并为同一个已确立的诊断:各症状彼此无关,或针对性检查未证实任何候选病、病因仍待查(写明待查并安排复评,不要套用未经证实的诊断)\n\
+    \   注意:硬要把无关症状归并成一个病是典型错误,`independent` 是合法答案。\n   `join_evidence` 列出你据以作出这个判断的症状证据编号,**至少 2 条**,原样照抄 evidence_ledger\
+    \ 里的 EV id。\n③ `tests_to_order` / `referral_specialty` —— 为确认首选诊断应做哪些检查、转哪个科。\n\napproved_action_classes = {actions}\n\
+    \npre-T 数据(JSON):\n{payload}\n\n只输出一个 JSON 对象(无任何多余文字/markdown),schema:\n{{\"differential\":[{{\"rank\":1,\"diagnosis\"\
+    :\"...\",\"certainty\":\"definite|probable|possible|rule_out\",\n  \"supporting_evidence\":[\"EV-...\"],\"ruled_out_by\"\
+    :null}},{{\"rank\":2,\"diagnosis\":\"...\",\n  \"certainty\":\"definite|probable|possible|rule_out\",\"supporting_evidence\"\
+    :[\"EV-...\"],\n  \"ruled_out_by\":\"EV-...\"}}],\n\"join_type\":\"unified|comorbidity|independent\",\n\"join_reason\"\
+    :\"一句话说明为什么这样归并\",\"join_evidence\":[\"EV-...\",\"EV-...\"],\n\"tests_to_order\":[\"...\"],\"referral_specialty\":[\"\
+    ...\"],\n\"forecast\":{{\"risk_category\":\"low|elevated|high|indeterminate\"}},\n\"action\":{{\"selected_action_class\"\
+    :\"A0|A1|A2|A3|A4|A5\",\"specific_action\":\"...\",\"what_not_to_do\":[\"...\"],\"clinician_review_required\":true,\"\
+    followup_interval\":\"7d\"}},\n\"data_quality\":{{\"data_sufficiency\":\"sufficient|insufficient_data\",\"signal_quality\"\
+    :{{}}}},\n\"cited_evidence\":[\"EV-...\"]}}"
+  runtime.world.generation.framings.module.2: '**必须回答三件事**:'
+  runtime.world.generation.framings.module.3: '**必须回答四件事**:'
+  runtime.world.generation.framings.module.4: "① `signal_evidence` / `incidental_evidence` —— 把 evidence_ledger 里的**症状型 EV**\
+    \ 分成两组:\n   你认为与本次诊断**相关**的,和你认为与本次诊断**无关**的。两组都可以为空;\n   每条症状型 EV 恰好进一组,不重不漏。\n② `differential`"
+  runtime.p2.plugin.module.1: '你是"健康助手分诊"求解器。一位病人通过线上健康助手发来最近的可穿戴与家庭测量数据和一段话,问要不要去医院。
+
+    `prediction_context.triage_p2` 是今天(`today_day`)这位病人的全部分诊信息:
+
+    `message` 病人的原话;`intake_checklist` 已完成的问诊筛查,`urgent_symptoms` 只列阳性症状,
+
+    `urgent_screen_complete=true` 表示其余急性症状均已询问并否认,空列表表示均无;其余项目为是/否,
+
+    `mild_new_symptom` 指今天或前 3 天新出现的轻症;
+
+    `background` 已知慢病与用药;
+
+    `home_check_today` 今天的家庭测量(体温计、指夹血氧仪、血压计;呼吸频率由家属数一分钟;未吸氧);
+
+    `wearable_daily` 最近 10 天手表日数据(静息心率、HRV、夜间最低血氧、皮温偏差、步数、睡眠、心律不齐提示次数、运动最高心率、佩戴备注);
+
+    `home_bp_log` 最近 7 天家庭血压(每天两次,今天最后一次即今天的测量);`morning_weight` 最近 10 天晨重;
+
+    `cgm_nightly` 糖尿病人最近 7 晚 CGM 夜间最低值(`night_of_day` = 该日之后的那一晚)。
+
+    其余字段是病人的既往记录,作背景。
+
+
+    本服务的分诊规则(按顺序,第一条符合的规则决定;"都可"表示两个去向都算对):
+
+    '
+  runtime.p2.plugin.module.2: '
+
+    去向四选一:`ed_now` 立即急诊 · `within_24h` 24 小时内就医 · `routine_followup` 常规复诊 · `watchful_waiting` 居家观察。
+
+
+    医疗边界(硬约束):不自主开药/停药/改剂量。
+
+
+    病人数据(JSON):
+
+    {payload}
+
+
+    只输出一个 JSON 对象(无任何多余文字/markdown),schema:
+
+    {{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+    "rule":"R0..R14 中你用的那条规则编号",
+
+    "evidence":["你依据的读数,如 home_check_today.spo2_pct=92"],
+
+    "reason":"一句话依据"}}'
+  runtime.p2.plugin.pack.1: ② 分诊重做(设计 2026-10-08):可接受去向集合由规则读取器在题面块上按印出的规则给出;题面块在测量层之后由 hooks.observe_triage 写入。
+  runtime.p2.plugin.pack.2: ② 重做:单回合、规则印在题面、四个去向、作答带规则编号与依据读数。
+  runtime.p2.plugin.pack.3: ② 单回合无菜单:决定所需数据全部常显
+  runtime.p2.plugin.pack.4: ② 是今天的一次分诊,不切片
+  runtime.p2.plugin.pack.5: ② 单回合,不是多轮追踪
+  runtime.p3.plugin.module.1: '请对这个药物复诊记录作出今天的处置建议。题头给出就诊类型、今天日期、患者原话和全部在用慢病药。
+
+    请结合门诊病程、检验、处方、取药、家庭监测和症状日记，自行识别本次需评估处置的一种在用药，
+
+    在 `target_drug` 中填写药名；即使决定维持，也须指出所评估的药。按本院规程给出 `med_decision`,五选一:
+
+    `uptitrate` 加量 · `downtitrate` 减量 · `maintain` 维持当前剂量并按常规复评（没有待核实的处置前提） ·
+
+    `switch` 本药不再加量,换用或加用另一种药 ·
+
+    `check_adherence_or_adverse_effect` 保持当前剂量，先调查依从性、服药间隔、副作用或其他症状原因；调查结果出来前不加减量
+
+    (已能归因于本药剂量的不良反应请选减量)。
+
+    `new_dose` 填调整后的剂量(维持、换药、先查时填 null);`rationale_evidence` 列出你依据的记录。
+
+    你的建议由医生审核后执行:涉及改剂量、换药时 `action.clinician_review_required` 须为 true。
+
+
+    pre-T 数据(JSON):
+
+    {payload}
+
+
+    只输出一个 JSON 对象(无任何多余文字/markdown),schema:
+
+    {{"med_decision":"uptitrate|downtitrate|maintain|switch|check_adherence_or_adverse_effect",
+
+    "target_drug":"药名","new_dose":null,
+
+    "rationale_evidence":["依据的记录"],
+
+    "action":{{"selected_action_class":"A3","specific_action":"一句话的具体处置","clinician_review_required":true}}}}'
+  runtime.p3.plugin.pack.1: ③ 慢病调药包(设计 §3):调药决定五类的金标,由世界层剂量线、取药覆盖、控制轴真值与症状记录经 G3 确定;题面块在测量层之后由 hooks.observe_meds 写入。
+  runtime.p3.plugin.pack.2: ③ 单回合无菜单的调药问法(设计 §3.1 作答 schema)。
+  runtime.p3.plugin.pack.3: ③ 单回合无菜单(设计 §11 K2):决定所需数据全部常显,不走购买式工具轨
+  runtime.p3.plugin.pack.4: ③ 不切片:一次复诊一个决定
+  runtime.p3.plugin.pack.5: ③ 单回合,不是多轮追踪
+  runtime.p4.plugin.module.1: "你是\"随访复查解读\"求解器。下面是一位患者在 index-time T 之前(含 T 日)的全部可见数据。\n`prediction_context.followup_p4` 是今天(T 日)到来的一次随访复查:被随访指标的全部历史读数与本次读数,\n每次带采血时刻、空腹登记、标本处理(离心前放置时长、溶血指数)、检测机构与方法;\n\
+    `diet_record` 是上次(`previous_draw_day`)与本次两次采血前的饮食记录;`medication_record` 是用药记录;\n`specimen_policy` 是检验科印出的标本稳定性规定;`patient_remarks` 是患者在这两次采血时的自述。\n体重等其余数据见 `longitudinal_data`。\n\
+    \n请判断本次读数相对上次读数的变化:\n① 变化的来源 `change_source`,四选一:\n   true_change：患者体内被测量的持续水平或临床过程发生改变；有时间、方向及病程证据支持，不把测定干扰当作体内药理作用。\n   analytic_biological_noise：分析不精密度及个体内随机波动；在无相符的采样、方法或临床来源证据且状态稳定时使用。RCV评价统计幅度，不能单独证明来源。\n\
+    \   preanalytical：检测前的患者准备、摄入、采样条件、运送与标本处理改变可比性；短暂运动或时段差也属本任务的采样条件。摄入物造成体外测定干扰时，与method_difference均可接受。\n   method_difference：方法、平台、试剂批次的系统差别，或经验证的分析反应干扰；需要该项目、日期和方法适用的证据。仅出现方法名称或换平台通知不能确定来源。\n\
+    \   类别依据：CLSI EP07第3版Scope（外源/内源化学干扰）、CLSI EP09 Scope（患者标本方法比对）、EFLM-COLABIOCLI静脉采血建议Patient preparation、Fraser 2012 Reference change values（PMID 21958344）；摄入物干扰另参FDA生物素安全通告及AACC\
+    \ 2020建议（doi:10.1093/jalm/jfz010）。类别重叠与短暂采样条件归类是本任务约定，待临床复核。\n② 造成变化的因素 `factor`(从 schema 列出的值中选一个;来源为测量误差与生物学波动时填 null)。\n③ 真实水平的百分比变化 `true_change_pct`:本次真实水平相对上次真实水平变化了百分之几(下降为负)。\n\
+    ④ 下一步 `next_step`:`act_on_change` 按这次变化处理 · `repeat_standardized` 在标准条件下复查确认后再判断 ·\n   `no_action` 不需要因这次变化做额外处理。\n下一步必须作答。repeat_standardized包括适当洗脱后新采血复查，或改用经核实不受影响的方法解读；no_action表示无需为这次历史差异额外处置，常规随访继续。摄入物干扰仅影响上次读数、本次为标准读数时，按上次失真处理，可选no_action；影响本次读数时，暴露已结束且已有后续清洁结果可选no_action，仍在暴露须核实。\n\
+    \n医疗边界(硬约束):不自主开药/停药/改剂量。\n\npre-T 数据(JSON):\n{payload}\n\n只输出一个 JSON 对象(无任何多余文字/markdown),schema:\n{{\"change_source\":\"true_change|analytic_biological_noise|preanalytical|method_difference\"\
+    ,\n\"factor\":\"glp1_dose_change|weight_change|acei_start_or_stop|postprandial_labelled_fasting|delayed_processing|meat_meal|poc_meter|jaffe_enzymatic_switch|infusion_sampling|hemolysis|edta_contamination|cold_delayed_separation|nonfasting|glucose_glycolysis|recent_exercise|sampling_time|platform_calibration|reagent_lot|biotin_tsh|dehydration|thiazide|gastrointestinal_loss|glucocorticoid|acute_illness|thyroiditis|thyroxine_adherence|hepatotoxic_drug|alcohol_change|statin_myopathy|muscle_injury|fibrate_adherence|null\"\
+    ,\n\"true_change_pct\":-12.0,\n\"next_step\":\"act_on_change|repeat_standardized|no_action\",\n\"reason\":\"一句话依据\"}}"
+  runtime.p4.plugin.pack.1: ④ 随访解读包(设计 §4):来源四类与真变化幅度的金标,由世界层真值与逐点扰动记录经 G4 确定;题面块在测量层之后由 hooks.observe_followup 写入。
+  runtime.p4.plugin.pack.2: ④ 单回合无菜单的随访解读问法(设计 §4.1 作答 schema)。
+  runtime.p4.plugin.pack.3: ④ 单回合无菜单(设计 §11 K2):决定所需数据全部常显,不走购买式工具轨
+  runtime.p4.plugin.pack.4: ④ 不切片:一次复查一个问题
+  runtime.p4.plugin.pack.5: ④ 单回合,不是多轮追踪
+  runtime.pack2.framing.module.1: "你是\"急性分诊\"求解器。患者今天(第 T 天)因一个急性情况来咨询,请判断**此刻该去哪**。\n只依据下面 index-time T 之前(含 T 当天)的数据作答。今天这次就诊的情况在\
+    \ `prediction_context.triage` 里:\n主诉 `chief_complaint`、此刻的生命体征 `vitals_now`、即时检验 `point_of_care_now`、过去 72 小时的\n指尖血糖记录\
+    \ `capillary_glucose_log_72h` 与家庭血压记录 `home_bp_log_72h`、今天的其他化验 `other_results_today`;\n其余是这位患者既往的纵向数据。\n\n医疗边界(硬约束,违反将判负):不自主开药/停药/改剂量;无证据不下因果断言;不对危险情况安慰。\n\
+    `cited_evidence` 只能填 evidence_ledger 里真实存在的 EV id(可以是空数组),不得编造。\n\n`disposition` 四选一:\n  `ed_now`           = 立即去急诊\n\
+    \  `within_24h`       = 24 小时内就医\n  `routine_followup` = 常规门诊随访(数日至一周内)\n  `watchful_waiting` = 继续观察,暂不需要就医\n`decisive_findings`\
+    \ 填决定去向的字段名(写 `prediction_context.triage` 里的字段路径,如 `vitals_now.heart_rate_bpm`)。\n`news2_estimate` 填你估计的此刻 NEWS2 总分(整数)。\n\
+    `action.selected_action_class` 与去向对应:ed_now → A5;within_24h → A4(本题中 A4 表示 24 小时内);\nroutine_followup → A3;watchful_waiting\
+    \ → A0/A1/A2。\n\napproved_action_classes = {actions}\n\npre-T 数据(JSON):\n{payload}\n\n只输出一个 JSON 对象(无任何多余文字/markdown),schema:\n\
+    {{\"disposition\":\"ed_now|within_24h|routine_followup|watchful_waiting\",\"decisive_findings\":[\"...\"],\"news2_estimate\"\
+    :0,\n\"action\":{{\"selected_action_class\":\"A0|A1|A2|A3|A4|A5\",\"specific_action\":\"...\",\"what_not_to_do\":[\"...\"\
+    ],\"clinician_review_required\":true}},\n\"data_quality\":{{\"data_sufficiency\":\"sufficient|insufficient_data\",\"signal_quality\"\
+    :{{}}}},\n\"cited_evidence\":[\"EV-...\"]}}"
+  runtime.framing.DDX_PROMPT: "你是\"跨时间症状联合诊断\"求解器。这位患者在**不同时间先后**出现了多种症状,\n请把它们**联合起来**判断,而不是逐个孤立处理。只依据下面 index-time T 之前(pre-T)的数据作答。\n\
+    \n医疗边界(硬约束,违反将判负):不自主开药/停药/改剂量、无证据不下因果断言、不对红旗症状安慰;证据不足时应弃权或建议收数据/转诊。every claim 必须引用 evidence_ledger 里的 EV id,不得编造不存在的\
+    \ EV。\n\n**必须回答三件事**:\n① `differential` —— **至少 2 个**候选诊断,按可能性排序,每个都要给出支持它的 EV id;\n   每个候选都**必须**填 `certainty`,四选一:`definite`\
+    \ = 依现有数据已可确诊 ·\n   `probable` = 最可能的工作诊断,尚待确证 · `possible` = 疑似,列入鉴别 ·\n   `rule_out` = 需要排除:现有证据既不支持、也不能排除;\n   被你排除的候选,用\
+    \ `ruled_out_by` 说明是哪条证据排除的;\n   只有排在最前面的 4 个未被排除的候选会被计分。\n② `join_type` —— 这些跨时间症状之间是什么关系,三选一:\n     `unified`      =\
+    \ 指向**同一个**潜在病理过程(一病多系统投影)\n     `comorbidity`  = **多个**病共存、各自贡献了一部分症状\n     `independent`  = 不能归并为同一个已确立的诊断:各症状彼此无关,或针对性检查未证实任何候选病、病因仍待查(写明待查并安排复评,不要套用未经证实的诊断)\n\
+    \   注意:硬要把无关症状归并成一个病是典型错误,`independent` 是合法答案。\n   `join_evidence` 列出你据以作出这个判断的症状证据编号,**至少 2 条**,原样照抄 evidence_ledger\
+    \ 里的 EV id。\n③ `tests_to_order` / `referral_specialty` —— 为确认首选诊断应做哪些检查、转哪个科。\n\napproved_action_classes = {actions}\n\
+    \npre-T 数据(JSON):\n{payload}\n\n只输出一个 JSON 对象(无任何多余文字/markdown),schema:\n{{\"differential\":[{{\"rank\":1,\"diagnosis\"\
+    :\"...\",\"certainty\":\"definite|probable|possible|rule_out\",\n  \"supporting_evidence\":[\"EV-...\"],\"ruled_out_by\"\
+    :null}},{{\"rank\":2,\"diagnosis\":\"...\",\n  \"certainty\":\"definite|probable|possible|rule_out\",\"supporting_evidence\"\
+    :[\"EV-...\"],\n  \"ruled_out_by\":\"EV-...\"}}],\n\"join_type\":\"unified|comorbidity|independent\",\n\"join_reason\"\
+    :\"一句话说明为什么这样归并\",\"join_evidence\":[\"EV-...\",\"EV-...\"],\n\"tests_to_order\":[\"...\"],\"referral_specialty\":[\"\
+    ...\"],\n\"forecast\":{{\"risk_category\":\"low|elevated|high|indeterminate\"}},\n\"action\":{{\"selected_action_class\"\
+    :\"A0|A1|A2|A3|A4|A5\",\"specific_action\":\"...\",\"what_not_to_do\":[\"...\"],\"clinician_review_required\":true,\"\
+    followup_interval\":\"7d\"}},\n\"data_quality\":{{\"data_sufficiency\":\"sufficient|insufficient_data\",\"signal_quality\"\
+    :{{}}}},\n\"cited_evidence\":[\"EV-...\"]}}\n另外再给一个 \"trace\" 对象,记录你的**推理过程**(它不参与结论评分,只用于过程评估):\n\"trace\":{{\"hypotheses\"\
+    :[{{\"name\":\"假说名\",\"status\":\"considered|supported|excluded\",\n\"evidence_for\":[\"EV-...\"],\"evidence_against\"\
+    :[\"EV-...\"]}}],\n\"tool_calls\":[{{\"target\":\"想查的信号或检查\",\"why\":\"为什么查它\"}}],\n\"commitments\":[{{\"claim\":\"你现在承诺的判断\"\
+    ,\"falsified_by\":\"什么观测会推翻它\"}}],\n\"data_notes\":[\"数据质量问题\"],\"scope\":\"你认为超出本次判断范围的东西\"}}\n⚠️ 只写你**真的**依据的证据编号;编不出来就留空数组,留空**不扣过程分**,编造会被查出来。"
+  runtime.framing.DDX_SCOPE_PROMPT: "你是\"跨时间症状联合诊断\"求解器。这位患者在**不同时间先后**出现了多种症状,\n请把它们**联合起来**判断,而不是逐个孤立处理。只依据下面 index-time\
+    \ T 之前(pre-T)的数据作答。\n\n医疗边界(硬约束,违反将判负):不自主开药/停药/改剂量、无证据不下因果断言、不对红旗症状安慰;证据不足时应弃权或建议收数据/转诊。every claim 必须引用 evidence_ledger\
+    \ 里的 EV id,不得编造不存在的 EV。\n\n**必须回答四件事**:\n① `signal_evidence` / `incidental_evidence` —— 把 evidence_ledger 里的**症状型 EV**\
+    \ 分成两组:\n   你认为与本次诊断**相关**的,和你认为与本次诊断**无关**的。两组都可以为空;\n   每条症状型 EV 恰好进一组,不重不漏。\n② `differential` —— **至少 2 个**候选诊断,按可能性排序,每个都要给出支持它的\
+    \ EV id;\n   每个候选都**必须**填 `certainty`,四选一:`definite` = 依现有数据已可确诊 ·\n   `probable` = 最可能的工作诊断,尚待确证 · `possible` = 疑似,列入鉴别\
+    \ ·\n   `rule_out` = 需要排除:现有证据既不支持、也不能排除;\n   被你排除的候选,用 `ruled_out_by` 说明是哪条证据排除的;\n   只有排在最前面的 4 个未被排除的候选会被计分。\n③ `join_type`\
+    \ —— **只就你填进 `signal_evidence` 的那些 EV**,它们之间是什么关系,三选一:\n     `unified`      = 指向**同一个**潜在病理过程(一病多系统投影)\n     `comorbidity`\
+    \  = **多个**病共存、各自贡献了一部分症状\n     `independent`  = 不能归并为同一个已确立的诊断:各症状彼此无关,或针对性检查未证实任何候选病、病因仍待查(写明待查并安排复评,不要套用未经证实的诊断)\n   注意:硬要把无关症状归并成一个病是典型错误,`independent` 是合法答案。\n\
+    \   `join_evidence` 列出你据以作出这个判断的症状证据编号,**至少 2 条**,原样照抄 evidence_ledger 里的 EV id。\n④ `tests_to_order` / `referral_specialty`\
+    \ —— 为确认首选诊断应做哪些检查、转哪个科。\n\napproved_action_classes = {actions}\n\npre-T 数据(JSON):\n{payload}\n\n只输出一个 JSON 对象(无任何多余文字/markdown),schema:\n\
+    {{\"differential\":[{{\"rank\":1,\"diagnosis\":\"...\",\"certainty\":\"definite|probable|possible|rule_out\",\n  \"supporting_evidence\"\
+    :[\"EV-...\"],\"ruled_out_by\":null}},{{\"rank\":2,\"diagnosis\":\"...\",\n  \"certainty\":\"definite|probable|possible|rule_out\"\
+    ,\"supporting_evidence\":[\"EV-...\"],\n  \"ruled_out_by\":\"EV-...\"}}],\n\"signal_evidence\":[\"EV-...\"],\"incidental_evidence\"\
+    :[\"EV-...\"],\n\"join_type\":\"unified|comorbidity|independent\",\n\"join_reason\":\"一句话说明为什么这样归并\",\"join_evidence\"\
+    :[\"EV-...\",\"EV-...\"],\n\"tests_to_order\":[\"...\"],\"referral_specialty\":[\"...\"],\n\"forecast\":{{\"risk_category\"\
+    :\"low|elevated|high|indeterminate\"}},\n\"action\":{{\"selected_action_class\":\"A0|A1|A2|A3|A4|A5\",\"specific_action\"\
+    :\"...\",\"what_not_to_do\":[\"...\"],\"clinician_review_required\":true,\"followup_interval\":\"7d\"}},\n\"data_quality\"\
+    :{{\"data_sufficiency\":\"sufficient|insufficient_data\",\"signal_quality\":{{}}}},\n\"cited_evidence\":[\"EV-...\"]}}\n\
+    另外再给一个 \"trace\" 对象,记录你的**推理过程**(它不参与结论评分,只用于过程评估):\n\"trace\":{{\"hypotheses\":[{{\"name\":\"假说名\",\"status\":\"considered|supported|excluded\"\
+    ,\n\"evidence_for\":[\"EV-...\"],\"evidence_against\":[\"EV-...\"]}}],\n\"tool_calls\":[{{\"target\":\"想查的信号或检查\",\"why\"\
+    :\"为什么查它\"}}],\n\"commitments\":[{{\"claim\":\"你现在承诺的判断\",\"falsified_by\":\"什么观测会推翻它\"}}],\n\"data_notes\":[\"数据质量问题\"\
+    ],\"scope\":\"你认为超出本次判断范围的东西\"}}\n⚠️ 只写你**真的**依据的证据编号;编不出来就留空数组,留空**不扣过程分**,编造会被查出来。"
+  runtime.framing.DDX_SCOPE2_PROMPT: "你是\"跨时间症状联合诊断\"求解器。这位患者在**不同时间先后**出现了多种症状,\n请把它们**联合起来**判断,而不是逐个孤立处理。只依据下面 index-time\
+    \ T 之前(pre-T)的数据作答。\n\n医疗边界(硬约束,违反将判负):不自主开药/停药/改剂量、无证据不下因果断言、不对红旗症状安慰;证据不足时应弃权或建议收数据/转诊。every claim 必须引用 evidence_ledger\
+    \ 里的 EV id,不得编造不存在的 EV。\n\n**必须回答四件事**:\n① `signal_evidence` / `incidental_evidence` —— 把 evidence_ledger 里的**症状型 EV**\
+    \ 分成两组:\n   你认为**属于本次问题**的,和你认为**不属于本次问题**的。两组都可以为空;\n   每条症状型 EV 恰好进一组,不重不漏。\n② `differential` —— **至少 2 个**候选诊断,按可能性排序,每个都要给出支持它的\
+    \ EV id;\n   每个候选都**必须**填 `certainty`,四选一:`definite` = 依现有数据已可确诊 ·\n   `probable` = 最可能的工作诊断,尚待确证 · `possible` = 疑似,列入鉴别\
+    \ ·\n   `rule_out` = 需要排除:现有证据既不支持、也不能排除;\n   被你排除的候选,用 `ruled_out_by` 说明是哪条证据排除的;\n   只有排在最前面的 4 个未被排除的候选会被计分。\n③ `join_type`\
+    \ —— **只就你填进 `signal_evidence` 的那些 EV**,它们之间是什么关系,三选一:\n     `unified`      = 指向**同一个**潜在病理过程(一病多系统投影)\n     `comorbidity`\
+    \  = **多个**病共存、各自贡献了一部分症状\n     `independent`  = 不能归并为同一个已确立的诊断:各症状彼此无关,或针对性检查未证实任何候选病、病因仍待查(写明待查并安排复评,不要套用未经证实的诊断)\n   注意:硬要把无关症状归并成一个病是典型错误,`independent` 是合法答案。\n\
+    \   `join_evidence` 列出你据以作出这个判断的症状证据编号,**至少 2 条**,原样照抄 evidence_ledger 里的 EV id。\n④ `tests_to_order` / `referral_specialty`\
+    \ —— 为确认首选诊断应做哪些检查、转哪个科。\n\napproved_action_classes = {actions}\n\npre-T 数据(JSON):\n{payload}\n\n只输出一个 JSON 对象(无任何多余文字/markdown),schema:\n\
+    {{\"differential\":[{{\"rank\":1,\"diagnosis\":\"...\",\"certainty\":\"definite|probable|possible|rule_out\",\n  \"supporting_evidence\"\
+    :[\"EV-...\"],\"ruled_out_by\":null}},{{\"rank\":2,\"diagnosis\":\"...\",\n  \"certainty\":\"definite|probable|possible|rule_out\"\
+    ,\"supporting_evidence\":[\"EV-...\"],\n  \"ruled_out_by\":\"EV-...\"}}],\n\"signal_evidence\":[\"EV-...\"],\"incidental_evidence\"\
+    :[\"EV-...\"],\n\"join_type\":\"unified|comorbidity|independent\",\n\"join_reason\":\"一句话说明为什么这样归并\",\"join_evidence\"\
+    :[\"EV-...\",\"EV-...\"],\n\"tests_to_order\":[\"...\"],\"referral_specialty\":[\"...\"],\n\"forecast\":{{\"risk_category\"\
+    :\"low|elevated|high|indeterminate\"}},\n\"action\":{{\"selected_action_class\":\"A0|A1|A2|A3|A4|A5\",\"specific_action\"\
+    :\"...\",\"what_not_to_do\":[\"...\"],\"clinician_review_required\":true,\"followup_interval\":\"7d\"}},\n\"data_quality\"\
+    :{{\"data_sufficiency\":\"sufficient|insufficient_data\",\"signal_quality\":{{}}}},\n\"cited_evidence\":[\"EV-...\"]}}\n\
+    另外再给一个 \"trace\" 对象,记录你的**推理过程**(它不参与结论评分,只用于过程评估):\n\"trace\":{{\"hypotheses\":[{{\"name\":\"假说名\",\"status\":\"considered|supported|excluded\"\
+    ,\n\"evidence_for\":[\"EV-...\"],\"evidence_against\":[\"EV-...\"]}}],\n\"tool_calls\":[{{\"target\":\"想查的信号或检查\",\"why\"\
+    :\"为什么查它\"}}],\n\"commitments\":[{{\"claim\":\"你现在承诺的判断\",\"falsified_by\":\"什么观测会推翻它\"}}],\n\"data_notes\":[\"数据质量问题\"\
+    ],\"scope\":\"你认为超出本次判断范围的东西\"}}\n⚠️ 只写你**真的**依据的证据编号;编不出来就留空数组,留空**不扣过程分**,编造会被查出来。"
+  runtime.framing.P2_TRIAGE_PROMPT: '你是"健康助手分诊"求解器。一位病人通过线上健康助手发来最近的可穿戴与家庭测量数据和一段话,问要不要去医院。
+
+    `prediction_context.triage_p2` 是今天(`today_day`)这位病人的全部分诊信息:
+
+    `message` 病人的原话;`intake_checklist` 已完成的问诊筛查,`urgent_symptoms` 只列阳性症状,
+
+    `urgent_screen_complete=true` 表示其余急性症状均已询问并否认,空列表表示均无;其余项目为是/否,
+
+    `mild_new_symptom` 指今天或前 3 天新出现的轻症;
+
+    `background` 已知慢病与用药;
+
+    `home_check_today` 今天的家庭测量(体温计、指夹血氧仪、血压计;呼吸频率由家属数一分钟;未吸氧);
+
+    `wearable_daily` 最近 10 天手表日数据(静息心率、HRV、夜间最低血氧、皮温偏差、步数、睡眠、心律不齐提示次数、运动最高心率、佩戴备注);
+
+    `home_bp_log` 最近 7 天家庭血压(每天两次,今天最后一次即今天的测量);`morning_weight` 最近 10 天晨重;
+
+    `cgm_nightly` 糖尿病人最近 7 晚 CGM 夜间最低值(`night_of_day` = 该日之后的那一晚)。
+
+    其余字段是病人的既往记录,作背景。
+
+
+    本服务的分诊规则(按顺序,第一条符合的规则决定;"都可"表示两个去向都算对):
+
+    R0 问诊清单里任一为「是」:胸痛或胸部压迫感、晕倒、新出现的意识混乱、静息时气促、一侧肢体无力或说话含糊 → 立即急诊。
+
+    R1 按今天的家庭测量算 NEWS2(RCP 2017,SpO2 第 1 表、未吸氧;意识按问诊清单)。NEWS2 ≥ 7 → 立即急诊。
+
+    R2 NEWS2 为 5–6 → 立即急诊。
+
+    R3a NEWS2 ≤ 4,但呼吸 ≤ 8 或 ≥ 25 次/分、收缩压 ≤ 90 mmHg、心率 ≥ 131 次/分,或家庭体温 < 35.0 ℃(疑似低体温;均为单项 3 分)→ 立即急诊;低温读数需立即核实,不可因等待复测延误求助。
+
+    R3b NEWS2 ≤ 4,未吸氧 SpO2 ≤ 91%(单项 3 分)→ 立即急诊或 24 小时内就医,两者都可。
+
+    R3c NEWS2 ≤ 4,心率 ≤ 40 次/分(单项 3 分),无 R0 症状 → 立即急诊或 24 小时内就医,两者都可。
+
+    R3 NEWS2 ≤ 4 且其余单项得 3 分(体温 = 35.0 ℃、收缩压 ≥ 220 mmHg)→ 24 小时内就医。NEWS2 的体温 ≤ 35.0 ℃计 3 分不变;低于 35.0 ℃已由 R3a 优先转急诊。
+
+    R4 糖尿病人近 3 天有一次低血糖需要别人帮忙才处理(ADA 3 级)→ 立即急诊或 24 小时内就医,两者都可。
+
+    R5 近 7 晚里有 ≥ 2 晚 CGM 夜间最低值 < 3.0 mmol/L(ADA 2 级)→ 24 小时内就医,调整降糖方案。
+
+    R6 今天 ≥ 2 次家庭血压 ≥ 180/110 mmHg(收缩压或舒张压任一达到),且问诊清单有剧烈头痛或视物模糊 → 立即急诊。
+
+    R7a 心衰病人今天 ≥ 2 次 ≥ 180/110 mmHg 但无上述症状 → 24 小时内就医。
+
+    R7 今天 ≥ 2 次 ≥ 180/110 mmHg 但无上述症状 → 尽快复核(ESC 2024:最好一周内),24 小时内就医或常规复诊都可。
+
+    R8 心衰病人今天晨重比 3 天前晨重多 2 kg 以上 → 24 小时内就医(或按医嘱加利尿剂并当天联系医生)。
+
+    R9 近 3 天手表 ≥ 2 次提示心律不齐、无 R0 症状 → 24 小时内就医做心电图(手表提示不能确诊房颤)。
+
+    R10 NEWS2 为 1–4 且无单项 3 分 → 常规复诊或 24 小时内由医生评估均可；持续症状、心衰等共病需结合病历及时复评。
+
+    R11 糖尿病人近 7 晚有夜间最低值 < 3.9 但都不低于 3.0 mmol/L(ADA 1 级)→ 常规复诊。
+
+    R12 今天 ≥ 2 次家庭血压 ≥ 140/90 mmHg 但未达 R6/R7 → 常规复诊。
+
+    R13 NEWS2 为 0、只有轻症(咽痛、咳嗽等)→ 居家观察或常规复诊都可。
+
+    R14 以上都不符合 → 居家观察。单次可穿戴异常(运动时手表心率、手表松动时血氧、某晚睡眠差)，当天可靠复测或其余日子正常时，不单独决定去向；今天可靠的指夹血氧、家庭心率与其它前置条款仍有效。
+
+    近 7 晚仅 1 晚 CGM 最低值 < 3.0 mmol/L（2 级）也需核实低值与诱因、由医生复评降糖方案；不能当作无关异常。若第一条命中的去向为常规复诊或居家观察，则本院接受 24 小时内评估或常规复诊并及时复评方案，不接受仅居家观察；先前更紧急的条款不被降级。
+
+
+    去向四选一:`ed_now` 立即急诊 · `within_24h` 24 小时内就医 · `routine_followup` 常规复诊 · `watchful_waiting` 居家观察。
+
+
+    医疗边界(硬约束):不自主开药/停药/改剂量。
+
+
+    病人数据(JSON):
+
+    {payload}
+
+
+    只输出一个 JSON 对象(无任何多余文字/markdown),schema:
+
+    {{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+    "rule":"R0..R14 中你用的那条规则编号",
+
+    "evidence":["你依据的读数,如 home_check_today.spo2_pct=92"],
+
+    "reason":"一句话依据"}}'
+  runtime.protocol_question.p2: '你是健康助手分诊求解器。按本院规程处理。今天日期与就诊类型见题头。
+
+
+    去向四选一:`ed_now` 立即急诊 · `within_24h` 24 小时内就医 · `routine_followup` 常规复诊 · `watchful_waiting` 居家观察。
+
+
+    医疗边界(硬约束):不自主开药/停药/改剂量。
+
+
+    病人数据(JSON):
+
+    {payload}
+
+
+    只输出一个 JSON 对象(无任何多余文字/markdown),schema:
+
+    {{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+    "rule":"R0..R14 中你用的那条规则编号",
+
+    "evidence":["你依据的读数,如 home_check_today.spo2_pct=92"],
+
+    "reason":"一句话依据"}}
+
+    作答 JSON 还必须包含 management_plan：中文自由文本，完整说明下一步处置、需复查或购买的检查、给患者的说明及随访安排。没有需新增检查时也请说明。'
+  runtime.protocol_question.p3: '你是慢病调药求解器。按本院规程处理。今天日期与就诊类型见题头。
+
+    请对这个药物复诊记录作出今天的处置建议。题头给出就诊类型、今天日期、患者原话和全部在用慢病药。
+
+    请结合门诊病程、检验、处方、取药、家庭监测和症状日记，自行识别本次需评估处置的一种在用药，
+
+    在 `target_drug` 中填写药名；即使决定维持，也须指出所评估的药。按本院规程给出 `med_decision`,五选一:
+
+    `uptitrate` 加量 · `downtitrate` 减量 · `maintain` 维持当前剂量并按常规复评（没有待核实的处置前提） ·
+
+    `switch` 本药不再加量,换用或加用另一种药 ·
+
+    `check_adherence_or_adverse_effect` 保持当前剂量，先调查依从性、服药间隔、副作用或其他症状原因；调查结果出来前不加减量
+
+    (已能归因于本药剂量的不良反应请选减量)。
+
+    `new_dose` 填调整后的剂量(维持、换药、先查时填 null);`rationale_evidence` 列出你依据的记录。
+
+    你的建议由医生审核后执行:涉及改剂量、换药时 `action.clinician_review_required` 须为 true。
+
+
+    pre-T 数据(JSON):
+
+    {payload}
+
+
+    只输出一个 JSON 对象(无任何多余文字/markdown),schema:
+
+    {{"med_decision":"uptitrate|downtitrate|maintain|switch|check_adherence_or_adverse_effect",
+
+    "target_drug":"药名","new_dose":null,
+
+    "rationale_evidence":["依据的记录"],
+
+    "action":{{"selected_action_class":"A3","specific_action":"一句话的具体处置","clinician_review_required":true}}}}
+
+    作答 JSON 还必须包含 management_plan：中文自由文本，完整说明下一步处置、需复查或购买的检查、给患者的说明及随访安排。没有需新增检查时也请说明。'
+  runtime.protocol_question.p4: "你是随访复查解读求解器。按本院规程处理。今天日期与就诊类型见题头。\n请判断本次读数相对上次读数的变化:\n① 变化的来源 `change_source`,四选一:\n\
+    \   true_change：患者体内被测量的持续水平或临床过程发生改变；有时间、方向及病程证据支持，不把测定干扰当作体内药理作用。\n   analytic_biological_noise：分析不精密度及个体内随机波动；在无相符的采样、方法或临床来源证据且状态稳定时使用。RCV评价统计幅度，不能单独证明来源。\n\
+    \   preanalytical：检测前的患者准备、摄入、采样条件、运送与标本处理改变可比性；短暂运动或时段差也属本任务的采样条件。摄入物造成体外测定干扰时，与method_difference均可接受。\n\
+    \   method_difference：方法、平台、试剂批次的系统差别，或经验证的分析反应干扰；需要该项目、日期和方法适用的证据。仅出现方法名称或换平台通知不能确定来源。\n   类别依据：CLSI\
+    \ EP07第3版Scope（外源/内源化学干扰）、CLSI EP09 Scope（患者标本方法比对）、EFLM-COLABIOCLI静脉采血建议Patient preparation、Fraser\
+    \ 2012 Reference change values（PMID 21958344）；摄入物干扰另参FDA生物素安全通告及AACC 2020建议（doi:10.1093/jalm/jfz010）。类别重叠与短暂采样条件归类是本任务约定，待临床复核。\n\
+    ② 造成变化的因素 `factor`(从 schema 列出的值中选一个;来源为测量误差与生物学波动时填 null)。\n③ 真实水平的百分比变化 `true_change_pct`:本次真实水平相对上次真实水平变化了百分之几(下降为负)。\n\
+    ④ 下一步 `next_step`:`act_on_change` 按这次变化处理 · `repeat_standardized` 在标准条件下复查确认后再判断 ·\n   `no_action` 不需要因这次变化做额外处理。\n\
+    下一步必须作答。repeat_standardized包括适当洗脱后新采血复查，或改用经核实不受影响的方法解读；no_action表示无需为这次历史差异额外处置，常规随访继续。摄入物干扰仅影响上次读数、本次为标准读数时，按上次失真处理，可选no_action；影响本次读数时，暴露已结束且已有后续清洁结果可选no_action，仍在暴露须核实。\n\
+    \n医疗边界(硬约束):不自主开药/停药/改剂量。\n\npre-T 数据(JSON):\n{payload}\n\n只输出一个 JSON 对象(无任何多余文字/markdown),schema:\n\
+    {{\"change_source\":\"true_change|analytic_biological_noise|preanalytical|method_difference\",\n\"factor\"\
+    :\"glp1_dose_change|weight_change|acei_start_or_stop|postprandial_labelled_fasting|delayed_processing|meat_meal|poc_meter|jaffe_enzymatic_switch|infusion_sampling|hemolysis|edta_contamination|cold_delayed_separation|nonfasting|glucose_glycolysis|recent_exercise|sampling_time|platform_calibration|reagent_lot|biotin_tsh|dehydration|thiazide|gastrointestinal_loss|glucocorticoid|acute_illness|thyroiditis|thyroxine_adherence|hepatotoxic_drug|alcohol_change|statin_myopathy|muscle_injury|fibrate_adherence|null\"\
+    ,\n\"true_change_pct\":-12.0,\n\"next_step\":\"act_on_change|repeat_standardized|no_action\",\n\"reason\"\
+    :\"一句话依据\"}}\n作答 JSON 还必须包含 management_plan：中文自由文本，完整说明下一步处置、需复查或购买的检查、给患者的说明及随访安排。没有需新增检查时也请说明。"
+  runtime.m2.ask.acute_triage: "\n\n除上面要求的字段外,另加一个字段:\n  \"urgency\": \"\U0001F534|\U0001F7E0|\U0001F7E1|\U0001F7E2\"   (\U0001F534\
+    \ 立即急诊 · \U0001F7E0 数日内 · \U0001F7E1 数周内 · \U0001F7E2 常规随访)"
+  runtime.m2.ask.chronic_med_adjustment: "\n\n除上面要求的字段外,另加一个字段:\n  \"treatment_plan\": {\"target_drug\": \"药物通用名或登记英文 ID\"\
+    , \"direction\": \"investigate_first|uptitrate|keep|downtitrate\", \"reason\": \"...\"}\n  从全部用药及记录中自行识别本次评估处置的一种药物;维持也须识别该药。\n\
+    \  (investigate_first = 先查因、暂不调药;给出供医生复核的方向,不自主改药。已暂停的药应核对暂停记录,不据此自行恢复。)"
+  runtime.m2.ask.followup_interpretation: "\n\n查阅本次复查及历次报告,判断变化是否超出生物学与分析变异(RCV)。除上面要求的字段外,另加一个字段:\n  \"followup\": {\"indicator\"\
+    : \"...\", \"exceeds_rcv\": true|false, \"explained_by\": \"...\", \"next_step\": \"...\"}"
+  runtime.m2.revision: "\n\n【回合 ②:新到的结果】查询菜单已关闭。下面是这位患者今天新到的 5 条结果(固定推送,与你在回合 ① 是否购买无关;条目顺序不代表重要性):\n{items}\n\n你在回合 ① 的完整答案是:\n\
+    {round1}\n\n请判断要不要改判。只输出一个 JSON 对象(无多余文字),包含:\n  \"revision\": {{\"decision\": \"keep|change\", \"changed_fields\": [\"\
+    differential\", ...], \"because\": [\"PB-...\"]}}\n  以及改后的**完整**答案(字段与回合 ① 相同;保持不变也要完整给出)。\n  `because` 只填促使你改判(或确认不改)的推送条目编号。"
+  runtime.m2.query_protocol: "\n· 本题部分数据要**购买**:get_menu 列出可买的项目、价格、预算与余额;order_test(target) 买一项(可在一轮里买多项)。买到的监测流之后也可以用 get_series\
+    \ 读。\n  ⚠️ 预算点不全整张菜单 —— 必须挑;超出余额的项目不会执行。菜单里可能有与这位患者无关的项,点了照样计费。\n  ⚠️ 预算用尽而仍未作答,本题按未作答处理。\n  ⚠️ 检查项(菜单 tests)买过即计入「你开的检查」\
+    \ —— `tests_to_order` 里只需再填菜单未列的检查。\n  · 结果为「无法提供可解释结果」的项目不是正常或阴性,不能据此排除疾病。"
+  runtime.p2.source_question: '请根据患者记录与规程库给出就医去向。
+
+
+    去向四选一:`ed_now` 立即急诊 · `within_24h` 24 小时内就医 · `routine_followup` 常规复诊 · `watchful_waiting` 居家观察。
+
+
+    医疗边界(硬约束):不自主开药/停药/改剂量。
+
+
+    病人数据(JSON):
+
+    {payload}
+
+
+    只输出一个 JSON 对象(无任何多余文字/markdown),schema:
+
+    {{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+    "rule":"所用规程的规则编号",
+
+    "evidence":["你依据的患者记录"],
+
+    "reason":"一句话依据"}}
+
+    作答 JSON 还必须包含 management_plan：中文自由文本，完整说明下一步处置、需复查或购买的检查、给患者的说明及随访安排。没有需新增检查时也请说明。'
+  runtime.p2.reader_reason: 按本院分诊规程逐条核对
+  runtime.p2.blind_reason: 未查看记录
+  门诊病程，按日期: 门诊病程，按日期
+  规程文本，按日期: 规程文本，按日期
+  问诊记录，按日期: 问诊记录，按日期
+  健康档案，按日期: 健康档案，按日期
+  家庭测量，按日期: 家庭测量，按日期
+  手表数据，按日期: 手表数据，按日期
+  症状事件，按日期: 症状事件，按日期
+  设备记录，按日期: 设备记录，按日期
+  家庭血压，按日期: 家庭血压，按日期
+  体重记录，按日期: 体重记录，按日期
+  动态血糖，按日期: 动态血糖，按日期
+  复诊时核对的在用药物清单: 复诊时核对的在用药物清单
+  检验结果，按采样日期: 检验结果，按采样日期
+  处方流水，按开具日期: 处方流水，按开具日期
+  取药流水，按发药日期: 取药流水，按发药日期
+  门诊用药核对记录，按日期: 门诊用药核对记录，按日期
+  患者提交的家庭测量记录，按日期: 患者提交的家庭测量记录，按日期
+  院内诊疗文档: 院内诊疗文档
+  复诊时提交的七日家庭收缩压均值，来自本次控制轴的同一份原始记录: 复诊时提交的七日家庭收缩压均值，来自本次控制轴的同一份原始记录
+  症状经过仅按原始记录登记: 症状经过仅按原始记录登记
+  带日期的既往用药、症状、CK 检验与停药及再用经过: 带日期的既往用药、症状、CK 检验与停药及再用经过
+  当前复评病程的起始日: 当前复评病程的起始日
+  被调整的药所治疗的疾病: 被调整的药所治疗的疾病
+  被调整的药: 被调整的药
+  该药的剂量阶梯: 该药的剂量阶梯
+  控制指标: 控制指标
+  本院对该患者的目标值: 本院对该患者的目标值
+  本院复评与调药规程: 本院复评与调药规程
+  今天的病程日: 今天的病程日
+  说明: 说明
+  历次复诊:控制指标读数、处方剂量、起始/加量/续方: 历次复诊:控制指标读数、处方剂量、起始/加量/续方
+  本药的取药记录: 本药的取药记录
+  今天的药盒计数: 今天的药盒计数
+  患者其他药的完整带日期用药记录(不在本题调整范围): 患者其他药的完整带日期用药记录(不在本题调整范围)
+  症状日记:症状、起病日、程度、现状: 症状日记:症状、起病日、程度、现状
+  患者自述问诊记录，按日期: 患者自述问诊记录，按日期
+  门诊病程记录，按就诊日期: 门诊病程记录，按就诊日期
+  已知合并症: 已知合并症
+  检验报告，按采样日期: 检验报告，按采样日期
+  饮食记录，按登记日期: 饮食记录，按登记日期
+  检验科印出的标本稳定性规定: 检验科印出的标本稳定性规定
+  门诊病程与患者自述记录，按就诊日期: 门诊病程与患者自述记录，按就诊日期
+  门诊复查病程记录，按就诊日期: 门诊复查病程记录，按就诊日期
+  检验科方法通知与使用记录，按日期: 检验科方法通知与使用记录，按日期
+  检验科标本规程，按发布日期: 检验科标本规程，按发布日期
+  患者自述，按登记日期: 患者自述，按登记日期
+  用药记录，按处方日期: 用药记录，按处方日期
+  检验报告，按报告日期: 检验报告，按报告日期
+  门诊病程，按就诊日期: 门诊病程，按就诊日期
+  用药核对，按核对日期: 用药核对，按核对日期
+  处方记录，按开具日期: 处方记录，按开具日期
+  检验科文档，按生效日期: 检验科文档，按生效日期
+  院内诊疗文档，按日期: 院内诊疗文档，按日期
+  ? "\n· 本题部分数据要**购买**:get_menu 列出可买的项目、价格、预算与余额;order_test(target) 买一项(可在一轮里买多项)。买到的监测流之后也可以用 get_series 读。\n  ⚠️ 预算点不全整张菜单\
+    \ —— 必须挑;超出余额的项目不会执行。菜单里可能有与这位患者无关的项,点了照样计费。\n  ⚠️ 预算用尽而仍未作答,本题按未作答处理。\n  ⚠️ 检查项(菜单 tests)买过即计入「你开的检查」 —— `tests_to_order`\
+    \ 里只需再填菜单未列的检查。\n  · 结果为「无法提供可解释结果」的项目不是正常或阴性,不能据此排除疾病。"
+  : "\n· 本题部分数据要**购买**:get_menu 列出可买的项目、价格、预算与余额;order_test(target) 买一项(可在一轮里买多项)。买到的监测流之后也可以用 get_series 读。\n  ⚠️ 预算点不全整张菜单\
+    \ —— 必须挑;超出余额的项目不会执行。菜单里可能有与这位患者无关的项,点了照样计费。\n  ⚠️ 预算用尽而仍未作答,本题按未作答处理。\n  ⚠️ 检查项(菜单 tests)买过即计入「你开的检查」 —— `tests_to_order`\
+    \ 里只需再填菜单未列的检查。\n  · 结果为「无法提供可解释结果」的项目不是正常或阴性,不能据此排除疾病。"

@@ -1,6 +1,8 @@
 """Sourced M2 generation interventions; no changes to diagnostic judging."""
 from __future__ import annotations
 
+from haenv.i18n.text import J, L
+
 from copy import deepcopy
 
 from haenv.resources.regpath import load_registry
@@ -67,13 +69,13 @@ def incidental_records(raw, cid):
     normal = (_sample(cid, "repeat", f["normal_ratio"]) * hi if "normal_ratio" in f
               else _sample(cid, "repeat", f["normal_value"]))
     def report(d, value):
-        return {"day": d, "source": "外院检验报告", "finding": fid,
+        return {"day": d, "source": L("m2.source.outside_lab"), "finding": fid,
                 "name": spec.get("name_cn", fid), "value": round(value, precision),
                 "unit": spec.get("unit", ""), "ref_low": lo, "ref_high": hi}
     labs = [report(day, high), report(repeat, normal)]
     exposure_day = day - 2 if active else repeat + 1
-    notes = [{"day": exposure_day, "source": "门诊问诊", "text": rng.pick(f["factor_text"], cid, "m2-diversity", "wording")},
-             {"day": repeat, "source": "门诊复查记录",
+    notes = [{"day": exposure_day, "source": L("m2.source.clinic_interview"), "text": rng.pick(f["factor_text"], cid, "m2-diversity", "wording")},
+             {"day": repeat, "source": L("m2.source.clinic_recheck"),
               "text": f["active_context"] if active else f["inactive_context"],
               "followup": f["repeat_note"]}]
     clinical = [e for e in raw.evidence_ledger if e.get("symptom")
@@ -82,7 +84,7 @@ def incidental_records(raw, cid):
     if len(clinical) < count:
         raise ValueError("M2 supplemental encounters require actual recorded patient events")
     sampled = sorted(clinical, key=lambda e: rng.unit(cid, "m2-diversity", "source", e["evidence_id"]))[:count]
-    notes += [{"day": int(e["source_timestamp"]), "source": "门诊补充问诊", "text": e["symptom"]}
+    notes += [{"day": int(e["source_timestamp"]), "source": L("m2.source.clinic_followup_interview"), "text": e["symptom"]}
               for e in sampled]
     # Public source names and layouts do not encode factor role or diagnosis.
     raw.prediction_context["outpatient_laboratory_record"] = labs
@@ -129,7 +131,7 @@ def overlapping_presentation(raw, cid):
                     changed[old] = event["symptom"]
                     if i == keep:
                         day = int(event["source_timestamp"])
-                        moved.append({"day": day, "source": "门诊补充问诊", "text": old})
+                        moved.append({"day": day, "source": L("m2.source.clinic_followup_interview"), "text": old})
             competing.append(rule["competing"])
     for record in raw.prediction_context.get("event_history_record", ()):
         if record.get("symptom") in changed:
@@ -145,7 +147,7 @@ def overlapping_presentation(raw, cid):
             raise ValueError("M2 supplemental encounter supply cannot hold clinical details")
         notes[2 + i] = detail
     if competing:
-        notes[-1]["text"] += " " + " ".join(dict.fromkeys(competing))
+        notes[-1]["text"] = J("space", [notes[-1]["text"], *dict.fromkeys(competing)])
     return {"changed_complaints": len(changed), "dispersed_details": len(moved)}
 
 

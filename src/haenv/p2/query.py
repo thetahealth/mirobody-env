@@ -7,6 +7,7 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import text_of
 from haenv.interaction.query.adapter import KeyLookup
 from haenv.interaction.query.adapter import QueryAdapter
 from haenv.interaction.query.adapter import register
@@ -15,6 +16,7 @@ from haenv.p2 import history as _history  # installs the pack-local source quest
 #: rule id prefix -> the sections whose rows decide it
 KEY_SECTIONS = (("R0", ("intake_checklist",)), ("R4", ("intake_checklist",)),
                 ("R1", ("home_check_today",)), ("R2", ("home_check_today",)), ("R3", ("home_check_today",)),
+                ("R10b", ("home_check_today", "intake_checklist")),
                 ("R10", ("home_check_today",)), ("R5", ("cgm_nightly",)), ("R11", ("cgm_nightly",)),
                 ("R6", ("home_bp_log",)), ("R7", ("home_bp_log",)), ("R12", ("home_bp_log",)),
                 ("R8", ("morning_weight", "background")), ("R9", ("wearable_daily",)),
@@ -70,10 +72,10 @@ class P2Adapter(QueryAdapter):
             block["message"] = block["intake_checklist"]["patient_statement"]
         a = assess(block)
         return {"disposition": a["set"][0], "rule": _rule_id(a["rule"]), "evidence": [],
-                "reason": "按本院分诊规程逐条核对"}
+                "reason": text_of("runtime.p2.reader_reason")}
 
     def blind_answer(self, payload=None) -> dict:
-        return {"disposition": "routine_followup", "rule": "R14", "evidence": [], "reason": "未查看记录"}
+        return {"disposition": "routine_followup", "rule": "R14", "evidence": [], "reason": text_of("runtime.p2.blind_reason")}
 
 
 ADAPTER = register(P2Adapter(

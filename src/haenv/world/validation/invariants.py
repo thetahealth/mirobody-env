@@ -21,6 +21,7 @@ from haenv.resources.regpath import load_registry
 from haenv.resources.regpath import registry_cached
 from dataclasses import dataclass, field
 from typing import Callable
+from haenv.i18n.identity import source
 
 from haenv import data_root as _dr   # resource root: source tree = repo root, wheel = haenv/_data
 
@@ -35,6 +36,8 @@ def load(batch, pack: str, purchases=None) -> list[dict]:
     if pack not in PACK_BLOCK:
         raise ValueError(f"unsupported invariant pack: {pack}")
     batch = pathlib.Path(batch)
+    from haenv.i18n.identity import load as load_messages, restore
+    messages = load_messages(pathlib.Path(batch) / "cases.jsonl")
     pays = {}
     for line in open(batch / "payloads.jsonl", encoding="utf-8"):
         r = json.loads(line)
@@ -55,7 +58,7 @@ def load(batch, pack: str, purchases=None) -> list[dict]:
         if r["case_id"] in ids:
             raise ValueError(f"duplicate case: {r['case_id']}")
         ids.add(r["case_id"])
-        out.append({"case_id": r["case_id"], "pack": pack, "case": r["case"], "sp": pays.get(r["case_id"]),
+        out.append({"case_id": r["case_id"], "pack": pack, "case": restore(r["case"], messages.get(r["case_id"])), "sp": restore(pays.get(r["case_id"]), messages.get(r["case_id"])),
                     "buy": buys.get(r["case_id"])})
     if not ids or set(pays) != ids or any(not it["sp"] for it in out):
         raise ValueError("invariant pool needs nonempty cases and complete, matching payloads")
@@ -73,11 +76,19 @@ def T_of(it) -> int:
 
 
 def gold(it) -> dict:
-    return ((it["case"].get("adjudication") or {}).get(PACK_BLOCK[it["pack"]]) or {})
+    return (it["case"].get("adjudication") or {}).get(PACK_BLOCK[it["pack"]]) or {}
+
+
+def source_gold(it) -> dict:
+    return source(gold(it))
 
 
 def block(it) -> dict:
-    return ((it["sp"].get("prediction_context") or {}).get(PACK_BLOCK[it["pack"]]) or {})
+    return (it["sp"].get("prediction_context") or {}).get(PACK_BLOCK[it["pack"]]) or {}
+
+
+def source_block(it) -> dict:
+    return source(block(it))
 
 
 def age_band(it) -> tuple[int, int] | None:
@@ -97,7 +108,7 @@ def world_conditions(it) -> set[str]:
 def record_conditions(it) -> set[str]:
     out = set((it["sp"].get("user_profile") or {}).get("known_conditions") or ())
     if it["pack"] == "p2":
-        out |= set((block(it).get("background") or {}).get("known_conditions") or ())
+        out |= set((source_block(it).get("background") or {}).get("known_conditions") or ())
     return {str(x) for x in out}
 
 
@@ -128,7 +139,7 @@ def drugs_in(text: str) -> set[str]:
 
 def visible_med_text(it) -> str:
     """The text where the solver reads the patient's current medicines."""
-    b = block(it)
+    b = source_block(it)
     if it["pack"] == "p2":
         return " ".join((b.get("background") or {}).get("medications") or ())
     if it["pack"] == "p3":
@@ -138,7 +149,7 @@ def visible_med_text(it) -> str:
     if it["pack"] == "p4":
         return " ".join(str(m.get("drug") or "") for m in b.get("medication_record") or ())
     if it["pack"] == "m2":
-        current = (it["sp"].get("prediction_context") or {}).get("current_medications") or ()
+        current = source((it["sp"].get("prediction_context") or {}).get("current_medications") or ())
         s = str(b.get("scene") or "")
         return " ".join([*current, *re.findall(r"在用 ([^。]*)", s)])
     return ""
@@ -205,14 +216,14 @@ def labs(it) -> list[dict]:
         for q in ld.get(s) or ():
             if int(q["ts"]) <= T and _num(q.get("value")) is not None:
                 out.append({"an": s, "day": int(q["ts"]), "v": _num(q["value"]), "ch": "record", "time": q.get("time")})
-    b = block(it)
+    b = source_block(it)
     if it["pack"] == "p4":
         an = str(b.get("analyte") or "")
         for r in b.get("report") or ():
             if _num(r.get("value")) is not None:
                 out.append({"an": an, "day": int(r["day"]), "v": _num(r["value"]), "ch": "report", "time": r.get("time")})
     if it["pack"] == "p3":
-        an = str(gold(it).get("axis") or "")
+        an = str(source_gold(it).get("axis") or "")
         for v in b.get("visits") or ():
             if _num(v.get("reading")) is not None:
                 out.append({"an": an, "day": int(v["day"]), "v": _num(v["reading"]), "ch": "visit"})
@@ -245,7 +256,7 @@ def _followup(it):
         d = json.loads(m.group(1))
     except ValueError:
         return None
-    an = str(d.get("indicator") or d.get("stream") or (block(it).get("followed_indicator") or ""))
+    an = str(d.get("indicator") or d.get("stream") or (source_block(it).get("followed_indicator") or ""))
     v = _num((d.get("today") or {}).get("value") if isinstance(d.get("today"), dict) else d.get("today"))
     return {"an": an, "v": v} if v is not None else None
 
@@ -253,10 +264,10 @@ def _followup(it):
 def texts(it) -> list[tuple[int, str]]:
     """Free text the solver reads: ledger entries, the message / scene, the symptom diary."""
     out = []
-    for e in it["sp"].get("evidence_ledger") or ():
+    for e in source(it["sp"].get("evidence_ledger") or ()):
         t = " ".join(str(e.get(k) or "") for k in ("symptom", "context", "note", "text", "claim"))
         out.append((int(e.get("source_timestamp") or 0), t))
-    b = block(it)
+    b = source_block(it)
     for k in ("message", "scene"):
         if b.get(k):
             out.append((T_of(it), str(b[k])))
@@ -269,7 +280,7 @@ def weights(it) -> list[float]:
     T = T_of(it)
     kg = [float(q["value"]) for q in (it["sp"].get("longitudinal_data") or {}).get("weight") or ()
           if int(q["ts"]) <= T and _num(q.get("value")) is not None]
-    kg += [float(r["kg"]) for r in block(it).get("morning_weight") or () if _num(r.get("kg")) is not None]
+    kg += [float(r["kg"]) for r in source_block(it).get("morning_weight") or () if _num(r.get("kg")) is not None]
     return kg
 
 
@@ -330,7 +341,7 @@ def c2(it):
     seen = {x["an"] for x in labs(it)} | ({"weight"} if weights(it) else set())
     ld = it["sp"].get("longitudinal_data") or {}
     seen |= {k for k in ("systolic_bp", "diastolic_bp") if ld.get(k)} | (
-        {"systolic_bp"} if it["pack"] == "p2" and block(it).get("home_bp_log") else set())
+        {"systolic_bp"} if it["pack"] == "p2" and source_block(it).get("home_bp_log") else set())
     out = [f"world_not_shown:{d}" for d, dose in sorted(wd.items())
            if dose > 0 and d not in vis and set(DRUG_ACTS.get(d, ())) & seen]
     out += [f"shown_not_world:{d}" for d in sorted(vis) if d not in wd]
@@ -340,13 +351,13 @@ def c2(it):
         wm = (it["case"].get("latent_premise") or {}).get("world_medication") or {}
         active = {drug: dose for drug, dose, _ in active_medicines(wm, T_of(it))}
         out += [f"shown_not_active:{d}" for d in sorted(vis & wd.keys()) if d not in active]
-        pc = it["sp"].get("prediction_context") or {}
+        pc = source(it["sp"].get("prediction_context") or {})
         if "current_medications" in pc:
             expected = [display(d, dose) for d, dose in active.items()]
             if sorted(pc["current_medications"]) != sorted(expected):
                 out.append("current_medications_active_dose_mismatch")
-            scene = str(block(it).get("scene") or "")
-            if block(it):
+            scene = str(source_block(it).get("scene") or "")
+            if source_block(it):
                 shown = re.findall(r"在用 ([^。]*)", scene)
                 if (expected and shown != ["、".join(expected)]) or (
                         not expected and (shown or "目前未使用药物" not in scene)):
@@ -441,7 +452,7 @@ def c4(it):
       gold_risk="high: the gold is computed on a value the solver never sees")
 def c5(it):
     out = []
-    g = gold(it)
+    g = source_gold(it)
     if it["pack"] == "m2":
         fr = g.get("f2_reading") or {}
         if fr.get("marker") and fr.get("last") is not None:
@@ -455,13 +466,13 @@ def c5(it):
                 out.append(f"f2_reading {an}={fr['last']}@{d} not readable (seen {seen[:3]})")
         buy = (it.get("buy") or {}).get("results") or {}
         if buy and g:
-            ddx = (it["case"].get("adjudication") or {}).get("ddx") or {}
+            ddx = source((it["case"].get("adjudication") or {}).get("ddx") or {})
             for t in ddx.get("tests") or ():
                 r = buy.get(t)
                 if r is not None and r.get("outcome") != "returned":
                     out.append(f"gold test unavailable: {t}")
     if it["pack"] == "p3":
-        vis = {int(v["day"]): _num(v.get("reading")) for v in block(it).get("visits") or ()}
+        vis = {int(v["day"]): _num(v.get("reading")) for v in source_block(it).get("visits") or ()}
         for v in g.get("visits") or ():
             if int(v["day"]) in vis and vis[int(v["day"])] is not None and abs(vis[int(v["day"])] - float(v["printed"])) > 1e-6:
                 out.append(f"visit {v['day']} printed {v['printed']} shown {vis[int(v['day'])]}")
@@ -477,7 +488,7 @@ def c5(it):
                 out.append(f"coverage from visible refills {cov:.3f} vs gold a_T {float(a):.3f}: side of {line} "
                            "not settled by the printed record")
     if it["pack"] == "p4":
-        rep = {int(r["day"]): _num(r.get("value")) for r in block(it).get("report") or ()}
+        rep = {int(r["day"]): _num(r.get("value")) for r in source_block(it).get("report") or ()}
         for r in g.get("records") or ():
             if int(r["day"]) in rep and rep[int(r["day"])] is not None and abs(rep[int(r["day"])] - float(r["printed"])) > 1e-6:
                 out.append(f"record {r['day']} printed {r['printed']} shown {rep[int(r['day'])]}")
@@ -490,7 +501,7 @@ def p3_visible_coverage(it) -> float | None:
     an early refill's surplus carried forward, a new-strength pickup (新规格) setting the old stock aside;
     after the last pickup the covered days are the doses today's pill count says were taken. A day on the
     drug before the first printed pickup is uncovered (proportion of days covered; PQA / Nau 2012 [memory])."""
-    b, T = block(it), T_of(it)
+    b, T = source_block(it), T_of(it)
     rec = []
     for r in b.get("refill_record") or ():
         m = re.match(r"(\d+)", str(r.get("dispensed") or ""))
@@ -552,14 +563,14 @@ def c7(it):
             and not (CRITICAL[x["an"]][0] <= x["v"] <= CRITICAL[x["an"]][1])]
     if not crit:
         return out
-    ddx = (it["case"].get("adjudication") or {}).get("ddx") or {}
+    ddx = source((it["case"].get("adjudication") or {}).get("ddx") or {})
     if it["pack"] == "m2":
-        g = gold(it)
+        g = source_gold(it)
         urg = g.get("urgency") or ddx.get("urgency")
         if g.get("frame") == "F1" and urg != "🔴":
             out.append(f"critical {[(x['an'], x['v']) for x in crit][:3]} with urgency {urg}")
     if it["pack"] == "p2":
-        st = set(gold(it).get("set") or ())
+        st = set(source_gold(it).get("set") or ())
         if not st & {"ed_now", "within_24h"}:
             out.append(f"critical {[(x['an'], x['v']) for x in crit][:3]} with set {sorted(st)}")
     return out
@@ -654,7 +665,7 @@ def c11(it):
     vis, wd, out = visible_drugs(it), set(world_drugs(it)), []
     n_htn = len(vis & ANTIHYPERTENSIVES)
     for day, t in texts(it):
-        if it["pack"] == "m2" and t == str(block(it).get("scene") or ""):
+        if it["pack"] == "m2" and t == str(source_block(it).get("scene") or ""):
             continue
         for d in sorted(drugs_in(t) - vis - wd):
             out.append(f"text names {d} (day {day})")
@@ -835,7 +846,7 @@ def v6(it):
     if not a1c and not fpg:
         return []
     t2d = "T2D" in world_conditions(it) | record_conditions(it)
-    hidden = str(((it["case"].get("adjudication") or {}).get("ddx") or {}).get("diagnosis") or "")
+    hidden = str(source(((it["case"].get("adjudication") or {}).get("ddx") or {}).get("diagnosis")) or "")
     explained = any(w in hidden for w in GLUCOSE_RAISING_DX)
     out = []
     if t2d and all(v < 5.7 for v in a1c) and all(v < 5.6 for v in fpg) and not (visible_drugs(it) & GLUCOSE_LOWERING):
@@ -940,13 +951,13 @@ def r1(items):
     pack = items[0]["pack"]
     if pack == "p2":
         floors = _p2_rule_floors(len(items))
-        c = _counts(items, lambda it: gold(it).get("rule"))
+        c = _counts(items, lambda it: source_gold(it).get("rule"))
         return [f"{r}: {c.get(r, 0)} < {f}" for r, f in floors.items() if c.get(r, 0) < f]
     if pack == "p3":
-        c = _counts(items, lambda it: gold(it).get("class"))
+        c = _counts(items, lambda it: source_gold(it).get("class"))
         return [f"{k}: {c.get(k, 0)} < 5" for k in P3_CLASSES if c.get(k, 0) < 5]
     if pack == "p4":
-        c = _counts(items, lambda it: gold(it).get("class"))
+        c = _counts(items, lambda it: source_gold(it).get("class"))
         return [f"{k}: {c.get(k, 0)} < 5" for k in P4_CLASSES if c.get(k, 0) < 5]
     return []
 
@@ -960,7 +971,7 @@ def r2(items):
         return []
     pack, out = items[0]["pack"], []
     if pack == "m2":
-        f1 = _counts([i for i in items if gold(i).get("frame") == "F1"], lambda it: gold(it).get("urgency"))
+        f1 = _counts([i for i in items if gold(i).get("frame") == "F1"], lambda it: source_gold(it).get("urgency"))
         out += [f"F1 urgency {u}: 0" for u in URG if not f1.get(u)]
         f2 = {}
         for i in items:
@@ -969,11 +980,11 @@ def r2(items):
                     f2[m] = f2.get(m, 0) + 1
         out += [f"F2 accept {m}: 0" for m in MED if not f2.get(m)]
         f3 = _counts([i for i in items if gold(i).get("frame") == "F3"],
-                     lambda it: (gold(it).get("f3_plan") or {}).get("arm"))
+                     lambda it: (source_gold(it).get("f3_plan") or {}).get("arm"))
         out += [f"F3 arm {a}: 0" for a in ("within", "exceeds") if not f3.get(a)]
     if pack in ("p3", "p4"):
-        key = (lambda it: (gold(it).get("class"), gold(it).get("subtype"))) if pack == "p3" else \
-              (lambda it: (gold(it).get("class"), gold(it).get("next_step")))
+        key = (lambda it: (source_gold(it).get("class"), source_gold(it).get("subtype"))) if pack == "p3" else \
+              (lambda it: (source_gold(it).get("class"), source_gold(it).get("next_step")))
         c = _counts(items, key)
         out += [f"{k[0]} x {k[1]}: 0" for k in BRANCHES[pack] if not c.get(k)]
     return out
@@ -998,15 +1009,15 @@ def r2_table(items) -> dict:
         return {}
     pack = items[0]["pack"]
     if pack == "m2":
-        return {"F1_urgency": _counts([i for i in items if gold(i).get("frame") == "F1"], lambda it: gold(it).get("urgency")),
-                "F2_direction": _counts([i for i in items if gold(i).get("frame") == "F2"], lambda it: gold(it).get("med_direction")),
-                "F3_arm": _counts([i for i in items if gold(i).get("frame") == "F3"], lambda it: (gold(it).get("f3_plan") or {}).get("arm"))}
+        return {"F1_urgency": _counts([i for i in items if gold(i).get("frame") == "F1"], lambda it: source_gold(it).get("urgency")),
+                "F2_direction": _counts([i for i in items if gold(i).get("frame") == "F2"], lambda it: source_gold(it).get("med_direction")),
+                "F3_arm": _counts([i for i in items if gold(i).get("frame") == "F3"], lambda it: (source_gold(it).get("f3_plan") or {}).get("arm"))}
     if pack == "p2":
-        return {"rule": _counts(items, lambda it: gold(it).get("rule"))}
+        return {"rule": _counts(items, lambda it: source_gold(it).get("rule"))}
     if pack == "p3":
-        return {"class_subtype": {f"{k[0]}|{k[1]}": v for k, v in _counts(items, lambda it: (gold(it).get("class"), gold(it).get("subtype"))).items()}}
+        return {"class_subtype": {f"{k[0]}|{k[1]}": v for k, v in _counts(items, lambda it: (source_gold(it).get("class"), source_gold(it).get("subtype"))).items()}}
     if pack == "p4":
-        return {"class_next": {f"{k[0]}|{k[1]}": v for k, v in _counts(items, lambda it: (gold(it).get("class"), gold(it).get("next_step"))).items()}}
+        return {"class_next": {f"{k[0]}|{k[1]}": v for k, v in _counts(items, lambda it: (source_gold(it).get("class"), source_gold(it).get("next_step"))).items()}}
     return {}
 
 
@@ -1019,7 +1030,7 @@ def benign_set(it) -> frozenset[str]:
     Unknown phrases are not invented into the benign vocabulary.
     """
     vocab = _benign_vocabulary()
-    return frozenset(vocab[s] for e in it["sp"].get("evidence_ledger") or ()
+    return frozenset(vocab[s] for e in source(it["sp"].get("evidence_ledger") or ())
                      if (s := str(e.get("symptom") or "")) in vocab)
 
 
@@ -1075,7 +1086,7 @@ def diversity(items):
       statement="Non-acting factors have dated retrievable source records; value fields contain no inline exemption.",
       control="delete a laboratory/encounter/device record, or restore the report's self-explaining parenthesis")
 def evidence_location(it):
-    b, pack = block(it), it["pack"]
+    b, pack = source_block(it), it["pack"]
     if pack == "m2":
         b = it["sp"].get("prediction_context") or {}
     from haenv.interaction.query.adapter import ADAPTERS
@@ -1085,10 +1096,10 @@ def evidence_location(it):
                 "p4": ("laboratory_method_record", "specimen_procedure"),
                 "m2": ("laboratory_method_record",)}[pack]
     bad = [f"missing retrievable {s}" for s in required if s not in b or s not in ADAPTERS[pack].sections]
-    pc = it["sp"].get("prediction_context") or {}
+    pc = source(it["sp"].get("prediction_context") or {})
     if "event_history_record" not in pc or "event_history_record" not in ADAPTERS[pack].sections:
         bad.append("missing retrievable event history")
-    if any(e.get("symptom") and e.get("context") for e in it["sp"].get("evidence_ledger") or ()):
+    if any(e.get("symptom") and e.get("context") for e in source(it["sp"].get("evidence_ledger") or ())):
         bad.append("inline symptom history")
     if pack == "p4":
         fields = [{k: r.get(k) for k in ("lab", "method", "specimen", "note")} for r in b.get("report") or ()]
@@ -1111,13 +1122,14 @@ def evidence_location(it):
             if "context" in e:
                 bad.append("inline diary context")
     elif pack == "p2":
+        b = source(b)
         if any(r.get("fit_note") for r in b.get("wearable_daily") or ()):
             bad.append("inline wearable fit note")
-        plan = gold(it).get("plan") or {}
-        if plan.get("artefact") == "strap" or gold(it).get("tier") == "ben_spo2":
+        plan = source_gold(it).get("plan") or {}
+        if plan.get("artefact") == "strap" or source_gold(it).get("tier") == "ben_spo2":
             from haenv.p2.background import strap_notes
             recorded = {e.get("day") for record in b.get("device_record") or () for e in record.get("entries") or ()
-                        if e.get("text") in strap_notes(plan)}
+                        if source(e.get("text")) in strap_notes(plan)}
             if not recorded:
                 bad.append("strap artefact has no retrievable wear record")
     else:
@@ -1147,7 +1159,7 @@ def history_timing(it):
     for ref in m.get("records") or ():
         if int(ref["day"]) > int(m["recent_lower"]) - gap:
             bad.append("decisive old record is inside the forbidden date margin")
-        b = block(it) if it["pack"] != "m2" else it["sp"].get("prediction_context") or {}
+        b = source_block(it) if it["pack"] != "m2" else it["sp"].get("prediction_context") or {}
         if not any(int(x.get("day", x.get("draw_day", 10**9))) == int(ref["day"]) for x in b.get(ref["section"]) or ()):
             bad.append("decisive dated source missing from solver records")
     return bad or ([] if m.get("records") else ["no decisive history reference"])
@@ -1172,9 +1184,9 @@ def history_twin(it):
     if m.get("active"):
         for ref in m["records"]:
             alternate = P.answer(P.twin(raw, int(ref["day"])))
-            baseline = (it["pack"] == "p4" and gold(it).get("class") == "true_change"
+            baseline = (it["pack"] == "p4" and source_gold(it).get("class") == "true_change"
                         and m.get("deletion") == "indeterminate"
-                        and ref["section"] == "report" and int(ref["day"]) == int(gold(it)["t0"]))
+                        and ref["section"] == "report" and int(ref["day"]) == int(source_gold(it)["t0"]))
             if alternate is None and not baseline:
                 bad.append("deletion twin has no derivable alternative gold")
             if alternate == full:
@@ -1227,7 +1239,7 @@ def look_alike_source_distribution(items):
     from collections import Counter
     groups = {True: Counter(), False: Counter()}
     for it in items:
-        g = gold(it) or (it["case"].get("adjudication") or {})
+        g = source_gold(it) or (it["case"].get("adjudication") or {})
         look = g.get("look_alike") or (g.get("history_dependency") or {}).get("look_alike") or {}
         for ref in look.get("records") or ():
             groups[bool(ref["acts"])][ref["section"]] += 1
@@ -1244,12 +1256,12 @@ def look_alike_source_distribution(items):
       statement="Header-amplitude-only effect among true change, method difference and preanalytical causes is below the registered shortcut threshold.",
       source="docs/design/p4-visible-change.md", control="assign separated amplitude ranges to non-noise causes")
 def p4_magnitude_overlap(items):
-    if not any(gold(it).get("look_alike") for it in items):
+    if not any(source_gold(it).get("look_alike") for it in items):
         return []
     from haenv.p4.magnitude import readout
     # RCV separates noise from significant change by design; audit whether
     # magnitude alone identifies the cause after that clinical first step.
-    r = readout([it for it in items if gold(it).get("class") in
+    r = readout([it for it in items if source_gold(it).get("class") in
                  ("true_change", "method_difference", "preanalytical")])
     bad = []
     if r["chance_corrected"] >= 0.20:
@@ -1276,7 +1288,7 @@ def p3_symptom_status(items):
       statement="Named-drug directions respect dated adverse-effect reductions, dose feasibility and hidden-line relevance.",
       source="registry/m2_pre_review.yaml:drug_targets,adverse_reduction", gold_risk="high: incorrect named-drug direction")
 def m2_f2(it):
-    g = gold(it)
+    g = source_gold(it)
     f2 = g.get("f2_reading") or {}
     if g.get("frame") != "F2":
         return []
@@ -1298,7 +1310,7 @@ def m2_f2(it):
     if f2.get("hidden_linked") is False and not f2.get("hidden_intake_loss"):
         expected = f2_accept(False, None, reading)
     elif (reading.get("dose_state") or {}).get("adverse_reduction"):
-        ddx = (it["case"].get("adjudication") or {}).get("ddx") or {}
+        ddx = source((it["case"].get("adjudication") or {}).get("ddx") or {})
         expected = f2_accept(g.get("hidden_named_condition", True), ddx.get("urgency"), reading)
     else:
         return out
@@ -1312,7 +1324,7 @@ def m2_f2(it):
       source="registry/m2_pre_review.yaml", gold_risk="high: required workup cannot be purchased")
 def m2_workup(it):
     from haenv.m2 import core as C
-    adj = it["case"].get("adjudication") or {}
+    adj = source(it["case"].get("adjudication") or {})
     ddx = adj.get("ddx") or {}
     tests = ddx.get("tests") or []
     plan = adj.get("m2_workup") or {}
@@ -1348,7 +1360,7 @@ def m2_workup(it):
       statement="Each M2 gold test is an exact, returned menu item.", gold_risk="high: nonexistent or unavailable gold test")
 def m2_menu(it):
     names = {i["target"] for i in it["buy"]["menu"] if i.get("is_test")}
-    ddx = (it["case"].get("adjudication") or {}).get("ddx") or {}
+    ddx = source((it["case"].get("adjudication") or {}).get("ddx") or {})
     out = [f"gold test absent from menu: {t}" for t in ddx.get("tests") or [] if t not in names]
     for t in ddx.get("tests") or []:
         result = (it["buy"].get("results") or {}).get(t)
@@ -1392,7 +1404,7 @@ def m2_urgency(items):
     reg = condition_registry()
     groups, out = {}, []
     for it in items:
-        ddx = (it["case"].get("adjudication") or {}).get("ddx") or {}
+        ddx = source((it["case"].get("adjudication") or {}).get("ddx") or {})
         if ddx.get("insufficient"):
             continue
         sid = ddx["spec_id"]
@@ -1423,19 +1435,19 @@ def m2_urgency(items):
       source="registry/protocols.yaml", control="shorten only the bearing procedures, change their schema, or make them one-step entries")
 def protocol_distribution(items):
     from haenv.world.protocols.gates import distribution_hits
-    return distribution_hits() if any(block(it).get("rules_delivery") == "library" for it in items) else []
+    return distribution_hits() if any(source_block(it).get("rules_delivery") == "library" for it in items) else []
 
 
 @gate(id="system_score_receipt", cls="①", packs=("p2",),
       statement="The automatic score is the registered fallible receipt; gold is recomputable from the completed observations.",
       source="registry/system_scoring.yaml", control="change an automatic total or scale, delete the receipt, or change a completed observation")
 def system_score_receipt(it):
-    if block(it).get("rules_delivery") != "library":
+    if source_block(it).get("rules_delivery") != "library":
         return []
     from haenv.world.protocols.gates import receipt_hits
     from haenv.p2.rules import assess
-    bad = receipt_hits(block(it), it["case_id"])
-    if set(assess(block(it))["set"]) != set(gold(it)["set"]):
+    bad = receipt_hits(source_block(it), it["case_id"])
+    if set(assess(source_block(it))["set"]) != set(source_gold(it)["set"]):
         bad.append("gold changed after attaching protocol library or automatic receipt")
     return bad
 

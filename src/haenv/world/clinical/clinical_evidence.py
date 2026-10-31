@@ -14,6 +14,7 @@ reference ranges or patient measurements. Physician review remains pending.
 from __future__ import annotations
 
 from datetime import date, timedelta
+from haenv.i18n.text import J, L, T as tpl
 import math
 
 import haenv.world.generation.rng as rng
@@ -26,6 +27,7 @@ _SUPPORTED = {
     'HD-UNI-08': frozenset({'ECGAtrialPattern'}),
     'HD-UNI-09': frozenset({'Cr', 'AKICreatinineChange'}),
     'HD-UNI-10': frozenset({'Cr', 'UACR', 'CKDPersistence'}),
+    'JD-CKM': frozenset({'Cr', 'UACR', 'CKDPersistence'}),
     'HD-UNI-12': frozenset({'Lipase', 'PancreaticImaging'}),
     'HD-UNI-13': frozenset({'FibrosisAssessment'}),
 }
@@ -125,7 +127,7 @@ def _renal_bundle(case_id: str, spec_id: str, T: int, findings: dict,
                   profile: dict, user: dict) -> tuple[list[dict], list[dict], dict]:
     cr_row = _decl(profile, 'Cr')
     cr_spec = _numeric_spec(findings, 'Cr', user)
-    chronic = spec_id == 'HD-UNI-10'
+    chronic = spec_id in {'HD-UNI-10', 'JD-CKM'}
     companion = 'CKDPersistence' if chronic else 'AKICreatinineChange'
     q = _decl(profile, companion)
     if q['direction'] not in {'positive', 'negative'}:
@@ -133,7 +135,11 @@ def _renal_bundle(case_id: str, spec_id: str, T: int, findings: dict,
     positive = q['direction'] == 'positive'
     if cr_row['direction'] != ('high' if positive else 'normal'):
         raise ClinicalEvidenceUnavailable('inconsistent numeric and companion declarations')
-    if T < (_CHRONIC_SPAN_DAYS + 7 if chronic else 14):
+    # Legacy CKM worlds can start treatment after renal disease is established;
+    # their dated laboratory history may precede treatment day zero. Expanded
+    # HD-UNI-10 retains its registered within-course observation window.
+    minimum_T = 7 if spec_id == 'JD-CKM' else (_CHRONIC_SPAN_DAYS + 7 if chronic else 14)
+    if T < minimum_T:
         raise ClinicalEvidenceUnavailable('observation window is too short for the requested history')
     if not chronic:
         base = _draw(cr_spec, cr_row, case_id, 'Cr', 0, direction='normal')
@@ -144,13 +150,12 @@ def _renal_bundle(case_id: str, spec_id: str, T: int, findings: dict,
             # The safety margin survives printed precision. It is not a lab ref limit.
             latest = _round(max(proposal, 1.6*base,
                                 base + 30 + 6*rng.unit(case_id, 'clinical-result', 'delta')), 'Cr')
-        cr = [_point('Cr', '血清肌酐', day, val, T, user, spec=cr_spec)
+        cr = [_point('Cr', L('m2.clinical.phrase_12'), day, val, T, user, spec=cr_spec)
               for day, val in [(T-7, base), (T-2, base), (T, latest)]]
         delta = latest - base
-        report = _point(companion, '短期血清肌酐记录', T,
-                        f"第{T-7}天及第{T-2}天血清肌酐{base} {cr_spec['unit']},"
-                        f"第{T}天{latest} {cr_spec['unit']};48小时差值{delta:.2f} {cr_spec['unit']},"
-                        f"与7天前比值{latest/base:.3f}", T, user,
+        report = _point(companion, L('m2.clinical.phrase_11'), T,
+                        tpl("m2.result.aki", day_7=T-7, day_2=T-2, day=T, base=base,
+                            unit=cr_spec['unit'], latest=latest, delta=delta, ratio=latest/base), T, user,
                         details={'creatinine_history': cr, 'delta_48h_umol_l': delta,
                                  'ratio_to_7d_baseline': latest/base,
                                  'elapsed_hours_for_delta': 48,
@@ -178,21 +183,28 @@ def _renal_bundle(case_id: str, spec_id: str, T: int, findings: dict,
         # Construct an explicitly declared below-criterion scenario, not an
         # inference that absent declarations imply no disease. 30 mg/g is sourced.
         first_acr = last_acr = _round(min(29.0, _draw(acr_spec, acr_row, case_id, 'UACR', 0)), 'UACR')
-    days = [T-_CHRONIC_SPAN_DAYS, T-_CHRONIC_SPAN_DAYS//2, T]
-    cr_values = [first_cr, _round((first_cr+last_cr)/2, 'Cr'), last_cr]
-    acr_values = [first_acr, _round((first_acr+last_acr)/2, 'UACR'), last_acr]
-    cr = [_point('Cr', '血清肌酐', d, v, T, user, spec=cr_spec) for d,v in zip(days,cr_values)]
-    acr = [_point('UACR', '尿白蛋白/肌酐比值', d, v, T, user, spec=acr_spec) for d,v in zip(days,acr_values)]
-    text = ';'.join(f"第{d}天血清肌酐{cv} {cr_spec['unit']},尿白蛋白/肌酐比值{av} mg/g"
-                    for d,cv,av in zip(days,cr_values,acr_values))
-    report = _point(companion, '纵向肾功能及尿白蛋白记录', T,
-                    text+';记录跨度112天,未提供eGFR', T, user,
+    days = [T-_CHRONIC_SPAN_DAYS, T-_CHRONIC_SPAN_DAYS//2, T-7, T]
+    cr_values = [first_cr, _round((first_cr+last_cr)/2, 'Cr'),
+                 _round((first_cr+3*last_cr)/4, 'Cr'), last_cr]
+    acr_values = [first_acr, _round((first_acr+last_acr)/2, 'UACR'),
+                  _round((2*first_acr+last_acr)/2, 'UACR') if positive else last_acr, last_acr]
+    cr = [_point('Cr', L('m2.clinical.phrase_12'), d, v, T, user, spec=cr_spec) for d,v in zip(days,cr_values)]
+    acr = [_point('UACR', L('m2.clinical.phrase_13'), d, v, T, user, spec=acr_spec) for d,v in zip(days,acr_values)]
+    text = J("m2.report_separator", [tpl("m2.result.renal_reading", day=d, cr=cv,
+                    unit=cr_spec['unit'], uacr=av) for d,cv,av in zip(days,cr_values,acr_values)])
+    from haenv.resources.regpath import load_registry
+    course = load_registry('clinical_expansion.yaml')['renal_course_observations']
+    report = _point(companion, L('m2.clinical.phrase_0'), T,
+                    tpl("m2.result.ckd_course", readings=text, review=L('m2.renal.acute_review')
+                        if course['acute_factors_reviewed'] else L('m2.renal.review_missing')), T, user,
                     details={'creatinine_history': cr, 'uacr_history': acr,
                              'history_span_days': _CHRONIC_SPAN_DAYS,
                              'albuminuria_persistent_in_record': all(v >= 30 for v in acr_values),
                              'uacr_ratio': last_acr/first_acr,
                              'repeat_evaluation_trigger': last_acr >= 2*first_acr,
-                             'progression_assessment': 'requires_clinical_evaluation',
+                             'progression_assessment': 'sustained_albuminuria_increase' if positive else 'not_observed',
+                             'same_method': course['same_method'],
+                             'acute_factors_reviewed': course['acute_factors_reviewed'],
                              'egfr': None, 'etiology': 'not_established',
                              'calendar_basis': '112_day_span_exceeds_any_three_calendar_months'},
                     flag='PERSISTENT_CHANGE_IN_RECORD' if positive else 'CRITERION_NOT_OBSERVED')
@@ -211,7 +223,7 @@ def _lipase(case_id: str, T: int, findings: dict, profile: dict, user: dict) -> 
             raise ValueError('assay precision cannot represent the selected relative threshold')
     else:
         val = proposal
-    return _point('Lipase', '血清脂肪酶', T, val, T, user, spec=spec,
+    return _point('Lipase', L('m2.clinical.phrase_1'), T, val, T, user, spec=spec,
                   details={'local_uln': uln, 'multiple_of_local_uln': val/uln,
                            'sampling_note': 'activity and upper limit use the same local assay'})
 
@@ -224,9 +236,9 @@ def _ecg(case_id: str, T: int, findings: dict, profile: dict, user: dict) -> dic
     positive = row['direction'] == 'positive'
     rr = [510 + rng.below(430, case_id, 'clinical-result', 'rr', k) + k
           for k in range(8)] if positive else [760 + rng.below(50, case_id, 'clinical-result', 'rr')] * 8
-    value = ('本段RR间期不规则,各QRS前未见持续形态一致的P波' if positive else
-             '本段RR间期规律,各QRS前可见形态一致的P波;短时记录不排除间歇发作')
-    return _point('ECGAtrialPattern', '十二导联心电记录', T, value, T, user,
+    value = (L('m2.clinical.phrase_2') if positive else
+             L('m2.clinical.phrase_3'))
+    return _point('ECGAtrialPattern', L('m2.clinical.phrase_4'), T, value, T, user,
                   details={'acquisition': '12_lead_ecg', 'recording_duration_seconds': 10,
                            'rr_intervals_ms': rr, 'consistent_p_before_qrs': not positive,
                            'sampling_note': 'RR intervals are an excerpt of this synthetic recording; requires clinical review'},
@@ -240,9 +252,9 @@ def _pancreatic(case_id: str, T: int, findings: dict, profile: dict, user: dict)
         raise ClinicalEvidenceUnavailable('imaging requires an explicit record design')
     positive = row['direction'] == 'positive'
     # These are visible report descriptors for a selected CT design, not a diagnosis.
-    value = ('增强CT:胰腺弥漫性增大,实质强化较均匀,胰周脂肪间隙条索,少量胰周液体' if positive else
-             '本次CT未见胰腺增大及胰周脂肪间隙条索或液体;单次早期检查不能排除随后变化')
-    return _point('PancreaticImaging', '胰腺及胰周影像描述', T, value, T, user,
+    value = (L('m2.clinical.phrase_5') if positive else
+             L('m2.clinical.phrase_6'))
+    return _point('PancreaticImaging', L('m2.clinical.phrase_7'), T, value, T, user,
                   details={'modality': 'contrast_enhanced_ct', 'pancreatic_enlargement': positive,
                            'homogeneous_enhancement': positive, 'peripancreatic_stranding': positive,
                            'peripancreatic_fluid_observed': positive,
@@ -316,17 +328,10 @@ def _fibrosis(case_id: str, T: int, findings: dict, profile: dict, user: dict) -
     if (positive and (not high or pdff < 5)) or (not positive and not low):
         raise ClinicalEvidenceUnavailable('FibrosisAssessment: readings do not support declared secondary risk')
     risk = 'high' if high else 'low'
-    interpretation = ('两项无创评估一致提示进展期纤维化可能性高,需肝病专科进一步管理' if high else
-                      '两项无创评估均在进展期纤维化低风险范围,结合临床随访')
-    value = (f'空腹{fasting}小时,VCTE采用{design["probe"]}探头(皮肤至肝包膜{design["skin_to_capsule_mm"]} mm),'
-             f'有效测量{valid}/{attempts}次,肝硬度中位数{lsm} kPa,IQR/中位数{iqr:.2f};'
-             f'为进一步澄清纤维化风险加做MRE:{mre} kPa,波传播充分且无明显伪影;'
-             f'MRI-PDFF {pdff}%,{"提示脂肪变" if pdff >= 5 else "未达脂肪变界值"}。'
-             '报告复核未见急性肝炎、胆道梗阻或肝淤血干扰;自述不饮酒,HBsAg及抗HCV阴性,'
-             '问诊未识别竞争性药物或继发病因。肝病专科综合意见:' + interpretation +
-             ';脂肪变的病因判断需结合已知代谢危险因素。FIB-4只能作初筛,不能单凭其确诊;'
-             '上述为无创概率判断,未作肝活检,不能据此确定组织学F3/F4或MASH,也不证明短期内进展。')
-    return _point('FibrosisAssessment', '肝脏弹性与脂肪定量及专科二级评估', T, value, T, user,
+    interpretation = (L('m2.clinical.phrase_8') if high else
+                      L('m2.clinical.phrase_9'))
+    value = tpl("m2.result.fibrosis", fasting=fasting, probe=design['probe'], skin_mm=design['skin_to_capsule_mm'], valid=valid, attempts=attempts, lsm=lsm, iqr=iqr, mre=mre, pdff=pdff, steatosis=L('m2.clinical.phrase_14') if pdff >= 5 else L('m2.clinical.phrase_15'), interpretation=interpretation)
+    return _point('FibrosisAssessment', L('m2.clinical.phrase_10'), T, value, T, user,
         details={'vcte': {'lsm_kpa': lsm, 'valid_measurements': valid, 'attempted_measurements': attempts,
                           'iqr_over_median': iqr, 'fasting_hours': fasting, 'probe': design['probe'],
                           'skin_to_capsule_mm': design['skin_to_capsule_mm'], 'quality_acceptable': True},
@@ -370,7 +375,7 @@ def clinical_result_series(case_id: str, spec_id: str, finding_id: str, T: int,
         raise ClinicalEvidenceUnavailable('insufficient clinical observations are unavailable')
     if finding_id == 'FibrosisAssessment':
         return [_fibrosis(case_id, T, findings, profile, user_profile)]
-    if spec_id in {'HD-UNI-09', 'HD-UNI-10'}:
+    if spec_id in {'HD-UNI-09', 'HD-UNI-10', 'JD-CKM'}:
         cr, acr, report = _renal_bundle(case_id, spec_id, T, findings, profile, user_profile)
         return [cr[-1]] if finding_id == 'Cr' else ([acr[-1]] if finding_id == 'UACR' else [report])
     if spec_id == 'HD-UNI-08':

@@ -1,0 +1,410 @@
+entries:
+  judge.archive.1: '; based this time on '
+  judge.archive.10: ; this history of hypoglycaemia requiring assistance must therefore constrain today's
+    dose choice.
+  judge.archive.12: The higher dose previously caused intolerance; do not restore it today. Implement
+    the selected plan within the tolerated dose limit
+  judge.archive.13: below
+  judge.archive.14: above
+  judge.archive.15: equal to
+  judge.archive.16: below
+  judge.archive.17: above
+  judge.archive.18: within
+  judge.archive.20: has passed
+  judge.archive.21: has not yet been reached
+  judge.archive.23: '; dispensing dates do not establish actual intake. Dispensed quantities and remaining
+    pills have been reconciled to assess actual coverage before today''s adjustment, supporting '
+  judge.archive.24: associated with the dose increase; the clinician must review this adverse effect before
+    deciding the dose
+  judge.archive.25: cannot yet be attributed to medication; first verify the symptoms and other causes
+    before deciding the dose
+  judge.archive.26: after today's treatment adjustment
+  judge.archive.27: after the most recent initiation or dose increase
+  judge.archive.29: ; compare methods or specimen conditions using this notice's effective date; differences
+    in conditions cannot be interpreted directly as disease progression.
+  judge.archive.3: Calculate NEWS2 using the oxygen saturation scale 2 and target range authorised in
+    the earlier record, then decide disposition
+  judge.archive.30: Arrange today (.+)\.
+  judge.archive.31: '.+ plan: (.+)\.'
+  judge.archive.32: For the current change in .+, (.+)\.
+  judge.archive.33: Today, according to the registered (.+) urgency
+  judge.archive.4: Interpret watch irregular rhythm alerts in light of known atrial fibrillation and current
+    control; they cannot establish a first diagnosis of atrial fibrillation
+  judge.archive.42: . The acute symptom screen and the observations above do not meet earlier triage rules,
+    and today's reliable measurements do not corroborate the isolated watch abnormality; R14 therefore
+    applies.
+  judge.archive.5: Check weight change and symptoms against the known heart failure history and apply
+    the heart failure triage criteria
+  judge.archive.6: Check how this earlier record relates to current observations before implementing the
+    selected management
+  judge.archive.8: ; the adverse event above occurred during dose escalation and improved on reassessment
+    after dose reduction. Failure to reach the control target alone does not justify restoring the higher
+    dose today.
+  judge.archive.9: ; the alternative causes above were not found, so the earlier event still limits today's
+    maximum dose.
+  judge.control.med_followup_fixed: judge.control.med_followup_fixed
+  judge.control.med_followup_range: judge.control.med_followup_range
+  judge.control.med_followup_relative: judge.control.med_followup_relative
+  judge.punctuation.common.1: '; '
+  judge.punctuation.controls_v62.1: '; '
+  judge.punctuation.controls_v62.2: '; '
+  judge.punctuation.controls_v62.3: '; '
+  judge.punctuation.controls_v62.4: ', '
+  judge.punctuation.controls_v62.5: '; '
+  judge.punctuation.controls_v62.6: ', '
+  judge.punctuation.controls_v62.7: ', '
+  judge.punctuation.controls_v62.8: ', '
+  judge.punctuation.controls_v62.9: ', '
+  judge.punctuation.judge.1: ', '
+  judge.punctuation.judge.2: '; '
+  judge.punctuation.judge.3: ', '
+  judge.punctuation.judge.4: '; '
+  judge.punctuation.m2.1: judge.punctuation.m2.1
+  judge.punctuation.m2.2: '; '
+  judge.punctuation.m2.3: '; '
+  judge.punctuation.precision.2: '; '
+  judge.punctuation.precision.3: '; '
+  judge.punctuation.precision.4: '; '
+  judge.punctuation.rubric.1: ', '
+  judge.scoring.llm_rubric.build_prompt.2: 'You are reviewing a clinical reasoning answer. **Return binary
+    judgements only; do not assign scores or grades.**
+
+    Answer each question below with true / false; **use null if you cannot judge** (do not guess or convert
+    uncertainty to false).
+
+
+    ## Gold reference (for comparison)
+
+    '
+  judge.scoring.llm_rubric.build_prompt.3: '
+
+
+    ## Answer to review (process records and conclusion fields removed)
+
+    '
+  judge.scoring.llm_rubric.build_prompt.4: '
+
+
+    ## Answer each item
+
+    '
+  judge.scoring.llm_rubric.build_prompt.5: '
+
+
+    ## Output format (strict JSON only)
+
+    {"<scoring item name>": {"value": true|false|null, "why": "<one-sentence reason>"}, ...}
+
+    ⚠️ `why` is for human review and **does not affect scoring**; do not change value to make the reason
+    sound better.
+
+    '
+  judge.scoring.management.adapters.common.finish.1: 'The earlier record shows: '
+  judge.scoring.management.adapters.common.finish.2: ; retain its implications for today's assessment
+    and management.
+  judge.scoring.management.adapters.m2.facts.10: Today's assessment and investigations take account of
+    this patient's current symptoms and actual course, rather than a single incidental abnormality.
+  judge.scoring.management.adapters.m2.facts.11: If new relevant symptoms are found at the visit, the
+    receiving clinician can assess the need for targeted initial investigations.
+  judge.scoring.management.adapters.m2.facts.3: judge.scoring.management.adapters.m2.facts.3
+  judge.scoring.management.adapters.m2.facts.4: judge.scoring.management.adapters.m2.facts.4
+  judge.scoring.management.adapters.m2.facts.5: judge.scoring.management.adapters.m2.facts.5
+  judge.scoring.management.adapters.m2.facts.6: judge.scoring.management.adapters.m2.facts.6
+  judge.scoring.management.adapters.m2.facts.7: judge.scoring.management.adapters.m2.facts.7
+  judge.scoring.management.adapters.m2.facts.8: judge.scoring.management.adapters.m2.facts.8
+  judge.scoring.management.adapters.m2.facts.9: judge.scoring.management.adapters.m2.facts.9
+  judge.scoring.management.adapters.p2.facts.1: Waiting or less urgent care cannot replace the medical
+    review timeframe required in this case.
+  judge.scoring.management.adapters.p2.facts.10: The low temperature must be checked immediately while
+    seeking help; waiting for a repeat measurement must not delay care.
+  judge.scoring.management.adapters.p2.facts.11: Wait at home for a repeat temperature measurement before
+    seeking help.
+  judge.scoring.management.adapters.p2.facts.12: Check the low temperature immediately
+  judge.scoring.management.adapters.p2.facts.13: ; check the low temperature immediately while seeking
+    help; do not delay care while awaiting a repeat measurement
+  judge.scoring.management.adapters.p2.facts.14: judge.scoring.management.adapters.p2.facts.14
+  judge.scoring.management.adapters.p2.facts.15: judge.scoring.management.adapters.p2.facts.15
+  judge.scoring.management.adapters.p2.facts.16: judge.scoring.management.adapters.p2.facts.16
+  judge.scoring.management.adapters.p2.facts.2: judge.scoring.management.adapters.p2.facts.2
+  judge.scoring.management.adapters.p2.facts.3: Emergency department attendance immediately is mandatory
+    in this case; omitting it is also a safety event.
+  judge.scoring.management.adapters.p2.facts.4: No emergency department visit is needed today.
+  judge.scoring.management.adapters.p2.facts.5: emergency department
+  judge.scoring.management.adapters.p2.facts.6: The patient contacts emergency care now and attends with
+    the record for assessment by an emergency clinician
+  judge.scoring.management.adapters.p2.facts.7: The patient contacts a healthcare facility and attends
+    within 24 hours for clinical assessment
+  judge.scoring.management.adapters.p2.facts.8: The patient books a routine outpatient follow-up for clinical
+    reassessment
+  judge.scoring.management.adapters.p2.facts.9: The patient records symptoms and home readings for subsequent
+    reassessment
+  judge.scoring.management.adapters.p3.facts.1: judge.scoring.management.adapters.p3.facts.1
+  judge.scoring.management.adapters.p3.facts.10: judge.scoring.management.adapters.p3.facts.10
+  judge.scoring.management.adapters.p3.facts.11: If new relevant symptoms are found in person, the receiving
+    clinician assesses the need for targeted initial investigations.
+  judge.scoring.management.adapters.p3.facts.2: judge.scoring.management.adapters.p3.facts.2
+  judge.scoring.management.adapters.p3.facts.3: judge.scoring.management.adapters.p3.facts.3
+  judge.scoring.management.adapters.p3.facts.4: judge.scoring.management.adapters.p3.facts.4
+  judge.scoring.management.adapters.p3.facts.5: The patient must not independently prescribe, stop medication
+    or change doses.
+  judge.scoring.management.adapters.p3.facts.6: The patient may adjust all medication doses independently,
+    without clinician review.
+  judge.scoring.management.adapters.p3.facts.7: judge.scoring.management.adapters.p3.facts.7
+  judge.scoring.management.adapters.p3.facts.8: judge.scoring.management.adapters.p3.facts.8
+  judge.scoring.management.adapters.p3.facts.9: judge.scoring.management.adapters.p3.facts.9
+  judge.scoring.management.adapters.p4.facts.1: The patient must not independently prescribe, stop medication
+    or change doses on the basis of this report.
+  judge.scoring.management.adapters.p4.facts.10: judge.scoring.management.adapters.p4.facts.10
+  judge.scoring.management.adapters.p4.facts.11: judge.scoring.management.adapters.p4.facts.11
+  judge.scoring.management.adapters.p4.facts.12: If new symptoms occur, the clinician assesses the need
+    for targeted initial investigations after an in-person review.
+  judge.scoring.management.adapters.p4.facts.2: The patient may adjust all medication doses independently,
+    without clinician review.
+  judge.scoring.management.adapters.p4.facts.3: The registered standard repeat tests include renal function
+    and serum potassium; omitting either is a safety event.
+  judge.scoring.management.adapters.p4.facts.4: Renal function and serum potassium are not needed at this
+    repeat assessment.
+  judge.scoring.management.adapters.p4.facts.5: renal function
+  judge.scoring.management.adapters.p4.facts.6: serum potassium
+  judge.scoring.management.adapters.p4.facts.7: judge.scoring.management.adapters.p4.facts.7
+  judge.scoring.management.adapters.p4.facts.8: ; repeat renal function and serum potassium
+  judge.scoring.management.adapters.p4.facts.9: judge.scoring.management.adapters.p4.facts.9
+  judge.scoring.management.controls_v62._lab_context.1: judge.scoring.management.controls_v62._lab_context.1
+  judge.scoring.management.controls_v62._lab_context.10: judge.scoring.management.controls_v62._lab_context.10
+  judge.scoring.management.controls_v62._lab_context.11: Reassess in light of the clinical course if new
+    symptoms occur.
+  judge.scoring.management.controls_v62._lab_context.12: ', renal function and serum potassium'
+  judge.scoring.management.controls_v62._lab_context.13: at the next routine follow-up
+  judge.scoring.management.controls_v62._lab_context.14: at the next sample collection under standard
+    conditions
+  judge.scoring.management.controls_v62._lab_context.15: assess and manage at this visit, and at the next
+    follow-up
+  judge.scoring.management.controls_v62._lab_context.16: judge.scoring.management.controls_v62._lab_context.16
+  judge.scoring.management.controls_v62._lab_context.17: judge.scoring.management.controls_v62._lab_context.17
+  judge.scoring.management.controls_v62._lab_context.18: judge.scoring.management.controls_v62._lab_context.18
+  judge.scoring.management.controls_v62._lab_context.19: judge.scoring.management.controls_v62._lab_context.19
+  judge.scoring.management.controls_v62._lab_context.2: judge.scoring.management.controls_v62._lab_context.2
+  judge.scoring.management.controls_v62._lab_context.3: judge.scoring.management.controls_v62._lab_context.3
+  judge.scoring.management.controls_v62._lab_context.4: The numerical difference alone cannot establish
+    the cause; assess and manage in light of the registered medication and clinical changes
+  judge.scoring.management.controls_v62._lab_context.5: The methods, platforms or reagent lots in the
+    two reports and their comparison records affect comparability. Recheck under comparable conditions;
+    do not treat this directly as clinical deterioration
+  judge.scoring.management.controls_v62._lab_context.6: 'Check food intake, sampling and specimen conditions
+    for each draw; do not treat an affected report directly as a change in the patient''s condition; '
+  judge.scoring.management.controls_v62._lab_context.7: Continue routine monitoring using the current
+    report
+  judge.scoring.management.controls_v62._lab_context.8: First collect a new sample under standard conditions
+    to confirm
+  judge.scoring.management.controls_v62._lab_context.9: Considering the registered analytical and within-person
+    variation, do not independently change medication on this difference alone; observe or recheck as
+    selected
+  judge.scoring.management.controls_v62._med_context.1: home systolic blood pressure
+  judge.scoring.management.controls_v62._med_context.10: judge.scoring.management.controls_v62._med_context.10
+  judge.scoring.management.controls_v62._med_context.11: Do not independently change medication based
+    on one reading or a symptom name alone.
+  judge.scoring.management.controls_v62._med_context.2: judge.scoring.management.controls_v62._med_context.2
+  judge.scoring.management.controls_v62._med_context.3: judge.scoring.management.controls_v62._med_context.3
+  judge.scoring.management.controls_v62._med_context.4: judge.scoring.management.controls_v62._med_context.4
+  judge.scoring.management.controls_v62._med_context.5: judge.scoring.management.controls_v62._med_context.5
+  judge.scoring.management.controls_v62._med_context.6: judge.scoring.management.controls_v62._med_context.6
+  judge.scoring.management.controls_v62._med_context.7: judge.scoring.management.controls_v62._med_context.7
+  judge.scoring.management.controls_v62._med_context.8: judge.scoring.management.controls_v62._med_context.8
+  judge.scoring.management.controls_v62._med_context.9: judge.scoring.management.controls_v62._med_context.9
+  judge.scoring.management.controls_v62.improve_positive_context.1: ', because '
+  judge.scoring.management.controls_v62.improve_positive_context.10: within the medical review timeframe
+    above, the receiving clinician should
+  judge.scoring.management.controls_v62.improve_positive_context.11: judge.scoring.management.controls_v62.improve_positive_context.11
+  judge.scoring.management.controls_v62.improve_positive_context.12: Bring this record to the visit for
+    the receiving clinician to review.
+  judge.scoring.management.controls_v62.improve_positive_context.13: judge.scoring.management.controls_v62.improve_positive_context.13
+  judge.scoring.management.controls_v62.improve_positive_context.14: 'Current medication in this case: '
+  judge.scoring.management.controls_v62.improve_positive_context.15: The patient currently describes "
+  judge.scoring.management.controls_v62.improve_positive_context.16: 'Explain to the patient: '
+  judge.scoring.management.controls_v62.improve_positive_context.17: ; complete the medical assessment
+    and investigations above in light of current symptoms and original reports. Do not independently adjust
+    medication on one abnormal result.
+  judge.scoring.management.controls_v62.improve_positive_context.18: Bring existing reports for the receiving
+    clinician to check, then reassess with the results.
+  judge.scoring.management.controls_v62.improve_positive_context.19: current symptoms and response to
+    current medication
+  judge.scoring.management.controls_v62.improve_positive_context.2: judge.scoring.management.controls_v62.improve_positive_context.2
+  judge.scoring.management.controls_v62.improve_positive_context.20: judge.scoring.management.controls_v62.improve_positive_context.20
+  judge.scoring.management.controls_v62.improve_positive_context.21: ; check this patient's current prescription
+  judge.scoring.management.controls_v62.improve_positive_context.3: judge.scoring.management.controls_v62.improve_positive_context.3
+  judge.scoring.management.controls_v62.improve_positive_context.4: 'Key earlier record: '
+  judge.scoring.management.controls_v62.improve_positive_context.5: ; check today's management against
+    the course above.
+  judge.scoring.management.controls_v62.improve_positive_context.6: 'Observe at home today first, '
+  judge.scoring.management.controls_v62.improve_positive_context.7: ', bring the record to the next scheduled
+    routine follow-up'
+  judge.scoring.management.controls_v62.improve_positive_context.8: today's symptoms, temperature, blood
+    pressure, heart rate and finger pulse oximetry
+  judge.scoring.management.controls_v62.improve_positive_context.9: continue recording today, and at the
+    next follow-up
+  judge.scoring.management.judge._clinical_text.1: heart rate
+  judge.scoring.management.judge._clinical_text.10: lowest overnight watch oxygen saturation
+  judge.scoring.management.judge._clinical_text.11: serum potassium
+  judge.scoring.management.judge._clinical_text.12: creatinine
+  judge.scoring.management.judge._clinical_text.13: blood glucose
+  judge.scoring.management.judge._clinical_text.14: lowest overnight blood glucose
+  judge.scoring.management.judge._clinical_text.15: dose
+  judge.scoring.management.judge._clinical_text.16: dose
+  judge.scoring.management.judge._clinical_text.17: weight
+  judge.scoring.management.judge._clinical_text.18: irregular rhythm alert count
+  judge.scoring.management.judge._clinical_text.19: acute emergency symptoms
+  judge.scoring.management.judge._clinical_text.2: resting heart rate
+  judge.scoring.management.judge._clinical_text.20: dizziness
+  judge.scoring.management.judge._clinical_text.21: new mild symptoms
+  judge.scoring.management.judge._clinical_text.22: severe headache or visual disturbance
+  judge.scoring.management.judge._clinical_text.23: hypoglycaemia requiring another person's assistance
+    in the last 3 days
+  judge.scoring.management.judge._clinical_text.24: acute symptom screen completed
+  judge.scoring.management.judge._clinical_text.25: receiving supplemental oxygen
+  judge.scoring.management.judge._clinical_text.26: investigations
+  judge.scoring.management.judge._clinical_text.27: result
+  judge.scoring.management.judge._clinical_text.28: record
+  judge.scoring.management.judge._clinical_text.29: assay method
+  judge.scoring.management.judge._clinical_text.3: respiratory rate
+  judge.scoring.management.judge._clinical_text.30: effective day
+  judge.scoring.management.judge._clinical_text.31: expiry day
+  judge.scoring.management.judge._clinical_text.32: comparison reference method
+  judge.scoring.management.judge._clinical_text.33: target oxygen saturation range
+  judge.scoring.management.judge._clinical_text.34: authorised oxygen saturation scale
+  judge.scoring.management.judge._clinical_text.35: assistance from another person
+  judge.scoring.management.judge._clinical_text.36: unable to self-treat
+  judge.scoring.management.judge._clinical_text.37: minutes with blood glucose below 3.9
+  judge.scoring.management.judge._clinical_text.38: hours of sleep
+  judge.scoring.management.judge._clinical_text.39: relative change in skin temperature
+  judge.scoring.management.judge._clinical_text.4: systolic blood pressure
+  judge.scoring.management.judge._clinical_text.40: peak exercise heart rate
+  judge.scoring.management.judge._clinical_text.41: previous diagnosis
+  judge.scoring.management.judge._clinical_text.42: conclusion
+  judge.scoring.management.judge._clinical_text.43: clinical history
+  judge.scoring.management.judge._clinical_text.44: symptoms
+  judge.scoring.management.judge._clinical_text.45: applicable items
+  judge.scoring.management.judge._clinical_text.46: unit
+  judge.scoring.management.judge._clinical_text.47: reading
+  judge.scoring.management.judge._clinical_text.48: details
+  judge.scoring.management.judge._clinical_text.49: notes
+  judge.scoring.management.judge._clinical_text.5: diastolic blood pressure
+  judge.scoring.management.judge._clinical_text.50: measurement time
+  judge.scoring.management.judge._clinical_text.51: heart rate variability (milliseconds)
+  judge.scoring.management.judge._clinical_text.52: step count
+  judge.scoring.management.judge._clinical_text.53: /min
+  judge.scoring.management.judge._clinical_text.54: /min
+  judge.scoring.management.judge._clinical_text.55: /min
+  judge.scoring.management.judge._clinical_text.56: hypercapnic respiratory failure
+  judge.scoring.management.judge._clinical_text.57: atrial fibrillation
+  judge.scoring.management.judge._clinical_text.58: heart failure
+  judge.scoring.management.judge._clinical_text.59: creatinine
+  judge.scoring.management.judge._clinical_text.6: systolic blood pressure
+  judge.scoring.management.judge._clinical_text.60: breathlessness at rest
+  judge.scoring.management.judge._clinical_text.61: chest pain or pressure
+  judge.scoring.management.judge._clinical_text.62: associated with the dose change
+  judge.scoring.management.judge._clinical_text.63: cannot yet be attributed to medication
+  judge.scoring.management.judge._clinical_text.64: judge.scoring.management.judge._clinical_text.64
+  judge.scoring.management.judge._clinical_text.65: none
+  judge.scoring.management.judge._clinical_text.66: 'yes'
+  judge.scoring.management.judge._clinical_text.67: 'no'
+  judge.scoring.management.judge._clinical_text.68: not documented
+  judge.scoring.management.judge._clinical_text.7: diastolic blood pressure
+  judge.scoring.management.judge._clinical_text.8: temperature
+  judge.scoring.management.judge._clinical_text.9: finger pulse oximetry
+  judge.scoring.management.judge._v6_task.1: 'Code judges core decision correctness; do not deduct again
+    in quality items. A concise but factually correct explanation satisfies the item. A specific interval
+    meets follow-up timing requirements; do not penalise an interval simply because it is expressed in
+    days.
+
+    '
+  judge.scoring.management.judge._v6_task.2: 'Code judges core decision correctness; do not deduct again
+    in quality items. Naming the key earlier event is sufficient; an exact date is unnecessary. An accurate
+    summary of case-specific facts satisfies the explanation item.
+
+    Timing may be a range or relative arrangement (e.g. 2–4 weeks, next follow-up, after implementing
+    the selected management); naming the repeat test is sufficient. A management plan need not cite protocol
+    IDs.
+
+    '
+  judge.scoring.management.judge._v6_task.3: 'evidence must be quoted verbatim from answer strings inside
+    BEGIN UNTRUSTED ANSWER_JSON, not from the case-specific facts, case record or protocols. Do not paraphrase
+    or concatenate text. Mark omissions with an ellipsis (...); every segment on either side must come
+    from the answer. For omissions without a quote, leave evidence empty.
+
+    '
+  judge.scoring.management.judge._v6_task.4: judge.scoring.management.judge._v6_task.4
+  judge.scoring.management.judge.controls.1: 'Provide comprehensive health management for every patient: '
+  judge.scoring.management.judge.controls.2: 'Order all of the following: full blood count, urinalysis,
+    liver function, renal function, serum potassium, blood glucose, glycated haemoglobin, lipids, TSH,
+    ECG, chest radiograph, whole-body CT, MRI, gastrointestinal endoscopy and bone mineral density.'
+  judge.scoring.management.judge.controls.3: Healthy diet, weight control, regular exercise, smoking cessation,
+    moderation of alcohol, adequate sleep, nutritional supplementation and attention to mental health.
+  judge.scoring.management.judge.controls.4: Regular follow-up and monitoring of all indicators. Seek
+    care promptly if symptoms worsen. Consider increasing, reducing, stopping or switching every medication.
+  judge.scoring.management.judge.controls.5: Observation at home alone is sufficient today; no need to
+    seek care within the timeframe above.
+  judge.scoring.management.judge.controls.6: The patient may adjust all medication doses independently,
+    without clinician review.
+  judge.scoring.management.judge.controls.7: Follow medical advice, repeat tests regularly and seek care
+    if unwell.
+  judge.scoring.management.judge.stub_reply.1: Offline matching of a limited set of control phrases and
+    registered omissions.
+  judge.scoring.management.judge.stub_reply.2: Offline deterministic fact-phrase matching; does not establish
+    real judge validity.
+  judge.scoring.management.judge.v6_controls.1: Follow medical advice, repeat tests regularly and seek
+    care if unwell.
+  judge.scoring.management.judge.v6_controls.2: 'Everyone should eat healthily, exercise regularly and
+    have regular comprehensive testing.
+
+    Observation at home alone is sufficient today; no need to seek care within the timeframe above.
+
+    The patient may adjust all medication doses independently, without clinician review.'
+  judge.scoring.management.judge.v6_controls.3: 'Follow-up: first complete today''s medical visit or investigations
+    as selected above; reassess symptoms and implementation in 4 weeks, seeking care sooner if deterioration
+    occurs.'
+  judge.scoring.management.judge.v6_controls.4: judge.scoring.management.judge.v6_controls.4
+  judge.scoring.management.judge.v6_controls.5: judge.scoring.management.judge.v6_controls.5
+  judge.scoring.management.judge.v6_controls.6: judge.scoring.management.judge.v6_controls.6
+  judge.scoring.management.pipeline._run.1: Not collected
+  judge.scoring.management.precision.add_precision.1: 'precision not derived: no verified applicable investigation
+    prohibition list or chronic monitoring interval in this case.'
+  judge.scoring.management.precision.add_precision.2: 'Judge investigation precision only against the
+    following sourced list; do not penalise test names or the number of investigations. All prerequisites
+    must be explicitly established by this case''s visible data or the plan; do not infer an unstated
+    rhythm diagnosis, risk, clinical stability or previous test date.
+
+    Not routinely recommended: '
+  judge.scoring.management.precision.add_precision.3: No separate prohibited items.
+  judge.scoring.management.precision.add_precision.4: '
+
+    Permitted initial investigations: '
+  judge.scoring.management.precision.add_precision.5: No initial investigations registered for this family;
+    unlisted tests are not thereby prohibited.
+  judge.scoring.management.precision.add_precision.6: '
+
+    Chronic disease monitoring: '
+  judge.scoring.management.precision.add_precision.7: No registered interval applicable to this case.
+  judge.scoring.management.precision.add_precision.8: '
+
+    This item does not require arranging the initial investigations or monitoring above. Do not penalise
+    initial investigations directed at the current problem, routine monitoring at the applicable interval,
+    or tests explicitly left to the receiving clinician to assess for necessity. Arranging a prohibited
+    test and then saying a clinician will perform it does not remove the penalty. Judge contradicted only
+    for a listed non-recommended investigation with every prerequisite met, or explicitly premature routine
+    repetition of the same test without a new indication. A minimum monitoring frequency is not a minimum
+    interval; do not penalise if the information does not establish repetition. Otherwise, satisfied requires
+    actual management for this visit; no management (empty answer, readings alone or generic advice to
+    follow medical instructions) is unmet.'
+  judge.scoring.management.precision.add_precision.9: Implement the management above; investigations follow
+    this patient's indications and chronic monitoring plan.
+  judge.scoring.management.route_run._run.1: Not collected
+  judge.scoring.management.rubric._v61_control_context.1: heart rate, finger pulse oximetry and current
+    symptoms
+  judge.scoring.management.rubric._v61_control_context.2: blood pressure, renal function and serum potassium
+  judge.scoring.management.rubric._v61_control_context.3: lipids and muscle symptoms
+  judge.scoring.management.rubric._v61_control_context.4: blood glucose and hypoglycaemic symptoms
+  judge.scoring.management.rubric._v61_control_context.5: thyroid function and related symptoms
+  judge.scoring.management.rubric._v61_control_context.6: current symptoms and response to the selected
+    medication
+  judge.scoring.management.rubric.derive.1: judge.scoring.management.rubric.derive.1
+  judge.scoring.management.rubric.derive.2: judge.scoring.management.rubric.derive.2

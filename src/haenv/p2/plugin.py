@@ -11,43 +11,23 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import J, L as _L, T, text_of as _rt
+
 NAME = "triage_p2"
 LATENT = "p2"
 PROBE_ID = "p2.triage"
 FRAMING = "P2_TRIAGE_PROMPT"
 
-_HEAD = """你是"健康助手分诊"求解器。一位病人通过线上健康助手发来最近的可穿戴与家庭测量数据和一段话,问要不要去医院。
-`prediction_context.triage_p2` 是今天(`today_day`)这位病人的全部分诊信息:
-`message` 病人的原话;`intake_checklist` 已完成的问诊筛查,`urgent_symptoms` 只列阳性症状,
-`urgent_screen_complete=true` 表示其余急性症状均已询问并否认,空列表表示均无;其余项目为是/否,
-`mild_new_symptom` 指今天或前 3 天新出现的轻症;
-`background` 已知慢病与用药;
-`home_check_today` 今天的家庭测量(体温计、指夹血氧仪、血压计;呼吸频率由家属数一分钟;未吸氧);
-`wearable_daily` 最近 10 天手表日数据(静息心率、HRV、夜间最低血氧、皮温偏差、步数、睡眠、心律不齐提示次数、运动最高心率、佩戴备注);
-`home_bp_log` 最近 7 天家庭血压(每天两次,今天最后一次即今天的测量);`morning_weight` 最近 10 天晨重;
-`cgm_nightly` 糖尿病人最近 7 晚 CGM 夜间最低值(`night_of_day` = 该日之后的那一晚)。
-其余字段是病人的既往记录,作背景。
-
-本服务的分诊规则(按顺序,第一条符合的规则决定;"都可"表示两个去向都算对):
-"""
-_TAIL = """
-去向四选一:`ed_now` 立即急诊 · `within_24h` 24 小时内就医 · `routine_followup` 常规复诊 · `watchful_waiting` 居家观察。
-
-医疗边界(硬约束):不自主开药/停药/改剂量。
-
-病人数据(JSON):
-{payload}
-
-只输出一个 JSON 对象(无任何多余文字/markdown),schema:
-{{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
-"rule":"R0..R14 中你用的那条规则编号",
-"evidence":["你依据的读数,如 home_check_today.spo2_pct=92"],
-"reason":"一句话依据"}}"""
+_HEAD = _L('runtime.p2.plugin.module.1')
+_TAIL = _L('runtime.p2.plugin.module.2')
 
 
 def prompt() -> str:
-    from haenv.p2.rules import policy_text
-    return _HEAD + policy_text().replace("{", "{{").replace("}", "}}") + "\n" + _TAIL
+    from haenv.p2.rules import table
+    rules = table()
+    return T('runtime.p2.triage_prompt', rules=J('lines', [
+        *(_L(r['printed']) for r in rules['rules']),
+        _L(rules['acceptance']['single_level2']['printed'])]))
 
 
 def _gold(meta):
@@ -88,13 +68,12 @@ def pack():
     return Pack(
         name="p2", history_dependency=POLICY, owns=_when, source="haenv.p2 (haenv/p2/plugin.py)",
         blocks=((NAME, _gold, lambda meta: None, (LATENT,), {LATENT: "knob"},
-                 "② 分诊重做(设计 2026-10-08):可接受去向集合由规则读取器在题面块上按印出的规则给出;"
-                 "题面块在测量层之后由 hooks.observe_triage 写入。"),),
+                 _rt('runtime.p2.plugin.pack.1')),),
         emission=emission(),
-        framing=(FRAMING, prompt(), "② 重做:单回合、规则印在题面、四个去向、作答带规则编号与依据读数。"),
+        framing=(FRAMING, prompt(), _rt('runtime.p2.plugin.pack.2')),
         probe=probe_dict, judge=(NAME, _judge, KINDS, _when), mounts={"single": "out"},
-        why_not={"gated": "② 单回合无菜单:决定所需数据全部常显", "slices": "② 是今天的一次分诊,不切片",
-                 "multi": "② 单回合,不是多轮追踪"},
+        why_not={"gated": _rt('runtime.p2.plugin.pack.3'), "slices": _rt('runtime.p2.plugin.pack.4'),
+                 "multi": _rt('runtime.p2.plugin.pack.5')},
         prompt_gold_meta=("outcome", "driver"), judging_segment="P2_JUDGING",
         base_labels=(), answers_action=False,
         # the item is read off the triage block; world streams are background only and the

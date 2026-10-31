@@ -54,11 +54,14 @@ def _registry_targets():
     import haenv.contracts.external_gold as EG
     import haenv.app.job as JOB
     import haenv.world.generation.world_plugins as WP
+    import haenv.i18n as I18N
 
     # The tables have three different types: `JUDGES` is `list[Judge]`,
     # `MOUNT`/`WHY_NOT` are `dict`, and `SUBJECTS` is a custom `_Subjects`
     # (no `clear`/`update`, not a `MutableMapping`). Each is restored by type.
-    targets = [(J, "JUDGES"), (MT, "MOUNT"), (MT, "WHY_NOT")]
+    # CLI/rejudge calls select a process language, just as they install registries.
+    # Restore it so a default-English batch cannot change a later Chinese fixture.
+    targets = [(J, "JUDGES"), (MT, "MOUNT"), (MT, "WHY_NOT"), (I18N, "_CURRENT")]
     targets += [(EG, name) for name in
                 ("BLOCKS", "LATENT_CLASSES", "GATES", "FRAMINGS", "PROBES")]
     targets += [(JOB, "LATENT_REGISTRY"), (JOB, "_LOADED_GROUPS")]

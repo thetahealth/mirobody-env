@@ -1,0 +1,24 @@
+# Pack 1 (diagnosis) record templates (zh).
+m2.today_date: "病程第 {day} 天"
+m2.scene.on_meds: "患者目前在用 {meds}"
+m2.scene.meds_only: "{meds}。"
+m2.scene.vitals: ",{name} {value} {unit}"
+m2.scene.what_quote: "「{quote}」{vitals}"
+m2.scene.f1: "今天(第 {day} 天)患者因{what}来诊。{meds}。请判断分诊紧急度(🔴 立即急诊 / 🟠 数日内 / 🟡 数周内 / 🟢 常规随访)、首选检查、鉴别诊断,以及是否需要立即请临床医生复核。"
+m2.scene.f2: "今天(第 {day} 天)是{disease}的慢病复诊,{meds}。请从完整用药记录中识别本次需要评估处置的药物,给出该药的调药方向(先查因暂不调 / 加量 / 维持 / 减量),并判断是否有其他疾病在扰乱基础病的控制。"
+m2.scene.f3: "今天(第 {day} 天)一次随访复查到来,结果见 `followup_result`(同一实验室,附上次结果)。{meds}。请就 `followed_indicator` 指出的指标,判断这两次结果的变化是否超出生物学与分析变异(RCV),是哪条线解释了这一变化,以及下一步怎么做。"
+m2.hist.prior_narrative: "既往门诊随访病史：{conditions}。当时继续原方案，相关症状与检查见原始记录。"
+m2.confirm.spirometry: "按质量要求完成支气管舒张前后肺功能，舒张后FEV1/FVC={ratio:.2f}；三次可接受呼气，重复性合格。需结合症状及暴露史解释。"
+m2.result.elastography: "空腹{fasting_hours}小时,VCTE采用{probe}探头,有效测量{valid}/{attempted}次,肝硬度中位数{lsm} kPa,IQR/中位数{iqr:.2f};MRE肝硬度{mre_lsm} kPa,波传播充分且无明显伪影。无创读数需结合临床复评,不能单凭本检查确定病因或组织学分期。"
+m2.result.aki: 第{day_7}天及第{day_2}天血清肌酐{base} {unit},第{day}天{latest} {unit};48小时差值{delta:.2f} {unit},与7天前比值{ratio:.3f}
+m2.result.renal_reading: 第{day}天血清肌酐{cr} {unit},尿白蛋白/肌酐比值{uacr} mg/g
+m2.result.ckd: '{readings};记录跨度112天,未提供eGFR'
+m2.result.fibrosis: 空腹{fasting}小时,VCTE采用{probe}探头(皮肤至肝包膜{skin_mm} mm),有效测量{valid}/{attempts}次,肝硬度中位数{lsm} kPa,IQR/中位数{iqr:.2f};为进一步澄清纤维化风险加做MRE:{mre}
+  kPa,波传播充分且无明显伪影;MRI-PDFF {pdff}%,{steatosis}。报告复核未见急性肝炎、胆道梗阻或肝淤血干扰;自述不饮酒,HBsAg及抗HCV阴性,问诊未识别竞争性药物或继发病因。肝病专科综合意见:{interpretation};脂肪变的病因判断需结合已知代谢危险因素。FIB-4只能作初筛,不能单凭其确诊;上述为无创概率判断,未作肝活检,不能据此确定组织学F3/F4或MASH,也不证明短期内进展。
+m2.scene.imported: "{prefix}{meds}{suffix}"
+m2.panel.reference: "(参考 {low}–{high})"
+m2.panel.body: "{name} {value} {unit}{reference}{flag}"
+m2.panel.without_unit: "{name} {value}{reference}{flag}"
+m2.qualifier.threshold: "{name} {value:g} >= {minimum:g}"
+
+m2.result.ckd_course: "{readings};记录跨度112天,未提供eGFR。{review}"

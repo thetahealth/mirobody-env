@@ -35,13 +35,17 @@ _LOCK = threading.Lock()
 def p4_judging_fingerprint() -> str:
     """Semantic fingerprint of `tools/release/make_freeze.py:P4_JUDGING` (same rule as `judging_sha16`)."""
     from haenv.app.packs import segment_fingerprint
-    return segment_fingerprint("P4_JUDGING")
+    from haenv.p4.gold import contract_fingerprint as fingerprint
+    import hashlib
+    return hashlib.sha256((segment_fingerprint("P4_JUDGING") + fingerprint()).encode()).hexdigest()[:16]
 
 
 def p4_world_fingerprint() -> str:
     """Semantic fingerprint of `tools/release/make_freeze.py:P4_WORLD`."""
     from haenv.app.packs import segment_fingerprint
-    return segment_fingerprint("P4_WORLD")
+    from haenv.p4.gold import contract_fingerprint as fingerprint
+    import hashlib
+    return hashlib.sha256((segment_fingerprint("P4_WORLD") + fingerprint()).encode()).hexdigest()[:16]
 
 
 def is_p4_payload(payload) -> bool:
@@ -95,7 +99,7 @@ def observe_followup(raw, case_id: str, truth: dict, audit: dict) -> tuple[dict,
 def acei_line(item: dict) -> list[dict]:
     """The ACEI's dose line as the item's record prints it (`render.medication_rows`)."""
     from haenv.world.labworld import tables
-    dose = float(str(tables()["effects"]["acei_on_creatinine"]["dose"]).split()[0])
+    dose = float(tables()["effects"]["acei_on_creatinine"]["dose_value"])
     ac = item.get("acei") or {}
     line = [{"ts": 0, "value": dose}] if ac.get("initial_on") else []
     for ev in sorted(list(ac.get("events") or ()) + list(ac.get("decoy_events") or ()), key=lambda e: int(e["day"])):

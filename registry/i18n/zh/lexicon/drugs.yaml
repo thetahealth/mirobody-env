@@ -1,0 +1,26 @@
+# Drug names and dosing frequencies as records print them (zh).
+entries:
+  drug.metformin: 二甲双胍
+  drug.semaglutide: 司美格鲁肽
+  drug.liraglutide: 利拉鲁肽
+  drug.dulaglutide: 度拉糖肽
+  drug.tirzepatide: 替尔泊肽
+  drug.amlodipine: 氨氯地平
+  drug.losartan: 氯沙坦
+  drug.atorvastatin: 阿托伐他汀
+  drug.levothyroxine: 左甲状腺素钠
+  drug.enalapril: 依那普利
+  drug.gliclazide: 格列齐特缓释片
+  drug.glimepiride: 格列美脲
+  drug.insulin_glargine: 甘精胰岛素
+  drug.dapagliflozin: 达格列净
+  drug.furosemide: 呋塞米
+  drug.bisoprolol: 比索洛尔
+  drug.metoprolol: 美托洛尔缓释片
+  freq.daily: 每日
+  freq.weekly_sc: 每周一次皮下注射
+  freq.once_daily_sc: 每日一次皮下注射
+  freq.once_daily: 每日一次
+  freq.once_nightly: 每晚一次
+  freq.before_breakfast: 每日早餐前
+  freq.nightly_sc: 每晚皮下注射

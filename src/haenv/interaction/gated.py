@@ -9,6 +9,8 @@ SYNTHETIC, eval-only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import text_of as _rt
+
 from haenv.resources.yamlcache import load_yaml as _cached_yaml
 
 import copy
@@ -482,10 +484,10 @@ def _base_synth_on_demand(raw, target: str, T: int) -> list[dict] | None:
     is_qualitative = bool(fspec.get("qualitative")) or _declared_dir in ("positive", "negative")
     if is_qualitative:
         if decl and decl.get("direction") != "negative":
-            val_str = "阳性 / 异常提示病理性改变"
+            val_str = _rt('runtime.interaction.gated._base_synth_on_demand.1')
             flag = "POSITIVE"
         else:
-            val_str = "阴性 / 未见明显异常"
+            val_str = _rt('runtime.interaction.gated._base_synth_on_demand.2')
             flag = "NEGATIVE"
         return [{
             "ts": T,
@@ -623,6 +625,8 @@ def _base_run_gated(raw, T: int, solver, budget: float = DEFAULT_BUDGET,
             kind = str(q.get("kind") or "ask")
             target = q.get("target")
             target = str(target) if target else None
+            from haenv.interaction.query.targets import canonical_target
+            target = canonical_target(target, {"menu": menu}) if target else None
             _billed = _menu_kind.get(target) if target else None
             if _billed is not None and _billed != kind:
                 tr.kind_misreports += 1
@@ -650,7 +654,7 @@ def _base_run_gated(raw, T: int, solver, budget: float = DEFAULT_BUDGET,
                     trace.append("tool/result", {
                         "call_id": _cid, "truncated": True, "revealed": False,
                         "error": {"name": "BudgetExceeded",
-                                  "reason": f"价 {_price} > 余额 {round(budget - gk.spent, 2)}"},
+                                  "reason": _rt('runtime.interaction.gated._base_run_gated.1', s0=_price, s1=round(budget - gk.spent, 2))},
                         "cost": 0.0, "spent_after": round(gk.spent, 2)}, step=r)
                 log.info("[gated] %s refused to execute %s (price %.1f, balance %.1f) -- over budget, "
                          "truncated per the question face's stated commitment",

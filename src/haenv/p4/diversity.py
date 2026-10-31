@@ -8,6 +8,9 @@ from __future__ import annotations
 import math
 from copy import deepcopy
 
+from haenv.i18n.text import L, T as text
+from haenv.p4.textmatch import is_text
+
 from haenv.resources.regpath import load_registry
 from haenv.resources.regpath import registry_cached
 from haenv.p4.plan import h01
@@ -75,6 +78,8 @@ def causes(an, cls, case=None):
         return [None]
     key = {"true_change": "true_causes", "preanalytical": "pre", "method_difference": "method"}[cls]
     options = list(table()["analytes"][an][key])
+    active = table()["question_update_14"]["active_causes"][cls][an]
+    options = [c for c in options if c in active]
     if method_bias_limit(an) is None:
         options = [c for c in options if c not in ("platform_calibration", "reagent_lot")]
     if case is not None:
@@ -122,12 +127,13 @@ def plans(cases, specs, streams, feasible=None):
                 opts = [a for a in opts if any(x[0] == a for x in feasible.get(cid, []))]
             if not opts:
                 continue
-            an = min(opts, key=lambda a: (counts.get(a, 0), h01("p4an-choice", cid, a)))
+            an = min(opts, key=lambda a: (min(fs.get(f, 0) for f in causes(a, c, by[cid])),
+                                         counts.get(a, 0), h01("p4an-choice", cid, a)))
             factors = causes(an, c, by[cid])
-            fac = min(factors, key=lambda f: (fs.get((an, f), 0), h01("p4cause", cid, f)))
+            fac = min(factors, key=lambda f: (fs.get(f, 0), h01("p4cause", cid, f)))
             sign = min((1, -1), key=lambda s: (signs.get((an, fac, s), 0), h01("p4direction", cid, s)))
             counts[an] = counts.get(an, 0) + 1
-            fs[(an, fac)] = fs.get((an, fac), 0) + 1
+            fs[fac] = fs.get(fac, 0) + 1
             signs[(an, fac, sign)] = signs.get((an, fac, sign), 0) + 1
             out[cid] = {"version": 2, "difficulty_r2": True, "class": c, "analyte": an,
                         "sign": sign, "u_ratio": round(h01("p4ratio", cid), 6),
@@ -161,6 +167,11 @@ def verification_consistent(item):
             bad.append("verification sample is outside its actual observation interval")
         if r["day"] == r["verification_for_day"] and r["time"] <= recs[r["day"]]["time"]:
             bad.append("verification sample precedes the original collection time")
+    exposure = item.get("ingested_exposure")
+    if exposure and exposure.get("end_day") is not None:
+        clean = [r for r in checks if int(exposure["end_day"]) <= int(r["day"]) <= int(item["review_day"])]
+        if not exposure.get("clean_followup") or not clean:
+            bad.append("ended ingestion has no completed clean follow-up after cessation")
     return bad
 
 
@@ -269,8 +280,6 @@ def realize(raw, cid, plan, ctx):
         raise Unrealizable("independent observations do not yield the planned single source")
     if cls == "analytic_biological_noise" and abs(g["dlog_obs"]) >= R:
         raise Unrealizable("unexplained observation outside RCV")
-    if cls != "analytic_biological_noise" and abs(math.log(r1["printed"] / r0["printed"])) <= R:
-        raise Unrealizable("non-noise apparent change does not exceed paired RCV")
     if remote and cls != "true_change":
         prior = next(r for r in records if r["day"] == episode_day)
         alternative = g4(prior, r1, pair_rcv(an, prior, r1), (1.3, 2.0), source_policy="clinical")["class"]
@@ -294,13 +303,14 @@ def realize(raw, cid, plan, ctx):
                                   [{"day": acei_day, "action": "stop" if stopped else "start"}] +
                                   ([{"day": acei_day + cfg["medication_world_design"]["historical_course_days"], "action": "stop"}]
                                    if fac != "acei_start_or_stop" else [])}
-    item["next_step"] = next_step(item)[0]
     # Independent newly collected samples, not the original measurements with
     # the sampled perturbation subtracted. Acute clinical changes are checked
     # immediately; transient sampling conditions are checked after washout.
     checks = []
     washout = int(cfg["design"]["verification"]["washout_days"])
-    delayed = fac in cfg["design"]["verification"]["washout_causes"]
+    from haenv.p4.gold import ingested_interference, contract_table as contract
+    ingested = next((key for key in cfg["analytes"][an]["method"] if ingested_interference(key)), None)
+    delayed = fac in cfg["design"]["verification"]["washout_causes"] or ingested is not None
     for original in (r0, r1):
         day = original["day"] + (washout if delayed else 0)
         truth = base
@@ -324,6 +334,12 @@ def realize(raw, cid, plan, ctx):
         check["verification_for_day"] = original["day"]
         checks.append(check)
     item["verification_records"] = checks
+    if ingested is not None:
+        ongoing = h01("p4-ingested-ongoing", cid) < contract()["exposure_calendar"]["ongoing_share"]
+        # The specimen can be old while intake has resumed at the review visit.
+        item["ingested_exposure"] = {"factor": ingested, "end_day": None if ongoing else T + 1,
+                                      "clean_followup": True}
+    item["next_step"] = next_step(item)[0]
     block = render(item, raw, cid)
     from haenv.p4.diversity_reader import significance_violations
     violations = significance_violations(block, cls, fac)
@@ -334,6 +350,12 @@ def realize(raw, cid, plan, ctx):
     return item
 
 
+def report_value(item, record):
+    """The printed reading as the report shows it (also used when a twin edits a record)."""
+    from haenv.world.labworld import analyte
+    return f"{record['printed']:.{int(analyte(item['analyte'])['ndigits'])}f}"
+
+
 def _draw_rows(item, raw, cid):
     from haenv.world.labworld import analyte
     from haenv.p4.render import reference_range
@@ -341,14 +363,14 @@ def _draw_rows(item, raw, cid):
     out = []
     for r in sorted(item["records"], key=lambda r: r["day"]):
         row = {"day": r["day"], "time": r["time"], "analyte": item["analyte"], "name": cfg["display"],
-               "value": f"{r['printed']:.{int(cfg['ndigits'])}f}", "unit": cfg["unit"],
-               "reference_range": reference_range(cfg, raw), "fasting": "未登记", "lab": "门诊检验科",
-               "method": cfg["default_method"], "platform": "常规平台", "reagent_lot": "在用批号",
-               "specimen": {"tube": "肝素锂血浆管", "processing": "采血后30分钟内分离", "separation_hours": 0.3,
-                            "storage_temperature_C": 22, "cells_separated": True, "hemolysis_index": "未见溶血",
-                            "free_hemoglobin_g_L": 0.05, "sampling_arm": "右", "infusion_arm": "左",
-                            "infusion_running": False, "infusion_solution": "0.9%氯化钠", "collection_site": "肘静脉",
-                            "blood_transfer_from": "原管", "calcium_mmol_L": 2.3}}
+               "value": report_value(item, r), "unit": cfg["unit"],
+               "reference_range": reference_range(cfg, raw), "fasting": L("p4.fasting.unrecorded"), "lab": L("p4.lab.outpatient"),
+               "method": cfg["default_method"], "platform": L("p4.platform.routine"), "reagent_lot": L("p4.lot.current"),
+               "specimen": {"tube": L("p4.tube.li_heparin_plasma"), "processing": L("p4.processing.within_30min"), "separation_hours": 0.3,
+                            "storage_temperature_C": 22, "cells_separated": True, "hemolysis_index": L("p4.hemolysis.none_seen"),
+                            "free_hemoglobin_g_L": 0.05, "sampling_arm": L("p4.arm.right"), "infusion_arm": L("p4.arm.left"),
+                            "infusion_running": False, "infusion_solution": L("p4.infusion.saline"), "collection_site": L("p4.site.antecubital"),
+                            "blood_transfer_from": L("p4.transfer.original_tube"), "calcium_mmol_L": 2.3}}
         out.append(row)
     return out
 
@@ -366,9 +388,12 @@ def render(item, raw, cid):
     reports = _draw_rows(item, raw, cid)
     by = {r["day"]: r for r in reports}
     block = {"analyte": an, "name": a["display"], "unit": a["unit"], "reference_range": reference_range(a, raw),
-             "today": T, "report": reports, "diet_record": [], "outpatient_record": [],
+             "today": int(item["review_day"]), "comparison_draw_day": T, "report": reports, "diet_record": [], "outpatient_record": [],
              "medication_record": medication_rows({**item, "acei": {}}, raw, T), "laboratory_method_record": [],
              "specimen_procedure": [], "patient_remarks": [], "text_source": "template"}
+    def wording(kind, day):
+        choices = cfg["question_update_14"]["wording"][kind]
+        return L(choices[int(h01("p4-method-wording", cid, kind) * len(choices))])
     # Records describe the actual collection, assay and exposure. No cause IDs,
     # relevance roles or effect flags are rendered on the patient side.
     for key in cfg["analytes"][an]["pre"] + cfg["analytes"][an]["method"] + cfg["analytes"][an]["true_causes"]:
@@ -391,50 +416,53 @@ def render(item, raw, cid):
                 minutes = int(hhmm[:2]) * 60 + int(hhmm[3:]) - int(hours * 60)
                 meal_day, minute = day + minutes // 1440, minutes % 1440
                 block["diet_record"].append({"day": day, "draw_day": day, "draw_time": hhmm,
-                    "entries": [{"day": meal_day, "meal": "正餐", "time": f"{minute//60:02d}:{minute%60:02d}",
-                                 "food": "一份熟猪肉" if key == "meat_meal" else "米饭和菜"}],
+                    "entries": [{"day": meal_day, "meal": L("p4.meal.main"), "time": f"{minute//60:02d}:{minute%60:02d}",
+                                 "food": L("p4.food.cooked_pork") if key == "meat_meal" else L("p4.food.rice_vegetables")}],
                     "last_calories_hours": hours, "cooked_meat": key == "meat_meal"})
         elif key in ("platform_calibration", "reagent_lot", "jaffe_enzymatic_switch"):
             for day in (t0, T):
                 row = by[day]
-                different = active and day == side_day
+                inactive_key = ("platform_calibration", "reagent_lot")[int(h01("p4-inactive-method-kind", cid) * 2)]
+                different = day == side_day and (active or (item["class"] != "method_difference" and key == inactive_key and
+                            h01("p4-inactive-method-present", cid) < 0.5))
                 if different:
-                    row["platform"] = "比对平台" if key != "reagent_lot" else "常规平台"
-                    row["reagent_lot"] = "新批号" if key == "reagent_lot" else "在用批号"
+                    row["platform"] = L("p4.platform.comparison") if key != "reagent_lot" else L("p4.platform.routine")
+                    row["reagent_lot"] = L("p4.lot.new") if key == "reagent_lot" else L("p4.lot.current")
                     if key == "jaffe_enzymatic_switch":
-                        row["method"] = "Jaffe 苦味酸速率法"
-                    row["lab"] = "协作检验室" if key == "platform_calibration" else "门诊检验科"
+                        row["method"] = L("p4.method.jaffe_picrate")
+                    row["lab"] = L("p4.lab.partner") if key == "platform_calibration" else L("p4.lab.outpatient")
                 # Batch comparisons include inactive earlier notices too. Their
                 # scope/date/platform must match a patient's report to apply.
                 block["laboratory_method_record"].append({"day": day - 1, "valid_from": day, "scope": an,
-                    "source": "检验科方法与试剂使用记录", "lab": row["lab"], "method": row["method"],
+                    "source": L("p4.source.method_reagent_use"), "lab": row["lab"], "method": row["method"],
                     "platform": row["platform"], "reagent_lot": row["reagent_lot"], "comparison": rule["exposure"],
-                    "patient_sample_difference_pct": round(100 * math.expm1(param["intrinsic"] * param["response"]), 1) if different else 0.0,
+                    "patient_sample_difference_pct": round(100 * math.expm1(param["intrinsic"] * param["response"]), 1) if different and active else 0.0,
                     "valid_until": day,
-                    "reference_platform": "常规平台", "reference_lot": "在用批号", "reference_method": a["default_method"],
-                    "text": "可交换患者标本并行比对；按报告平台、批号和启用日期核对适用范围。"})
+                    "reference_platform": L("p4.platform.routine"), "reference_lot": L("p4.lot.current"), "reference_method": a["default_method"],
+                    "text": wording("commutable", day)})
             block["laboratory_method_record"].append({"day": t0 - 190, "valid_from": t0 - 190, "valid_until": t0 - 160,
-                "scope": an, "source": "检验科历史比对通知", "lab": "协作检验室", "method": a["default_method"],
-                "platform": "旧平台", "reagent_lot": "旧批号", "comparison": rule["exposure"],
+                "scope": an, "source": L("p4.source.historical_comparison"), "lab": L("p4.lab.partner"), "method": a["default_method"],
+                "platform": L("p4.platform.old"), "reagent_lot": L("p4.lot.old"), "comparison": rule["exposure"],
                 "patient_sample_difference_pct": 100 * math.expm1(sampled_method_bias(an, cid, "p4-old-comparison-" + key)),
-                "text": "所列文件属于既往检测批次，报告按当时实际使用的平台和试剂登记。"})
+                "text": wording("historical", t0)})
         elif key == "biotin_tsh":
             for day in (t0, T):
-                by[day]["assay_architecture"] = "链霉亲和素-生物素夹心法" if active or h01("p4-biotin-platform", cid) < 0.5 else "不采用生物素结合体系"
-                block["medication_record"].append({"day": day, "draw_day": day, "drug": "生物素", "event": "服用10 mg补充剂",
-                    "dose_mg": 10, "last_dose_hours": 2 if active and day == side_day else 72,
-                    "reason": "患者自述用于头发和指甲保健"})
+                recent_inactive = not active and h01("p4-biotin-platform", cid) < 0.5
+                by[day]["assay_architecture"] = L("p4.assay.non_biotin") if recent_inactive else L("p4.assay.streptavidin_biotin")
+                block["medication_record"].append({"day": day, "draw_day": day, "drug": rule["exposure"], "event": L("p4.event.biotin_10mg"),
+                    "dose_mg": 10, "last_dose_hours": 2 if recent_inactive or active and day == side_day else 72,
+                    "reason": L("p4.reason.biotin_hair_nails")})
         elif rule["section"] in ("medication_record", "outpatient_record"):
             day = param["event_day"] if active else t0 - 100 - _day_range(cid, "p4-inactive-event-" + key, [0, 60])
             direction = item["sign"] if active else rule["sign"]
             more = direction == rule["sign"]
             if rule["section"] == "medication_record":
-                action = ("开始规律服用" if more else "中断规律服用") if key in ("thyroxine_adherence", "fibrate_adherence") else ("开始服用" if more else "由医生停用")
+                action = (L("p4.action.start_regular") if more else L("p4.action.stop_regular")) if key in ("thyroxine_adherence", "fibrate_adherence") else (L("p4.action.start") if more else L("p4.action.stopped_by_doctor"))
             else:
-                action = "新发" if more else "恢复"
+                action = L("p4.action.new_onset") if more else L("p4.action.recovered")
             row = {"day": day, "exposure": rule["exposure"], "course_action": action,
-                   "event": rule["exposure"] + "，" + action,
-                   "supporting_record": _support(key, action)}
+                   "event": text("p4.event.exposure_action", exposure=rule["exposure"], action=action),
+                   "supporting_record": _support(key, more)}
             if rule["section"] == "medication_record":
                 row["drug"] = rule["exposure"]
                 row["reason"] = _indication_text(key)
@@ -445,7 +473,7 @@ def render(item, raw, cid):
                     row["prior_course_start_day"] = prior_start
                     block["medication_record"].append({"day": prior_start, "drug": rule["exposure"],
                         "dose": course["dose"], "dose_unit": course["unit"],
-                        "event": "长期处方开始", "reason": _indication_text(key)})
+                        "event": L("p4.event.long_term_rx_start"), "reason": _indication_text(key)})
                 if not active:
                     row["course_end_day"] = day + cfg["medication_world_design"]["historical_course_days"]
                 # The prescription states the course; the current clinic note
@@ -454,12 +482,12 @@ def render(item, raw, cid):
                 support = row.pop("supporting_record")
                 block["outpatient_record"].append({"day": T, "onset_day": day,
                     "medication": rule["exposure"], "course_action": action,
-                    "text": support if active else "患者交代既往处方和配药经过，所列供药期已结束；目前未再使用此药。"})
+                    "text": support if active else L("p4.outpatient.course_ended")})
             elif key != "recent_exercise":
                 row.update(day=T, onset_day=day)
             if key == "recent_exercise":
                 row.update(day=side_day - 2 if active else side_day - 21, draw_day=side_day,
-                           exercise="不习惯的高强度抗阻训练", exercise_duration_minutes=60,
+                           exercise=L("p4.exercise.unaccustomed_resistance"), exercise_duration_minutes=60,
                            persistent_injury=False)
             block[rule["section"]].append(row)
         elif rule["section"] == "report":
@@ -467,68 +495,72 @@ def render(item, raw, cid):
             s = row["specimen"]
             if key == "infusion_sampling":
                 for day in (t0, T):
-                    by[day]["specimen"].update(infusion_running=True, collection_site="输液点近心侧静脉" if active and day == side_day else "对侧肘静脉",
-                        sampling_arm="左" if active and day == side_day else "右")
+                    by[day]["specimen"].update(infusion_running=True, collection_site=L("p4.site.proximal_to_infusion") if active and day == side_day else L("p4.site.contralateral_antecubital"),
+                        sampling_arm=L("p4.arm.left") if active and day == side_day else L("p4.arm.right"))
             elif key == "hemolysis" and active:
-                s.update(free_hemoglobin_g_L=1.2, hemolysis_index="明显溶血")
+                s.update(free_hemoglobin_g_L=1.2, hemolysis_index=L("p4.hemolysis.marked"))
             elif key == "edta_contamination":
-                s.update(blood_transfer_from="K-EDTA管" if active else "原管", calcium_mmol_L=1.1 if active else 2.3,
-                         tube_order="EDTA管后生化管", collection_system="跨管转移" if active else "闭合真空系统")
+                s.update(blood_transfer_from=L("p4.transfer.k_edta_tube") if active else L("p4.transfer.original_tube"), calcium_mmol_L=1.1 if active else 2.3,
+                         tube_order=L("p4.tube_order.edta_before_chemistry"), collection_system=L("p4.collection.cross_tube_transfer") if active else L("p4.collection.closed_vacuum"))
             elif key == "cold_delayed_separation":
                 s.update(storage_temperature_C=4, separation_hours=6 if active else 0.3,
-                         cells_separated=not active, processing="未分离全血冷藏6小时后离心" if active else "分离血浆后冷藏")
+                         cells_separated=not active, processing=L("p4.processing.cold_whole_blood_6h") if active else L("p4.processing.plasma_then_cold"))
             elif key == "glucose_glycolysis":
-                s.update(tube="普通肝素锂管" if active else "柠檬酸缓冲抑制管", cells_separated=not active,
-                         separation_hours=3 if active else 0.3, processing="室温放置3小时后分离" if active else "采血后30分钟内分离")
+                s.update(tube=L("p4.tube.li_heparin_plain") if active else L("p4.tube.citrate_inhibitor"), cells_separated=not active,
+                         separation_hours=3 if active else 0.3, processing=L("p4.processing.room_temp_3h") if active else L("p4.processing.within_30min"))
             elif key == "sampling_time":
                 for day in (t0, T):
                     by[day]["time"] = "15:00:00" if active and day == side_day else "08:00:00"
     issued = min(r["day"] for r in reports) - 30
     block["specimen_procedure"] = [{"day": issued, "valid_from": issued, "scope": an,
-        "source": "检验科标本处理规程", "free_hemoglobin_limit_g_L": cfg["evidence_parameters"]["free_hemoglobin_limit_g_L"],
-        "text": "报告登记实际采血位置、采样时段、试管、分离时间、存放温度与溶血指数；按项目方法文件核对。"}]
-    block["patient_remarks"] = [{"draw_day": d, "text": "这次来复查，想知道前后为什么有差别。" if h01("p4-diverse-quote", cid, d) < 0.5 else "最近的吃药和生活情况都记在随访记录里。"} for d in (t0, T)]
+        "source": L("p4.source.specimen_procedure"), "free_hemoglobin_limit_g_L": cfg["evidence_parameters"]["free_hemoglobin_limit_g_L"],
+        "text": L("p4.procedure.report_fields")}]
+    block["patient_remarks"] = [{"draw_day": d, "text": L("p4.remark.why_different") if h01("p4-diverse-quote", cid, d) < 0.5 else L("p4.remark.see_followup")} for d in (t0, T)]
     for record in item["records"]:
         if record["day"] >= t0:
             continue
         for p in record["perturbations"]:
             row = by[record["day"]]
             if p["factor"] == "infusion_sampling":
-                row["specimen"].update(infusion_running=True, sampling_arm="左", infusion_arm="左", collection_site="输液点近心侧静脉")
+                row["specimen"].update(infusion_running=True, sampling_arm=L("p4.arm.left"), infusion_arm=L("p4.arm.left"), collection_site=L("p4.site.proximal_to_infusion"))
             elif p["factor"] == "platform_calibration":
-                row.update(platform="比对平台", lab="协作检验室")
+                row.update(platform=L("p4.platform.comparison"), lab=L("p4.lab.partner"))
                 block["laboratory_method_record"].append({"day": row["day"] - 1, "valid_from": row["day"], "scope": an,
-                    "source": "检验科方法与试剂使用记录", "lab": row["lab"], "method": row["method"],
-                    "platform": row["platform"], "reagent_lot": row["reagent_lot"], "comparison": "平台比对",
+                    "source": L("p4.source.method_reagent_use"), "lab": row["lab"], "method": row["method"],
+                    "platform": row["platform"], "reagent_lot": row["reagent_lot"], "comparison": cfg["rules"]["platform_calibration"]["exposure"],
                     "patient_sample_difference_pct": round(100 * math.expm1(p["bias_log"]), 1),
-                    "reference_platform": "常规平台", "reference_lot": "在用批号", "reference_method": a["default_method"],
-                    "text": "可交换患者标本并行比对；按报告平台、批号和启用日期核对适用范围。"})
+                    "reference_platform": L("p4.platform.routine"), "reference_lot": L("p4.lot.current"), "reference_method": a["default_method"],
+                    "text": wording("commutable", row["day"])})
     # Every actual draw has its own method-use record, including unchanged
     # batches. Retain the dated records for every assay.
     for row in reports:
         block["laboratory_method_record"].append({"day": row["day"], "valid_from": row["day"], "scope": an,
-            "source": "检验科批次方法使用记录", **{k: row[k] for k in ("lab", "method", "platform", "reagent_lot")},
-            "text": "本批检测按所列方法文件执行，报告保留所用平台及试剂批号。"})
+            "source": L("p4.source.batch_method_use"), **{k: row[k] for k in ("lab", "method", "platform", "reagent_lot")},
+            "text": L("p4.notice.batch_method")})
     for check in item.get("verification_records", []):
         block["laboratory_method_record"].append({
             "day": check["day"], "scope": an,
-            "source": "检验科标准化复核记录", "verification_for_day": check["verification_for_day"],
+            "source": L("p4.source.standardized_verification"), "verification_for_day": check["verification_for_day"],
             "value": f"{check['printed']:.{int(a['ndigits'])}f}", "unit": a["unit"],
-            "method": "不使用生物素结合体系的TSH检测" if an == "tsh" else a["default_method"],
-            "platform": "非生物素复核平台" if an == "tsh" else "常规平台", "reagent_lot": "复核批号" if an == "tsh" else "在用批号",
-            "lab": "门诊检验科", "time": check["time"],
+            "method": L("p4.method.tsh_non_biotin") if an == "tsh" else a["default_method"],
+            "platform": L("p4.platform.non_biotin_verification") if an == "tsh" else L("p4.platform.routine"), "reagent_lot": L("p4.lot.verification") if an == "tsh" else L("p4.lot.current"),
+            "lab": L("p4.lab.outpatient"), "time": check["time"],
             "text": cfg["design"]["verification"]["conditions"],
-            "assay_architecture": "不采用生物素结合体系" if an == "tsh" else "常规检测体系"})
+            "assay_architecture": L("p4.assay.non_biotin") if an == "tsh" else L("p4.assay.routine")})
         block["laboratory_method_record"][-1].update(
-            reference_method=a["default_method"], reference_platform="常规平台", reference_lot="在用批号",
+            reference_method=a["default_method"], reference_platform=L("p4.platform.routine"), reference_lot=L("p4.lot.current"),
             patient_sample_difference_pct=round(100 * math.expm1(sum(p["bias_log"] for p in check["perturbations"])), 1))
     block["laboratory_method_record"].sort(key=lambda d: (int(d.get("valid_from", d["day"])), int(d["day"])))
+    if "ingested_exposure" in item:
+        exposure = item["ingested_exposure"]
+        block["medication_record"].append({"day": item["review_day"], "drug": cfg["rules"][exposure["factor"]]["exposure"],
+            "course_end_day": exposure["end_day"], "clean_followup": exposure["clean_followup"],
+            "event": L("p4.event.biotin_ongoing" if exposure["end_day"] is None else "p4.event.biotin_ended")})
     return block
 
 
-def _support(key, action):
+def _support(key, more):
     row = table()["narratives"][key]
-    more = action in ("开始服用", "开始规律服用", "新发")
     return row["more" if more else "less"]
 
 
@@ -565,25 +597,31 @@ def register_medicines(raw):
     present = existing_medicines(raw)
     courses = {}
     for record in block["medication_record"]:
-        matched = by_exposure.get(record.get("exposure", record.get("drug")))
+        matched = next((spec for exposure, spec in by_exposure.items()
+                        if is_text(record.get("exposure", record.get("drug")), exposure)), None)
         if not matched:
             continue
         key, spec = matched
         if spec["drug"] in present:
             continue
         action = record.get("course_action")
-        if key != "biotin_tsh" and action not in ("开始服用", "开始规律服用", "由医生停用", "中断规律服用"):
+        if key != "biotin_tsh" and not any(is_text(action, k) for k in ("p4.action.start", "p4.action.start_regular",
+                                                                        "p4.action.stopped_by_doctor", "p4.action.stop_regular")):
             continue
         points = courses.setdefault(spec["drug"], [])
         day = int(record["day"])
         if key == "biotin_tsh":
-            points.extend([{"ts": day - int(record["last_dose_hours"]) // 24, "value": spec["dose"]},
-                           {"ts": day - int(record["last_dose_hours"]) // 24 + 1, "value": 0.0}])
-        elif action in ("开始服用", "开始规律服用"):
+            if "last_dose_hours" in record:
+                points.extend([{"ts": day - int(record["last_dose_hours"]) // 24, "value": spec["dose"]},
+                               {"ts": day - int(record["last_dose_hours"]) // 24 + 1, "value": 0.0}])
+            else:
+                points.append({"ts": record["course_end_day"] if record["course_end_day"] is not None else day,
+                               "value": 0.0 if record["course_end_day"] is not None else spec["dose"]})
+        elif any(is_text(action, k) for k in ("p4.action.start", "p4.action.start_regular")):
             points.append({"ts": day, "value": spec["dose"]})
         else:
             points.extend([{"ts": int(record["prior_course_start_day"]), "value": spec["dose"]}, {"ts": day, "value": 0.0}])
-        if "course_end_day" in record:
+        if record.get("course_end_day") is not None:
             points.append({"ts": int(record["course_end_day"]), "value": 0.0})
     for drug, points in courses.items():
         spec = next(v for v in cfg["medication_world"].values() if v["drug"] == drug)

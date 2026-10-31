@@ -18,14 +18,15 @@ from __future__ import annotations
 import math
 
 CLASSES = ("uptitrate", "downtitrate", "maintain", "switch", "check_adherence_or_adverse_effect")
-#: active states of each subtype (single activation, PREREG 2)
+#: True active states for consistency checks; decisive facts come from g3(blk)["decisive"].
 STATES = {"off": {"off"}, "top_off": {"off"}, "ae_dose": {"ae_dose"},
           "over": {"over"}, "early": {"off", "early"}, "on": set(), "adh_low": {"off", "adh_low"},
-          "unattributed": {"ae_unattributed"}}
+          "unattributed": {"ae_unattributed"}, "absorption": {"off", "absorption"}}
+STATES.update(on_low={"adh_low"}, off_ae={"off", "ae_dose"})
 
 
 def expected_states(sub: str):
-    """The subtype's active states (PREREG 2)."""
+    """True active states (PREREG 2); decisive facts come from g3(blk)["decisive"]."""
     s = STATES.get(sub)
     return None if s is None else set(s)
 
@@ -180,7 +181,8 @@ def ae_cause(entry: dict, line, start: int, attribution: str) -> str | None:
 
 def natural_status(onset: int, days: int, T: int) -> str:
     """A self-limited episode is ongoing while it lasts (`days` from its onset) and resolved afterwards."""
-    return "持续至今" if int(onset) + int(days) >= int(T) else "已缓解"
+    from haenv.i18n.text import L
+    return L("p3.status.ongoing" if int(onset) + int(days) >= int(T) else "p3.status.resolved")
 
 
 def documented_contexts(d: dict) -> set[str]:
@@ -201,31 +203,35 @@ def confounder_why(blk: dict, e: dict, d: dict) -> str:
     from haenv.world.labworld.meds import meds
     from haenv.world.labworld.meds import rule
     reg = meds()["confounders"]
-    sym, cause, T = str(e.get("symptom")), e.get("cause"), int(blk["T"])
+    from haenv.p3.textread import canonical
+    from haenv.i18n.text import is_text
+    # Registry phrase IDs are world data; their rendered words do not determine applicability.
+    sym, cause, T = canonical(e.get("symptom")), e.get("cause"), int(blk["T"])
+    ctx = canonical(e.get("context")) if isinstance(e.get("context"), str) else e.get("context")
     start = min(int(x) for x, _ in blk["dose_line"])
     if cause == "other_drug":
         src = e.get("source_drug")
-        if sym in d["ae_symptoms"] or src not in (blk.get("other_drugs") or ()) \
-                or sym not in ((reg["other_drug"].get(src) or {}).get("symptoms") or ()):
+        if sym in {canonical(x) for x in d["ae_symptoms"]} or src not in (blk.get("other_drugs") or ()) \
+                or sym not in {canonical(x) for x in ((reg["other_drug"].get(src) or {}).get("symptoms") or ())}:
             return f"other-drug entry {sym!r}: {src} is not a visible medicine with that registered effect"
-        hit = [w for w in d.get("decision_facts") or () if w in sym]
+        hit = [w for w in d.get("decision_facts") or () if canonical(w) in sym]
         return f"other-drug entry {sym!r} carries the managed drug's adverse-effect word {hit}" if hit else ""
     if cause == "intercurrent":
         ill = reg["intercurrent"]
-        days = next((int(x["days"]) for x in ill["illnesses"] if x["symptom"] == sym), None)
-        if days is None or e.get("context") not in ill["settings"]:
+        days = next((int(x["days"]) for x in ill["illnesses"] if canonical(x["symptom"]) == sym), None)
+        if days is None or ctx not in {canonical(x) for x in ill["settings"]}:
             return f"illness entry {sym!r} / {e.get('context')!r} is not a registered illness with a documented setting"
         want = natural_status(e["onset"], days, T)
     elif cause == "background_symptom":
         spec = reg["background_symptom"].get(blk["drug"])
-        if not spec or sym not in d["ae_symptoms"] or e.get("context") not in documented_contexts(d):
+        if not spec or sym not in {canonical(x) for x in d["ae_symptoms"]} or ctx not in {canonical(x) for x in documented_contexts(d)}:
             return f"background symptom {sym!r} / {e.get('context')!r} has no registered non-drug setting for {blk['drug']}"
         if int(e["onset"]) - start < int(rule()["start_gray_days"]):
             return "background symptom starts inside the start gray band"
         want = natural_status(e["onset"], spec["days"], T)
     else:
         return f"unknown background cause {cause!r}"
-    return "" if e.get("status") == want else f"{cause} entry {sym!r} is {e.get('status')}, its course says {want}"
+    return "" if is_text(e.get("status"), want.key) else f"{cause} entry {sym!r} is {e.get('status')}, its course says {want}"
 
 
 def edge_margin_why(blk: dict) -> str:
@@ -243,6 +249,11 @@ def edge_margin_why(blk: dict) -> str:
     for e in blk["diary"]:
         if e.get("kind") != "drug_symptom":
             continue
+        from haenv.i18n.text import is_text
+        from haenv.p3.policy import specification
+        if (is_text(e.get("status"), "p3.status.resolved")
+                and blk["drug"] not in specification()["symptom_course"]["recurrent_event_drugs"]):
+            continue
         on = int(e["onset"])
         if abs(on - start) < int(rl["start_gray_days"]) + mo:
             return f"symptom onset {on} within {mo} days of the start gray band"
@@ -257,9 +268,10 @@ def edge_margin_why(blk: dict) -> str:
 
 def accepted(blk: dict, g: dict | None = None) -> list[str]:
     """The decisions the item accepts: its gold, and, when an off-target `T - s` lies within
-    `rule.edge_margin_date_days` of 0.5 tau or tau (the clinic's own interval lines, no clinical boundary),
+    `rule.edge_margin_date_days` of 0.5 tau (the clinic's own early interval line, no clinical boundary),
     the decision of the neighbouring reading of that line ("effect not yet arrived" against "arrived"). Both
-    are scored correct; an item away from the lines accepts its gold alone."""
+    are scored correct; a registered guideline-concordant alternative is also accepted."""
+    from haenv.world.labworld.meds import drug
     from haenv.world.labworld.meds import rule
     rl = rule()
     g = g or g3(blk)
@@ -267,10 +279,17 @@ def accepted(blk: dict, g: dict | None = None) -> list[str]:
     if g.get("class") and g.get("control") == "off":
         since, tau = int(g["since_increase"]), float(g["tau"])
         half = float(rl["early_max_frac"]) * tau
-        if min(abs(since - half), abs(since - tau)) < int(rl["edge_margin_date_days"]):
+        # At the full reassessment interval, the neighbouring excluded band
+        # is gray, not an early visit. Treating it as early_as=True used to
+        # accept a hold even after a complete, exactly dated review interval.
+        if abs(since - half) < int(rl["edge_margin_date_days"]):
             alt = g3(blk, early_as="early" not in g["states"])["class"]
             if alt:
                 out.add(alt)
+    if "uptitrate" in out and g.get("control") == "off":
+        alternative = drug(blk["drug"], known_of(blk)).get("off_also_accepts")
+        if alternative:
+            out.add(alternative["decision"])
     return sorted(out)
 
 
@@ -288,7 +307,7 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
     L = [float(x) for x in d["ladder"]]
     T = int(blk["T"])
     line = blk["dose_line"]
-    out = {"class": None, "states": [], "reason": ""}
+    out = {"class": None, "states": [], "decisive": [], "reason": ""}
     x = float(dose_at(line, T))
     s = last_increase(line, T)
     tau = float(d["tau_rule_days"])
@@ -332,6 +351,11 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
             continue
         if e.get("kind") != "drug_symptom":
             continue
+        from haenv.i18n.text import is_text
+        from haenv.p3.policy import specification
+        if (is_text(e.get("status"), "p3.status.resolved")
+                and blk["drug"] not in specification()["symptom_course"]["recurrent_event_drugs"]):
+            continue
         seen = ae_cause(e, line, start, d["attribution"])
         if seen is None:
             out["reason"] = f"symptom onset {e['onset']} in the gray band of its timing"
@@ -344,12 +368,24 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
     over = status == "over"
     off = status == "off"
     adh_low = a < float(rl["adherence_line"])
+    from haenv.p3.policy import absorption_interaction
+    absorption = absorption_interaction(blk.get("administration_record"))
     states = {k for k, v in (("off", off), ("over", over), ("early", early), ("adh_low", adh_low),
-                             ("ae_dose", ae == "dose_related"), ("ae_unattributed", ae == "unattributed")) if v}
+                             ("ae_dose", ae == "dose_related"), ("ae_unattributed", ae == "unattributed"),
+                             ("absorption", absorption)) if v}
     out["states"] = sorted(states)
     at_min, at_max = x == L[0], x == L[-1]
-    if (off and adh_low) or ae == "unattributed":
-        c = "check_adherence_or_adverse_effect"
+    from haenv.p3.policy import specification
+    symptom_facts = ["symptom_onset"]
+    if blk["drug"] not in specification()["symptom_course"]["recurrent_event_drugs"]:
+        symptom_facts.append("symptom_course")
+    # Safety signals take precedence even when coverage is low. This priority
+    # is a clinical rule, not a subtype or interaction-designation lookup.
+    from haenv.p3.history import acei_contraindicated
+    if acei_contraindicated(blk.get("adverse_event_record"), blk["drug"]):
+        c, decisive = "switch", ["contraindication"]
+    elif ae == "unattributed" and not over:
+        c, decisive = "check_adherence_or_adverse_effect", symptom_facts
     elif ae == "dose_related" and not over and d.get("ae_dose_decision") is False:
         out["reason"] = "a dose-related symptom with the control axis not suppressed: dosed by the axis, not emitted"
         return out
@@ -358,15 +394,26 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
             out["reason"] = "dose-related adverse effect or overtreatment on the lowest rung"
             return out
         c = "downtitrate"
+        decisive = [] if ae == "dose_related" and over else ["control"] if over else symptom_facts
+    elif off and (adh_low or absorption):
+        c = "check_adherence_or_adverse_effect"
+        decisive = ["control"]
+        # At the top dose a drug whose ceiling rule is the same check keeps it with full coverage or
+        # separated dosing, so neither is decisive there (only the control reading is).
+        same_at_top = at_max and (d.get("when_off_at_top") or {}).get("decision") == c
+        if not (adh_low and absorption) and not same_at_top:
+            decisive.append("coverage" if adh_low else "administration")
     elif off and early:
-        c = "maintain"
+        c, decisive = "maintain", ["interval"]
     elif off and historical_limit(blk, x):
-        c = "switch"
+        c, decisive = "switch", ["control"] + ([] if at_max else ["dose_limit"])
     elif off and at_max:
-        c = "switch"
+        c = (d.get("when_off_at_top") or {}).get("decision", "switch")
+        decisive = ["control", "headroom"]
     elif off:
         # the next step the drug's guideline gives when the target is missed below the top rung (A15)
         c = "uptitrate" if d["when_off"] == "titrate" else "switch"
+        decisive = ["control", "interval"] + (["headroom"] if d["when_off"] == "titrate" else [])
     elif d.get("on_target") == "titrate" and not at_max:
         # CKD with albuminuria: the ACEI goes to its top dose on target too, unless today's reading is
         # under the registered floor; a reading within one band of the floor is not emitted (p3-fixes c)
@@ -378,12 +425,14 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
                 out["reason"] = why
                 return out
         c = "uptitrate" if side == "above" else "maintain"
+        decisive = ["comorbidity", "headroom"] if side == "above" else ["control"]
     else:
-        c = "maintain"
+        c, decisive = "maintain", ["control"]
     if c == "switch" and not d.get("switch", True):
         out["reason"] = f"{blk['drug']} has no drug to switch to (not emitted)"
         return out
     out["class"] = c
+    out["decisive"] = sorted(decisive)
     out.update(dose=x, at_min=at_min, at_max=at_max, since_increase=since, a_T=round(a, 4),
                control=status, ae=ae, tau=tau)
     return out
@@ -411,6 +460,10 @@ def gold_block_consistent(blk: dict) -> list[str]:
             bad.append(why)
         if blk.get("accept") != accepted(blk, g):
             bad.append(f"accepted set {blk.get('accept')} != recomputed {accepted(blk, g)}")
+    if blk.get("interaction_family"):
+        from haenv.p3.interactions import receipt
+        if not receipt(blk)["pass"]:
+            bad.append("interaction does not change accepted gold under both factor ablations")
     return bad
 
 

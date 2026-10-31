@@ -682,7 +682,12 @@ def emitted(pool_text: str, mode: str = "legacy") -> tuple[set[str], list[str], 
         if r.returncode not in (0, 4) or not got:
             sys.stderr.write(r.stdout[-4000:] + r.stderr[-4000:])
             raise SystemExit(f"[m2_gen_job] pool build failed (exit {r.returncode})")
-        built = [json.loads(ln) for ln in got[-1].read_text(encoding="utf-8").splitlines() if ln.strip()]
+        # Selection consumes the saved source identities, never the preview's prose.
+        from haenv.i18n.identity import load as load_messages, restore, source
+        messages = load_messages(got[-1])
+        built = [{**row, "case": source(restore(row["case"], messages.get(row["case_id"])))}
+                 for ln in got[-1].read_text(encoding="utf-8").splitlines() if ln.strip()
+                 for row in [json.loads(ln)]]
         from haenv.world.validation.difficulty_r2 import enabled
         if enabled():
             GATE["history_eligible"] = {b["case_id"] for b in built
@@ -821,6 +826,10 @@ def build(n: int = PS.DEFAULT_N, seed: str = PS.PUBLIC_SEED, pool_out: pathlib.P
             c["latent"]["m2"]["f2"] = f2[c["case_id"]]
         if apply_critical(c, (GATE.get("critical") or {}).get(c["case_id"])):
             critical[c["case_id"]] = c["latent"]["m2"]["critical"]
+        if c["case_id"] in GATE.get("score_branches", {}):
+            # The preview predates the measured F2 reading and critical-value
+            # update above. Coverage must describe the gold this job will emit.
+            GATE["score_branches"][c["case_id"]] = finalized_score_branches(c)
     if pool_out is not None:
         pool_out.write_text(_dump(pool, "# m2 pool job (intermediate; the pack is selected from it)\n"), encoding="utf-8")
     refused = sorted(c["case_id"] for c in cases if c["case_id"] not in ok)
@@ -1039,6 +1048,18 @@ def score_branches(gold: dict) -> list[str]:
     if frame == "F3" and gold.get("f3_plan"):
         return ["F3:" + gold["f3_plan"]["arm"]]
     return []
+
+
+def finalized_score_branches(case: dict) -> list[str]:
+    """Production branches after measured readings and critical urgency exist."""
+    from haenv.contracts.external_gold import SLOT
+    from haenv.m2.core import frame_gold
+    latent = case["latent"]
+    meta = {SLOT: {"m2": latent.get("m2") or {}},
+            "ddx": {"join_gold": latent.get("ddx_join_gold"),
+                    "urgency": latent.get("ddx_urgency")},
+            "red_flag": latent.get("ddx_red_flag", False)}
+    return score_branches(frame_gold(meta) or {})
 
 
 def paired_strata(original: dict[int, list[dict]], candidates: list[dict], seed: str,

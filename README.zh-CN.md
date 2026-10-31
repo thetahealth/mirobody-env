@@ -76,6 +76,8 @@ HAEnv（Health Agent Environment）是本仓库中的 Python 包与命令行工�
 
 1.3.1 榜在四个题包上给 13 个模型排名，每包 100 题（N100），每题作答 3 次。主分为每题三次作答的 `S = G·D·(1+Q)/2` 取平均（k3），四包等权；首次作答的预注册分 pk1 仅将第 8、9 名的 minimax-m3 与 deepseek-v4-flash 对调，其余次序相同。95% 区间来自配对题簇自助法（2,000 次），对所有模型重抽同一批题目；名次区间来自同一批抽样。
 
+> 本榜在 1.3 中文题包上测得。`main` 现为 1.4 预览版：默认英文记录，四个题包的题目均已修订（见[更新记录](https://github.com/thetahealth/mirobody-env/blob/main/CHANGELOG.md)）。1.4 榜单发布后将替换本榜；复现本榜请使用 [v1.3.2](https://github.com/thetahealth/mirobody-env/tree/v1.3.2)。
+
 ### 1.3.1 总分
 
 <!-- board-1.3.1:start -->
@@ -319,7 +321,7 @@ HAEnv 同时具备在 `T` 处截断的纵向病历、先于数据确定的金标
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.3.2}
+  version = {1.4.0.dev0}
 }
 ```
 

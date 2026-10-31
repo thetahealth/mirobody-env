@@ -2,6 +2,13 @@
 
     python tools/evaluation/reask_pooled.py --check
     python tools/evaluation/reask_pooled.py --out artifacts/reask-analysis.json
+    python tools/evaluation/reask_pooled.py --write-drift
+
+The released facts are computed from the stored D. Re-scoring the stored answers with
+today's diagnosis judge guards against unregistered judging changes: every difference must
+be listed in the generated `matcher-drift-1.4.json`, which attributes it to a registered
+1.4 diagnosis concept (diagnosis answer equivalence) or to the registered judging name that
+matched (a `judging_synonyms` row, a generated English name, or a spelling variant).
 """
 from __future__ import annotations
 
@@ -24,6 +31,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / 'benchmarks/results/1.3.1/reask'
+DRIFT = 'matcher-drift-1.4.json'
 BOOT, SEED = 2000, 20261014
 MODELS = {'gpt-6-luna': ('GPT-6 Luna', 'LUNA'), 'glm-5.3-flash': ('GLM 5.3 Flash', 'GLM'),
           'qwen3-32b': ('Qwen3-32B', 'QWEN')}
@@ -232,8 +240,17 @@ def recompute(directory=DATA):
             'main': result, 'half': half_result, 'facts': make_facts(result, half_result)}
 
 
-def check_answers(directory=DATA):
-    """Parse final text again and call the released diagnosis judges on its differential."""
+def score_answers(directory=DATA):
+    """Parse final text again and call today's diagnosis judges on its differential.
+
+    Yields (identity, inclusion row, current D, judge atoms, gold) for every included answer.
+    """
+    for key, row, d, atoms, gold, _out in _scored(directory):
+        yield key, row, d, atoms, gold
+
+
+def _scored(directory=DATA):
+    """`score_answers` plus the parsed answer, for attributing a difference."""
     from haenv_kernel.solver import _extract_json
     from haenv.evaluate import _to_output
     from haenv.judges._helpers import gold_kind
@@ -245,7 +262,6 @@ def check_answers(directory=DATA):
     if len(answers) != len(answer_rows) or inclusion.keys() != answers.keys():
         raise ValueError('answers must cover the inclusion list exactly once')
     gold = json.loads((directory / 'gold.json').read_text())
-    checked = 0
     for key, row in inclusion.items():
         answer = answers[key]
         try:
@@ -263,10 +279,105 @@ def check_answers(directory=DATA):
         out = _to_output(parsed, SimpleNamespace(prediction_context={}))
         atoms = judge(out, vp, {})
         d = int(row['status'] == 'answered' and bool(parsed) and atoms['dx_listed'] == 1.0)
-        if d != row['D']:
-            raise ValueError(f'stored D differs: {key}: stored={row["D"]}, scored={d}')
+        yield key, row, d, atoms, gold[row['question']], out
+
+
+def _concept_of(gold):
+    """The registered 1.4 diagnosis concept whose anchors name this gold, if any."""
+    from haenv.resources.registry import _load_yaml
+    names = {str(n).strip().casefold() for n in [gold.get('diagnosis'), *(gold.get('aliases') or [])] if n}
+    for name, entry in (_load_yaml('threads.yaml').get('diagnosis_concepts') or {}).items():
+        if names & {str(a).casefold() for a in entry.get('anchors', [])}:
+            return name
+    return None
+
+
+def _judging_name_of(gold, out):
+    """The judging-only name (not a kernel alias) that a live candidate of `out` matches, and the
+    table it comes from; None when no such name matches."""
+    from haenv.resources.registry import _load_yaml
+    from haenv.scoring.tracks import _differential, alias_hit_asserted, entry_excluded, judging_names
+    from haenv.scoring.tracks import rank_key, thread_aliases
+    threads = [t['aliases'] for t in gold.get('threads') or () if t.get('aliases')]
+    raw_sets = threads or [[gold.get('diagnosis') or '', *(gold.get('aliases') or [])]]
+    live = [str(x.get('diagnosis') or '') for x in sorted(_differential(out), key=rank_key)
+            if not entry_excluded(x)]
+    synonyms = {str(n).lower() for e in (_load_yaml('threads.yaml').get('judging_synonyms') or {}).values()
+                for n in e.get('names') or ()}
+    english = {str(v).lower() for v in (_load_yaml('judging_aliases_en.yaml').get('names') or {}).values()}
+    for raw in raw_sets:
+        expanded = thread_aliases(raw) if threads else judging_names(raw)
+        extra = [n for n in expanded if str(n).lower() not in {str(a).lower() for a in raw}]
+        for text in live:
+            if alias_hit_asserted(text, raw):
+                continue
+            for n in extra:
+                if alias_hit_asserted(text, [n]):
+                    table = ('judging_synonyms' if n.lower() in synonyms else
+                             'judging_aliases_en' if n.lower() in english else 'english_variants')
+                    return n, table
+    return None
+
+
+def matcher_drift(directory=DATA):
+    """Answers whose current D differs from the stored D, attributed to a 1.4 concept or to the
+    judging name that matched."""
+    rows, unattributed = [], []
+    for key, row, d, atoms, gold, out in _scored(directory):
+        if d == row['D']:
+            continue
+        concept = _concept_of(gold)
+        if concept is not None:
+            change, extra = '1.4 diagnosis answer equivalence', {}
+        else:
+            named = _judging_name_of(gold, out) if d > row['D'] else None
+            if named is None:
+                unattributed.append(key)
+                continue
+            change, concept, extra = '1.4 judging names', named[1], {'name': named[0]}
+        model, question, repeat, kind, arm = key
+        rows.append({'model': model, 'question': question, 'repeat': repeat, 'kind': kind, 'arm': arm,
+                     'stored_D': row['D'], 'current_D': d, 'gold': gold['diagnosis'],
+                     'change': change, 'concept': concept, **extra,
+                     'listed_positions': atoms.get('dx_listed_positions')})
+    if unattributed:
+        raise ValueError(f'D differences without a registered 1.4 concept or judging name: {unattributed}')
+    return rows
+
+
+def write_drift(directory=DATA):
+    rows = matcher_drift(directory)
+    about = ('Released 1.3.1 re-ask answers whose D changes under the 1.4 diagnosis judge. '
+             'The released facts keep the stored D; reask_pooled.py --check requires '
+             'exactly these differences. Generated by reask_pooled.py --write-drift.')
+    lines = ',\n'.join('  ' + json.dumps(r, ensure_ascii=False) for r in rows)
+    text = '{\n "about": ' + json.dumps(about) + ',\n "rows": [\n' + lines + ('\n' if rows else '') + ' ]\n}\n'
+    (directory / DRIFT).write_text(text, encoding='utf-8')
+    return len(rows)
+
+
+def check_answers(directory=DATA):
+    """Re-score every stored answer; any D change must be a registered 1.4 matcher difference.
+
+    Returns (answers re-scored, registered differences reproduced).
+    """
+    registered = {}
+    for r in json.loads((directory / DRIFT).read_text(encoding='utf-8'))['rows']:
+        if not r.get('change') or not r.get('concept'):
+            raise ValueError(f'registered difference without its 1.4 change: {r}')
+        registered[identity(r)] = (r['stored_D'], r['current_D'])
+    checked, seen = 0, set()
+    for key, row, d, _atoms, _gold in score_answers(directory):
         checked += 1
-    return checked
+        if d == row['D']:
+            continue
+        if registered.get(key) != (row['D'], d):
+            raise ValueError(f'stored D differs: {key}: stored={row["D"]}, scored={d}')
+        seen.add(key)
+    stale = sorted(set(registered) - seen)
+    if stale:
+        raise ValueError(f'registered difference no longer reproduces: {stale}')
+    return checked, len(seen)
 
 
 def main(argv=None):
@@ -274,14 +385,19 @@ def main(argv=None):
     parser.add_argument('--data', type=Path, default=DATA)
     parser.add_argument('--check', action='store_true', help='re-score every stored answer and compare all released facts')
     parser.add_argument('--out', type=Path, help='write full per-model and pooled estimates and 95%% intervals as JSON')
+    parser.add_argument('--write-drift', action='store_true',
+                        help=f'regenerate {DRIFT} from the current diagnosis judge')
     args = parser.parse_args(argv)
+    if args.write_drift:
+        print(f'{write_drift(args.data)} registered 1.4 matcher differences written to {DRIFT}')
     result = recompute(args.data)
     if args.check:
         expected = json.loads((args.data / 'facts.json').read_text())
         if result['facts'] != expected:
             raise ValueError('recomputed facts differ from the released facts')
-        count = check_answers(args.data)
-        print(f'{len(expected)} facts matched; {count} answers re-scored; 0 D mismatches')
+        count, drift = check_answers(args.data)
+        print(f'{len(expected)} facts matched; {count} answers re-scored; '
+              f'{drift} registered 1.4 matcher differences; 0 other D mismatches')
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')

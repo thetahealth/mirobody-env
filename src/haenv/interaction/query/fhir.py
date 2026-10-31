@@ -40,10 +40,20 @@ def _kind0(kind) -> str:
     return kind if isinstance(kind, str) else kind[0]
 
 
+def stream_id(name):
+    from haenv.interaction.query.targets import target_id
+    return target_id(name)
+
+
+def stream_label(name):
+    from haenv.i18n.runtime import registry_phrase
+    return registry_phrase(name)
+
+
 def stream_head(name: str, *, lab: bool) -> dict:
     """What every Observation of one stream shares, stated once on its Bundle (a stream of daily
     device summaries: each entry's `effectiveDay` is its `effectivePeriod`, that whole day)."""
-    return {"entryResourceType": "Observation", "meta": {"source": name}, "code": {"text": name},
+    return {"entryResourceType": "Observation", "meta": {"source": stream_id(name)}, "code": {"text": stream_label(name)},
             "category": "laboratory" if lab else ("vital-signs" if name in VITALS else "activity"),
             **({} if lab else {"effectivePeriod": "the entry's whole day (daily device summary)"})}
 
@@ -51,10 +61,11 @@ def stream_head(name: str, *, lab: bool) -> dict:
 def point(name: str, p: dict, *, lab: bool, full: bool = False) -> dict:
     """A stream point `{ts, value, ...}` as a compact Observation entry of its stream's Bundle, or
     (`full`, in a Bundle that mixes sources) a whole Observation."""
-    r = ({"resourceType": "Observation", "meta": {"source": name}, "code": {"text": name},
+    r = ({"resourceType": "Observation", "meta": {"source": stream_id(name)}, "code": {"text": stream_label(name)},
           "category": "laboratory" if lab else "activity"} if full else {})
-    r.update({"effectiveDay": int(p["ts"]), "valueQuantity": {"value": p.get("value")}})
-    r.update({k: v for k, v in p.items() if k not in ("ts", "value")})
+    from haenv.i18n.runtime import runtime_text
+    r.update({"effectiveDay": int(p["ts"]), "valueQuantity": {"value": runtime_text(p.get("value"))}})
+    r.update(runtime_text({k: v for k, v in p.items() if k not in ("ts", "value")}))
     return r
 
 

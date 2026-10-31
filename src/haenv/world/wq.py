@@ -264,7 +264,10 @@ def derive_join_gold(raw) -> tuple[str, list[str]]:
     ddx = resolve_path(raw, "W.adjudication.ddx")
     ddx = ddx if isinstance(ddx, dict) else {}
     threads = ddx.get("threads") or []
-    diagnosis = str(ddx.get("diagnosis") or "")
+    # The marker is read from the diagnosis source identity: a saved English
+    # batch displays the diagnosis in English but keeps its registered message ID.
+    from haenv.i18n.identity import source
+    diagnosis = str(source(ddx.get("diagnosis")) or "")
 
     if len(threads) >= 2:
         return "comorbidity", [

@@ -1,4 +1,7 @@
 """Render verified guideline data, without medical thresholds in Python."""
+
+from haenv.i18n.runtime import registry_phrase
+from haenv.i18n.text import text_of as _rt
 from fnmatch import fnmatchcase
 from pathlib import Path
 
@@ -45,24 +48,15 @@ def add_precision(builder, sources, decision_item):
     medications = canonical(background.get("medications", [])).casefold()
     groups = [group for group in list(data["families"].values()) + list(data["chronic"].values())
               if _matches(group, family, conditions, medications)]
-    rules = {kind: [rule for group in groups for rule in group.get(kind, [])]
+    rules = {kind: [{k: registry_phrase(v) if k in {'text', 'control', 'early_control'} else v
+                     for k, v in rule.items()} for group in groups for rule in group.get(kind, [])]
              for kind in ("not_recommended", "initial", "monitoring")}
     if not rules["not_recommended"] and not rules["monitoring"]:
-        builder.gaps.append("precision未派生：本例无已核实适用的检查禁止清单或慢病监测间隔。")
+        builder.gaps.append(_rt('judge.scoring.management.precision.add_precision.1'))
         return
-    render = lambda rule: (f"{rule['text']}（{data['sources'][rule['source']]['short']} "
-                           f"{data['sources'][rule['source']]['section']}）")
+    render = lambda rule: (_rt('judge.punctuation.precision.1', s0=rule['text'], s1=data['sources'][rule['source']]['short'], s2=data['sources'][rule['source']]['section']))
     text = (
-        "本例检查精确性只对照以下带出处的清单，不能因列检查名或数量多而扣分。"
-        "前提必须由本例可见资料或方案明确建立，不能推断未提供的心律诊断、风险、病情稳定或上次检查日期。\n"
-        "不常规推荐清单：" + ("；".join(map(render, rules["not_recommended"])) or "无独立禁止项。") + "\n"
-        "允许的初始检查：" + ("；".join(map(render, rules["initial"])) or "未登记本家族初始检查；不把未列项目当作禁止。") + "\n"
-        "慢病监测：" + ("；".join(map(render, rules["monitoring"])) or "无本例适用的已登记间隔。") + "\n"
-        "本条不要求安排上述初始检查或监测。针对本次问题的初始检查、按间隔常规监测、"
-        "写明交由接诊医生判断是否需要的检查均不扣分；明确已经安排违规检查后再说由医生执行不免扣。"
-        "只有安排了清单中符合全部前提的不推荐检查，或明确无新指征且早于适用间隔的同项常规重复监测，才判contradicted；"
-        "最低监测频次不是最短间隔，资料不足以证明重复也不扣分。"
-        "否则有本次实际处置即satisfied；没有任何处置（空答、纯读数或泛泛遵医嘱）即unmet。"
+        _rt('judge.scoring.management.precision.add_precision.2') + (_rt('judge.punctuation.precision.2').join(map(render, rules["not_recommended"])) or _rt('judge.scoring.management.precision.add_precision.3')) + _rt('judge.scoring.management.precision.add_precision.4') + (_rt('judge.punctuation.precision.3').join(map(render, rules["initial"])) or _rt('judge.scoring.management.precision.add_precision.5')) + _rt('judge.scoring.management.precision.add_precision.6') + (_rt('judge.punctuation.precision.4').join(map(render, rules["monitoring"])) or _rt('judge.scoring.management.precision.add_precision.7')) + _rt('judge.scoring.management.precision.add_precision.8')
     )
     refs = [f"/visible_facts/{key}" for key in (
         "background", "home_check_today", "intake_checklist", "message", "clinical_history_record") if key in visible]
@@ -78,7 +72,7 @@ def add_precision(builder, sources, decision_item):
                                         "\n".join(r["control"] for r in rules[kind] if r.get("control")) or None)
                                 for kind in rules}}
     builder.add("precision.guideline_checks", "precision", text, list(dict.fromkeys(sources + refs)),
-                evidence=refs, claim="本次处置按上述安排执行；检查遵循本例适应证及慢病监测计划。",
+                evidence=refs, claim=_rt('judge.scoring.management.precision.add_precision.9'),
                 diagnostic=diagnostics)
     builder.items[-1]["guideline_basis"] = {
         "registry_version": data["version"], "registry_sha256": sha256(data),

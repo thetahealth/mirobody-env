@@ -1,0 +1,50 @@
+# Native English additions for the medication review pack.
+entries:
+  本院他汀复评：既往同药更高剂量出现肌痛且 CK 超过正常上限 10 倍、无继发原因并经停药消退，不再恢复该剂量；目前已证实耐受的低剂量未达标时维持最大耐受剂量并加用非他汀药。症状有明确其他原因或再激发耐受良好者不据此限制加量。: 'Clinic
+    statin review policy: if a higher dose of the same statin previously caused muscle pain with CK above 10 times
+    the upper limit of normal, with no secondary cause and resolution after withdrawal, do not resume that dose.
+    If the lower, confirmed tolerated dose does not achieve the target, retain the maximally tolerated dose and
+    add a non-statin medicine. Symptoms with a clear alternative cause or a well-tolerated rechallenge do not establish
+    a limit on dose escalation.'
+  p3.rule.safety_course: Before changing treatment, review current control, medicine taking, symptom onset and current
+    course, and previously tolerated doses together. Address actionable adverse effects or excessive treatment first;
+    low coverage must not justify continuing an unsafe regimen. A resolved isolated symptom is not an ongoing adverse
+    effect. Gliclazide-associated hypoglycaemia still requires review after the episode has resolved.
+  p3.note: Recommendations require a doctor's review before implementation. Days are relative to day 0 in this dataset;
+    negative days refer to chronic disease records held by the hospital before day 0.
+  p3.hist.cause.none_renal: No dehydration, NSAID use, potassium supplementation or other concomitant medication
+    changes identified
+  p3.hist.cause.none_statin: No exercise, hypothyroidism or other precipitant identified
+  p3.hist.cause.hiking: Recent long-distance hiking; muscle symptoms resolved with rest
+  p3.hist.event.assisted: Consciousness and responsiveness were impaired; unable to eat unaided. Family gave sugar
+    and emergency personnel administered glucose
+  p3.hist.event.self_treated: Ate without assistance; no change in consciousness or help from others
+  p3.hist.symptom.cold_fatigue_resolved: Cold intolerance and fatigue at the time; subsequent review documented
+    symptom resolution
+  p3.hist.dechallenge.ck_normal: Symptoms and CK returned to normal
+  p3.hist.rechallenge.lower_tolerated: That dose was not used again; a lower dose was tolerated long term
+  p3.hist.rechallenge.same_tolerated: The original dose was tolerated on reintroduction
+  p3.hist.course.statin_recovered: Recovered after stopping treatment; subsequently tolerated atorvastatin 10 mg
+    daily long term, with no renal injury.
+  p3.context.food_relieved: Symptoms resolved after eating during that episode; the prescription has not yet been
+    changed
+  下午突然发虚冒汗、手抖，喝了糖水缓解: Sudden afternoon weakness, sweating and trembling; relieved by a sugary drink
+  p3.administration.calcium: Takes a calcium carbonate supplement daily. Actual levothyroxine and calcium administration
+    times were recorded at this medication review; this schedule has not changed recently.
+  p3.hist.course.amlodipine_tolerated: Continued treatment after the previous adjustment; no ankle swelling or other
+    discomfort reported at follow-up.
+  脚踝发胀: Ankle swelling
+  水肿: Oedema
+  脚背肿: Swelling over the top of the foot
+  脚踝: Ankle
+  脚背: Top of the foot
+  p3.menu.administration_record: Actual administration times recorded at medication reconciliation
+  p3.menu.medication_instructions: Medication and review instructions supplied with the prescription
+  p3.med.calcium: Calcium carbonate supplement, taken daily
+  p3.rule.ae.predating: Symptoms that began before treatment are not attributed to this drug.
+  ? 既往加量后出现高钾或肌酐明显升高、排除其他原因，退回原剂量后恢复者，停在已耐受剂量；未达标时加用其他药。格列齐特曾发生需他人救助的严重低血糖者不再加量，复核方案并考虑更低低血糖风险药物。由原始化验、处方和事件时间线核对；不能仅凭旧症状认定剂量限制。
+  : If a previous dose increase caused hyperkalaemia or a marked creatinine rise, other causes were excluded and
+    the results recovered after returning to the previous dose, retain the tolerated dose; add another medicine
+    if the target remains unmet. After severe hypoglycaemia requiring assistance with gliclazide, do not increase
+    the dose further; review the regimen and consider a medicine with a lower hypoglycaemia risk. Check the original
+    laboratory results, prescriptions and event timeline; old symptoms alone cannot establish a dose limitation.

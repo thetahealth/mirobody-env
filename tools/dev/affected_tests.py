@@ -17,6 +17,7 @@ COMPONENTS = {
     "app": ("src/haenv/app", "src/haenv/cli.py", "src/haenv/job.py"),
     "contracts": ("src/haenv/contracts",),
     "guards": (),
+    "i18n_en": ("registry/i18n/en",),
     "interaction": ("src/haenv/interaction",),
     "interaction/query": ("src/haenv/interaction/query",),
     "judges": ("src/haenv/judges",),

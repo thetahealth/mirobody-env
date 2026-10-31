@@ -44,6 +44,10 @@ def parser_for(maintenance: set[str], twin_ops: list[str]) -> argparse.ArgumentP
     ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
                     help="override one configuration value after config.local.yaml and the overlay "
                          "(dotted key, YAML value; repeatable), e.g. --set eval.workers=4")
+    ap.add_argument("--lang", choices=["en", "zh"], default=None,
+                    help="language of the records, questions and judge prompts of a new batch "
+                         "(default: job `language`, then config `language`, then en). A built batch "
+                         "keeps its language; `run` and `report` follow it")
     ap.add_argument("--offline", action="store_true",
                     help="run only the offline deterministic reference (no real model calls); for smoke tests/CI")
     ap.add_argument("--no-semantic", action="store_true", help="skip semantic judging; report code scores only")

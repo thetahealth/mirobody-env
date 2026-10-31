@@ -46,6 +46,23 @@ The default kernel is the `haenv_kernel` namespace imported from the executing s
 installation, independently of resource overrides. An explicit comparison path must exist;
 it never selects another path when missing and does not switch the executing implementation.
 
+### Language
+
+Records, questions and judge prompts are in English by default. To build a Chinese batch, use
+`--lang zh` with `haenv`, `language: zh` in the job file or `config.yaml`, or `HAENV_LANG=zh`.
+The first of these that is set wins, in that order. `tools/generation/make_pack.py` passes
+`HAENV_LANG` to the build:
+
+```bash
+uv run haenv run benchmarks/inputs/example-ew.job.yaml --offline --fresh --lang zh
+HAENV_LANG=zh uv run --with scikit-learn --with joblib python tools/generation/make_pack.py --pack p4 --n 50 --out artifacts/lab-smoke-zh
+```
+
+A built batch keeps its language: resuming, `run` and `report` follow it, and a conflicting
+`--lang` is refused. The same seed gives the same world in both languages, so a zh and an en
+build of one pack share case IDs, gold answers and `world_sha`. Compare scores within one
+language. Batches without a recorded language, such as all 1.3.x batches, are read as Chinese.
+
 ## 2. What can be reproduced for free
 
 Saved reports and receipts can be replayed without new model calls. Explicit legacy
@@ -135,7 +152,10 @@ Re-score the released diagnosis answers and recompute the pooled results offline
 python tools/evaluation/reask_pooled.py --check
 ```
 
-Expected summary: `61 facts matched; 535 answers re-scored; 0 D mismatches`.
+Expected summary: `61 facts matched; 535 answers re-scored; 20 registered 1.4 matcher differences; 0 other D mismatches`.
+The released facts are computed from the stored outcomes. Re-scoring uses the current
+diagnosis judge, whose 1.4 answer-equivalence rules and judging names accept 20 stored answers that 1.3.1
+scored wrong; `matcher-drift-1.4.json` lists them, and any other difference fails the check.
 The [released data and conditions](../benchmarks/results/1.3.1/reask/README.md) include
 the stored answers, inclusion list and diagnosis gold. A new `haenv reask` run selects its
 own units; see the [re-asking guide](reask.md) for the input contract and arm definitions.

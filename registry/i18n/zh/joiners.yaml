@@ -1,0 +1,8 @@
+# Separators of `J(key, items)` (haenv.i18n.text).
+sentences: ""
+semicolon: "；"
+lines: "\n"
+slash: " / "
+enum: "、"
+space: " "
+m2.report_separator: ";"

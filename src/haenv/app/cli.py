@@ -431,6 +431,15 @@ def _main(argv=None) -> int:
     from haenv import output_root as _out_root
     job = load_job(_job_path, root=_out_root())
     job.allow_retired = bool(a.allow_retired)
+    # Language of the batch's text (`haenv.i18n`): a new batch takes `--lang` > job > config > en;
+    # a reused batch keeps the language it was built in (checked below, once the batch is known).
+    import haenv.i18n as _i18n
+    from haenv.resources.yamlcache import load_yaml as _load_job_doc
+    try:
+        job.language = _i18n.resolve(cli=getattr(a, "lang", None),
+                                     job=_load_job_doc(Path(job.path)) if job.path else None, cfg=cfg)
+    except _i18n.LanguageError as e:
+        print(f"[haenv] {e}"); return 2
     # Applied after loading, so the flag overrides the job file.
     if a.physio is not None:
         import haenv.world.generation.world_knobs as _ev_sw
@@ -510,6 +519,15 @@ def _main(argv=None) -> int:
         print(f"[haenv] this job has no batch artefacts yet; run `run` first."); return 2
     print(f"[haenv] batch {job.batch} ({'new' if is_new else 'reused, resuming'})"
           f" · details directory {_rel(job.results_dir)}")
+    from haenv.i18n.runtime import require_assets, select_batch_language
+    from haenv.i18n.text import MissingText
+    try:
+        if not is_new:
+            job.language = select_batch_language([job.results_dir], requested=getattr(a, 'lang', None))
+        _i18n.set_current(job.language if not is_new else _i18n.CANONICAL)
+        require_assets(job.language)
+    except (_i18n.LanguageError, MissingText) as e:
+        print(f"[haenv] {type(e).__name__}: {e}"); return 2
 
     # ---- reuse the batch's cases, so what is scored and reported are the questions that were run ----
     from haenv.app.artifacts.store import load_cases
@@ -622,6 +640,7 @@ def _main(argv=None) -> int:
                             workers=_workers)
 
     # ---- generator: a model for the course and daily events, or deterministic ----
+    _i18n.set_current(_i18n.CANONICAL)
     syn = cfg.get("synth", {}) or {}
     gen_mode = a.gen or ("deterministic" if a.offline else syn.get("generator", "deterministic"))
     dispatch = None
@@ -706,6 +725,18 @@ def _main(argv=None) -> int:
         print(f"[haenv] question-generation LLM calls: {dispatch.n_calls} (cache hits {dispatch.n_hits})")
     if not built:
         print("[haenv] no usable cases (all blocked by the emission gate); stopping."); return 2
+
+    # ---- render: every text of the built world becomes text in the batch language ----
+    from haenv.i18n.render_case import render_built
+    _i18n.set_current(job.language)
+    try:
+        built = render_built(built, job.language)
+    except Exception as e:                                   # noqa: BLE001
+        from haenv.i18n.text import MissingText
+        if not isinstance(e, MissingText):
+            raise
+        print(f"[haenv] cannot render the batch in `{job.language}`: {e}"); return 2
+    print(f"[haenv] language: {job.language}")
 
     # ---- save the generated cases ----
     gen_tag = f"llm:{a.gen_model or _gen_model_of(syn)}" if dispatch else "deterministic"

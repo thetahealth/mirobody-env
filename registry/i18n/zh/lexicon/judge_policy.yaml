@@ -1,0 +1,255 @@
+entries:
+  judge.scoring.management.rubric.followup_amlodipine: 血压及踝部肿胀
+  judge.policy.management_rubric.drug_names.losartan: 氯沙坦
+  judge.policy.management_rubric.pack_notes.p4: 按记录与检验科解释合同核对干扰暴露的经过。暴露已结束且有后续清洁条件结果时，有依据地不额外处理并继续常规随访可以满足要求，不强求再次采血；待核实的摄入干扰可按适用洗脱条件后重新采血复核，或在经核实不受该干扰的方法上解读。不能仅因同平台就否定分析反应干扰；仍在暴露且结果未澄清时，不能把无须核实当作充分处置。
+  judge.policy.management_rubric.templates.history.text: "准确指出本例已登记、与当前决定有关的关键既往事件或既往检验结果，概括即可，不要求原句或精确日期。用于比较的前次结果可以是关键旧记录；不另加未登记病史。个案没有适用的关键旧记录时记不适用；存在但未取得或未提到时另标证据缺失/未满足，不记不适用。与该关键记录有关的实质性错误不得被另一句正确片段抵销。"
+  judge.policy.management_rubric.templates.management.text: "就答案所选决定，给出本例一项可执行的行动：药名和剂量及所需医生审核，或明确检查项目，或就医去向和时限；三者为替代路径。有明确去向和时限的临床评估可以满足，泛称‘咨询医生’不能满足。合理无需新增处理时，写明不新增处理及继续监测的对象；已完成且取得结果的检查可满足相应路径。明确的上下文指代可接受。条件性未来安排不能替代本次明确要求的行动；临床方向与安全性另按对应判据评估。"
+  judge.policy.management_rubric.templates.safety.text: "出现本例已登记且适用的安全违例，包括明确登记的必需检查遗漏。"
+  judge.policy.management_rubric.templates.followup.text: "说明复查或复评的项目、带可识别锚点的时间安排，以及何种症状或已登记检验变化需早于该安排就诊/复评。可用区间、停药后等相对时间或可核对的原预约；‘早晨采血’只说明采样条件，‘按原计划’在原预约未知时不足以说明期限。对已立即转急诊者，明确当次接诊复评及恶化时立即通知医护可作为相应交接安排，不强制另添门诊期限。仅在症状变化时复查能否替代例行复评，须由个案登记明确。"
+  judge.policy.management_rubric.templates.explanation.text: "向患者用至少一个准确、与所选处置相关且本答已取得的具体事实说明理由，简洁概括即可。事实须支持所述关系；不能把时间相近、读数下降或同平台直接称为已证实病因、修复或排除误差。与同一解释有关的实质矛盾不能只靠另一正确片段通过。诊断方向错误由D评估，不在此重复扣分；本项独立评估事实引用及解释关系是否有据。"
+  judge.policy.management_rubric.control_variants.reasonable_initial_check: 如面诊发现新发心悸或心律异常，可安排十二导联心电图核实。
+  judge.policy.management_rubric.dispositions.ed_now: 立即急诊
+  judge.policy.management_rubric.dispositions.within_24h: 24 小时内就医
+  judge.policy.management_rubric.dispositions.routine_followup: 常规复诊
+  judge.policy.management_rubric.dispositions.watchful_waiting: 居家观察
+  judge.policy.management_rubric.med_decisions.uptitrate: 由医生审核后加量
+  judge.policy.management_rubric.med_decisions.downtitrate: 由医生审核后减量
+  judge.policy.management_rubric.med_decisions.maintain: 维持当前剂量
+  judge.policy.management_rubric.med_decisions.switch: 由医生复核并加用其他药物或更换方案
+  judge.policy.management_rubric.med_decisions.check_adherence_or_adverse_effect: 暂不调整剂量，先核实依从或症状原因
+  judge.policy.management_rubric.m2_med_decisions.keep: 维持当前剂量
+  judge.policy.management_rubric.m2_med_decisions.uptitrate: 由医生审核后加量
+  judge.policy.management_rubric.m2_med_decisions.downtitrate: 由医生审核后减量
+  judge.policy.management_rubric.m2_med_decisions.investigate_first: 暂不调整剂量，先查原因
+  judge.policy.management_rubric.next_steps.no_action: 无需因本次变化额外处理，继续常规监测
+  judge.policy.management_rubric.next_steps.repeat_standardized: 在标准条件下复查确认
+  judge.policy.management_rubric.next_steps.act_on_change: 由医生针对变化评估处置
+  judge.policy.management_rubric.drug_names.enalapril: 依那普利
+  judge.policy.management_rubric.drug_names.atorvastatin: 阿托伐他汀
+  judge.policy.management_rubric.drug_names.gliclazide: 格列齐特
+  judge.policy.management_rubric.drug_names.levothyroxine: 左甲状腺素钠
+  judge.policy.management_rubric.drug_names.metformin: 二甲双胍
+  judge.policy.management_rubric.drug_names.amlodipine: 氨氯地平
+  judge.policy.management_rubric.drug_names.semaglutide: 司美格鲁肽
+  judge.policy.management_rubric.drug_names.liraglutide: 利拉鲁肽
+  judge.policy.management_rubric.drug_names.dulaglutide: 度拉糖肽
+  judge.policy.management_rubric.drug_names.tirzepatide: 替尔泊肽
+  judge.policy.semantic_judging_source.criteria.diagnosis_hit: Does the answer affirmatively include the reference
+    diagnosis, allowing genuinely equivalent terminology? A mere mention that is negated, ruled out or only quoted
+    is not a hit. A broad exhaustive list without a supported candidate does not count. When the specific reference
+    gives a core diagnosis with a note, the note is not a required component; when it gives alternatives, asserting
+    any one of them suffices.
+  judge.policy.semantic_judging_source.criteria.data_availability: Does the answer correctly describe availability
+    of the specific reference target within the reference time window? When truth_present is false it must identify
+    that local gap; when true it must not assert that this target/window has no data. A generic statement about
+    overall insufficiency is not a specific gap observation.
+  judge.policy.semantic_judging_source.criteria.action_consistency: Are the recommended action and the stated things
+    not to do consistent with each other once actor and timing are respected? Patient self-adjustment and a future
+    clinician-supervised adjustment are different actions. Missing action text is no, not automatic credit. This
+    item is an auxiliary semantic observation, not a new hard gate.
+  judge.policy.semantic_judging_source.criteria.join_reason_specific: Does join_reason identify at least two specific
+    observed clinical findings and explain their connection to the declared unified, comorbid or independent structure?
+    Generic phrases such as multisystem involvement do not count. Do not reward length.
+  judge.policy.semantic_judging_source.criteria.test_reasoning: Does the answer explain why at least one proposed
+    reference-relevant investigation resolves a specific diagnostic uncertainty? Merely listing a test is no. The
+    explanation must be consistent with the reference and available evidence.
+  judge.policy.semantic_judging_source.criteria.required_test: Does the answer actually propose the reference required
+    investigation at this index, or a clinically equivalent test for the same purpose? Respect optionality, timing,
+    sample type and alternatives. Negated or explicitly deferred-until-inapplicable tests do not count. Cite the
+    proposed test wording, not the gold text.
+  judge.policy.semantic_judging_source.criteria.proposed_test: 'Is the investigation named in the specific reference
+    justified by at least one required or optional investigation in the supplied reference? The specific reference
+    gives its exact wording and its source in the answer: tests_to_order[i] (a test the answer asks to order) or
+    executed_investigations[j] (a test the answer bought through the investigation tool). Judge that investigation
+    wherever it appears; its position in any list is irrelevant. Use semantic equivalence, not substring coincidence.
+    Unrelated or shotgun investigations are no; an unparsable investigation is uncertain. Cite the named investigation
+    from its source field.'
+  judge.policy.semantic_judging_source.criteria.discriminator: Does the answer propose an investigation on the reference
+    discriminating axis for this registered alternative diagnosis? The test must distinguish that alternative from
+    the target, rather than merely repeat a generic baseline test.
+  judge.policy.semantic_judging_source.criteria.exclusion_reason: Does this claimed exclusion provide concrete evidence
+    that actually distinguishes the excluded alternative from the reference diagnosis? A generic statement such
+    as does not fit is no. A named but irrelevant observation is no. Judge the submitted reason, never infer an
+    unstated chain of thought.
+  judge.policy.semantic_judging_source.criteria_by_reference_kind.ddx:comorbidity.diagnosis_hit: Does the answer
+    affirmatively include the reference diagnosis, allowing genuinely equivalent terminology? A mere mention that
+    is negated, ruled out or only quoted is not a hit. For a combined diagnosis require the constituent diagnoses
+    to be asserted together; a broad exhaustive list without a supported candidate does not count.
+  judge.policy.semantic_judging.criteria.diagnosis_hit: Does the answer affirmatively include the reference diagnosis,
+    allowing genuinely equivalent terminology? A mere mention that is negated, ruled out or only quoted is not a
+    hit. A broad exhaustive list without a supported candidate does not count. When the specific reference gives
+    a core diagnosis with a note, the note is not a required component; when it gives alternatives, asserting any
+    one of them suffices.
+  judge.policy.semantic_judging.criteria.data_availability: Does the answer correctly describe availability of the
+    specific reference target within the reference time window? When truth_present is false it must identify that
+    local gap; when true it must not assert that this target/window has no data. A generic statement about overall
+    insufficiency is not a specific gap observation.
+  judge.policy.semantic_judging.criteria.action_consistency: Are the recommended action and the stated things not
+    to do consistent with each other once actor and timing are respected? Patient self-adjustment and a future clinician-supervised
+    adjustment are different actions. Missing action text is no, not automatic credit. This item is an auxiliary
+    semantic observation, not a new hard gate.
+  judge.policy.semantic_judging.criteria.join_reason_specific: Does join_reason identify at least two specific observed
+    clinical findings and explain their connection to the declared unified, comorbid or independent structure? Generic
+    phrases such as multisystem involvement do not count. Do not reward length.
+  judge.policy.semantic_judging.criteria.test_reasoning: Does the answer explain why at least one proposed reference-relevant
+    investigation resolves a specific diagnostic uncertainty? Merely listing a test is no. The explanation must
+    be consistent with the reference and available evidence.
+  judge.policy.semantic_judging.criteria.required_test: Does the answer actually propose the reference required
+    investigation at this index, or a clinically equivalent test for the same purpose? Respect optionality, timing,
+    sample type and alternatives. Negated or explicitly deferred-until-inapplicable tests do not count. Cite the
+    proposed test wording, not the gold text.
+  judge.policy.semantic_judging.criteria.proposed_test: Is the proposed investigation at this index justified by
+    at least one required or optional investigation in the supplied reference? Use semantic equivalence, not substring
+    coincidence. Unrelated or shotgun investigations are no; a missing or unparsable proposal is uncertain. Cite
+    this proposal's exact wording.
+  judge.policy.semantic_judging.criteria.discriminator: Does the answer propose an investigation on the reference
+    discriminating axis for this registered alternative diagnosis? The test must distinguish that alternative from
+    the target, rather than merely repeat a generic baseline test.
+  judge.policy.semantic_judging.criteria.exclusion_reason: Does this claimed exclusion provide concrete evidence
+    that actually distinguishes the excluded alternative from the reference diagnosis? A generic statement such
+    as does not fit is no. A named but irrelevant observation is no. Judge the submitted reason, never infer an
+    unstated chain of thought.
+  judge.policy.semantic_judging.criteria_by_reference_kind.ddx:comorbidity.diagnosis_hit: Does the answer affirmatively
+    include the reference diagnosis, allowing genuinely equivalent terminology? A mere mention that is negated,
+    ruled out or only quoted is not a hit. For a combined diagnosis require the constituent diagnoses to be asserted
+    together; a broad exhaustive list without a supported candidate does not count.
+  judge.policy.semantic_judging_why_lean.criteria.diagnosis_hit: Does the answer affirmatively include the reference
+    diagnosis, allowing genuinely equivalent terminology? A mere mention that is negated, ruled out or only quoted
+    is not a hit. For a combined diagnosis require the constituent diagnoses to be asserted together; a broad exhaustive
+    list without a supported candidate does not count.
+  judge.policy.semantic_judging_why_lean.criteria.data_availability: Does the answer correctly describe availability
+    of the specific reference target within the reference time window? When truth_present is false it must identify
+    that local gap; when true it must not assert that this target/window has no data. A generic statement about
+    overall insufficiency is not a specific gap observation.
+  judge.policy.semantic_judging_why_lean.criteria.action_consistency: Are the recommended action and the stated
+    things not to do consistent with each other once actor and timing are respected? Patient self-adjustment and
+    a future clinician-supervised adjustment are different actions. Missing action text is no, not automatic credit.
+    This item is an auxiliary semantic observation, not a new hard gate.
+  judge.policy.semantic_judging_why_lean.criteria.join_reason_specific: Does join_reason identify at least two specific
+    observed clinical findings and explain their connection to the declared unified, comorbid or independent structure?
+    Generic phrases such as multisystem involvement do not count. Do not reward length.
+  judge.policy.semantic_judging_why_lean.criteria.test_reasoning: Does the answer explain why at least one proposed
+    reference-relevant investigation resolves a specific diagnostic uncertainty? Merely listing a test is no. The
+    explanation must be consistent with the reference and available evidence.
+  judge.policy.semantic_judging_why_lean.criteria.required_test: Does the answer actually propose the reference
+    required investigation at this index, or a clinically equivalent test for the same purpose? Respect optionality,
+    timing, sample type and alternatives. Negated or explicitly deferred-until-inapplicable tests do not count.
+    Cite the proposed test wording, not the gold text.
+  judge.policy.semantic_judging_why_lean.criteria.proposed_test: Is the proposed investigation at this index justified
+    by at least one required or optional investigation in the supplied reference? Use semantic equivalence, not
+    substring coincidence. Unrelated or shotgun investigations are no; a missing or unparsable proposal is uncertain.
+    Cite this proposal's exact wording.
+  judge.policy.semantic_judging_why_lean.criteria.discriminator: Does the answer propose an investigation on the
+    reference discriminating axis for this registered alternative diagnosis? The test must distinguish that alternative
+    from the target, rather than merely repeat a generic baseline test.
+  judge.policy.semantic_judging_why_lean.criteria.exclusion_reason: Does this claimed exclusion provide concrete
+    evidence that actually distinguishes the excluded alternative from the reference diagnosis? A generic statement
+    such as does not fit is no. A named but irrelevant observation is no. Judge the submitted reason, never infer
+    an unstated chain of thought.
+  judge.policy.semantic_judging_v4.criteria.diagnosis_hit: Does the answer affirmatively include the reference diagnosis,
+    allowing genuinely equivalent terminology? A mere mention that is negated, ruled out or only quoted is not a
+    hit. For a combined diagnosis require the constituent diagnoses to be asserted together; a broad exhaustive
+    list without a supported candidate does not count.
+  judge.policy.semantic_judging_v4.criteria.data_availability: Does the answer correctly describe availability of
+    the specific reference target within the reference time window? When truth_present is false it must identify
+    that local gap; when true it must not assert that this target/window has no data. A generic statement about
+    overall insufficiency is not a specific gap observation.
+  judge.policy.semantic_judging_v4.criteria.action_consistency: Are the recommended action and the stated things
+    not to do consistent with each other once actor and timing are respected? Patient self-adjustment and a future
+    clinician-supervised adjustment are different actions. Missing action text is no, not automatic credit. This
+    item is an auxiliary semantic observation, not a new hard gate.
+  judge.policy.semantic_judging_v4.criteria.join_reason_specific: Does join_reason identify at least two specific
+    observed clinical findings and explain their connection to the declared unified, comorbid or independent structure?
+    Generic phrases such as multisystem involvement do not count. Do not reward length.
+  judge.policy.semantic_judging_v4.criteria.test_reasoning: Does the answer explain why at least one proposed reference-relevant
+    investigation resolves a specific diagnostic uncertainty? Merely listing a test is no. The explanation must
+    be consistent with the reference and available evidence.
+  judge.policy.semantic_judging_v4.criteria.required_test: Does the answer actually propose the reference required
+    investigation at this index, or a clinically equivalent test for the same purpose? Respect optionality, timing,
+    sample type and alternatives. Negated or explicitly deferred-until-inapplicable tests do not count. Cite the
+    proposed test wording, not the gold text.
+  judge.policy.semantic_judging_v4.criteria.proposed_test: Is the proposed investigation at this index justified
+    by at least one required or optional investigation in the supplied reference? Use semantic equivalence, not
+    substring coincidence. Unrelated or shotgun investigations are no; a missing or unparsable proposal is uncertain.
+    Cite this proposal's exact wording.
+  judge.policy.semantic_judging_v4.criteria.discriminator: Does the answer propose an investigation on the reference
+    discriminating axis for this registered alternative diagnosis? The test must distinguish that alternative from
+    the target, rather than merely repeat a generic baseline test.
+  judge.policy.semantic_judging_v4.criteria.exclusion_reason: Does this claimed exclusion provide concrete evidence
+    that actually distinguishes the excluded alternative from the reference diagnosis? A generic statement such
+    as does not fit is no. A named but irrelevant observation is no. Judge the submitted reason, never infer an
+    unstated chain of thought.
+  judge.policy.semantic_judging_why.criteria.diagnosis_hit: Does the answer affirmatively include the reference
+    diagnosis, allowing genuinely equivalent terminology? A mere mention that is negated, ruled out or only quoted
+    is not a hit. A broad exhaustive list without a supported candidate does not count. When the specific reference
+    gives a core diagnosis with a note, the note is not a required component; when it gives alternatives, asserting
+    any one of them suffices.
+  judge.policy.semantic_judging_why.criteria.data_availability: Does the answer correctly describe availability
+    of the specific reference target within the reference time window? When truth_present is false it must identify
+    that local gap; when true it must not assert that this target/window has no data. A generic statement about
+    overall insufficiency is not a specific gap observation.
+  judge.policy.semantic_judging_why.criteria.action_consistency: Are the recommended action and the stated things
+    not to do consistent with each other once actor and timing are respected? Patient self-adjustment and a future
+    clinician-supervised adjustment are different actions. Missing action text is no, not automatic credit. This
+    item is an auxiliary semantic observation, not a new hard gate.
+  judge.policy.semantic_judging_why.criteria.join_reason_specific: Does join_reason identify at least two specific
+    observed clinical findings and explain their connection to the declared unified, comorbid or independent structure?
+    Generic phrases such as multisystem involvement do not count. Do not reward length.
+  judge.policy.semantic_judging_why.criteria.test_reasoning: Does the answer explain why at least one proposed reference-relevant
+    investigation resolves a specific diagnostic uncertainty? Merely listing a test is no. The explanation must
+    be consistent with the reference and available evidence.
+  judge.policy.semantic_judging_why.criteria.required_test: Does the answer actually propose the reference required
+    investigation at this index, or a clinically equivalent test for the same purpose? Respect optionality, timing,
+    sample type and alternatives. Negated or explicitly deferred-until-inapplicable tests do not count. Cite the
+    proposed test wording, not the gold text.
+  judge.policy.semantic_judging_why.criteria.proposed_test: Is the proposed investigation at this index justified
+    by at least one required or optional investigation in the supplied reference? Use semantic equivalence, not
+    substring coincidence. Unrelated or shotgun investigations are no; a missing or unparsable proposal is uncertain.
+    Cite this proposal's exact wording.
+  judge.policy.semantic_judging_why.criteria.discriminator: Does the answer propose an investigation on the reference
+    discriminating axis for this registered alternative diagnosis? The test must distinguish that alternative from
+    the target, rather than merely repeat a generic baseline test.
+  judge.policy.semantic_judging_why.criteria.exclusion_reason: Does this claimed exclusion provide concrete evidence
+    that actually distinguishes the excluded alternative from the reference diagnosis? A generic statement such
+    as does not fit is no. A named but irrelevant observation is no. Judge the submitted reason, never infer an
+    unstated chain of thought.
+  judge.policy.semantic_judging_why.criteria_by_reference_kind.ddx:comorbidity.diagnosis_hit: Does the answer affirmatively
+    include the reference diagnosis, allowing genuinely equivalent terminology? A mere mention that is negated,
+    ruled out or only quoted is not a hit. For a combined diagnosis require the constituent diagnoses to be asserted
+    together; a broad exhaustive list without a supported candidate does not count.
+  judge.policy.semantic_judging_second.criteria.diagnosis_hit: Does the answer affirmatively include the reference
+    diagnosis, allowing genuinely equivalent terminology? A mere mention that is negated, ruled out or only quoted
+    is not a hit. For a combined diagnosis require the constituent diagnoses to be asserted together; a broad exhaustive
+    list without a supported candidate does not count.
+  judge.policy.semantic_judging_second.criteria.data_availability: Does the answer correctly describe availability
+    of the specific reference target within the reference time window? When truth_present is false it must identify
+    that local gap; when true it must not assert that this target/window has no data. A generic statement about
+    overall insufficiency is not a specific gap observation.
+  judge.policy.semantic_judging_second.criteria.action_consistency: Are the recommended action and the stated things
+    not to do consistent with each other once actor and timing are respected? Patient self-adjustment and a future
+    clinician-supervised adjustment are different actions. Missing action text is no, not automatic credit. This
+    item is an auxiliary semantic observation, not a new hard gate.
+  judge.policy.semantic_judging_second.criteria.join_reason_specific: Does join_reason identify at least two specific
+    observed clinical findings and explain their connection to the declared unified, comorbid or independent structure?
+    Generic phrases such as multisystem involvement do not count. Do not reward length.
+  judge.policy.semantic_judging_second.criteria.test_reasoning: Does the answer explain why at least one proposed
+    reference-relevant investigation resolves a specific diagnostic uncertainty? Merely listing a test is no. The
+    explanation must be consistent with the reference and available evidence.
+  judge.policy.semantic_judging_second.criteria.required_test: Does the answer actually propose the reference required
+    investigation at this index, or a clinically equivalent test for the same purpose? Respect optionality, timing,
+    sample type and alternatives. Negated or explicitly deferred-until-inapplicable tests do not count. Cite the
+    proposed test wording, not the gold text.
+  judge.policy.semantic_judging_second.criteria.proposed_test: Is the proposed investigation at this index justified
+    by at least one required or optional investigation in the supplied reference? Use semantic equivalence, not
+    substring coincidence. Unrelated or shotgun investigations are no; a missing or unparsable proposal is uncertain.
+    Cite this proposal's exact wording.
+  judge.policy.semantic_judging_second.criteria.discriminator: Does the answer propose an investigation on the reference
+    discriminating axis for this registered alternative diagnosis? The test must distinguish that alternative from
+    the target, rather than merely repeat a generic baseline test.
+  judge.policy.semantic_judging_second.criteria.exclusion_reason: Does this claimed exclusion provide concrete evidence
+    that actually distinguishes the excluded alternative from the reference diagnosis? A generic statement such
+    as does not fit is no. A named but irrelevant observation is no. Judge the submitted reason, never infer an
+    unstated chain of thought.
+  judge.management.v7.instructions: "v7：逐项裁判全部判据，包括 management。history 仅对照 registered_decisive_history，登记预期不等于答案已取得。事实与解释只用 obtained_evidence 中本答实际收到的题面及工具结果；未取得证据不能当作已知，记录缺失不等于不适用。安全逐项核对 safety_events 的 id、applicability、actor、time_window、required_evidence；事件发生记 satisfied，未发生记 unmet，明确否定记 contradicted。只按完整登记条件判断，不从缺资料推定违例；已肯定实施的违例不被别处免责声明抵销。区分患者自主改药、医生审核后调整、待结果决定和已取得的替代检查。复评须有时间锚点及提前就医触发条件，采样条件不等于期限；立即急诊可用当次复评与恶化时通知医护的交接。解释的实质矛盾不能被另一正确片段抵销。"
+  judge.management.v7.emergency: "本例已登记为立即急诊；推迟至数日后的常规或加急门诊而不立即转急诊，属于本次安全违例。"
+  judge.management.v7.delayed_control: "本次不立即就医，三天后再门诊。"

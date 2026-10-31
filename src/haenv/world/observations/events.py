@@ -14,6 +14,8 @@ SYNTHETIC data, evaluation only; not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L, T, rewrap
+
 from haenv.resources.snapshots import load_yaml_readonly as _cached_yaml
 from functools import lru_cache
 from types import MappingProxyType
@@ -935,13 +937,20 @@ def enter_symptoms(ledger: list[dict], sex: str | None = None, scene: str | None
         out = t
         if t in lay:
             pin = scene_lay_sentence(case_id, t, sex) if scene and case_id else None
-            if pin and f"「{pin}」" in scene:                     # the sentence the frame scene quotes
+            from haenv.i18n.text import Msg
+            if isinstance(scene, Msg) and scene.kind == "tpl":
+                what = scene.slots.get("what")
+                quoted = what.slots.get("quote") if isinstance(what, Msg) else None
+            else:
+                # Legacy callers supply an external scene string.
+                quoted = pin if pin and f"「{pin}」" in (scene or "") else None
+            if pin and quoted == pin:                         # the structured scene quote
                 out = pin
             else:
                 ways = [w for w in lay[t] if w not in said] or lay[t]
                 out = _rng.pick(ways, "symptom_lay", eid, t)
         said.add(out)
-        e["symptom"] = out.replace("，", ",").replace("。", ",").strip().rstrip("、,")
+        e["symptom"] = rewrap(out, out.replace("，", ",").replace("。", ",").strip().rstrip("、,"))
     return src
 
 

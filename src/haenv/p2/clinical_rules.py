@@ -1,5 +1,6 @@
 """P2-only rule/table extension; common hospital-library inputs retain their bytes."""
 from copy import deepcopy
+from haenv.i18n.text import L
 from haenv.p2 import rules as R
 from haenv.resources.regpath import load_registry
 from haenv.resources.regpath import registry_cached
@@ -14,6 +15,7 @@ def table():
         if key == "rules":
             for rule in value:
                 rule = dict(rule)
+                rule["printed"] = L(rule["printed"])
                 before = rule.pop("before")
                 base[key].insert(next(i for i, r in enumerate(base[key]) if r["id"] == before), rule)
         elif key == "tiers":
@@ -39,10 +41,15 @@ def assess(block):
         rid = "R0a_head_anticoag"
     elif r["chemo_unwell"]:
         rid = "R0b_chemo_unwell"
+    elif r["relative_hypotension"] and result["rule"] not in (
+            "R1_news2_high", "R2_news2_medium", "R3a_single3_vital"):
+        rid = "R3d_relative_hypotension"
     elif (result["rule"] == "R10_news2_low" and r["stable_rate"] and r["news2"] == 1
           and any(lo <= block["home_check_today"]["heart_rate_bpm"] <= hi
                   for lo, hi, points in table()["news2"]["hr"] if points == 1 and hi < 90)):
         rid = "R10a_stable_rate"
+    elif result["rule"] == "R10_news2_low" and r["infection_medium_risk"]:
+        rid = "R10b_infection_medium_risk"
     else:
         return result
     accepted = list(R.rule_of(rid)["set"])

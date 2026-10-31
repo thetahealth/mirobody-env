@@ -8,7 +8,7 @@ titration with four evenly placed adherence readings:
 * the primary dose climbs the ladder at irregular intervals; after titration a course has at
   most one dose-down episode (a step back to the previous rung, or a hold at 0), then a restart
   or a stay at the lower rung. Each episode moves in one direction: a dose does not bounce
-  between two rungs (real prescribing records show dose-downs, 674 : 557 up to down in coronary
+  between two rungs (real prescribing records show dose-downs, 462 : 390 up to down in coronary
   disease outpatients, but not a back-and-forth every one to two months);
 * adherence readings come on irregular days, in a random number, with measurement error; a
   long stretch without a reading is common, and some readings dip briefly and recover (a missed
@@ -32,7 +32,10 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L, T
+
 import math
+from functools import lru_cache
 
 from haenv.resources.regpath import registry_cached as _registry_cached
 from haenv.world.generation.rng import unit
@@ -528,6 +531,51 @@ def practice_course(case_id: str, drug: str, ladder: tuple[float, ...], course_e
     return pts + [{"ts": end_rec, "value": ladder[k]}]
 
 
+@lru_cache(maxsize=512)
+def _dated_background_levels(drug, points, sig, end):
+    """One response path across day zero, using the existing kinetic constants.
+
+    Short records retain their declared day-zero steady-state initialization.
+    With a dated past, a recent start/stop must not reset to steady state at zero.
+    The cached path is private and never modified by callers.
+    """
+    if not points or min(d for d, _ in points) >= 0:
+        return None
+    import haenv.world.clinical.drug_effects as de
+    pts = [{"ts": d, "value": v} for d, v in points]
+    start = min(d for d, _ in points)
+    x = a = 0.0
+    path = {}
+    if sig in BP_SIGNALS and drug in BP_STANDARD_DOSE:
+        k = 1.0 - 0.5 ** (1.0 / BP_HALF_TIME_DAYS)
+        drive = lambda d: bp_lowering(drug, dose_at(pts, d), sig)
+    elif sig == "LDL" and drug in STATINS:
+        from haenv.world.labworld.meds import drug as drug_table
+        k = 1.0 - math.exp(-1.0 / float(drug_table(drug)["tau_truth_days"]))
+        drive = lambda d: _statin_effect(drug, dose_at(pts, d))
+    elif sig in de.EFFECT_FIELDS:
+        k = 1.0 - 0.5 ** (1.0 / de.HALF_TIME_DAYS["glucose"])
+        ka = 1.0 - 0.5 ** (1.0 / de.HALF_TIME_DAYS["HbA1c"])
+        drive = lambda d: float(dose_at(pts, d) > 0)
+    else:
+        return None
+    for d in range(start, end + 1):
+        x += k * (drive(d) - x)
+        if sig in de.EFFECT_FIELDS:
+            a += ka * (x - a)
+        path[d] = a if sig == "HbA1c" else x
+    return path
+
+
+def _background_levels(drug, pts, sig, day):
+    points = tuple(sorted((int(p["ts"]), float(p["value"])) for p in pts))
+    end = max([0, int(day), *(d for d, _ in points)])
+    path = _dated_background_levels(drug, points, sig, end)
+    if path is None:
+        return None
+    return path.get(int(day), 0.0), path[0]
+
+
 def prefix_increments(sig: str, days, concurrent: list[dict], per_kg: float, atten: float, cohort,
                       base: float | None, hba1c_base: float | None = None) -> dict[int, float]:
     """`{day: increment}` of `sig` on record days before day 0, relative to its day-0 value: each background
@@ -545,6 +593,20 @@ def prefix_increments(sig: str, days, concurrent: list[dict], per_kg: float, att
         if not pts:
             continue
         drug = str(m["drug"])
+        levels = [_background_levels(drug, pts, sig, d) for d in days]
+        if levels and levels[0] is not None:
+            if sig in BP_SIGNALS and drug in BP_STANDARD_DOSE:
+                for d, (x, x0) in zip(days, levels):
+                    out[d] -= x - x0
+            elif sig in de.EFFECT_FIELDS and de.applies_to(cohort):
+                full = de.direct_effect(drug, per_kg, atten, None, sig) or 0.0
+                full *= de.baseline_factor(drug, hba1c_base)
+                for d, (x, x0) in zip(days, levels):
+                    out[d] += full * (x - x0)
+            elif sig == "LDL" and drug in STATINS and base is not None:
+                for d, (x, x0) in zip(days, levels):
+                    out[d] += float(base) * (math.exp(-(x - x0)) - 1.0)
+            continue
         start = min(days[0], int(pts[0]["ts"])) - 200
         if sig in BP_SIGNALS and BP_STANDARD_DOSE.get(drug) is not None:
             k = 1.0 - 0.5 ** (1.0 / BP_HALF_TIME_DAYS)
@@ -610,7 +672,7 @@ def record_rows(world_medication: dict | None, lo: int, hi: int, skip=(), overla
         pts = sorted(m.get("dose_timeline") or (), key=lambda x: int(x["ts"]))
         before = dose_at(pts, int(lo) - 1)
         if before > 0:
-            out.append({"day": int(lo), "drug": nm, "event": f"长期服用 {before:g} {unit_}（记录起点前已在用）"})
+            out.append({"day": int(lo), "drug": nm, "event": T("med.event.before_record", dose=f"{before:g}", unit=unit_)})
         prev, seen = before, before > 0
         for i, q in enumerate(pts):
             d, v = int(q["ts"]), float(q["value"])
@@ -621,14 +683,14 @@ def record_rows(world_medication: dict | None, lo: int, hi: int, skip=(), overla
             if v == prev:
                 continue
             if not prev:
-                row = {"event": f"{'恢复' if seen else '起用'} {v:g} {unit_}",
+                row = {"event": T("med.event.restart" if seen else "med.event.start", dose=f"{v:g}", unit=unit_),
                        "reason": why.get("back", "") if seen else ind_names.get(str(m.get("indication") or ""), "")}
             elif not v:
                 later = any(float(x["value"]) > 0 for x in pts[i + 1:])
-                row = ({"event": f"暂停（原剂量 {prev:g} {unit_}）", "reason": why.get("hold", "")} if later else
-                       {"event": f"停用（原剂量 {prev:g} {unit_}）", "reason": why.get("stop") or why.get("hold", "")})
+                row = ({"event": T("med.event.hold", dose=f"{prev:g}", unit=unit_), "reason": why.get("hold", "")} if later else
+                       {"event": T("med.event.stop", dose=f"{prev:g}", unit=unit_), "reason": why.get("stop") or why.get("hold", "")})
             else:
-                row = {"event": f"剂量 {prev:g} → {v:g}", "reason": why["up"] if v > prev else why["down"]}
+                row = {"event": T("med.event.dose_change", prev=f"{prev:g}", new=f"{v:g}"), "reason": why["up"] if v > prev else why["down"]}
             out.append({"day": d, "drug": nm, **{k: x for k, x in row.items() if x}})
             prev, seen = v, seen or v > 0
     return sorted(out, key=lambda r: (r["day"], r["drug"]))
@@ -722,6 +784,11 @@ def bp_term(sig: str, day: int, primary_drug: str, primary_dose: list[dict], adh
         if BP_STANDARD_DOSE.get(m["drug"]) is None:
             continue
         pts = m["dose_timeline"]
+        levels = _background_levels(m["drug"], pts, sig, day)
+        if levels is not None:
+            x, x0 = levels
+            tot -= x - x0
+            continue
         e0 = bp_lowering(m["drug"], dose_at(pts, 0), sig)
         tot -= _first_order(day, lambda d, _p=pts, _m=m["drug"]: bp_lowering(_m, dose_at(_p, d), sig),
                             BP_HALF_TIME_DAYS, e0) - e0
@@ -743,6 +810,11 @@ def concurrent_glucose_term(sig: str, day: int, concurrent: list[dict], per_kg: 
             continue
         full *= de.baseline_factor(m["drug"], hba1c_base)
         pts = m["dose_timeline"]
+        levels = _background_levels(m["drug"], pts, sig, day)
+        if levels is not None:
+            x, x0 = levels
+            tot += full * (x - x0)
+            continue
         on0 = 1.0 if dose_at(pts, 0) > 0 else 0.0
         frac = de.kinetic_level(sig, day, lambda d, _p=pts: 1.0 if dose_at(_p, d) > 0 else 0.0,
                                 start=on0)
@@ -783,30 +855,49 @@ def overlay_medicines(plans: dict | None, patient_basics: dict | None = None) ->
     return out
 
 
-#: Chinese name, unit and frequency of the world's medicines as a record prints them.
-DISPLAY = {
-    "metformin": ("二甲双胍", "mg", "每日"), "semaglutide": ("司美格鲁肽", "mg", "每周一次皮下注射"),
-    "liraglutide": ("利拉鲁肽", "mg", "每日一次皮下注射"), "dulaglutide": ("度拉糖肽", "mg", "每周一次皮下注射"),
-    "tirzepatide": ("替尔泊肽", "mg", "每周一次皮下注射"), "amlodipine": ("氨氯地平", "mg", "每日一次"),
-    "losartan": ("氯沙坦", "mg", "每日一次"), "atorvastatin": ("阿托伐他汀", "mg", "每晚一次"),
-    "levothyroxine": ("左甲状腺素钠", "μg", "每日一次"), "enalapril": ("依那普利", "mg", "每日"),
-    "gliclazide": ("格列齐特缓释片", "mg", "每日一次"), "glimepiride": ("格列美脲", "mg", "每日早餐前"),
-    "insulin_glargine": ("甘精胰岛素", "U", "每晚皮下注射"), "dapagliflozin": ("达格列净", "mg", "每日一次"),
-    "furosemide": ("呋塞米", "mg", "每日一次"), "bisoprolol": ("比索洛尔", "mg", "每日一次"),
-    "metoprolol": ("美托洛尔缓释片", "mg", "每日一次"),
+#: Unit and frequency of the world's medicines as a record prints them; the name is the lexicon
+#: phrase `drug.<key>` and the frequency the phrase `freq.<id>` (`registry/i18n/<lang>/lexicon/drugs.yaml`).
+_DISPLAY = {
+    "metformin": ("mg", "daily"), "semaglutide": ("mg", "weekly_sc"),
+    "liraglutide": ("mg", "once_daily_sc"), "dulaglutide": ("mg", "weekly_sc"),
+    "tirzepatide": ("mg", "weekly_sc"), "amlodipine": ("mg", "once_daily"),
+    "losartan": ("mg", "once_daily"), "atorvastatin": ("mg", "once_nightly"),
+    "levothyroxine": ("μg", "once_daily"), "enalapril": ("mg", "daily"),
+    "gliclazide": ("mg", "once_daily"), "glimepiride": ("mg", "before_breakfast"),
+    "insulin_glargine": ("U", "nightly_sc"), "dapagliflozin": ("mg", "once_daily"),
+    "furosemide": ("mg", "once_daily"), "bisoprolol": ("mg", "once_daily"),
+    "metoprolol": ("mg", "once_daily"),
 }
+#: name, unit and frequency per drug key, as `Msg` phrases
+DISPLAY = {k: (L(f"drug.{k}"), unit, L(f"freq.{freq}")) for k, (unit, freq) in _DISPLAY.items()}
+
+
+def drug_key(name) -> str | None:
+    """The drug key a printed name (or `Msg` phrase) stands for, by the name's phrase id."""
+    from haenv.i18n.text import Msg, is_text
+    if isinstance(name, Msg) and name.kind == "lex" and name.key.startswith("drug."):
+        return name.key[len("drug."):] if name.key[len("drug."):] in DISPLAY else None
+    return next((k for k in DISPLAY if is_text(name, f"drug.{k}")), None)
 
 
 def _fmt_dose(v: float) -> str:
     return f"{v:g}"
 
 
+def line_drug(line) -> str | None:
+    """The drug key of a medication-list line made by `display` (its name slot), else `None`."""
+    from haenv.i18n.text import Msg
+    if isinstance(line, Msg) and line.kind == "tpl" and line.key in ("med.line", "med.line_per_day"):
+        return drug_key(line.slots.get("name"))
+    return None
+
+
 def display(drug: str, dose: float) -> str:
     """One line of a visible medication list: name, dose and frequency."""
     name, unit, freq = DISPLAY[str(drug)]
     if str(drug) == "metformin":
-        return f"{name} {_fmt_dose(dose)} {unit}/日"
-    return " ".join(x for x in (name, f"{_fmt_dose(dose)} {unit}", freq) if x)
+        return T("med.line_per_day", name=name, dose=_fmt_dose(dose), unit=unit)
+    return T("med.line", name=name, dose=_fmt_dose(dose), unit=unit, freq=freq)
 
 
 def active_medicines(world_medication: dict | None, day: int) -> list[tuple[str, float, dict]]:
@@ -856,6 +947,12 @@ def statin_ldl_term(sig: str, day: int, primary_drug: str, primary_dose: list[di
               if m["drug"] in STATINS]
     tot = 0.0
     for drug, pts, adh in lines:
+        if any(m.get("dose_timeline") is pts for m in concurrent or ()):
+            levels = _background_levels(drug, pts, sig, day)
+            if levels is not None:
+                x, x0 = levels
+                tot += x - x0
+                continue
         half = float(_table(drug)["tau_truth_days"]) * math.log(2.0)
         x0 = _statin_effect(drug, dose_at(pts, 0)) * max(0.0, min(1.0, float(adh(0))))
         x = _first_order(day, lambda d, _p=pts, _g=drug, _a=adh: _statin_effect(_g, dose_at(_p, d))

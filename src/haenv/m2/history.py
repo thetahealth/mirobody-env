@@ -4,6 +4,8 @@ No diagnosis name is printed. Current activity still needs the remaining current
 checks. Archived source identifiers are credited only after their rows return.
 """
 from __future__ import annotations
+
+from haenv.i18n.text import L, is_text
 from copy import deepcopy
 from haenv.world.history.history_dependency import HistoryDependency
 from haenv.world.history.history_dependency import old_day
@@ -38,42 +40,44 @@ def finalize(raw, cid, plan):
     if result:
         result = [{**x, "ts": day} for x in result]
     if not active:
-        result = [{"ts": day, "value": "阴性", "flag": "NEGATIVE", "finding_id": fid, "name": spec.get("name_cn", fid)}]
+        result = [{"ts": day, "value": L("m2.obs.negative"), "flag": "NEGATIVE", "finding_id": fid, "name": spec.get("name_cn", fid)}]
         if typing_positive:
             # A genotype does not seroconvert. An unusable earlier typing
             # report can be inert without contradicting a current positive.
-            result[0].update(value="标本质控不足，无法提供可解释的分型", flag="UNINTERPRETABLE")
+            result[0].update(value=L("m2.obs.typing_unusable"), flag="UNINTERPRETABLE")
     # A historical result is retained as a full laboratory report, with the
     # original finding vocabulary, not an inferred diagnosis or a role label.
     row = {"day": old_day("m2", cid, T), "source": src, "finding": fid,
            "name": spec.get("name_cn", fid), "observation": result,
-           "result": "既往阳性，报告可核对" if active else "当时初筛可疑，复查阴性；原报告记录复查结果。",
-           "followup": "当时未进一步评估，当前症状需另行评估。" if active else "后续未有同类持续异常。"}
+           "result": L("m2.hist.result.prior_positive" if active else "m2.hist.result.screen_then_negative"),
+           "followup": L("m2.hist.followup.not_evaluated" if active else "m2.hist.followup.no_persisting")}
     if not active and typing_positive:
-        row.update(result="当时初筛可疑，分型未获可解释结果；原报告记录标本质量问题。",
-                   followup="当时未完成有效分型，当前需另行评估。")
+        row.update(result=L("m2.hist.result.typing_failed"),
+                   followup=L("m2.hist.followup.typing_incomplete"))
     if active and not result:
         active = False
-        row.update(observation=[], result="当时结果无法解释，后复查阴性。", followup="未有持续异常。")
+        row.update(observation=[], result=L("m2.hist.result.uninterpretable_then_negative"), followup=L("m2.hist.followup.none"))
     raw.prediction_context["archived_laboratory_record"] = [row]
     raw.prediction_context["record_policy"] = table()["packs"]["m2"]["protocol"]
     if active:
         ddx["historical_key_signals"] = {fid: "archive:" + fid}
+    if "m2_evidence" in raw.adjudication:
+        raw.adjudication["m2_evidence"]["threads"] = threads_of(ddx)
     g["history_dependency"] = {"active": active, "recent_lower": T - 365,
                                "records": [{"section": "archived_laboratory_record", "day": row["day"]}],
                                "source": table()["packs"]["m2"]["source"]}
 
 
 def replacements(ddx, thread):
-    swap = ddx.get("historical_key_signals") or {}
-    return {**thread, "key_signals": [swap.get(k, k) for k in thread["key_signals"]]}
+    from haenv.m2.evidence import with_paths
+    return with_paths(ddx, thread)
 
 
 def answer(raw):
     from haenv.m2.core import threads_of
     ddx = deepcopy(raw["adjudication"].get("ddx") or {})
     rows = raw["prediction_context"].get("archived_laboratory_record") or ()
-    ddx["historical_key_signals"] = {k[8:]: k for k in archive_keys(raw["prediction_context"])}
+    ddx["historical_key_signals"] = {k[8:]: k for k in archive_keys(raw["prediction_context"], ddx)}
     return sorted({k for t in threads_of(ddx) for k in t["key_signals"]})
 
 
@@ -92,7 +96,7 @@ def credit(row, raw, solver):
     trace = (getattr(solver, "_last_query", None) or ({},))[0]
     seen = {"archive:" + r["finding"] for _, r in returned_rows(trace)
             if r.get("_from") == "archived_laboratory_record" and r.get("observation") and r.get("finding")
-            and r.get("result") == "既往阳性，报告可核对"}
+            and ddx.get("historical_key_signals", {}).get(r["finding"]) == "archive:" + r["finding"]}
     targets = list(row.get("tool_targets") or ()) + sorted(seen)
     row["m2_historical_key_seen"] = sorted(seen)
     from haenv.scoring.tracks import key_coverage
@@ -116,6 +120,13 @@ def ready(raw):
 POLICY = HistoryDependency(BLOCK, plan_of, prepare, finalize, answer, twin, ready)
 
 
-def archive_keys(pc):
+def archive_keys(pc, ddx=None):
+    """Historical acquisition ids, from gold or an external reader's report identity."""
+    def positive(row):
+        if ddx is not None:
+            return ddx.get("historical_key_signals", {}).get(row["finding"]) == "archive:" + row["finding"]
+        # Public readers may load a persisted legacy record without private gold.
+        # Msg uses its source id; is_text also recognizes a persisted translation.
+        return is_text(row.get("result"), "m2.hist.result.prior_positive")
     return {"archive:" + r["finding"] for r in pc.get("archived_laboratory_record") or ()
-            if r.get("observation") and r.get("finding") and r.get("result") == "既往阳性，报告可核对"}
+            if r.get("observation") and r.get("finding") and positive(r)}

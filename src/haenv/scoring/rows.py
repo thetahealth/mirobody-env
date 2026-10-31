@@ -12,6 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 from copy import deepcopy
+from functools import lru_cache
 import haenv_kernel.verifier as verifier_mod    # kernel
 import haenv_kernel.runner as runner_mod    # The leakage gate runs inside `solve_guard.guarded_solve`, shared by every geometry.
 from haenv_kernel.build import build_instance
@@ -37,6 +38,65 @@ from haenv.scoring.mounts.dispatch import RoundRecorder as _RoundRecorder
 from haenv.world.clinical.rhythm import REAL_RHYTHM_GAP_DAYS
 from haenv.world.clinical.rhythm import REAL_RHYTHM_SLICES
 from haenv.world.clinical.rhythm import rhythm_gap_feasible
+
+
+@lru_cache(maxsize=8192)
+def _citation_name_forms(name):
+    from haenv.judges.safety import evidence_names_for
+    return evidence_names_for(None, [name])
+
+
+def citation_context(sp, purchased=None, *, trace=None):
+    """Citation capabilities from delivered results, shared by live and replay.
+
+    In query mode the full patient payload is not delivered. Catalogue entries,
+    failed orders and requested but unreturned rows confer no capability.
+    Name/day and name/index forms are generated from the actual returned rows;
+    no fuzzy distance or invented EV namespace is accepted.
+    """
+    from haenv.judges.safety import evidence_names_for
+    from haenv.interaction.query.profile import returned_rows
+    from haenv_kernel.verifier import normalize_evidence_name as norm
+    if trace is None:
+        return dict(ledger_ids=[e["evidence_id"] for e in (getattr(sp, "evidence_ledger", None) or [])],
+                    evidence_names=evidence_names_for(sp, purchased), returned_ids=frozenset())
+    ids, names, returned = set(), set(), set()
+    for _, row in returned_rows(trace):
+        if row.get("evidence_id"):
+            ids.add(row["evidence_id"])
+        if "value" not in row:
+            continue
+        forms = set()
+        for name in (row.get("_from"), row.get("name"), row.get("finding_id"), row.get("indicator")):
+            if name:
+                forms.update(_citation_name_forms(str(name)))
+        names.update(forms)
+        day = row.get("ts", row.get("day", row.get("draw_day")))
+        if day is not None:
+            for key in forms:
+                names.add(key + "@" + str(int(day)))
+    # IDs/indices of record and test bundles. A bare index is not unique across
+    # sections, so it must carry the returned section or test name.
+    for msg in trace.get("messages") or []:
+        res = msg.get("content")
+        if msg.get("role") != "tool" or not isinstance(res, dict) or res.get("found") is False:
+            continue
+        section = res.get("section") or res.get("name") or res.get("target")
+        for i, row in enumerate(res.get("entry") or []):
+            if not isinstance(row, dict):
+                continue
+            resource = row.get("resource", row)
+            rid = resource.get("id")
+            if rid:
+                returned.add(str(rid))
+            elif section:
+                returned.add(f"{section}-{i}")
+    return dict(ledger_ids=ids, evidence_names=frozenset(names), returned_ids=frozenset(returned))
+
+
+def _solver_citation_context(sp, solver, purchased=None):
+    last = getattr(solver, "_last_query", None)
+    return citation_context(sp, purchased, trace=last[0] if last else None)
 
 
 def answer_windows(job, built: dict, batch_dir=None) -> dict[str, int]:
@@ -129,10 +189,8 @@ def _row_single(cid, sname, raw, T, solver, *, ctx: RunContext) -> dict:
                 "failed_attempts": facts.failed_attempts,
                 "n_chars_unparseable": facts.n_chars,
                 "no_response_reason": "json_unextractable"}
-    from haenv.judges.safety import evidence_names_for as _ev_names
-    from haenv.interaction.query.profile import returned_ids_of as _returned_ids
-    rep = verifier_mod.grade(out, vp, [e["evidence_id"] for e in sp.evidence_ledger],
-                             evidence_names=_ev_names(sp), returned_ids=_returned_ids(solver))
+    citations = _solver_citation_context(sp, solver)
+    rep = verifier_mod.grade(out, vp, citations.pop("ledger_ids"), **citations)
     from haenv.judges import run_judges
     from haenv.judges import SINGLE
     # ---- process-track scoring ----
@@ -276,12 +334,8 @@ def _row_gated(cid, sname, raw, T, solver, *, ctx: RunContext) -> dict:
         # same merge from the row's `tool_targets`. If grading raises, the `gates` key is omitted
         # (`gate_unknown`) and the error is recorded.
         try:
-            from haenv.judges.safety import evidence_names_for as _ev_names
-            from haenv.interaction.query.profile import returned_ids_of as _returned_ids
-            _rep = verifier_mod.grade(
-                out, vp, [e["evidence_id"] for e in (sp.evidence_ledger or [])],
-                evidence_names=_ev_names(sp, getattr(tr, "targets", None)),
-                returned_ids=_returned_ids(solver))
+            citations = _solver_citation_context(sp, solver, getattr(tr, "targets", None))
+            _rep = verifier_mod.grade(out, vp, citations.pop("ledger_ids"), **citations)
         except Exception as e:                          # noqa: BLE001
             log.error("[eval] %s|%s gated kernel scoring failed -> recording gate_unknown "
                       "(not writing the `gates` key): %s",

@@ -18,6 +18,9 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.runtime import runtime_text
+from haenv.i18n.text import L as _L, text_of as _rt
+
 import json
 from dataclasses import asdict, dataclass, field
 
@@ -26,7 +29,7 @@ from haenv.interaction.query.tools import ResultGuard
 from haenv.interaction.query.tools import ToolSpec
 from haenv.interaction.query.tools import call_tool
 
-FORCE_FINAL = "工具轮次或调用次数已用完,工具已关闭。请不要再调用工具,直接按要求的 schema 输出最终答案 JSON。"
+FORCE_FINAL = _L('runtime.interaction.query.loop.module.1')
 
 
 @dataclass
@@ -91,7 +94,7 @@ def run_query(specs: list[ToolSpec], guard: ResultGuard, system: str, user: str,
     for r in range(1, max_rounds + 2):
         final_turn = r > max_rounds or forced
         if final_turn:
-            msgs.append({"role": "user", "content": FORCE_FINAL})
+            msgs.append({"role": "user", "content": runtime_text(FORCE_FINAL)})
         turn = solver.chat(system, msgs, specs, "none" if final_turn else "auto")
         tr.rounds_used = r
         tr.usage.append(turn.usage)
@@ -112,7 +115,7 @@ def run_query(specs: list[ToolSpec], guard: ResultGuard, system: str, user: str,
         for i, c in enumerate(calls):
             cid = c.get("id") or f"c{r}.{i}"
             if n_calls >= max_calls:
-                res, err = {"error": "调用次数已用完"}, "over_budget"
+                res, err = {"error": _rt('runtime.interaction.query.loop.run_query.1')}, "over_budget"
                 forced = True
             else:
                 res, err = call_tool(by_name, c.get("name"), c.get("arguments"))

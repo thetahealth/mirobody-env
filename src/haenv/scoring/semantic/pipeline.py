@@ -1,6 +1,8 @@
 """Prepare, seal and resume semantic judging without overwriting saved evaluations."""
 from __future__ import annotations
 
+from haenv.i18n.runtime import localized_judge_version, select_batch_language, select_saved_language
+
 from collections import Counter
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -126,6 +128,7 @@ def prepare_batches(batches: list[Path], out: Path, *, run_id: str,
         raise ValueError("Pilot limit must be positive")
     from haenv.scoring.semantic.rubric import LEAN_LAYOUT
     from haenv.scoring.semantic.rubric import rubric_atoms
+    language = select_batch_language(batches)
     policy = load_policy(policy_path)
     lean = policy.get("prompt_layout") == LEAN_LAYOUT
     tasks, sources, states = [], [], Counter()
@@ -222,7 +225,7 @@ def prepare_batches(batches: list[Path], out: Path, *, run_id: str,
                 item_ids, template = tuple(criteria), None
             task = JudgeTask(run_id=run_id, item_ids=item_ids, prompt=prompt,
                              answer_text=answer_text, judge_model=policy["judge"]["model_id"],
-                             rubric_version=policy["version"],
+                             rubric_version=localized_judge_version(policy["version"], policy),
                              reasoning_effort=policy["judge"]["reasoning_effort"],
                              evidence_catalog=evidence_catalogue(answer_text)[0] if use_ids else None,
                              atom_template=template)
@@ -232,7 +235,7 @@ def prepare_batches(batches: list[Path], out: Path, *, run_id: str,
     with (out / "tasks.jsonl").open("w", encoding="utf-8") as file:
         for task in tasks:
             file.write(json.dumps(task, ensure_ascii=False) + "\n")
-    manifest = {"run_id": run_id, "created_at": datetime.now(timezone.utc).isoformat(),
+    manifest = {"run_id": run_id, "language": language, "created_at": datetime.now(timezone.utc).isoformat(),
                 "policy": policy, "sources": sources, "code": code_state(),
                 "tasks_sha256": digest(out / "tasks.jsonl"), "states": dict(states),
                 "sampling": {"limit_per_model": limit_per_model, "rule": "case SHA256, model blind",
@@ -246,6 +249,7 @@ def prepare_batches(batches: list[Path], out: Path, *, run_id: str,
 def seal_run(out: Path) -> dict:
     """Lock the tested pilot code without restamping any existing batch or freeze anchor."""
     manifest = json.loads((out / "manifest.json").read_text())
+    select_saved_language(manifest)
     if "correction" in manifest:
         from haenv.scoring.semantic.corrections import validate_correction
         validate_correction(out)
@@ -263,6 +267,7 @@ def seal_run(out: Path) -> dict:
 
 def validate_run(out: Path) -> dict:
     manifest = json.loads((out / "manifest.json").read_text())
+    select_saved_language(manifest)
     if "correction" in manifest:
         from haenv.scoring.semantic.corrections import validate_correction
         validate_correction(out)

@@ -24,6 +24,8 @@ The M2 judging code is its own segment, `tools/release/make_freeze.py:M2_JUDGING
 """
 from __future__ import annotations
 
+from haenv.i18n.text import text_of
+
 import copy
 import json
 import threading
@@ -40,10 +42,11 @@ def m2_suffix(solver, payload) -> str:
     from haenv.m2.core import M2_REVISION_PROMPT
     fr = ((getattr(payload, "prediction_context", None) or {}).get("m2_frame") or {})
     fr = fr if isinstance(fr, dict) else {}
-    out = M2_FRAME_ASKS.get(str(fr.get("frame") or ""), "")
+    frame = str(fr.get("frame") or "")
+    out = text_of("runtime.m2.ask." + frame) if frame in M2_FRAME_ASKS else ""
     rc = getattr(solver, "m2_revision_context", None)
     if rc:
-        out += M2_REVISION_PROMPT.format(
+        out += text_of("runtime.m2.revision").format(
             items="\n".join(json.dumps(i, ensure_ascii=False) for i in rc.get("items") or []),
             round1=json.dumps(rc.get("round1") or {}, ensure_ascii=False))
     return out
@@ -165,7 +168,7 @@ def gated_row(base_row, cid, sname, raw, T, solver, **kw):
         last = getattr(_TL, "last", None)
     finally:
         _TL.last = previous
-    if not core.is_m2_framed(raw):
+    if not core.is_m2_case(raw):
         return row
     row["m2_judging_sha16"] = m2_judging_fingerprint()
     if last is None or last[1] is None or "tool_n_calls" not in row:

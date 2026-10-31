@@ -57,7 +57,9 @@ GOLD_SIGNAL_OF = _LazyMap()
 TRUTH_TOKENS = ("outcome_label", "event_occurred", "event_not_occurred", "gold_driver",
                 "adjudication", "latent_premise", "reversal_point", "artifact_flag",
                 "noise_class", "distractor", "future_data", "verifier", "label_rule",
-                "injected_event_manifest", "primary_driver", "clinician_action_warranted")
+                "injected_event_manifest", "primary_driver", "clinician_action_warranted",
+                "outcome label", "true driver", "gold label", "standard answer", "ground truth",
+                "latent variable", "evaluation focus", "expected drug effect")
 TRUTH_WORDS_ZH = ("结局标签", "真驱动", "金标", "教学点", "转归", "裁定", "隐变量", "隐控制",
                   "泄漏", "标准答案", "复胖", "未复胖", "维持成功", "确诊", "疗效失败",
                   "药物无效", "停药后", "预期药效", "评测焦点")

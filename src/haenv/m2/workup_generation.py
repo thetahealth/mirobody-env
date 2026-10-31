@@ -1,7 +1,7 @@
 """Derive conditional initial-stage requirements from the generated record."""
 from __future__ import annotations
 
-import json
+from haenv.world.observations.events_text import phrase_ids
 
 
 def install():
@@ -56,7 +56,7 @@ def finalize(raw, case_id):
         testosterone = point("Testosterone")
         records = raw.prediction_context.get("event_history_record") or []
         menstrual = [r for r in records if int(r.get("day", T + 1)) <= T
-                     and any(s in json.dumps(r, ensure_ascii=False) for s in ("月经稀发", "周期推迟40", "周期超过35"))]
+                     and any(s in phrase for phrase in phrase_ids(r) for s in ("月经稀发", "周期推迟40", "周期超过35"))]
         androgen = (isinstance(testosterone.get("value"), (int, float))
                     and testosterone.get("ref_high") is not None
                     and testosterone["value"] > testosterone["ref_high"])

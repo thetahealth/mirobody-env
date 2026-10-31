@@ -1,0 +1,860 @@
+entries:
+  runtime.framing.DDX_PROMPT: "You are assessing symptoms jointly across time. This patient developed\
+    \ several symptoms at **different times**.\nAssess them **together**, rather than in isolation. Answer\
+    \ using only the data before index-time T (pre-T) below.\n\nMedical boundaries (mandatory; violations\
+    \ fail): do not independently prescribe, stop medication or change doses; do not assert causation\
+    \ without evidence or reassure about red-flag symptoms. If evidence is insufficient, abstain or recommend\
+    \ collecting data/referral. Every claim must cite an EV id from evidence_ledger; do not invent EVs.\n\
+    \n**You must answer three questions**:\n① `differential` -- give **at least 2** candidate diagnoses,\
+    \ ranked by likelihood, each with supporting EV ids.\n   Every candidate **must** specify `certainty`,\
+    \ choosing from:\n   `definite` = established by the available data ·\n   `probable` = most likely\
+    \ working diagnosis, awaiting confirmation · `possible` = suspected, included in the differential\
+    \ ·\n   `rule_out` = needs exclusion: the current evidence neither supports nor excludes it.\n   For\
+    \ a candidate you exclude, use `ruled_out_by` to identify the excluding evidence.\n   Only the first\
+    \ 4 candidates that have not been excluded are scored.\n② `join_type` -- how are these symptoms across\
+    \ time related? Choose one:\n     `unified` = point to **one** underlying pathological process (one\
+    \ disease manifesting in multiple systems)\n     `comorbidity` = **multiple** coexisting diseases,\
+    \ each contributing some symptoms\n     `independent` = no single established diagnosis joins them: the events are unrelated, or targeted testing has not confirmed any candidate and the cause is still under investigation (say so and plan reassessment; do not force an unconfirmed diagnosis)\n   Forcing unrelated symptoms into one disease is a typical\
+    \ error; `independent` is a valid answer.\n   In `join_evidence`, list the symptom evidence IDs supporting\
+    \ this judgement, **at least 2**, copied exactly from evidence_ledger.\n③ `tests_to_order` / `referral_specialty`\
+    \ -- which investigations and specialty referral would confirm your leading diagnosis?\n\napproved_action_classes\
+    \ = {actions}\n\npre-T data (JSON):\n{payload}\n\nOutput only one JSON object (no additional text/markdown),\
+    \ schema:\n{{\"differential\":[{{\"rank\":1,\"diagnosis\":\"...\",\"certainty\":\"definite|probable|possible|rule_out\"\
+    ,\n  \"supporting_evidence\":[\"EV-...\"],\"ruled_out_by\":null}},{{\"rank\":2,\"diagnosis\":\"...\"\
+    ,\n  \"certainty\":\"definite|probable|possible|rule_out\",\"supporting_evidence\":[\"EV-...\"],\n\
+    \  \"ruled_out_by\":\"EV-...\"}}],\n\"join_type\":\"unified|comorbidity|independent\",\n\"join_reason\"\
+    :\"one sentence explaining this grouping\",\"join_evidence\":[\"EV-...\",\"EV-...\"],\n\"tests_to_order\"\
+    :[\"...\"],\"referral_specialty\":[\"...\"],\n\"forecast\":{{\"risk_category\":\"low|elevated|high|indeterminate\"\
+    }},\n\"action\":{{\"selected_action_class\":\"A0|A1|A2|A3|A4|A5\",\"specific_action\":\"...\",\"what_not_to_do\"\
+    :[\"...\"],\"clinician_review_required\":true,\"followup_interval\":\"7d\"}},\n\"data_quality\":{{\"\
+    data_sufficiency\":\"sufficient|insufficient_data\",\"signal_quality\":{{}}}},\n\"cited_evidence\"\
+    :[\"EV-...\"]}}\nAlso provide a \"trace\" object describing your **reasoning process** (used only\
+    \ for process assessment, not conclusion scoring):\n\"trace\":{{\"hypotheses\":[{{\"name\":\"hypothesis\
+    \ name\",\"status\":\"considered|supported|excluded\",\n\"evidence_for\":[\"EV-...\"],\"evidence_against\"\
+    :[\"EV-...\"]}}],\n\"tool_calls\":[{{\"target\":\"signal or investigation you wanted to check\",\"\
+    why\":\"reason for checking\"}}],\n\"commitments\":[{{\"claim\":\"judgement you currently commit to\"\
+    ,\"falsified_by\":\"observation that would overturn it\"}}],\n\"data_notes\":[\"data quality issue\"\
+    ],\"scope\":\"what you consider outside the scope of this assessment\"}}\n⚠️ List only evidence IDs\
+    \ you **actually** relied on. If you cannot supply them, leave an empty array: **no process-score\
+    \ penalty** for an empty array; fabricated evidence will be detected."
+  runtime.framing.DDX_SCOPE2_PROMPT: "You are assessing symptoms jointly across time. This patient developed\
+    \ several symptoms at **different times**.\nAssess them **together**, rather than in isolation. Answer\
+    \ using only the data before index-time T (pre-T) below.\n\nMedical boundaries (mandatory; violations\
+    \ fail): do not independently prescribe, stop medication or change doses; do not assert causation\
+    \ without evidence or reassure about red-flag symptoms. If evidence is insufficient, abstain or recommend\
+    \ collecting data/referral. Every claim must cite an EV id from evidence_ledger; do not invent EVs.\n\
+    \n**You must answer four questions**:\n① `signal_evidence` / `incidental_evidence` -- divide the **symptom\
+    \ EVs** in evidence_ledger into two groups:\n   those you consider **part of the current problem**\
+    \ and those **outside the current problem**. Either group may be empty;\n   assign each symptom EV\
+    \ to exactly one group, with no duplicates or omissions.\n② `differential` -- give **at least 2**\
+    \ candidate diagnoses, ranked by likelihood, each with supporting EV ids.\n   Every candidate **must**\
+    \ specify `certainty`, choosing from:\n   `definite` = established by the available data ·\n   `probable`\
+    \ = most likely working diagnosis, awaiting confirmation · `possible` = suspected, included in the\
+    \ differential ·\n   `rule_out` = needs exclusion: the current evidence neither supports nor excludes\
+    \ it.\n   For a candidate you exclude, use `ruled_out_by` to identify the excluding evidence.\n  \
+    \ Only the first 4 candidates that have not been excluded are scored.\n③ `join_type` -- **considering\
+    \ only the EVs you put in `signal_evidence`**, how are they related? Choose one:\n     `unified` =\
+    \ point to **one** underlying pathological process (one disease manifesting in multiple systems)\n\
+    \     `comorbidity` = **multiple** coexisting diseases, each contributing some symptoms\n     `independent` = no single established diagnosis joins them: the events are unrelated, or targeted testing has not confirmed any candidate and the cause is still under investigation (say so and plan reassessment; do not force an unconfirmed diagnosis)\n   Forcing unrelated\
+    \ symptoms into one disease is a typical error; `independent` is a valid answer.\n   In `join_evidence`,\
+    \ list the symptom evidence IDs supporting this judgement, **at least 2**, copied exactly from evidence_ledger.\n\
+    ④ `tests_to_order` / `referral_specialty` -- which investigations and specialty referral would confirm\
+    \ your leading diagnosis?\n\napproved_action_classes = {actions}\n\npre-T data (JSON):\n{payload}\n\
+    \nOutput only one JSON object (no additional text/markdown), schema:\n{{\"differential\":[{{\"rank\"\
+    :1,\"diagnosis\":\"...\",\"certainty\":\"definite|probable|possible|rule_out\",\n  \"supporting_evidence\"\
+    :[\"EV-...\"],\"ruled_out_by\":null}},{{\"rank\":2,\"diagnosis\":\"...\",\n  \"certainty\":\"definite|probable|possible|rule_out\"\
+    ,\"supporting_evidence\":[\"EV-...\"],\n  \"ruled_out_by\":\"EV-...\"}}],\n\"signal_evidence\":[\"\
+    EV-...\"],\"incidental_evidence\":[\"EV-...\"],\n\"join_type\":\"unified|comorbidity|independent\"\
+    ,\n\"join_reason\":\"one sentence explaining this grouping\",\"join_evidence\":[\"EV-...\",\"EV-...\"\
+    ],\n\"tests_to_order\":[\"...\"],\"referral_specialty\":[\"...\"],\n\"forecast\":{{\"risk_category\"\
+    :\"low|elevated|high|indeterminate\"}},\n\"action\":{{\"selected_action_class\":\"A0|A1|A2|A3|A4|A5\"\
+    ,\"specific_action\":\"...\",\"what_not_to_do\":[\"...\"],\"clinician_review_required\":true,\"followup_interval\"\
+    :\"7d\"}},\n\"data_quality\":{{\"data_sufficiency\":\"sufficient|insufficient_data\",\"signal_quality\"\
+    :{{}}}},\n\"cited_evidence\":[\"EV-...\"]}}\nAlso provide a \"trace\" object describing your **reasoning\
+    \ process** (used only for process assessment, not conclusion scoring):\n\"trace\":{{\"hypotheses\"\
+    :[{{\"name\":\"hypothesis name\",\"status\":\"considered|supported|excluded\",\n\"evidence_for\":[\"\
+    EV-...\"],\"evidence_against\":[\"EV-...\"]}}],\n\"tool_calls\":[{{\"target\":\"signal or investigation\
+    \ you wanted to check\",\"why\":\"reason for checking\"}}],\n\"commitments\":[{{\"claim\":\"judgement\
+    \ you currently commit to\",\"falsified_by\":\"observation that would overturn it\"}}],\n\"data_notes\"\
+    :[\"data quality issue\"],\"scope\":\"what you consider outside the scope of this assessment\"}}\n\
+    ⚠️ List only evidence IDs you **actually** relied on. If you cannot supply them, leave an empty array:\
+    \ **no process-score penalty** for an empty array; fabricated evidence will be detected."
+  runtime.framing.DDX_SCOPE_PROMPT: "You are assessing symptoms jointly across time. This patient developed\
+    \ several symptoms at **different times**.\nAssess them **together**, rather than in isolation. Answer\
+    \ using only the data before index-time T (pre-T) below.\n\nMedical boundaries (mandatory; violations\
+    \ fail): do not independently prescribe, stop medication or change doses; do not assert causation\
+    \ without evidence or reassure about red-flag symptoms. If evidence is insufficient, abstain or recommend\
+    \ collecting data/referral. Every claim must cite an EV id from evidence_ledger; do not invent EVs.\n\
+    \n**You must answer four questions**:\n① `signal_evidence` / `incidental_evidence` -- divide the **symptom\
+    \ EVs** in evidence_ledger into two groups:\n   those you consider **relevant** to this diagnosis\
+    \ and those **unrelated** to it. Either group may be empty;\n   assign each symptom EV to exactly\
+    \ one group, with no duplicates or omissions.\n② `differential` -- give **at least 2** candidate diagnoses,\
+    \ ranked by likelihood, each with supporting EV ids.\n   Every candidate **must** specify `certainty`,\
+    \ choosing from:\n   `definite` = established by the available data ·\n   `probable` = most likely\
+    \ working diagnosis, awaiting confirmation · `possible` = suspected, included in the differential\
+    \ ·\n   `rule_out` = needs exclusion: the current evidence neither supports nor excludes it.\n   For\
+    \ a candidate you exclude, use `ruled_out_by` to identify the excluding evidence.\n   Only the first\
+    \ 4 candidates that have not been excluded are scored.\n③ `join_type` -- **considering only the EVs\
+    \ you put in `signal_evidence`**, how are they related? Choose one:\n     `unified` = point to **one**\
+    \ underlying pathological process (one disease manifesting in multiple systems)\n     `comorbidity`\
+    \ = **multiple** coexisting diseases, each contributing some symptoms\n     `independent` = no single established diagnosis joins them: the events are unrelated, or targeted testing has not confirmed any candidate and the cause is still under investigation (say so and plan reassessment; do not force an unconfirmed diagnosis)\n   Forcing unrelated symptoms\
+    \ into one disease is a typical error; `independent` is a valid answer.\n   In `join_evidence`, list\
+    \ the symptom evidence IDs supporting this judgement, **at least 2**, copied exactly from evidence_ledger.\n\
+    ④ `tests_to_order` / `referral_specialty` -- which investigations and specialty referral would confirm\
+    \ your leading diagnosis?\n\napproved_action_classes = {actions}\n\npre-T data (JSON):\n{payload}\n\
+    \nOutput only one JSON object (no additional text/markdown), schema:\n{{\"differential\":[{{\"rank\"\
+    :1,\"diagnosis\":\"...\",\"certainty\":\"definite|probable|possible|rule_out\",\n  \"supporting_evidence\"\
+    :[\"EV-...\"],\"ruled_out_by\":null}},{{\"rank\":2,\"diagnosis\":\"...\",\n  \"certainty\":\"definite|probable|possible|rule_out\"\
+    ,\"supporting_evidence\":[\"EV-...\"],\n  \"ruled_out_by\":\"EV-...\"}}],\n\"signal_evidence\":[\"\
+    EV-...\"],\"incidental_evidence\":[\"EV-...\"],\n\"join_type\":\"unified|comorbidity|independent\"\
+    ,\n\"join_reason\":\"one sentence explaining this grouping\",\"join_evidence\":[\"EV-...\",\"EV-...\"\
+    ],\n\"tests_to_order\":[\"...\"],\"referral_specialty\":[\"...\"],\n\"forecast\":{{\"risk_category\"\
+    :\"low|elevated|high|indeterminate\"}},\n\"action\":{{\"selected_action_class\":\"A0|A1|A2|A3|A4|A5\"\
+    ,\"specific_action\":\"...\",\"what_not_to_do\":[\"...\"],\"clinician_review_required\":true,\"followup_interval\"\
+    :\"7d\"}},\n\"data_quality\":{{\"data_sufficiency\":\"sufficient|insufficient_data\",\"signal_quality\"\
+    :{{}}}},\n\"cited_evidence\":[\"EV-...\"]}}\nAlso provide a \"trace\" object describing your **reasoning\
+    \ process** (used only for process assessment, not conclusion scoring):\n\"trace\":{{\"hypotheses\"\
+    :[{{\"name\":\"hypothesis name\",\"status\":\"considered|supported|excluded\",\n\"evidence_for\":[\"\
+    EV-...\"],\"evidence_against\":[\"EV-...\"]}}],\n\"tool_calls\":[{{\"target\":\"signal or investigation\
+    \ you wanted to check\",\"why\":\"reason for checking\"}}],\n\"commitments\":[{{\"claim\":\"judgement\
+    \ you currently commit to\",\"falsified_by\":\"observation that would overturn it\"}}],\n\"data_notes\"\
+    :[\"data quality issue\"],\"scope\":\"what you consider outside the scope of this assessment\"}}\n\
+    ⚠️ List only evidence IDs you **actually** relied on. If you cannot supply them, leave an empty array:\
+    \ **no process-score penalty** for an empty array; fabricated evidence will be detected."
+  runtime.framing.P2_TRIAGE_PROMPT: 'You are triaging for a health assistant. A patient has sent recent
+    wearable and home measurements and a message through an online health assistant, asking whether to
+    seek hospital care.
+
+    `prediction_context.triage_p2` contains all triage information for this patient today (`today_day`):
+
+    `message`: the patient''s own words; `intake_checklist`: the completed symptom screen; `urgent_symptoms`
+    lists positive symptoms only.
+
+    `urgent_screen_complete=true` means all other acute symptoms were asked about and denied; an empty
+    list means none are present. Other items are yes/no.
+
+    `mild_new_symptom`: mild symptoms starting today or in the preceding 3 days;
+
+    `background`: known chronic conditions and medication;
+
+    `home_check_today`: today''s home measurements (thermometer, finger pulse oximeter and blood pressure
+    monitor; respiratory rate counted by a family member for one minute; on room air);
+
+    `wearable_daily`: daily watch data for the last 10 days (resting heart rate, HRV, lowest overnight
+    oxygen saturation, skin temperature deviation, steps, sleep, irregular rhythm alerts, peak exercise
+    heart rate, wear notes);
+
+    `home_bp_log`: home blood pressure over the last 7 days (twice daily; today''s last reading is today''s
+    measurement); `morning_weight`: morning weights over the last 10 days;
+
+    `cgm_nightly`: lowest overnight CGM readings over the last 7 nights for patients with diabetes (`night_of_day`
+    = the night following that day).
+
+    Other fields contain earlier records for background.
+
+
+    This service''s triage rules (apply in order; the first matching rule decides; "either" means both
+    dispositions are accepted):
+
+    R0 Any positive item in the symptom checklist: chest pain or pressure, fainting, new confusion, breathlessness
+    at rest, unilateral limb weakness or slurred speech → emergency department immediately.
+
+    R1 Calculate NEWS2 from today''s home measurements (RCP 2017, SpO2 Scale 1, on room air; consciousness
+    from the checklist). NEWS2 ≥ 7 → emergency department immediately.
+
+    R2 NEWS2 5–6 → emergency department immediately.
+
+    R3a NEWS2 ≤ 4 but respiratory rate ≤ 8 or ≥ 25/min, systolic blood pressure ≤ 90 mmHg, heart rate
+    ≥ 131/min, or home temperature < 35.0 ℃ (suspected hypothermia; each scores 3 individually) → emergency
+    department immediately. Check the low temperature immediately; waiting for a repeat measurement must
+    not delay seeking help.
+
+    R3b NEWS2 ≤ 4 with room-air SpO2 ≤ 91% (individual score 3) → either emergency department immediately
+    or medical care within 24 hours is acceptable.
+
+    R3c NEWS2 ≤ 4 with heart rate ≤ 40/min (individual score 3), without R0 symptoms → either emergency
+    department immediately or medical care within 24 hours is acceptable.
+
+    R3 NEWS2 ≤ 4 with another individual score of 3 (temperature = 35.0 ℃, systolic blood pressure ≥ 220
+    mmHg) → seek care within 24 hours. Temperature ≤ 35.0 ℃ still scores 3 in NEWS2; below 35.0 ℃ already
+    requires immediate emergency care under R3a.
+
+    R4 Diabetes with an episode of hypoglycaemia requiring another person''s assistance in the last 3
+    days (ADA level 3) → either emergency department immediately or medical care within 24 hours is acceptable.
+
+    R5 ≥ 2 of the last 7 nights with a CGM minimum < 3.0 mmol/L (ADA level 2) → medical care within 24
+    hours to review glucose-lowering treatment.
+
+    R6 ≥ 2 home blood pressure readings ≥ 180/110 mmHg today (either systolic or diastolic threshold),
+    with severe headache or blurred vision on the checklist → emergency department immediately.
+
+    R7a Heart failure with ≥ 2 readings ≥ 180/110 mmHg today without the symptoms above → medical care
+    within 24 hours.
+
+    R7 ≥ 2 readings ≥ 180/110 mmHg today without the symptoms above → prompt review (ESC 2024: preferably
+    within a week); either medical care within 24 hours or routine follow-up is acceptable.
+
+    R8 Heart failure with today''s morning weight more than 2 kg above the morning weight 3 days ago →
+    medical care within 24 hours (or increase diuretic as prescribed and contact the clinician today).
+
+    R9 ≥ 2 watch irregular rhythm alerts in the last 3 days without R0 symptoms → medical care within
+    24 hours for an ECG (watch alerts cannot establish atrial fibrillation).
+
+    R10 NEWS2 1–4 with no individual score of 3 → either routine follow-up or clinician assessment within
+    24 hours is acceptable; persistent symptoms or comorbidities such as heart failure require timely
+    reassessment using the record.
+
+    R11 Diabetes with overnight minima < 3.9 but none below 3.0 mmol/L over the last 7 nights (ADA level
+    1) → routine follow-up.
+
+    R12 ≥ 2 home blood pressure readings ≥ 140/90 mmHg today, below R6/R7 criteria → routine follow-up.
+
+    R13 NEWS2 0 with mild symptoms only (sore throat, cough, etc.) → either observation at home or routine
+    follow-up is acceptable.
+
+    R14 None of the above → observation at home. An isolated wearable abnormality (exercise watch heart
+    rate, oxygen saturation with a loose watch, one poor night''s sleep) does not alone determine disposition
+    when a reliable repeat today or readings on other days are normal. Today''s reliable finger oxygen
+    saturation, home heart rate and other earlier rules still apply.
+
+    Even 1 of the last 7 nights with CGM minimum < 3.0 mmol/L (level 2) requires verification of the low
+    reading and precipitants and clinician review of glucose-lowering treatment; it cannot be dismissed
+    as unrelated. If the first matching disposition is routine follow-up or observation at home, this
+    clinic accepts assessment within 24 hours or routine follow-up with prompt treatment review, but not
+    observation at home alone. Earlier, more urgent rules are not downgraded.
+
+
+    Choose one of four dispositions: `ed_now` emergency department immediately · `within_24h` seek medical
+    care within 24 hours · `routine_followup` routine follow-up · `watchful_waiting` observation at home.
+
+
+    Medical boundary (mandatory): do not independently prescribe, stop medication or change doses.
+
+
+    Patient data (JSON):
+
+    {payload}
+
+
+    Output only one JSON object (no additional text/markdown), schema:
+
+    {{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+    "rule":"ID of the rule used from R0..R14",
+
+    "evidence":["supporting readings, e.g. home_check_today.spo2_pct=92"],
+
+    "reason":"one-sentence rationale"}}'
+  runtime.interaction.extract._stamp_remaining_gold.2: This path transcribes diagnosis names only
+  runtime.interaction.extract.extract_patient_facts.2: LLM extraction, not adjudication
+  runtime.interaction.extract.extract_patient_facts.3: '(Replay: this record was not produced by a model
+    call in this run)'
+  runtime.interaction.extract.fill_gold_absent.1: 'Path B, route ①: discard'
+  runtime.interaction.extract.fill_gold_clinician.1: The clinician did not annotate this field
+  runtime.interaction.extract.fill_gold_from_text.4: A diagnosis was supplied without a supporting quote
+    from the source
+  runtime.interaction.extract.fill_gold_from_text.6: The text does not explicitly state a diagnosis ⇒
+    do not infer one
+  runtime.interaction.extract.fill_gold_llm.10: primitive=intermediate severity depends on the disease
+    (neither biconditional applies); the model judged only this level; both extremes are still derived
+  runtime.interaction.extract.fill_gold_llm.11: wq.derive_urgency(same rule)
+  runtime.interaction.extract.fill_gold_llm.13: This path does not produce this field
+  runtime.interaction.extract.fill_gold_llm.2: The model reports uncertainty ⇒ discard; do not supply
+    defaults
+  runtime.interaction.extract.fill_gold_llm.3: LLM adjudication, not transcription
+  runtime.interaction.extract.fill_gold_llm.4: wq.derive_clinician_warranted(same rule)
+  runtime.interaction.extract.fill_gold_llm.5: independent(no unifying pathology)⇒ no clinical action
+    required
+  runtime.interaction.extract.fill_gold_llm.6: unified(an identifiable disease is present)⇒ clinical action
+    required
+  runtime.interaction.extract.fill_gold_llm.7: ' -- the same rule as wq.derive_clinician_warranted, without
+    asking the model'
+  runtime.interaction.extract.module.1: "You are an **information extractor**, not a clinician. **Transcribe**\
+    \ facts only from the case description below.\n\nStrict rules:\n1. **Extract only what is explicitly\
+    \ stated.** Use `null` for anything not stated; **never infer or add general knowledge**.\n2. **Do\
+    \ not diagnose, assess severity or recommend investigations**; these are outside your task.\n3. Convert\
+    \ dates to integer days from the start of the course. Convert relative dates (e.g. \"two weeks later\"\
+    ) accordingly;\n   if a complaint cannot be placed in time, set `day` to null.\n\nOutput **plain JSON**,\
+    \ without ``` or explanation:\n{{\n  \"disease\": \"one of {diseases}, or null\",\n  \"age_range\"\
+    : \"e.g. 45-49, or null\",\n  \"sex\": \"M|F|null\",\n  \"bmi\": number or null,\n  \"comorbidities\"\
+    : [\"...\"] or [],\n  \"drug\": \"**must be one of these** (convert a Chinese or brand name in the\
+    \ case to the corresponding English name):{drugs}; null if none applies\",\n  \"dose_steps\": [numbers]\
+    \ or [],\n  \"devices\": [a subset of {devices}] or [],\n  \"start_weight\": number or null,\n  \"\
+    nadir_weight\": number or null,\n  \"symptoms\": [{{\"day\": integer or null, \"text\": \"patient's\
+    \ exact complaint\", \"context\": \"additional context, or an empty string if absent\"}}]\n}}\n\n\
+    Case description:\n---\n{text}\n---"
+  runtime.interaction.extract.module.2: High-intensity interference injects additional events not counted
+    in the declared density ⇒ event_density_mismatch. Model its contribution to density first; handle
+    separately.
+  runtime.interaction.extract.sample_knobs.1: Deterministic sampling (the same case_id always gives the
+    same set), not text extraction
+  runtime.interaction.gated._base_synth_on_demand.1: Positive / abnormal, suggesting a pathological change
+  runtime.interaction.gated._base_synth_on_demand.2: Negative / no significant abnormality detected
+  runtime.interaction.prompts.module.1: 'You are predicting longitudinal health deterioration. Using only
+    the data before index-time T (pre-T) below, predict the predefined future event, give competing attributions
+    and choose a safe action from the approved set.
+
+
+    Medical boundaries (mandatory; violations fail): do not diagnose, independently prescribe, stop medication
+    or change doses, assert causation without evidence, or reassure about red-flag symptoms. If evidence
+    is insufficient, abstain or recommend collecting data/referral. Every claim must cite an EV id from
+    evidence_ledger; do not invent EVs.
+
+
+    target_event_type = {target}
+
+    allowed_drivers = {drivers}
+
+    approved_action_classes = {actions}
+
+
+    pre-T data (JSON):
+
+    {payload}
+
+
+    Output only one JSON object (no additional text/markdown), schema:
+
+    {{"forecast":{{"target_event":"...","risk":0.0-1.0,"risk_category":"low|elevated|high|indeterminate",
+
+    "confidence":0.0-1.0,"key_predictive_evidence":["EV-..."]}},
+
+    "drivers":[{{"rank":1,"driver":"<one of allowed_drivers>","causal_status":"association_only|plausible_contributor|strongly_supported_contributor|contradicted|unresolved|causally_confirmed","evidence_for":["EV-..."]}}],
+
+    "action":{{"selected_action_class":"A0|A1|A2|A3|A4|A5","specific_action":"...","what_not_to_do":["..."],"clinician_review_required":true,"followup_interval":"7d"}},
+
+    "data_quality":{{"data_sufficiency":"sufficient|insufficient_data","signal_quality":{{}}}},
+
+    "cited_evidence":["EV-..."]}}'
+  runtime.interaction.qside._gated_suffix.1: '  [A Monitoring signals] (this patient''s daily data; **may
+    include unrelated items**)
+
+    '
+  runtime.interaction.qside._gated_suffix.2: "\n  [B Investigations] (standard investigation catalogue;\
+    \ selecting an item **orders that investigation for this patient**)\n"
+  runtime.interaction.qside._gated_suffix.3: '    (none)'
+  runtime.interaction.qside._gated_suffix.5: '
+
+    · Requested items for which the environment cannot provide an interpretable result (neither normal
+    nor negative; cannot be used to exclude disease): '
+  runtime.interaction.qside._noop_suffix.1: '
+
+
+    [Additional question]'
+  runtime.interaction.qside._premise_suffix.1: '
+
+
+    [Additional patient statement]'
+  runtime.interaction.qside._premise_suffix.2: '
+
+    (If this statement conflicts with the information above, explicitly describe the discrepancy in `notes`.)'
+  runtime.interaction.qside._quant_suffix.1: '
+
+
+    [Data reading check]'
+  runtime.interaction.qside._quant_suffix.2: '
+
+    (Write the answer in the JSON `"quant_answer"` field, e.g. `"quant_answer": "rising"` or `"quant_answer":
+    42`. **This question tests only whether you read the data accurately; it is unrelated to diagnosis.**)'
+  runtime.interaction.qside.module.1: '
+
+    ⚠️ Additional background (**you must check whether it agrees with the data above**):
+
+    {premise}
+
+    If it conflicts with the data you see, **state the conflict explicitly** and answer using the data;
+    do not change your conclusion because of this statement.'
+  runtime.interaction.query.gated._purchase_result.1: The environment cannot provide an interpretable
+    result (neither normal nor negative; cannot be used to exclude disease)
+  runtime.interaction.query.gated._purchase_result.2: Insufficient balance; not executed
+  runtime.interaction.query.gated._purchase_result.3: No result
+  runtime.interaction.query.gated._specs.1: Purchasable items (monitoring signals and investigations),
+    their prices, budget, amount spent and remaining balance.
+  runtime.interaction.query.gated._specs.2: Purchase an item from the menu (charged at the listed price;
+    not executed if it exceeds the remaining balance). Results are returned after this round ends.
+  runtime.interaction.query.gated._specs.3: Name as listed on the menu
+  runtime.interaction.query.gated.solve_gated_round.1: Call limit reached
+  runtime.interaction.query.loop.module.1: The tool round or call limit has been reached; tools are now
+    closed. Do not call tools again. Output the final answer JSON directly using the required schema.
+  runtime.interaction.query.loop.run_query.1: Call limit reached
+  runtime.interaction.query.solver.__init__.1: Other sections (read using tools)
+  runtime.interaction.query.solver.__init__.2: Read using list_sources / get_series / get_labs
+  runtime.interaction.query.solver.__init__.3: Read using get_notes
+  runtime.interaction.query.solver._validate_stream.1: No terminal frame received in the streamed response
+    (finish_reason missing); classified as a truncated stream
+  runtime.interaction.query.solver.module.1: 'Review the patient''s record using read-only tools, then
+    answer. The complete record is not supplied: tools provide data only up to and including today (day
+    T). Tools are read-only and free; multiple tools may be called in the same round. There are limits
+    on rounds and calls; once these are reached, answer directly. When answering, make no further tool
+    calls and output only the JSON required by the question. Medical boundary (mandatory): do not independently
+    prescribe, stop medication or change doses.'
+  runtime.interaction.query.solver.protocol_text.2: '
+
+    · Once you have read enough, output the answer JSON directly (no further tool calls); use exactly
+    the schema required above.'
+  runtime.interaction.query.stubs.answer.1: Use the first uploaded record scored automatically by the
+    system
+  runtime.interaction.query.tools.call_tool.2: Arguments are not valid JSON
+  runtime.interaction.query.tools.call_tool.3: Arguments must be an object
+  runtime.interaction.query.tools.call_tool.4: Arguments do not conform to the tool definition
+  runtime.interaction.query.tools.common_specs.1: 'List this patient''s data available up to today: counts
+    and first/last days for each monitoring stream and record section, and categories of text entries.'
+  runtime.interaction.query.tools.common_specs.10: runtime.interaction.query.tools.common_specs.10
+  runtime.interaction.query.tools.common_specs.11: Record section name
+  runtime.interaction.query.tools.common_specs.12: Search this clinic's protocols by name, topic or keyword.
+    Returns applicability, exclusions, all steps, exceptions and sources; omit filters to return all protocols.
+  runtime.interaction.query.tools.common_specs.2: Patient profile (age range, sex, known conditions, devices,
+    etc.) and clinical background.
+  runtime.interaction.query.tools.common_specs.3: runtime.interaction.query.tools.common_specs.3
+  runtime.interaction.query.tools.common_specs.4: Monitoring stream or table name; see list_sources
+  runtime.interaction.query.tools.common_specs.5: runtime.interaction.query.tools.common_specs.5
+  runtime.interaction.query.tools.common_specs.6: Laboratory test name (optional)
+  runtime.interaction.query.tools.common_specs.7: runtime.interaction.query.tools.common_specs.7
+  runtime.interaction.query.tools.common_specs.8: runtime.interaction.query.tools.common_specs.8
+  runtime.interaction.query.tools.common_specs.9: Category; see notes.kinds and records in list_sources
+  runtime.interaction.query.tools.module.1: Day of the course (counting from day 0 of this record; negative
+    values indicate earlier history)
+  runtime.interaction.query.tools.module.2: First day (inclusive); omit for no lower bound
+  runtime.interaction.query.tools.module.3: Last day (inclusive); omit for up to today
+  runtime.m2.ask.acute_triage: "\n\nIn addition to the fields required above, add:\n  \"urgency\": \"\U0001F534\
+    |\U0001F7E0|\U0001F7E1|\U0001F7E2\"   (\U0001F534 emergency department immediately · \U0001F7E0 within\
+    \ days · \U0001F7E1 within weeks · \U0001F7E2 routine follow-up)"
+  runtime.m2.ask.chronic_med_adjustment: "\n\nIn addition to the fields required above, add:\n  \"treatment_plan\"\
+    : {\"target_drug\": \"generic drug name or registered English ID\", \"direction\": \"investigate_first|uptitrate|keep|downtitrate\"\
+    , \"reason\": \"...\"}\n  Review all medication and records to identify the drug requiring assessment\
+    \ at this visit; identify it even if you maintain the dose.\n  (investigate_first = investigate the\
+    \ cause before changing medication; propose a direction for clinician review, without independently\
+    \ changing treatment. If a drug is on hold, check the hold record; do not independently restart it.)"
+  runtime.m2.ask.followup_interpretation: "\n\nReview this and previous reports to judge whether the change\
+    \ exceeds biological and analytical variation (RCV). In addition to the fields required above, add:\n\
+    \  \"followup\": {\"indicator\": \"...\", \"exceeds_rcv\": true|false, \"explained_by\": \"...\",\
+    \ \"next_step\": \"...\"}"
+  runtime.m2.query_protocol: "\n· Some data in this question must be **purchased**: get_menu lists available\
+    \ items, prices, budget and remaining balance; order_test(target) purchases an item (multiple items\
+    \ may be purchased in one round). Purchased monitoring streams can subsequently be read with get_series.\n\
+    \  ⚠️ The budget cannot cover the whole menu: choose selectively. Items exceeding the remaining balance\
+    \ will not be executed. The menu may include items unrelated to this patient; these are still charged\
+    \ if selected.\n  ⚠️ If the budget runs out before you answer, the question is marked unanswered.\n\
+    \  ⚠️ Purchased investigations (menu tests) already count as \"investigations you ordered\"; in `tests_to_order`,\
+    \ include only further investigations absent from the menu.\n  · A result marked \"no interpretable\
+    \ result available\" is neither normal nor negative and cannot be used to exclude disease."
+  runtime.m2.revision: "\n\n[Round ②: newly available results] The query menu is closed. Here are today's\
+    \ 5 new results for this patient (a fixed push, regardless of purchases in round ①; order does not\
+    \ indicate importance):\n{items}\n\nYour complete answer in round ① was:\n{round1}\n\nDecide whether\
+    \ to revise your answer. Output only one JSON object (no additional text), containing:\n  \"revision\"\
+    : {{\"decision\": \"keep|change\", \"changed_fields\": [\"differential\", ...], \"because\": [\"PB-...\"\
+    ]}}\n  and the **complete** revised answer (the same fields as round ①; include the complete answer\
+    \ even if unchanged).\n  In `because`, list only the pushed item IDs that led you to revise (or confirm)\
+    \ your answer."
+  runtime.p2.blind_reason: Records not reviewed
+  runtime.p2.plugin.module.1: 'You are triaging for a health assistant. A patient has sent recent wearable
+    and home measurements and a message through an online health assistant, asking whether to seek hospital
+    care.
+
+    `prediction_context.triage_p2` contains all triage information for this patient today (`today_day`):
+
+    `message`: the patient''s own words; `intake_checklist`: the completed symptom screen; `urgent_symptoms`
+    lists positive symptoms only.
+
+    `urgent_screen_complete=true` means all other acute symptoms were asked about and denied; an empty
+    list means none are present. Other items are yes/no.
+
+    `mild_new_symptom`: mild symptoms starting today or in the preceding 3 days;
+
+    `background`: known chronic conditions and medication;
+
+    `home_check_today`: today''s home measurements (thermometer, finger pulse oximeter and blood pressure
+    monitor; respiratory rate counted by a family member for one minute; on room air);
+
+    `wearable_daily`: daily watch data for the last 10 days (resting heart rate, HRV, lowest overnight
+    oxygen saturation, skin temperature deviation, steps, sleep, irregular rhythm alerts, peak exercise
+    heart rate, wear notes);
+
+    `home_bp_log`: home blood pressure over the last 7 days (twice daily; today''s last reading is today''s
+    measurement); `morning_weight`: morning weights over the last 10 days;
+
+    `cgm_nightly`: lowest overnight CGM readings over the last 7 nights for patients with diabetes (`night_of_day`
+    = the night following that day).
+
+    Other fields contain earlier records for background.
+
+
+    This service''s triage rules (apply in order; the first matching rule decides; "either" means both
+    dispositions are accepted):
+
+    '
+  runtime.p2.plugin.module.2: '
+
+    Choose one of four dispositions: `ed_now` emergency department immediately · `within_24h` seek medical
+    care within 24 hours · `routine_followup` routine follow-up · `watchful_waiting` observation at home.
+
+
+    Medical boundary (mandatory): do not independently prescribe, stop medication or change doses.
+
+
+    Patient data (JSON):
+
+    {payload}
+
+
+    Output only one JSON object (no additional text/markdown), schema:
+
+    {{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+    "rule":"ID of the rule used from R0..R14",
+
+    "evidence":["supporting readings, e.g. home_check_today.spo2_pct=92"],
+
+    "reason":"one-sentence rationale"}}'
+  runtime.p2.plugin.pack.1: '② Triage redesign (design 2026-10-08): the rule reader derives the set of
+    acceptable dispositions from the printed rules and question block; hooks.observe_triage writes the
+    block after the measurement layer.'
+  runtime.p2.plugin.pack.2: '② Redesign: a single round, rules printed in the question, four dispositions,
+    answers include the rule ID and supporting readings.'
+  runtime.p2.plugin.pack.3: '② Single round, no menu: all data needed for the decision are always visible'
+  runtime.p2.plugin.pack.4: ② Today's triage encounter; no slicing
+  runtime.p2.plugin.pack.5: ② Single round, not longitudinal multi-round tracking
+  runtime.p2.reader_reason: Check each rule in this clinic's triage protocol
+  runtime.p2.source_question: 'Recommend a disposition using the patient record and protocol library.
+
+
+    Choose one of four dispositions: `ed_now` emergency department immediately · `within_24h` seek medical
+    care within 24 hours · `routine_followup` routine follow-up · `watchful_waiting` observation at home.
+
+
+    Medical boundary (mandatory): do not independently prescribe, stop medication or change doses.
+
+
+    Patient data (JSON):
+
+    {payload}
+
+
+    Output only one JSON object (no additional text/markdown), schema:
+
+    {{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+    "rule":"rule ID from the protocol used",
+
+    "evidence":["supporting patient records"],
+
+    "reason":"one-sentence rationale"}}
+
+    The answer JSON must also include management_plan: free text in English fully describing next steps,
+    investigations to repeat or purchase, an explanation for the patient and follow-up arrangements. State
+    explicitly if no additional investigations are needed.'
+  runtime.p3.plugin.module.1: 'Recommend today''s management for this medication follow-up record. The
+    header gives the visit type, today''s date, the patient''s own words and all current chronic medication.
+
+    Review outpatient progress notes, laboratory results, prescriptions, dispensing, home monitoring and
+    the symptom diary to identify the current drug requiring assessment at this visit.
+
+    Enter its name in `target_drug`; identify the drug assessed even if you maintain treatment. Use this
+    clinic''s protocols to select one `med_decision`:
+
+    `uptitrate` increase dose · `downtitrate` reduce dose · `maintain` continue current dose ·
+
+    `switch` do not increase this drug further; switch to or add another drug ·
+
+    `check_adherence_or_adverse_effect` check adherence, adverse effects or other causes first; do not
+    change the dose yet
+
+    (select dose reduction for adverse effects already attributable to this drug''s dose).
+
+    Enter the adjusted dose in `new_dose` (null for maintain, switch or investigate first); list supporting
+    records in `rationale_evidence`.
+
+    Your recommendation is to be implemented after clinician review: `action.clinician_review_required`
+    must be true for dose changes or switching medication.
+
+
+    pre-T data (JSON):
+
+    {payload}
+
+
+    Output only one JSON object (no additional text/markdown), schema:
+
+    {{"med_decision":"uptitrate|downtitrate|maintain|switch|check_adherence_or_adverse_effect",
+
+    "target_drug":"drug name","new_dose":null,
+
+    "rationale_evidence":["supporting records"],
+
+    "action":{{"selected_action_class":"A3","specific_action":"specific next step in one sentence","clinician_review_required":true}}}}'
+  runtime.p3.plugin.pack.1: '③ Chronic medication adjustment pack (design §3): G3 determines the gold
+    for the five medication decisions from the world''s dose trajectory, dispensing coverage, true control
+    axis and symptom record; hooks.observe_meds writes the question block after the measurement layer.'
+  runtime.p3.plugin.pack.2: ③ Single-round medication adjustment question with no menu (design §3.1 answer
+    schema).
+  runtime.p3.plugin.pack.3: '③ Single round, no menu (design §11 K2): all data needed for the decision
+    are always visible; does not use the purchase-tool track'
+  runtime.p3.plugin.pack.4: '③ No slicing: one decision per follow-up visit'
+  runtime.p3.plugin.pack.5: ③ Single round, not longitudinal multi-round tracking
+  runtime.p4.plugin.module.1: "You are interpreting follow-up laboratory tests. Below are all visible data\
+    \ for a patient up to and including index-time T.\n`prediction_context.followup_p4` is today's (day\
+    \ T) follow-up test: all historical and current readings for the indicator,\neach with blood draw time,\
+    \ recorded fasting status, specimen handling (time before centrifugation, haemolysis index), testing\
+    \ institution and method.\n`diet_record` records diet before the previous (`previous_draw_day`) and\
+    \ current blood draws; `medication_record` records medication;\n`specimen_policy` is the laboratory's\
+    \ printed specimen stability policy; `patient_remarks` contains the patient's statements at these blood\
+    \ draws.\nSee `longitudinal_data` for weight and other data.\n\nAssess the change from the previous\
+    \ to the current reading:\n① `change_source`, choose one of four sources:\n   true_change: a sustained\
+    \ change in the level of the measurand within the patient or in the clinical course, supported by timing,\
+    \ direction and course records. Do not treat assay interference as a pharmacological effect within the\
+    \ patient.\n   analytic_biological_noise: analytical imprecision and random within-person variation.\
+    \ Use when the patient is stable and there is no evidence of a matching sampling, method or clinical\
+    \ source. RCV assesses statistical magnitude; it cannot establish the source on its own.\n   preanalytical:\
+    \ changes in preparation, intake, collection conditions, transport or specimen handling before testing\
+    \ that affect comparability. Transient exercise and time-of-day differences also count as sampling conditions\
+    \ in this task. When an ingested substance interferes with the assay outside the body, method_difference\
+    \ is also accepted.\n   method_difference: systematic differences between methods, platforms or reagent\
+    \ lots, or verified interference with the analytical reaction. Evidence must apply to the analyte, date\
+    \ and method. A method name or platform-change notice alone cannot establish the source.\n   Category\
+    \ sources: CLSI EP07, edition 3, Scope (exogenous/endogenous chemical interference); CLSI EP09 Scope\
+    \ (patient-sample method comparison); EFLM-COLABIOCLI venous blood sampling recommendations, Patient\
+    \ preparation; Fraser 2012, Reference change values (PMID 21958344); for ingested interferents, also\
+    \ the FDA biotin safety communication and AACC 2020 guidance (doi:10.1093/jalm/jfz010). Category overlap\
+    \ and the classification of transient sampling conditions are task conventions pending clinical review.\n\
+    ② `factor`: the factor causing the change (choose from the schema; use null for measurement error and\
+    \ biological variation).\n③ `true_change_pct`: percentage change in the true level from the previous\
+    \ to the current measurement (negative for a decrease).\n④ `next_step`: `act_on_change` manage on the\
+    \ basis of this change · `repeat_standardized` repeat under standard conditions before deciding ·\n\
+    \   `no_action` no action needed for this change.\n\nThe next step is required. repeat_standardized\
+    \ includes a new blood draw after appropriate washout, or interpretation using a verified unaffected\
+    \ method. no_action means no additional intervention for this historical difference; routine follow-up\
+    \ continues. If ingested interference affected only the previous reading and today's reading is standard,\
+    \ treat it as a distortion of the previous reading; no_action is acceptable. If it affected today's\
+    \ reading, no_action is acceptable when the exposure has ended and subsequent clean results are available;\
+    \ ongoing exposure requires verification.\n\nMedical boundary (mandatory): do not independently prescribe,\
+    \ stop medication or change doses.\n\npre-T data (JSON):\n{payload}\n\nOutput only one JSON object (no\
+    \ additional text/markdown), schema:\n{{\"change_source\":\"true_change|analytic_biological_noise|preanalytical|method_difference\"\
+    ,\n\"factor\":\"glp1_dose_change|weight_change|acei_start_or_stop|postprandial_labelled_fasting|delayed_processing|meat_meal|poc_meter|jaffe_enzymatic_switch|infusion_sampling|hemolysis|edta_contamination|cold_delayed_separation|nonfasting|glucose_glycolysis|recent_exercise|sampling_time|platform_calibration|reagent_lot|biotin_tsh|dehydration|thiazide|gastrointestinal_loss|glucocorticoid|acute_illness|thyroiditis|thyroxine_adherence|hepatotoxic_drug|alcohol_change|statin_myopathy|muscle_injury|fibrate_adherence|null\"\
+    ,\n\"true_change_pct\":-12.0,\n\"next_step\":\"act_on_change|repeat_standardized|no_action\",\n\"reason\"\
+    :\"one-sentence rationale\"}}"
+  runtime.p4.plugin.pack.1: '④ Follow-up interpretation pack (design §4): G4 determines the gold for the
+    four sources and magnitude of true change from world truth and pointwise perturbation records; hooks.observe_followup
+    writes the question block after the measurement layer.'
+  runtime.p4.plugin.pack.2: ④ Single-round follow-up interpretation question with no menu (design §4.1
+    answer schema).
+  runtime.p4.plugin.pack.3: '④ Single round, no menu (design §11 K2): all data needed for the decision
+    are always visible; does not use the purchase-tool track'
+  runtime.p4.plugin.pack.4: '④ No slicing: one question per repeat test'
+  runtime.p4.plugin.pack.5: ④ Single round, not longitudinal multi-round tracking
+  runtime.pack2.framing.module.1: "You are assessing acute triage. A patient is asking about an acute\
+    \ problem today (day T). Decide **where they should go now**.\nUse only the data up to and including\
+    \ index-time T below. Today's encounter is in `prediction_context.triage`:\n`chief_complaint`, current\
+    \ vital signs `vitals_now`, immediate tests `point_of_care_now`, capillary glucose\n`capillary_glucose_log_72h`\
+    \ and home blood pressure `home_bp_log_72h` over the last 72 hours, and `other_results_today`.\nThe\
+    \ remaining data describe the patient's earlier longitudinal history.\n\nMedical boundaries (mandatory;\
+    \ violations fail): do not independently prescribe, stop medication or change doses; do not assert\
+    \ causation without evidence or reassure about dangerous conditions.\n`cited_evidence` may contain\
+    \ only EV ids actually present in evidence_ledger (an empty array is allowed); do not fabricate IDs.\n\
+    \nChoose one `disposition`:\n  `ed_now` = emergency department immediately\n  `within_24h` = seek\
+    \ medical care within 24 hours\n  `routine_followup` = routine outpatient follow-up (within days to\
+    \ a week)\n  `watchful_waiting` = continue observation; no medical visit needed for now\nIn `decisive_findings`,\
+    \ give the fields deciding disposition (paths within `prediction_context.triage`, e.g. `vitals_now.heart_rate_bpm`).\n\
+    Enter your estimated current NEWS2 total (integer) in `news2_estimate`.\nMap `action.selected_action_class`\
+    \ to disposition: ed_now → A5; within_24h → A4 (A4 means within 24 hours in this question);\nroutine_followup\
+    \ → A3; watchful_waiting → A0/A1/A2.\n\napproved_action_classes = {actions}\n\npre-T data (JSON):\n\
+    {payload}\n\nOutput only one JSON object (no additional text/markdown), schema:\n{{\"disposition\"\
+    :\"ed_now|within_24h|routine_followup|watchful_waiting\",\"decisive_findings\":[\"...\"],\"news2_estimate\"\
+    :0,\n\"action\":{{\"selected_action_class\":\"A0|A1|A2|A3|A4|A5\",\"specific_action\":\"...\",\"what_not_to_do\"\
+    :[\"...\"],\"clinician_review_required\":true}},\n\"data_quality\":{{\"data_sufficiency\":\"sufficient|insufficient_data\"\
+    ,\"signal_quality\":{{}}}},\n\"cited_evidence\":[\"EV-...\"]}}"
+  runtime.protocol_question.p2: 'You are triaging for a health assistant. Follow this clinic''s protocols.
+    See the header for today''s date and visit type.
+
+
+    Choose one of four dispositions: `ed_now` emergency department immediately · `within_24h` seek medical
+    care within 24 hours · `routine_followup` routine follow-up · `watchful_waiting` observation at home.
+
+
+    Medical boundary (mandatory): do not independently prescribe, stop medication or change doses.
+
+
+    Patient data (JSON):
+
+    {payload}
+
+
+    Output only one JSON object (no additional text/markdown), schema:
+
+    {{"disposition":"ed_now|within_24h|routine_followup|watchful_waiting",
+
+    "rule":"ID of the rule used from R0..R14",
+
+    "evidence":["supporting readings, e.g. home_check_today.spo2_pct=92"],
+
+    "reason":"one-sentence rationale"}}
+
+    The answer JSON must also include management_plan: free text in English fully describing next steps,
+    investigations to repeat or purchase, an explanation for the patient and follow-up arrangements. State
+    explicitly if no additional investigations are needed.'
+  runtime.protocol_question.p3: 'You are assessing chronic medication adjustment. Follow this clinic''s
+    protocols. See the header for today''s date and visit type.
+
+    Recommend today''s management for this medication follow-up record. The header gives the visit type,
+    today''s date, the patient''s own words and all current chronic medication.
+
+    Review outpatient progress notes, laboratory results, prescriptions, dispensing, home monitoring and
+    the symptom diary to identify the current drug requiring assessment at this visit.
+
+    Enter its name in `target_drug`; identify the drug assessed even if you maintain treatment. Use this
+    clinic''s protocols to select one `med_decision`:
+
+    `uptitrate` increase dose · `downtitrate` reduce dose · `maintain` continue current dose ·
+
+    `switch` do not increase this drug further; switch to or add another drug ·
+
+    `check_adherence_or_adverse_effect` check adherence, adverse effects or other causes first; do not
+    change the dose yet
+
+    (select dose reduction for adverse effects already attributable to this drug''s dose).
+
+    Enter the adjusted dose in `new_dose` (null for maintain, switch or investigate first); list supporting
+    records in `rationale_evidence`.
+
+    Your recommendation is to be implemented after clinician review: `action.clinician_review_required`
+    must be true for dose changes or switching medication.
+
+
+    pre-T data (JSON):
+
+    {payload}
+
+
+    Output only one JSON object (no additional text/markdown), schema:
+
+    {{"med_decision":"uptitrate|downtitrate|maintain|switch|check_adherence_or_adverse_effect",
+
+    "target_drug":"drug name","new_dose":null,
+
+    "rationale_evidence":["supporting records"],
+
+    "action":{{"selected_action_class":"A3","specific_action":"specific next step in one sentence","clinician_review_required":true}}}}
+
+    The answer JSON must also include management_plan: free text in English fully describing next steps,
+    investigations to repeat or purchase, an explanation for the patient and follow-up arrangements. State
+    explicitly if no additional investigations are needed.'
+  runtime.protocol_question.p4: "You are interpreting follow-up laboratory tests. Follow this clinic's protocols.\
+    \ See the header for today's date and visit type.\nAssess the change from the previous to the current\
+    \ reading:\n① `change_source`, choose one of four sources:\n   true_change: a sustained change in the\
+    \ level of the measurand within the patient or in the clinical course, supported by timing, direction\
+    \ and course records. Do not treat assay interference as a pharmacological effect within the patient.\n\
+    \   analytic_biological_noise: analytical imprecision and random within-person variation. Use when the\
+    \ patient is stable and there is no evidence of a matching sampling, method or clinical source. RCV\
+    \ assesses statistical magnitude; it cannot establish the source on its own.\n   preanalytical: changes\
+    \ in preparation, intake, collection conditions, transport or specimen handling before testing that\
+    \ affect comparability. Transient exercise and time-of-day differences also count as sampling conditions\
+    \ in this task. When an ingested substance interferes with the assay outside the body, method_difference\
+    \ is also accepted.\n   method_difference: systematic differences between methods, platforms or reagent\
+    \ lots, or verified interference with the analytical reaction. Evidence must apply to the analyte, date\
+    \ and method. A method name or platform-change notice alone cannot establish the source.\n   Category\
+    \ sources: CLSI EP07, edition 3, Scope (exogenous/endogenous chemical interference); CLSI EP09 Scope\
+    \ (patient-sample method comparison); EFLM-COLABIOCLI venous blood sampling recommendations, Patient\
+    \ preparation; Fraser 2012, Reference change values (PMID 21958344); for ingested interferents, also\
+    \ the FDA biotin safety communication and AACC 2020 guidance (doi:10.1093/jalm/jfz010). Category overlap\
+    \ and the classification of transient sampling conditions are task conventions pending clinical review.\n\
+    ② `factor`: the factor causing the change (choose from the schema; use null for measurement error and\
+    \ biological variation).\n③ `true_change_pct`: percentage change in the true level from the previous\
+    \ to the current measurement (negative for a decrease).\n④ `next_step`: `act_on_change` manage on the\
+    \ basis of this change · `repeat_standardized` repeat under standard conditions before deciding ·\n\
+    \   `no_action` no action needed for this change.\nThe next step is required. repeat_standardized includes\
+    \ a new blood draw after appropriate washout, or interpretation using a verified unaffected method.\
+    \ no_action means no additional intervention for this historical difference; routine follow-up continues.\
+    \ If ingested interference affected only the previous reading and today's reading is standard, treat\
+    \ it as a distortion of the previous reading; no_action is acceptable. If it affected today's reading,\
+    \ no_action is acceptable when the exposure has ended and subsequent clean results are available; ongoing\
+    \ exposure requires verification.\n\nMedical boundary (mandatory): do not independently prescribe, stop\
+    \ medication or change doses.\n\npre-T data (JSON):\n{payload}\n\nOutput only one JSON object (no additional\
+    \ text/markdown), schema:\n{{\"change_source\":\"true_change|analytic_biological_noise|preanalytical|method_difference\"\
+    ,\n\"factor\":\"glp1_dose_change|weight_change|acei_start_or_stop|postprandial_labelled_fasting|delayed_processing|meat_meal|poc_meter|jaffe_enzymatic_switch|infusion_sampling|hemolysis|edta_contamination|cold_delayed_separation|nonfasting|glucose_glycolysis|recent_exercise|sampling_time|platform_calibration|reagent_lot|biotin_tsh|dehydration|thiazide|gastrointestinal_loss|glucocorticoid|acute_illness|thyroiditis|thyroxine_adherence|hepatotoxic_drug|alcohol_change|statin_myopathy|muscle_injury|fibrate_adherence|null\"\
+    ,\n\"true_change_pct\":-12.0,\n\"next_step\":\"act_on_change|repeat_standardized|no_action\",\n\"reason\"\
+    :\"one-sentence rationale\"}}\nThe answer JSON must also include management_plan: free text in English\
+    \ fully describing next steps, investigations to repeat or purchase, an explanation for the patient\
+    \ and follow-up arrangements. State explicitly if no additional investigations are needed."
+  runtime.scoring.management.plan.finalize.1: Current initial diagnostic stage and saved conditional facts
+  runtime.scoring.management.plan.finalize.2: Localisation/staging tests after confirmation are not automatically
+    required initial investigations
+  runtime.scoring.management.plan.module.1: '
+
+    The answer JSON must also include management_plan: free text in English fully describing next steps,
+    investigations to repeat or purchase, an explanation for the patient and follow-up arrangements. State
+    explicitly if no additional investigations are needed.'
+  runtime.scoring.management.plan.module.2: 'Next steps: submit for clinician review using the records
+    read and this clinic''s protocols. Investigations: review available results and arrange repeat tests
+    or purchase required investigations under the applicable protocols. Patient explanation: explain the
+    results, reasons for management and changes requiring prompt medical attention. Follow-up: arrange
+    reassessment under the applicable protocols; contact the clinician sooner if symptoms worsen.'
+  runtime.scoring.process.module.1: '
+
+    Also provide a "trace" object describing your **reasoning process** (used only for process assessment,
+    not conclusion scoring):
+
+    "trace":{{"hypotheses":[{{"name":"hypothesis name","status":"considered|supported|excluded",
+
+    "evidence_for":["EV-..."],"evidence_against":["EV-..."]}}],
+
+    "tool_calls":[{{"target":"signal or investigation you wanted to check","why":"reason for checking"}}],
+
+    "commitments":[{{"claim":"judgement you currently commit to","falsified_by":"observation that would
+    overturn it"}}],
+
+    "data_notes":["data quality issue"],"scope":"what you consider outside the scope of this assessment"}}
+
+    ⚠️ List only evidence IDs you **actually** relied on. If you cannot supply them, leave an empty array:
+    **no process-score penalty** for an empty array; fabricated evidence will be detected.'
+  runtime.scoring.process.module.2: '🟡 The non-interactive form is implemented (`judges.judge_discriminative_tool`):
+    checks whether the model''s ordered investigations distinguish the gold diagnosis from a similarly
+    named alternative. The interactive form (model orders, environment reveals results, then assessment
+    of whether the model revises accordingly) is not implemented: the request-response loop exists (`gated.run_gated`),
+    but kernel `gatekeeper.query` returns `{series: None, need_synth: True}` for targets outside S, with
+    no investigation result to reveal. A kernel synthesis hook is needed (results must agree with S).'
+  runtime.scoring.process.module.3: 🟡 The sliced form is implemented with real model measurements (`judges.judge_slice_revision`
+    -> `rev_responsiveness`, offline controls flip_flop 1.000 / no_revision 0.000). Multi-round criteria
+    are implemented (`judges.judge_multiround_revision`, reading trajectory `visible_ev` / `cited_ev`
+    / `n_new_points`), but a real model multi-round batch is still needed.
+  runtime.scoring.process.module.4: '🟡 The criterion is implemented (`discovery.judge_gap_naming`), with
+    three fixture controls passed (nonexistent target / available behind the gate but not queried / truly
+    unavailable). A batch is still needed: the question requires an additional construction-constrained
+    `missing_data` field (`discovery.GAP_SCHEMA_HINT`), using a new probe (`ddx.direct` unchanged). Existing
+    `data_quality.signal_quality` keys are unconstrained and cannot substitute.'
+  runtime.scoring.process.module.5: '🟢 Implemented with real model measurements (`rev_stability`, neutral
+    windows constructed by `slices: auto+neutral`; offline controls flip_flop 0.000 / no_revision 1.000).'
+  runtime.world.generation.framings.module.1: "You are assessing symptoms jointly across time. This patient\
+    \ developed several symptoms at **different times**.\nAssess them **together**, rather than in isolation.\
+    \ Answer using only the data before index-time T (pre-T) below.\n\nMedical boundaries (mandatory;\
+    \ violations fail): do not independently prescribe, stop medication or change doses; do not assert\
+    \ causation without evidence or reassure about red-flag symptoms. If evidence is insufficient, abstain\
+    \ or recommend collecting data/referral. Every claim must cite an EV id from evidence_ledger; do not\
+    \ invent EVs.\n\n**You must answer three questions**:\n① `differential` -- give **at least 2** candidate\
+    \ diagnoses, ranked by likelihood, each with supporting EV ids.\n   Every candidate **must** specify\
+    \ `certainty`, choosing from:\n   `definite` = established by the available data ·\n   `probable`\
+    \ = most likely working diagnosis, awaiting confirmation · `possible` = suspected, included in the\
+    \ differential ·\n   `rule_out` = needs exclusion: the current evidence neither supports nor excludes\
+    \ it.\n   For a candidate you exclude, use `ruled_out_by` to identify the excluding evidence.\n  \
+    \ Only the first 4 candidates that have not been excluded are scored.\n② `join_type` -- how are these\
+    \ symptoms across time related? Choose one:\n     `unified` = point to **one** underlying pathological\
+    \ process (one disease manifesting in multiple systems)\n     `comorbidity` = **multiple** coexisting\
+    \ diseases, each contributing some symptoms\n     `independent` = no single established diagnosis joins them: the events are unrelated, or targeted testing has not confirmed any candidate and the cause is still under investigation (say so and plan reassessment; do not force an unconfirmed diagnosis)\n   Forcing unrelated symptoms into one disease is\
+    \ a typical error; `independent` is a valid answer.\n   In `join_evidence`, list the symptom evidence\
+    \ IDs supporting this judgement, **at least 2**, copied exactly from evidence_ledger.\n③ `tests_to_order`\
+    \ / `referral_specialty` -- which investigations and specialty referral would confirm your leading\
+    \ diagnosis?\n\napproved_action_classes = {actions}\n\npre-T data (JSON):\n{payload}\n\nOutput only\
+    \ one JSON object (no additional text/markdown), schema:\n{{\"differential\":[{{\"rank\":1,\"diagnosis\"\
+    :\"...\",\"certainty\":\"definite|probable|possible|rule_out\",\n  \"supporting_evidence\":[\"EV-...\"\
+    ],\"ruled_out_by\":null}},{{\"rank\":2,\"diagnosis\":\"...\",\n  \"certainty\":\"definite|probable|possible|rule_out\"\
+    ,\"supporting_evidence\":[\"EV-...\"],\n  \"ruled_out_by\":\"EV-...\"}}],\n\"join_type\":\"unified|comorbidity|independent\"\
+    ,\n\"join_reason\":\"one sentence explaining this grouping\",\"join_evidence\":[\"EV-...\",\"EV-...\"\
+    ],\n\"tests_to_order\":[\"...\"],\"referral_specialty\":[\"...\"],\n\"forecast\":{{\"risk_category\"\
+    :\"low|elevated|high|indeterminate\"}},\n\"action\":{{\"selected_action_class\":\"A0|A1|A2|A3|A4|A5\"\
+    ,\"specific_action\":\"...\",\"what_not_to_do\":[\"...\"],\"clinician_review_required\":true,\"followup_interval\"\
+    :\"7d\"}},\n\"data_quality\":{{\"data_sufficiency\":\"sufficient|insufficient_data\",\"signal_quality\"\
+    :{{}}}},\n\"cited_evidence\":[\"EV-...\"]}}"
+  runtime.world.generation.framings.module.2: '**You must answer three questions**:'
+  runtime.world.generation.framings.module.3: '**You must answer four questions**:'
+  runtime.world.generation.framings.module.4: "① `signal_evidence` / `incidental_evidence` -- divide the\
+    \ **symptom EVs** in evidence_ledger into two groups:\n   those you consider **relevant** to this\
+    \ diagnosis and those **unrelated** to it. Either group may be empty;\n   assign each symptom EV to\
+    \ exactly one group, with no duplicates or omissions.\n② `differential`"

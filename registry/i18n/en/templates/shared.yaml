@@ -1,0 +1,117 @@
+med.line: '{name} {dose} {unit} {freq}'
+protocol.source: 'Reference: {cite}; link: {url}; local policy: {policy}.'
+protocol.cite_join: '{head}; {tail}'
+protocol.news2.band: '{lo}–{hi}: {pts} points'
+protocol.news2.bands: '{label}: {bands}'
+protocol.news2.confusion: 'New confusion: {points} points; otherwise alert: 0 points.'
+protocol.news2.sum: Add the NEWS2 components (range endpoints inclusive); missing measurements must not
+  be scored 0. First check the record-authorised SpO2 scale. {bands}
+protocol.med.ladder: '{name}: dose ladder {ladder} (daily). {rule}'
+protocol.doc.field: '{label}: {body}'
+m2.today_date: Day {day} of the course
+m2.panel.reference: (reference {low}–{high})
+m2.panel.body: '{name} {value} {unit}{reference}{flag}'
+m2.panel.without_unit: '{name} {value}{reference}{flag}'
+m2.qualifier.threshold: '{name} {value:g} >= {minimum:g}'
+p3.dose: '{value} {unit}'
+p3.labs.egfr: (eGFR {egfr} mL/min/1.73m²)
+p3.labs.acr: ', urine albumin/creatinine ratio {acr} mg/g'
+p3.labs.renal: Creatinine {cr} μmol/L{egfr}, potassium {k} mmol/L{acr}
+p3.change.increase: Dose increase ({old} → {new})
+p3.rx.daily: '{name} {dose} daily'
+p3.target.upper: '{axis} < {up} {unit}'
+p3.target.range: '{axis} {lo}–{up} {unit}'
+p3.target.clinic: 'This clinic''s target: {target}'
+p3.comorbidity.ckd: '{display} stage {stage}, albuminuria A3 (nephrology follow-up){comed}'
+p3.comorbidity.comed: ; taking {med}
+p3.ladder: '{ladder} (daily)'
+p3.refill.dispensed: '{sup} days'' supply{extra}'
+p3.refill.new_strength: (increased to {dose}, new strength)
+p3.emr.line.complaint: 'Presenting complaint: {text}.'
+p3.emr.line.diagnosis: 'Diagnosis: {text}.'
+p3.emr.line.rx: 'Prescription: {text}'
+p3.emr.line.record: 'Record: {text}'
+p3.emr.line.exam: 'Examination: {text}'
+p3.emr.line.order: 'Medical instructions: {text}'
+p3.emr.line.pmh: 'Past medical history: {text}'
+p3.emr.line.hpi: 'History of presenting illness: {text}'
+p3.emr.line.drug_history: 'Medication history: {text}'
+p3.emr.line.clinical_note: 'Clinical note: {text}'
+p3.emr.line.verification: 'Record verification: {text}'
+p3.emr.line.record_state: 'Record status: {text}'
+p3.emr.line.record_received: 'Encounter record: {text}'
+p3.emr.line.medication: 'Medication: {text}'
+p3.emr.line.inquiry: 'Interview: {text}'
+p3.emr.line.course: 'Clinical course: {text}'
+p3.emr.line.workup: 'Investigation record: {text}'
+p3.emr.line.management: 'Management: {text}'
+p3.emr.line.followup: 'Follow-up: {text}'
+p3.rx.daily_unit: '{name} {dose} {unit} daily'
+p3.lab.result: '{value} {unit}'
+p3.today_day: Day {day} of the course
+p4.event.exposure_action: '{exposure}, {action}'
+p4.proc.wait0: Centrifuged {h:.1f} hours after collection
+p4.proc.wait0_warm: Centrifuged {h:.1f} hours after collection; kept at room temperature in the meantime
+p4.proc.wait1: Centrifuged after {h:.1f} hours
+p4.proc.wait1_warm: Centrifuged after {h:.1f} hours (kept at room temperature after collection)
+p4.proc.wait2: Left for {h:.1f} hours before centrifugation
+p4.proc.wait2_warm: Left for {h:.1f} hours before centrifugation (room temperature)
+p4.method.reagent_lot_b: '{method}, reagent lot B'
+p4.lab.other_campus: '{lab} (another campus)'
+p4.med.start: Started {dose}
+p4.med.start_unit: Started {dose} {unit}
+p4.med.hold: Held (previous dose {dose})
+p4.med.restart: Restarted {dose}
+p4.med.change: Dose {prev} → {new}
+p4.med.acei_name: '{drug} (ACEI, oral)'
+p4.med.long_term_dose: Long-term use of {dose} (already taking before the course started)
+p4.med.long_term: Long-term use of {dose} {unit} (already taking before the course started)
+p4.med.begin: Started {dose}
+p4.known_ckd: '{display} stage {stage} (nephrology follow-up)'
+p4.stability_statement: 'This laboratory''s specimen stability validation: creatinine results are unaffected
+  if centrifuged within {h:g} hours of blood collection'
+p4.doc.evidence_scope: 'Local method document and scope of evidence: validated free haemoglobin limit
+  {hb} g/L; supporting low calcium for EDTA transfer <{ca} mmol/L; unseparated specimen refrigerated at
+  ≤{cold_c}℃ for ≥{cold_h} hours; check room-temperature glycolysis in plain whole blood at ≥{glyco_h}
+  hours; biotin dose {biotin} mg; thyroxine reassessment after at least {settle} days. {reason}'
+p4.doc.cva_item: '{method} {pct}%'
+p4.doc.enum: '{head}, {tail}'
+p4.doc.analyte_cv: '{display}: CVI={cvi}%; CVA={cva}; two-sided 95% log RCV={rcv}%. Unit {unit}.'
+p4.doc.rule: '{exposure}: {rule} (source {source}; see the registry for the synthetic response range;
+  it is not a patient management threshold.)'
+p4.doc.event_window: '{exposure}: local synthetic follow-up places exposure or course onset {lo}–{hi}
+  days before this draw, between the two draws. This generation window is not a universal diagnostic cutoff.'
+p4.doc.source: '{source_id}: {title}; {url}'
+p4.lab_label: '{analyte} {name}'
+p3.rule.ae.head: 'Local adverse effect attribution: the registered adverse effect of {name} is {ae}.'
+p3.rule.ae.exposure: '{head} If it starts after treatment begins, attribute it to this drug''s dose, {lower};
+  {pre}'
+p3.rule.ae.timing: '{head} If onset is within {lo}–{hi} days of the latest increase (or initiation), attribute
+  it to this drug''s dose, {lower}; if at least {umin} days have passed since the latest dose change,
+  do not attribute it to this drug''s dose. Do not adjust the dose yet; investigate other causes first.
+  {pre}'
+p3.rule.adherence: 'Local adherence assessment: estimate intake coverage over the latest {window} days
+  (or since initiation if treatment duration is less than {window} days) from dispensing records and today''s
+  pill count. Carry forward early-refill stock; when a new strength is dispensed on escalation day, exclude
+  remaining old-strength stock. Coverage below {pct}% indicates poor adherence. If above target with poor
+  adherence, do not adjust the dose yet; verify intake first.'
+p3.rule.interval: 'Local reassessment interval: full effect is expected about {tau} days after increasing
+  (or starting) this drug. Readings still above target within {half} days of increasing (or starting)
+  treatment reflect an effect that has not yet fully developed; they do not establish failure of the dose
+  increase.'
+p4.followup.case.acei_start_within: After ACEI initiation, creatinine rises by no more than {n} from the
+  previous reading
+p4.followup.case.acei_start_baseline_within: After ACEI initiation, creatinine rises by more than {n}
+  from the previous reading but no more than {n} from the pre-initiation mean
+p4.followup.case.other_true_change: Other true changes, including a creatinine rise after ACEI initiation
+  exceeding {n} from both the previous reading and the pre-initiation mean
+p4.followup.step: '{condition}: preferred {primary} ({label}); accepted {accepted}.'
+record.today_date: Day {day} of the course (dates relative to day 0 of this record)
+p2.hist.result.registered: '{condition}, registered at that time.'
+med.line_per_day: '{name} {dose} {unit}/day'
+med.event.before_record: Long-term use of {dose} {unit} (already taking before the record starts)
+med.event.start: Started {dose} {unit}
+med.event.restart: Restarted {dose} {unit}
+med.event.hold: Held (previous dose {dose} {unit})
+med.event.stop: Stopped (previous dose {dose} {unit})
+med.event.dose_change: Dose {prev} → {new}

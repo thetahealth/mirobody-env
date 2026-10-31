@@ -11,9 +11,26 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import J, L, T
+
 TEXT_SOURCE = "template"
-RENEWAL_READING = "未到复查时间"
-NOTE = ("你的建议由医生审核后执行。日数相对于本数据的第 0 天，负数为第 0 天之前的院内慢病档案记录。")
+RENEWAL_READING = L("p3.reading.not_due")
+NOTE = L("p3.note")
+DRUG_KEYS = ("gliclazide", "atorvastatin", "enalapril", "levothyroxine")
+
+
+def drug_name(key: str):
+    """The short printed name of a managed drug (its display before the bracketed class)."""
+    return L(f"drug.{key}")
+
+
+def key_of(d: dict) -> str:
+    """The managed drug a `meds.drug` table describes."""
+    from haenv.p3.plan import identify_drug as parse_drug
+    key = parse_drug(d["display"])
+    if key is None:
+        raise ValueError("unknown managed drug")
+    return key
 
 
 def _fmt(v: float, nd: int) -> str:
@@ -21,7 +38,7 @@ def _fmt(v: float, nd: int) -> str:
 
 
 def _dose(v: float, unit: str) -> str:
-    return f"{int(v) if float(v).is_integer() else v} {unit.split('/')[0]}"
+    return T("p3.dose", value=int(v) if float(v).is_integer() else v, unit=unit.split('/')[0])
 
 
 def _labs(renal: dict, day: int, uacr: dict | None = None, k_nd: int = 1) -> dict:
@@ -30,9 +47,9 @@ def _labs(renal: dict, day: int, uacr: dict | None = None, k_nd: int = 1) -> dic
     if day not in renal:
         return {}
     v = renal[day]
-    egfr = f"（eGFR {v[2]} mL/min/1.73m²）" if len(v) > 2 else ""
-    acr = f"，尿白蛋白/肌酐比 {uacr[day]} mg/g" if uacr and day in uacr else ""
-    return {"labs": f"肌酐 {v[0]} μmol/L{egfr}，血钾 {v[1]:.{k_nd}f} mmol/L{acr}"}
+    egfr = T("p3.labs.egfr", egfr=v[2]) if len(v) > 2 else ""
+    acr = T("p3.labs.acr", acr=uacr[day]) if uacr and day in uacr else ""
+    return {"labs": T("p3.labs.renal", cr=v[0], egfr=egfr, k=f"{v[1]:.{k_nd}f}", acr=acr)}
 
 
 def visit_rows(item: dict) -> list[dict]:
@@ -42,7 +59,7 @@ def visit_rows(item: dict) -> list[dict]:
     from haenv.p3.plan import known_of
     d = drug(item["drug"], known_of({"comorbidity": (item.get("comorbidity") or {}).get("code")}))
     ax = axis(item["axis"])
-    name = d["display"].split("（")[0]
+    name = drug_name(item["drug"])
     line = sorted(item["dose_line"], key=lambda x: int(x[0]))
     on_day = {int(dd): v for dd, v in line}
     renal = {int(r[0]): tuple(r[1:]) for r in item.get("renal") or ()}
@@ -56,34 +73,34 @@ def visit_rows(item: dict) -> list[dict]:
     rows, cur, last = [], None, None
     for r in sorted(item["visits"], key=lambda x: int(x["day"])):
         day = int(r["day"])
-        reading = f"{_fmt(float(r['printed']), int(ax['ndigits']))} {ax['unit']}"
+        reading = T("p3.lab.result", value=_fmt(float(r['printed']), int(ax['ndigits'])), unit=ax['unit'])
 
         if day == int(item["T"]):
-            rows.append({"day": day, "reading": reading, "prescription": "本次待定", "change": "—", **_labs(renal, day, uacr, k_nd)})
+            rows.append({"day": day, "reading": reading, "prescription": L("p3.rx.pending"), "change": "—", **_labs(renal, day, uacr, k_nd)})
             continue
         if cur is None and day not in on_day:
             # A19: a monitoring visit before the start
-            rows.append({"day": day, "reading": reading, "prescription": "未用药", "change": "观察", **_labs(renal, day, uacr, k_nd)})
+            rows.append({"day": day, "reading": reading, "prescription": L("p3.rx.none"), "change": L("p3.change.observe"), **_labs(renal, day, uacr, k_nd)})
             continue
         if day in on_day:
             last = day
             new = on_day[day]
-            change = "起始" if cur is None else f"加量（{_dose(cur, d['unit'])} → {_dose(new, d['unit'])}）"   # A10: the record's own wording
+            change = L("p3.change.start") if cur is None else T("p3.change.increase", old=_dose(cur, d['unit']), new=_dose(new, d['unit']))   # A10: the record's own wording
             cur = new
         else:
             # a renewal visit, inside the early window after the last change (`realize._layout`): the
             # patient's own home record is read as at every visit; a laboratory axis is not yet due
-            change = "续方"
+            change = L("p3.change.renew")
             if not d.get("self_measured") and day - last <= half:
                 reading = RENEWAL_READING
-        rows.append({"day": day, "reading": reading, "prescription": f"{name} {_dose(cur, d['unit'])} 每日",
+        rows.append({"day": day, "reading": reading, "prescription": T("p3.rx.daily", name=name, dose=_dose(cur, d['unit'])),
                      "change": change, **_labs(renal, day, uacr, k_nd)})
     iv = item.get("illness_visit")
     if iv:      # a visit for an acute illness between the chronic visits: no reading, the prescription as it stood
         day = int(iv["day"])
         at = [v for dd, v in line if int(dd) <= day][-1]
-        rows.append({"day": day, "reading": "未测", "prescription": f"{name} {_dose(at, d['unit'])} 每日",
-                     "change": f"因{iv['reason']}就诊，慢病用药未调整"})
+        rows.append({"day": day, "reading": L("p3.reading.not_measured"), "prescription": T("p3.rx.daily", name=name, dose=_dose(at, d['unit'])),
+                     "change": T("p3.change.illness_visit", reason=iv['reason'])})
         rows.sort(key=lambda r: int(r["day"]))
     return rows
 
@@ -95,17 +112,14 @@ def attribution_rule(d: dict, background: bool = False) -> str:
     for a symptom alone. Onsets inside the gray bands are not emitted, so the rule needs no words for them."""
     from haenv.world.labworld.meds import rule
     rl = rule()
-    name = d["display"].split("（")[0]
-    head = f"本院不良反应归因：{name}登记的不良反应为{d['ae_display']}。"
-    lower = "应减量" if d.get("ae_dose_decision") is not False else "但本药剂量按控制指标调整，控制指标未低于目标下限时不因症状减量"
-    pre = "开始用药之前已出现的，不归因于本药。"
-    other = ""
+    head = T("p3.rule.ae.head", name=drug_name(key_of(d)), ae=d['ae_display'])
+    lower = L("p3.rule.ae.lower" if d.get("ae_dose_decision") is not False else "p3.rule.ae.axis_dosed")
+    pre = L("p3.rule.ae.predating")
     if d["attribution"] == "exposure":
-        return head + f"开始用药后出现的，归因于本药剂量，{lower}；" + pre + other
+        return T("p3.rule.ae.exposure", head=head, lower=lower, pre=pre)
     lo, hi = (int(x) for x in rl["ae_dose_window"])
-    return (head + f"起病于最近一次加量（或开始用药）后 {lo}–{hi} 天内的，归因于本药剂量，{lower}；"
-            f"起病距最近一次剂量变动已满 {int(rl['ae_unattributed_min'])} 天的，不能归因于本药剂量，"
-            "暂不调整剂量，先查其他原因；" + pre + other)
+    return T("p3.rule.ae.timing", head=head, lo=lo, hi=hi, lower=lower,
+             umin=int(rl['ae_unattributed_min']), pre=pre)
 
 
 def adherence_rule() -> str:
@@ -113,9 +127,7 @@ def adherence_rule() -> str:
     from haenv.world.labworld.meds import rule
     rl = rule()
     pct = int(round(100 * float(rl["adherence_line"])))
-    return (f"本院依从性判定：按取药记录（提前取药的余量顺延计入；加量当天换新规格发药，旧规格余药不再计入）与今天的药盒计数估算最近 {int(rl['adherence_window_days'])} 天"
-            f"（开始用药不足 {int(rl['adherence_window_days'])} 天的，自开始用药日起）的服药覆盖率，"
-            f"低于 {pct}% 视为依从不足；控制指标未达标而依从不足时，暂不调整剂量，先核实服药情况。")
+    return T("p3.rule.adherence", window=int(rl['adherence_window_days']), pct=pct)
 
 
 def clinic_protocol(item: dict) -> list[str]:
@@ -130,8 +142,16 @@ def clinic_protocol(item: dict) -> list[str]:
     d = drug(item["drug"], known_of({"comorbidity": (item.get("comorbidity") or {}).get("code")}))
     tau = int(d["tau_rule_days"])
     half = int(float(rule()["early_max_frac"]) * tau)
-    out = [f"本院复评间隔：该药加量（或开始用药）后约 {tau} 天疗效才充分显现；加量（或开始用药）后 {half} 天内复查读数仍未达标，"
-           f"属疗效尚未显现，不据此判定加量无效。", attribution_rule(d, bool(item.get("background"))), adherence_rule()]
+    out = [T("p3.rule.interval", tau=tau, half=half), attribution_rule(d, bool(item.get("background"))), adherence_rule()]
+    if item.get("documented_course_only"):
+        out.append(L("p3.rule.safety_course"))
+    if item["drug"] == "levothyroxine":
+        from haenv.p3.plan import specification
+        out.append(T("p3.rule.absorption", hours=specification()["levothyroxine_absorption"]["minimum_separation_hours"]))
+    if d.get("when_off_at_top"):
+        from haenv.world.labworld.meds import axis
+        out.append(T("p3.rule.top_check", name=drug_name(item["drug"]), top=d["ladder"][-1],
+                     unit=d["unit"], axis=axis(d["axis"])["display"]))
     if item.get("adverse_event_record"):
         from haenv.world.history.history_dependency import table
         out.append(table()["packs"]["p3"]["protocol"])
@@ -142,7 +162,7 @@ def clinic_protocol(item: dict) -> list[str]:
         out.append(str(d["clinic_policy"]))
     if item.get("documented_course_only"):
         from haenv.world.validation.difficulty_r2 import config
-        out.append("症状状态只登记原始记录明确记载的经过，未登记不表示已缓解或持续。一次症状后来缓解也不能替代对起病时用药、加量日期和其他原因的核对。")
+        out.append(L("protocol.p3.documented_course_only"))
         out.append(config("p3")["allergy_record"]["protocol"])
     return out
 
@@ -179,16 +199,16 @@ def render_block(item: dict) -> dict:
     d = drug(item["drug"])
     ax = axis(item["axis"])
     up = item.get("upper", ax["upper"])          # this patient's target (A12)
-    tgt = f"{ax['display']} < {up} {ax['unit']}"
+    tgt = T("p3.target.upper", axis=ax['display'], up=up, unit=ax['unit'])
     if ax.get("lower") is not None:
-        tgt = f"{ax['display']} {ax['lower']}–{up} {ax['unit']}"
+        tgt = T("p3.target.range", axis=ax['display'], lo=ax['lower'], up=up, unit=ax['unit'])
     diary = sorted(item["diary"], key=lambda e: int(e["onset"]))
     on_day = {int(x): v for x, v in sorted(item["dose_line"], key=lambda x: int(x[0]))[1:]}   # the increases
     cm = item.get("comorbidity")
     known = {}
     if cm:      # A24: the comorbidity the clinic knows, staged by a persistent eGFR (`ckd_stage`), and the nephrology medication
-        known = {"known_comorbidity": f"{cm['display']} {ckd_stage(item)} 期，白蛋白尿 A3（肾内科随诊）"
-                 + (f"；在用{cm['co_medication']}" if cm.get("co_medication") else "")}
+        known = {"known_comorbidity": T("p3.comorbidity.ckd", display=cm['display'], stage=ckd_stage(item),
+                                        comed=T("p3.comorbidity.comed", med=cm['co_medication']) if cm.get("co_medication") else "")}
     out = {
         **({"documented_course_only": True} if item.get("documented_course_only") else {}),
         **({"home_pressure_record": home_pressure_rows(item)}
@@ -197,20 +217,26 @@ def render_block(item: dict) -> dict:
         **({"review_from_day": item["review_from_day"]} if "review_from_day" in item else {}),
         "condition": d["condition"], "drug": d["display"], **known,
         "other_medications": list(item.get("other_medications") or ()),
-        "dose_ladder": " / ".join(_dose(x, d["unit"]) for x in d["ladder"]) + "（每日）",
-        "control_axis": ax["display"], "clinic_target": "本院目标：" + tgt, "clinic_protocol": clinic_protocol(item),
+        "dose_ladder": T("p3.ladder", ladder=J("slash", [_dose(x, d["unit"]) for x in d["ladder"]])),
+        "control_axis": ax["display"], "clinic_target": T("p3.target.clinic_drug", name=d["display"], target=tgt), "clinic_protocol": clinic_protocol(item),
+        # Source instructions cover newly registered medicines until the shared
+        # hospital catalog includes their monographs. They never read the gold.
+        **({"medication_instructions": clinic_protocol(item)}
+           if item["drug"] in ("amlodipine", "losartan", "levothyroxine") else {}),
         "visits": visit_rows(item),
-        "refill_record": [{"day": int(p), "dispensed": f"{sup} 天量" + (f"（加量至 {_dose(on_day[int(p)], d['unit'])}，新规格）" if int(p) in on_day else "")}
+        "refill_record": [{"day": int(p), "dispensed": T("p3.refill.dispensed", sup=sup, extra=(
+                               T("p3.refill.new_strength", dose=_dose(on_day[int(p)], d['unit'])) if int(p) in on_day else ""))}
                           for p in item["refills"]],
-        "pill_count_today": f"末次取药（第 {int(item['refills'][-1])} 天，{sup} 天量）后，今天药盒剩余 {int(item['pill_count'])} 天量",
+        "pill_count_today": pill_count(item, sup),
         "symptom_diary": [{"symptom": e["symptom"], "onset_day": int(e["onset"]),
                            "severity": e["severity"],
-                           **({"status": e["status"]} if course_documented(item, e) else {})}
+                           "status": e["status"]}
                           for e in diary],
-        "encounter_record": [{"day": int(e["onset"]), "source": "门诊问诊记录",
+        "encounter_record": [{"day": int(e["onset"]), "source": L("p3.source.consult"),
                               "symptom": e["symptom"], "onset_day": int(e["onset"]),
-                              "history": e.get("context") or ("无明显诱因" if e.get("kind") == "drug_symptom" else "—")}
+                              "history": e.get("context") or (L("p3.context.no_trigger") if e.get("kind") == "drug_symptom" else "—")}
                              for e in diary],
+        **({"administration_record": item["administration_record"]} if item.get("administration_record") else {}),
         "today": int(item["T"]), "note": NOTE, "text_source": TEXT_SOURCE,
     }
     from haenv.world.protocols.delivery import library_block
@@ -220,13 +246,18 @@ def render_block(item: dict) -> dict:
 def home_pressure_rows(item):
     """One observed seven-day aggregate per visit, never a daily sampling stream."""
     return [{"ts": int(r["day"]), "value": float(r["printed"]),
-             "aggregation": "7日家庭收缩压均值"} for r in item["visits"]]
+             "aggregation": L("p3.agg.home_sbp_7d")} for r in item["visits"]]
 
 
 def course_documented(item, entry):
-    """Recorded course is optional; every symptom and its onset remain visible."""
-    if not item.get("documented_course_only"):
-        return True
-    from haenv.world.validation.difficulty_r2 import config
-    from haenv.world.history.history_dependency import uniform
-    return uniform("p3-course-documentation", item["course_documentation_key"], entry["onset"], entry["symptom"]) < config("p3")["documented_symptom_course"]["value"]
+    """Every course G3 can inspect is documented, including resolved events."""
+    return True
+
+
+def pill_count(item, supply):
+    from haenv.p3.plan import h01
+    from haenv.p3.plan import specification
+    keys = specification()["surface"]["pill_count_templates"]
+    key = item.get("course_documentation_key") or item.get("record_key") or str(item["dose_line"])
+    template_key = keys[int(h01("p3-count-channel", key) * len(keys))]
+    return T(template_key, day=int(item["refills"][-1]), sup=supply, left=int(item["pill_count"]))

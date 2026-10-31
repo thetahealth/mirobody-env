@@ -29,7 +29,10 @@ import functools
 import hashlib
 
 CLASSES = ("uptitrate", "downtitrate", "maintain", "switch", "check_adherence_or_adverse_effect")
-DRUGS = ("gliclazide", "atorvastatin", "enalapril", "levothyroxine")
+from haenv.p3.policy import (specification, drug_keys, identify_drug, pill_count_slots,
+                             absorption_interaction)
+
+DRUGS = drug_keys()
 GLUCOSE_PRIMARY = ("metformin", "semaglutide", "liraglutide", "dulaglutide", "tirzepatide")
 #: subtypes and their share inside each class (PREREG 4, A5)
 SUBTYPES = {
@@ -45,6 +48,9 @@ SUBTYPES = {
 POSITION = {"off": (0.5, 0.5, 0.0), "ae_dose": (0.0, 0.6, 0.4), "over": (0.0, 1.0, 0.0),
             "early": (0.0, 1.0, 0.0), "on": (0.45, 0.25, 0.3), "top_off": (0.0, 0.0, 1.0),
             "adh_low": (0.3, 0.3, 0.4), "unattributed": (0.3, 0.3, 0.4)}
+POSITION["absorption"] = POSITION["adh_low"]
+POSITION["on_low"] = POSITION["on"]
+POSITION["off_ae"] = POSITION["ae_dose"]
 AE_SUBTYPES = ("ae_dose", "unattributed")
 DIP_Q, PREDATING_Q = 0.45, 0.45   # A17: decoys at a natural frequency (自拟), the adherence decoy withdrawn
 #: Pack share of each decision: the five decisions alike (balanced accuracy weighs them alike), 20 per
@@ -52,26 +58,17 @@ DIP_Q, PREDATING_Q = 0.45, 0.45   # A17: decoys at a natural frequency (自拟),
 #: Inside a decision the drugs that can take it share alike (`planned_cells`).
 CLASS_SHARE = {"check_adherence_or_adverse_effect": 1, "maintain": 1, "downtitrate": 1, "uptitrate": 1, "switch": 1}
 WEIGHT = 3
-#: Pool dealing only (`make_plans`; the published pack follows `planned_scenarios`).
-#: p3-fixes e: (drug, class) cells whose items every model answered in every cell of the 1.3.0 board
-#: (37 such items of 100 in the item-level response audit): levothyroxine downtitrate (TSH
-#: suppressed, 5/5), gliclazide downtitrate (hypoglycaemia, 4/5), on-target maintain of the drugs
-#: without an `early` item (10/11). They weigh `LOW_SIGNAL_WEIGHT` instead of `WEIGHT` inside their
-#: class, so more of the class's items go to the cells that separated models (statin / ACEI adverse
-#: effects, enalapril's just-raised and CKD items). 2, not 1: at 1 the drug alone tells the decision
-#: (majority class of the drug, cc 0.225 on the planned N = 100 cells, over the 0.20 shortcut line);
-#: at 2 it reads 0.150 (0.125 before). Every cell keeps at least one item at N = 100.
-LOW_SIGNAL_WEIGHT = 2
-LOW_SIGNAL_CELLS = {("levothyroxine", "downtitrate"), ("gliclazide", "downtitrate"),
-                    ("gliclazide", "maintain"), ("atorvastatin", "maintain"), ("levothyroxine", "maintain")}
+#: Equal drug-cell coverage within each sourced response class; no board outcomes.
+LOW_SIGNAL_CELLS = set()
+LOW_SIGNAL_WEIGHT = WEIGHT
 WEIGHT_COMORB = (2, 1)         # per class, with / without the comorbidity
 CAP_PER_DRUG = 40        # cases per drug per H stratum at N = 50 (the generator scales it with N)
 SUPPLY = (30, 60, 90)       # days per dispensing, a per-patient habit (A14, A15)
 N_VIS = (3, 4, 5)           # visits on record including today, one range for every class (A19)
 N_VIS_BACKGROUND = (3, 4, 5, 6, 7)   # with the background layer: longer histories (real EMR median 21 lab dates per patient)
 N_DIARY = (1, 2, 3)         # diary entries, one range for every class; a drug symptom takes an ordinary entry's place (A20)
-PLAN_VERSION = 15
-PLAN_VERSION_BACKGROUND = 16
+PLAN_VERSION = 18
+PLAN_VERSION_BACKGROUND = 18
 
 
 @functools.lru_cache(maxsize=1)
@@ -83,7 +80,8 @@ def background_on() -> bool:
 
 
 def h01(*parts) -> float:
-    s = hashlib.sha256("|".join(str(p) for p in parts).encode()).hexdigest()
+    from haenv.p3.textread import canonical
+    s = hashlib.sha256("|".join(str(canonical(p)) for p in parts).encode()).hexdigest()
     return int(s[:12], 16) / float(16 ** 12)
 
 
@@ -94,9 +92,10 @@ def hidden(latent: dict) -> int:
 def dx_allowed(drug_name: str, case: dict) -> bool:
     """A16 whitelist: every component of the case's condition line is on the drug's `allowed_dx`."""
     from haenv.world.labworld.meds import drug
-    dx = str((case.get("latent") or {}).get("ddx_diagnosis") or "")
+    from haenv.p3.textread import canonical
+    dx = canonical((case.get("latent") or {}).get("ddx_diagnosis") or "")
     ok = drug(drug_name).get("allowed_dx") or ()
-    return not dx or all(any(k in part for k in ok) for part in dx.split(" + "))
+    return not dx or all(any(canonical(k) in part for k in ok) for part in dx.split(" + "))
 
 
 def _age(case: dict) -> int:
@@ -109,8 +108,9 @@ def background_ok(drug_name: str, *texts, sex: str | None = None) -> bool:
     `events.sex_words`)."""
     from haenv.world.observations.events import sex_words
     from haenv.world.labworld.meds import drug
+    from haenv.p3.textread import canonical
     words = list(drug(drug_name).get("background_deny") or ()) + list(sex_words(sex) if sex else ())
-    return not any(w in str(t or "") for t in texts for w in words)
+    return not any(canonical(w) in canonical(t or "") for t in texts for w in words)
 
 
 def record_conditions(drug_name: str, comorbidity: str | None = None) -> list[str]:
@@ -206,7 +206,8 @@ def cell_weights() -> dict:
     cm = comorbid_drugs()
     from haenv.world.validation.difficulty_r2 import enabled
     from haenv.world.validation.difficulty_r2 import config
-    shares = config("p3")["class_weights"]["value"] if enabled() else None
+    from haenv.p3.plan import specification
+    shares = specification()["class_mix"]["weights"] if enabled() else None
     out = {}
     for d in DRUGS:
         for code in (None,) + ((cm[d],) if d in cm else ()):
@@ -217,7 +218,7 @@ def cell_weights() -> dict:
                     if (d, c) in LOW_SIGNAL_CELLS and not (shares and c == "switch"):
                         w = LOW_SIGNAL_WEIGHT   # p3-fixes e
                     if shares:
-                        w *= int(shares[c])
+                        w = max(1, round(w * float(shares[c]) * 100))
                     out[(d, c, code)] = w
     return out
 
@@ -232,17 +233,13 @@ def planned_cells(n_items: int = 50) -> dict:
     out = {}
     from haenv.world.validation.difficulty_r2 import enabled
     from haenv.world.validation.difficulty_r2 import config
-    shares = config("p3")["class_weights"]["value"] if enabled() else CLASS_SHARE
+    from haenv.p3.plan import specification
+    shares = specification()["class_mix"]["weights"] if enabled() else CLASS_SHARE
     for c, n in PS.apportion(n_items, shares).items():
         carry = {d: [code for code in (None,) + ((cm[d],) if d in cm else ()) if takes(d, c, (code,) if code else ())]
                  for d in DRUGS}
         carry = {d: codes for d, codes in carry.items() if codes}
         weights = dict.fromkeys(carry, 1)
-        from haenv.world.validation.difficulty_r2 import enabled
-        if c == "switch" and "atorvastatin" in carry and not enabled():
-            from haenv.world.history.history_dependency import rate
-            share = rate("p3", {})
-            weights = {"atorvastatin": 1} if share == 1 else {**weights, "atorvastatin": share * (len(carry) - 1) / (1 - share)}
         for d, k in PS.apportion(n, weights).items():
             codes = carry[d]
             w = {code: WEIGHT_COMORB[0 if code else 1] for code in codes} if len(codes) > 1 else {codes[0]: 1}
@@ -286,6 +283,13 @@ def subtype_weights(cls: str, drug_name: str, known=()) -> dict[str, float]:
     """
     from haenv.world.labworld.meds import drug as _drug
     from haenv.world.validation.difficulty_r2 import enabled
+    if enabled() and cls == "downtitrate" and drug_name != "levothyroxine":
+        return {"ae_dose": 0.5, "off_ae": 0.5}
+    if enabled() and cls == "maintain":
+        if drug_name == "atorvastatin" or "CKD" in known:
+            return dict(SUBTYPES["maintain"]) if has_early(drug_name, known) else {"on": 1.0}
+        return ({"early": 2 / 3, "on": 1 / 6, "on_low": 1 / 6} if has_early(drug_name, known)
+                else {"on": 0.5, "on_low": 0.5})
     if enabled() and cls == "switch" and drug_name in ("atorvastatin", "enalapril", "gliclazide"):
         # The statin's registered response cannot reliably miss at its top
         # rung. The other medicines retain the existing maximum-dose branch.
@@ -301,6 +305,9 @@ def subtype_weights(cls: str, drug_name: str, known=()) -> dict[str, float]:
         fixed = {"uptitrate": up, "downtitrate": "ae_dose", "switch": "top_off",
                  "check_adherence_or_adverse_effect": "adh_low"}.get(cls)
         return {fixed: 1.0} if fixed else dict(SUBTYPES["maintain"])
+    if cls == "check_adherence_or_adverse_effect" and drug_name == "levothyroxine" and enabled():
+        from haenv.p3.plan import specification
+        return dict(specification()["levothyroxine_absorption"]["subtype_weights"])
     timing = drug(drug_name)["attribution"] == "timing"
     if cls == "downtitrate" and drug(drug_name).get("ae_dose_decision") is False:
         return {"over": 1.0}       # dosed by the axis; a symptom alone lowers nothing
@@ -339,7 +346,7 @@ def on_target_raise_possible(d: dict) -> bool:
     return math.log(float(axis(d["axis"])["upper"])) - math.log(float(fl)) > 2 * R
 
 
-ON_TARGET = ("ae_dose", "over", "on", "unattributed")
+ON_TARGET = ("ae_dose", "over", "on", "on_low", "unattributed")
 
 
 def position(sub: str, cid: str, drug_name: str | None = None) -> str:
@@ -392,11 +399,17 @@ def make_plans(cases: list[dict], world_streams: dict[str, set[str]], cap: int =
             for code, ids_g in groups:
                 known = (code,) if code else ()
                 w = {k: cell_weights()[(d, k, code)] for k in CLASSES if takes(d, k, known)}
-                # the classes dealt in the pack's cell weights, a class's turns spread over the ring
-                can = [k for r in range(max(w.values())) for k in w if r < w[k]]
+                # Fractional sourced weights must not form a huge ring with a
+                # long tail of only the largest classes. Apportion this group's
+                # actual supply, then interleave its turns at equal intervals.
+                from haenv.world.validation.pack_size import apportion
+                counts = apportion(len(ids_g), w)
+                can = [c for _, c in sorted(((j + 0.5) / n, c)
+                       for c, n in counts.items() for j in range(n))]
                 off = int(h01("pack3", "offset", h, d, *known) * len(can))
                 for k, cid in enumerate(ids_g):
-                    out[cid] = _plan(can[(k + off) % len(can)], d, cid, ok[cid], h, target_upper(d, cases_by[cid]), code)
+                    rc = record_case(cases_by[cid], d, code, condition_specs=condition_specs)
+                    out[cid] = _plan(can[(k + off) % len(can)], d, cid, ok[cid], h, target_upper(d, rc), code)
         # the dispensing size, the number of past increases, the number of visits and the number of
         # diary entries are dealt in turn inside each (H, decision), so none follows the decision
         # (A15, A19, A20)
@@ -424,6 +437,11 @@ def takes(d: str, cls: str, known=()) -> bool:
 
     def drug(n):
         return _drug(n, known)
+    alternative = drug(d).get("off_also_accepts")
+    # Dose headroom and a documented dose limit cannot make the accepted sets
+    # disjoint when the alternative is accepted below the top (necessity probe).
+    if alternative and cls in ("uptitrate", alternative["decision"]):
+        return False
     if cls == "switch":
         from haenv.world.history.history_dependency import rate
         if d == "atorvastatin" and rate("p3", {}) > 0:
@@ -440,17 +458,17 @@ def takes(d: str, cls: str, known=()) -> bool:
 
 
 def target_upper(d: str, case: dict) -> float:
-    """The clinic target's upper bound for this patient (`upper_if_known`; none registered since
-    A15: the 2026 ACC/AHA LDL-C < 70 mg/dL needs risk factors the world does not show)."""
+    """The clinic target's upper bound for the record's conditions and printed age band."""
     from haenv.world.labworld.meds import axis
     from haenv.world.labworld.meds import drug
     ax = axis(drug(d)["axis"])
     raw = case.get("raw") or {}
     known = {str(raw.get("disease") or "")} | {str(x) for x in raw.get("comorbidities") or ()}
-    for k, v in (ax.get("upper_if_known") or {}).items():
-        if k in known:
-            return float(v)
-    return float(ax["upper"])
+    upper = next((v for k, v in (ax.get("upper_if_known") or {}).items() if k in known), ax["upper"])
+    matches = [row for row in ax.get("upper_by_age") or () if _age(case) >= int(row["min_age"])]
+    if matches:
+        upper = max(matches, key=lambda row: int(row["min_age"]))["upper"]
+    return float(upper)
 
 
 def _plan(c: str, d: str, cid: str, ok: list[str], H: int, upper: float, comorb: str | None = None) -> dict:
@@ -459,10 +477,15 @@ def _plan(c: str, d: str, cid: str, ok: list[str], H: int, upper: float, comorb:
     sub = subtype(c, d, cid, known)
     pos = position(sub, cid, d)
     if drug(d, known).get("on_target") == "titrate":
-        pos = ("mid" if c == "uptitrate" or sub == "early" or (sub == "on" and c == "maintain" and h01("p3ckdpos", cid) < 0.5)
+        pos = ("mid" if c == "uptitrate" or sub == "early" or (sub in ("on", "on_low") and c == "maintain" and h01("p3ckdpos", cid) < 0.5)
                else "top")     # (see `subtype`): a CKD item on target below the top is kept only under the SBP floor (placed one band or more under it, p3-fixes c)
     bg = background_on()
+    from haenv.world.validation.difficulty_r2 import enabled
+    from haenv.p3.interactions import family
+    intersection = family(d, c, sub) if enabled() else None
+    designated = intersection and h01("p3interaction", cid) < specification()["interactions"]["candidate_share"]
     return {"version": PLAN_VERSION_BACKGROUND if bg else PLAN_VERSION, "class": c, "subtype": sub, "drug": d, "position": pos,
+            **({"interaction_family": intersection} if designated else {}),
             **({"comorbidity": comorb} if comorb else {}),
             "decoys": {"dip": sub != "adh_low" and h01("p3dip", cid) < DIP_Q,
                        "predating": ((bg or sub not in AE_SUBTYPES) and bool(drug(d).get("predating_contexts"))

@@ -30,6 +30,8 @@ triage:
   - R13
   scoring: true
   history: false
+  source: RCP NEWS2 (2017), Charts 1, 2, 4; NICE NG253, Table 1 and §1.7.1
+  review: pending
   protocol_id: HP-C24C6A7A
 - key: triage-glucose
   name: 家庭 CGM 低血糖分诊
@@ -49,6 +51,8 @@ triage:
   - R11
   scoring: false
   history: false
+  source: ADA Standards of Care 2025, Section 6, Hypoglycemia
+  review: pending
   protocol_id: HP-38632D9F
 - key: triage-pressure
   name: 家庭血压异常分诊
@@ -69,6 +73,8 @@ triage:
   - R12
   scoring: false
   history: false
+  source: 2024 ESC hypertension guideline, §10.1.1; 2021 ESC heart failure guideline, Table 12
+  review: pending
   protocol_id: HP-737B008A
 - key: triage-heart
   name: 心衰晨重与心律提示复核
@@ -87,6 +93,8 @@ triage:
   - R9
   scoring: false
   history: true
+  source: 2021 ESC heart failure guideline, Table 12; 2024 ESC AF guideline, diagnostic criteria and recommendation table 15
+  review: pending
   protocol_id: HP-AD54DC4D
 - key: triage-acute
   name: 家庭急性症状与无异常处理
@@ -105,6 +113,8 @@ triage:
   - R14
   scoring: false
   history: false
+  source: RCP NEWS2 (2017), Clinical response to NEWS; NHS chest pain, fainting, sudden confusion, shortness of breath; NHS stroke symptoms (Immediate action required)
+  review: pending
   protocol_id: HP-E9F35D2B
 medication:
 - key: med-review
@@ -114,7 +124,7 @@ medication:
   - 用药
   keywords:
   - 慢病用药剂量与复评间隔
-  applies: 成人慢病用药复诊，复评药为格列齐特、阿托伐他汀、依那普利或左甲状腺素。
+  applies: 成人慢病用药复诊，复评本院已登记的慢病药物；目标药物、适应证及当前剂量另查患者处方。
   excludes:
   - 本病人其它药不属本次调整范围；本次需查原处方及最近一次起用或加量时间。
   exceptions:
@@ -128,7 +138,7 @@ medication:
   - 用药
   keywords:
   - 慢病用药不良反应归因
-  applies: 上述四药复评，有症状、起病日期和处方剂量变化记录。
+  applies: 已登记药物复评，有症状、起病日期和处方剂量变化记录。
   excludes:
   - 已有明确其它原因的症状不机械归因于药；开始用药前症状不能归因于本药。
   exceptions:
@@ -142,7 +152,7 @@ medication:
   - 用药
   keywords:
   - 慢病复评服药覆盖核查
-  applies: 上述四药复评，需要连续取药记录与今天药盒计数。先查原处方起始日、各次取药数量及日期、规格变化与今天剩余天数；取药日期本身不能证明已服用。
+  applies: 已登记药物复评，需要连续取药记录与今天药盒计数。先查原处方起始日、各次取药数量及日期、规格变化与今天剩余天数；取药日期本身不能证明已服用。
   excludes:
   - 未取得实际取药或计数记录时不能假定完全服药；其它药取药不能当作本药覆盖。
   - 使用本病人最近观察窗口的取药记录，不用其它患者、其它药物或今天之后的记录；提前取药余量与换规格时点都应按本条计算。
@@ -180,6 +190,24 @@ medication:
   - 核对本例目标及有效医嘱；本次建议由医生审核后执行。
   generator: renal
   protocol_id: HP-DFF060BC
+- key: levothyroxine-administration
+  protocol_id: HP-CA41A7E2
+  name: 左甲状腺素服法与干扰复评
+  topics: [慢病复诊, 用药]
+  keywords: [左甲状腺素, 碳酸钙, 服药间隔]
+  applies: 成人复评左甲状腺素治疗，需核对本药和钙剂的实际服用时刻、当前 TSH、目标范围及症状经过。处方量与服药覆盖率已核实时仍不能省略服法复核。
+  excludes:
+  - 未取得实际服药时刻时不能推断同服；近期停用的补充剂须核对停用日期和后续复查，不能当作当前仍在服用。
+  - 其它药物的处方量与疗程不作为左甲状腺素的服药时刻；本条不授权自行加减药。
+  exceptions:
+  - 传统推荐间隔尚未经直接试验验证，按适用药物及医生指导执行；控制不佳先核实服法及吸收干扰，不立即升级剂量。
+  generator: levothyroxine
+  source:
+    cite: ATA Guidelines for the Treatment of Hypothyroidism (2014)
+    locator: Recommendation 3b and discussion of calcium carbonate; recommendations 1b and 4b
+    url: https://pmc.ncbi.nlm.nih.gov/articles/PMC4267409/
+  ours_reason: 服法与钙剂吸收相互作用据 ATA 指南；症状经过与先调查再复评沿用已登记的合成门诊政策，仍待临床复核。传统间隔不是已经试验证实的统一洗脱时间。
+  review: pending
 other:
 - key: LIB-FEVER
   name: 成人发热的预检分诊

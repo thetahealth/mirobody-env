@@ -47,8 +47,12 @@ def test_every_finding_word_is_used_by_some_registered_thread():
     assert not dead, f"finding_aliases entries no thread carries: {dead}"
 
 def test_thread_aliases_drops_finding_words():
-    assert thread_aliases(PHPT) == ["甲状旁腺", "甲旁亢", "hyperparathyroid"]
-    assert thread_aliases(HYPO) == HYPO
+    # The finding word 高钙 (and its English rendering) is dropped; judging-only English names
+    # follow the declared aliases.
+    got = thread_aliases(PHPT)
+    assert got[:3] == ["甲状旁腺", "甲旁亢", "hyperparathyroid"]
+    assert not {"高钙", "high calcium"} & {a.lower() for a in got}
+    assert thread_aliases(HYPO)[:len(HYPO)] == HYPO
 
 @pytest.mark.parametrize("text", [
     "结节病伴高钙血症/肾结石/可能肾上腺受累",

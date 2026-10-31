@@ -7,6 +7,92 @@ per-criterion fingerprints identify which result columns remain comparable, and 
 fingerprint identifies the complete set of criteria. Combined scores also require matching
 aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [Unreleased] - 1.4.0
+
+Major update: English records, revised questions in all four packs, and a new plan-quality
+rubric. The packs are regenerated and every answer is judged again, so 1.4 boards are not
+comparable with 1.3.x boards. No 1.4 board has been published yet; its numbers will be added
+at release. The 1.3.x boards stay reproducible at their recorded commits.
+
+### Added
+
+- English records. Records, questions, tool replies, menus, follow-up turns and judge prompts
+  exist in English and Chinese. Both are written natively and rendered from one
+  language-independent world: the same seed gives the same patients, gold answers and evidence
+  IDs in both languages. Units, record structure and clinical workflow are the same in both.
+- English is the default language. Chinese is selected with `--lang zh` on `haenv`,
+  `language: zh` in a job file or `config.yaml`, or `HAENV_LANG=zh` (used by
+  `tools/generation/make_pack.py`). Precedence: `--lang`, then the job, then `HAENV_LANG`, then
+  the config, then English.
+- A batch records its language; a built batch keeps it, and `run` and `report` follow it.
+  Batches without a language field, including every 1.3.x batch, are read as Chinese.
+- Language fingerprints: `world_sha` is the same in both languages, `render_sha16` is per
+  language, and each language's judge rubric has its own stamp (`management_rubric_sha16`).
+  Rows carry `language` and `render_sha16` beside `judging_sha16`. The publish gate refuses a
+  board that mixes languages, as it already refuses mixed judging versions.
+- Saved batches carry `message_sources.jsonl`, the structured source of each rendered message.
+  Checks read it instead of parsing rendered text; it never reaches the agent being evaluated.
+- `tools/evaluation/reask_pooled.py --check` lists the released 1.3.1 re-ask answers that the
+  1.4 diagnosis judge scores differently (`matcher-drift-1.4.json`) and fails on any other
+  difference; the released facts still use the stored outcomes.
+- `tools/release/make_freeze.py` records the zh and en builds of one generated pack side by side
+  (`--generated-pack JOB@LANG=BATCH`) and can carry the published packs of the previous anchor
+  over (`--inherit-packs`).
+
+### Changed
+
+Questions (the packs are regenerated):
+
+- Every premise a gold answer depends on is visible in the record the agent can reach. For
+  example, a cause-attributed diagnosis requires the cause in the record, and a decision that
+  depends on whether a symptom is ongoing states it. A case built with such a premise removed is
+  refused.
+- ① Diagnosis matching handles qualifiers explicitly: a qualifier the gold requires (such as
+  progression) must be present, and an explicitly absent one does not match. Where a source
+  supports more than one evidence path to a diagnosis, any complete path counts. A registered red flag now requires immediate emergency care. Care within days no longer
+  passes the emergency check in pack ①; the other packs are unchanged.
+- ① Diagnosis judging is language-neutral: English answers are judged against the reviewed
+  English names of each gold diagnosis.
+- ① The test-recall column is reported, not scored, and is not comparable across languages in
+  1.4.
+- ② More questions sit on the emergency boundary, with the findings that decide it, including
+  exceptions for an already known diagnosis. The answer-class mix follows sourced frequencies.
+  Repeated event templates are replaced by varied, sourced complaints.
+- ③ Six managed drugs instead of four (losartan and amlodipine added). More questions require two
+  clinical factors to be read together, such as indication, adherence, onset time, tolerated
+  dose, comorbidity and co-medication. Some questions require keeping the dose while the cause
+  is investigated. Question builds no longer filter items by classifier scores.
+- ④ Assay interference by an ingested substance, such as biotin, accepts both `preanalytical`
+  and `method_difference`. The next step is still required, and the accepted next steps depend
+  on whether the exposure has ended. `method_difference` questions come from real method or
+  platform differences. A reference-change value no longer decides a question alone: questions
+  include factors that were present but did not act, and changes of similar size with different
+  mechanisms. The record's date is the review date; the compared draw carries its own date.
+- Hard gates fire only when the gated action depends on the flagged signal. Correct answers that
+  did not rely on the flagged signal are no longer zeroed.
+- Registry corrections: upstream mappings and aliases that pointed to the wrong analyte (calcium,
+  creatinine) are fixed, and cross-analyte aliases are rejected.
+- Rules disputed in a physician review were checked against sources: ① a negative targeted test
+  reads as "under investigation", not as unrelated events, and LADA records show established
+  diabetes; ② suspected infection with a medium-risk sign needs assessment within 24 hours;
+  ③ adding a non-statin is also accepted for off-target atorvastatin below the top dose, and the
+  TSH target is 0.4-6.0 mIU/L from age 70; ④ no action is accepted when an ingested substance
+  affected only the previous draw. Other disputed rules are kept with their sources.
+
+Plan-quality score Q (`management-rubric-v7`):
+
+- Q combines registered history, management, follow-up and explanation with the registry
+  weights, times the safety multiplier; all four packs share one definition. Every dimension is
+  also published in the profile.
+- The judge sees only what the answer obtained: the question and the tool results the agent
+  actually received. Evidence the agent did not obtain is not treated as known. History is
+  judged against the registered decisive records only. Follow-up needs a time anchor and triggers
+  for earlier care; an emergency handover counts as follow-up. Safety lists each registered
+  negative event with its applicability, actor and time window.
+- Q values judged under earlier rubric versions keep their recorded version and are not
+  restamped; every 1.4 board is judged in full under v7, in each language with its own rubric
+  stamp.
+
 ## [1.3.2] - 2026-10-21
 
 Documentation and bug-fix release. Question packs, scorers and the 1.3.1 board are unchanged.

@@ -57,6 +57,20 @@ def assert_publishable(rows: list[dict], where: str = "", *, criteria=None) -> N
     """
     # The judgment lives in `verifier_core.vintage`; this is the single entry point
     # that maps haenv's names onto it.
+    from haenv.i18n import batch_language
+    languages = {batch_language(row) for row in rows}
+    if len(languages) > 1:
+        raise NotPublishable(f'{where}: cannot publish mixed languages: {sorted(languages)}')
+    versions = {row.get('judging_sha16') for row in rows}
+    if len(versions) > 1:
+        raise NotPublishable(f'{where}: cannot publish mixed judging versions')
+    from haenv.i18n.text import judge_fingerprints
+    if rows:
+        language = next(iter(languages))
+        for field, stamps in judge_fingerprints(language).items():
+            if any(field in row for row in rows):
+                if any(row.get(field, {}).get(language) != stamps[language] for row in rows):
+                    raise NotPublishable(f'{where}: mixed, missing or stale {language} {field}')
     from verifier_core.vintage import NotPublishable as _VCNotPublishable
     from verifier_core.vintage import assert_publishable as _vc_assert
     prov = judging_provenance(rows, criteria=criteria)
@@ -80,11 +94,19 @@ def assert_publishable(rows: list[dict], where: str = "", *, criteria=None) -> N
 def code_state():
     state = semantic_pipeline.code_state()
     ruler = current_fingerprints()
-    return {**state, "judging_criteria": {"semantic": ruler["criteria"]["semantic"]},
+    from haenv.i18n import current
+    from haenv.i18n.text import judge_fingerprints
+    return {**state, **judge_fingerprints(current()), "judging_criteria": {"semantic": ruler["criteria"]["semantic"]},
             "judging_total_sha16": ruler["total_sha16"]}
 
 
 def overlay_rows(rows, results, *, run_id, judging_sha, criteria=None):
+    from haenv.i18n.runtime import validate_rows_language
+    from haenv.i18n import batch_language
+    for row in rows:
+        cell = results.get((row['case'], row['solver']))
+        if cell is not None and 'language' in cell:
+            validate_rows_language([cell], batch_language(row))
     viewed = semantic_report.overlay_rows(rows, results, run_id=run_id, judging_sha=judging_sha)
     for row in viewed:
         cell = results.get((row["case"], row["solver"]))
@@ -92,14 +114,24 @@ def overlay_rows(rows, results, *, run_id, judging_sha, criteria=None):
         stamp = stamps.get("semantic") if row["semantic"]["status"] == "resolved" else None
         if recorded_criteria(row) is not None or stamp:
             merge_recorded_criteria(row, {"semantic": stamp})
+        if cell is not None and 'semantic_policy_sha16' in cell:
+            row['semantic_policy_sha16'] = cell['semantic_policy_sha16']
     return viewed
 
 
 def read_run(out, batch):
+    from haenv.i18n.runtime import read_batch_language, validate_rows_language, select_saved_language
+    saved = json.loads((Path(out) / 'manifest.json').read_text())
+    language = read_batch_language(batch)
+    validate_rows_language([saved], language)
+    select_saved_language(saved)
     manifest, results = semantic_report.read_run(out, batch)
     stamps = _run_criteria(manifest)
     for cell in results.values():
         cell["judging_criteria"] = dict(stamps)
+        cell['language'] = language
+        if 'semantic_policy_sha16' in manifest.get('code', {}):
+            cell['semantic_policy_sha16'] = manifest['code']['semantic_policy_sha16']
     return manifest, results
 
 
@@ -206,6 +238,9 @@ def _stamp_prepared(manifest, out, name):
     ruler = current_fingerprints()
     manifest["code"]["judging_criteria"] = {name: ruler["criteria"][name]}
     manifest["code"]["judging_total_sha16"] = ruler["total_sha16"]
+    from haenv.i18n import batch_language
+    from haenv.i18n.text import judge_fingerprints
+    manifest['code'].update(judge_fingerprints(batch_language(manifest)))
     semantic_seal._write_json(Path(out) / "manifest.json", manifest)
     return manifest
 
@@ -220,6 +255,9 @@ def management_prepare(*args, **kwargs):
              if kwargs.get("policy_path") else current_fingerprints())
     result["code"]["judging_criteria"] = {"management_rubric": ruler["criteria"]["management_rubric"]}
     result["code"]["judging_total_sha16"] = ruler["total_sha16"]
+    from haenv.i18n import batch_language
+    from haenv.i18n.text import judge_fingerprints
+    result['code'].update(judge_fingerprints(batch_language(result)))
     management_pipeline.atomic_json(Path(kwargs.get("out", args[1] if len(args) > 1 else None)) / "manifest.json", result)
     return result
 
@@ -248,12 +286,17 @@ def management_saved_prepare(previous_runs, out, **kwargs):
 def _stamp_management_results(out, stamps, total, *, preserve=False):
     path = out / "rubric_results.jsonl"
     rows = management_pipeline.read_jsonl(path)
+    from haenv.i18n import batch_language
+    saved = json.loads((out / 'manifest.json').read_text()) if (out / 'manifest.json').is_file() else {}
     for row in rows:
         if preserve:
             row["source_judging_criteria"] = row.get("judging_criteria") or row.get("code", {}).get("judging_criteria")
         row["judging_criteria"] = dict(stamps)
         row["judging_total_sha16"] = total
         row["Q"] = row["summary"].get("quality_score")
+        row['language'] = batch_language(saved)
+        if 'management_rubric_sha16' in saved.get('code', {}):
+            row['management_rubric_sha16'] = saved['code']['management_rubric_sha16']
     management_pipeline.write_jsonl(path, rows)
 
 

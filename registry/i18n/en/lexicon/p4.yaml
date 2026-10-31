@@ -1,0 +1,223 @@
+# Pack 4 follow-up records, patient speech and wording variants.
+entries:
+  p4.procedure.report_fields: The report records the actual collection site, collection time window, tube,
+    separation time, storage temperature and haemolysis index. Check these against the method document
+    for the analyte.
+  p4.remark.why_different: I'm back for another blood test and want to know why the results are different.
+  p4.remark.see_followup: What I've been taking and how things have been lately are all in the follow-up
+    notes.
+  p4.reason.biotin_hair_nails: The patient reports taking it for hair and nail care
+  p4.outpatient.course_ended: The patient described the earlier prescription and dispensing history. The
+    recorded supply has run out; the patient is no longer taking this medicine.
+  p4.reader.reason: Check consecutive reports for the same analyte, the actual sampling conditions and
+    applicable method documents, and the medication and clinical course records
+  p4.reader.within_variation: The difference is within the variation expected between the two measurements
+  p4.reader.matching_direction: Use the recorded factor whose direction agrees with the change
+  ALT 12.4%, CK 14.1%, glucose 4.9%, TSH 17.9%; 页面更新8/10/2026。钾3.9%、TG19.8%为6/5/2026更新。CVA不是该数据库统一给定常数。: ALT
+    12.4%, CK 14.1%, glucose 4.9%, TSH 17.9%; page updated 8/10/2026. Potassium 3.9% and TG 19.8% were
+    updated 6/5/2026. CVA is not a universal constant supplied by this database.
+  ? B是每种方法相对靶值的期望系统偏差规格，不是方法间观测差异的经验最大值。两方法偏差b0和b1分别在[-B,B]，相对差为(1+b1)/(1+b0)-1，绝对上界为2B/(1-B)。各端独立均匀是ours示例分布，不冒称实测分布；原患者基线在参照系列尺度上表达，同一患者的参照校准b0共用于纵向系列，因而公共校准项不解释新变化，方法更换由相对校准差作用。Jaffe保留其已发表患者标本回归，生物素保留敏感体系特异干扰。无规格不生成普通方法冲突，报告舍入后核对推导上界。
+  : B specifies the desirable systematic bias of each method relative to its target; it is not an empirical
+    maximum difference between methods. Method biases b0 and b1 each lie in [-B,B]; the relative difference
+    is (1+b1)/(1+b0)-1, with absolute upper bound 2B/(1-B). Independent uniform sampling at each end is
+    our illustrative distribution, not a measured distribution. The original patient baseline is expressed
+    on the reference-series scale, and the same patient's reference calibration b0 applies throughout
+    the longitudinal series. Thus a shared calibration term does not explain a new change; a method switch
+    acts through the relative calibration difference. Jaffe retains its published patient-sample regression,
+    and biotin retains its assay-specific interference in susceptible systems. Ordinary method conflicts
+    are not generated without a specification. Check the derived bound after report rounding.
+  ? 为可重建来源提供独立重新采血的规范条件复核，每类均有两端复核且不进入常规纵向report序列；不是一般临床复查率或统一治疗等待期。原报告至本次回顾就诊的14–21天为合成记录日历；急性病程及普通标本问题在原日及时复核，不等待14天。饮食/运动/时段及生物素干扰在14天后新采血并使用不受生物素干扰的体系复核；不宣称同标本校正，不用隐藏响应反算复核值。每次复核按真实复核日的患者轨迹和新的独立总CV生成。同日新采血也独立抽总CV为ours近似，未建模短间隔生物相关；TSH非生物素平台沿用原CVA为ours代理，其相对参照的偏差仍按原项目B规格独立抽样并印出，先按该适用比对校正复核值。
+  : Independent new draws under standard conditions permit reconstruction of the source. Each class has
+    verification at both ends, outside the routine longitudinal report series; this is not a general clinical
+    retesting rate or a uniform wait before treatment. The 14–21 days from the original report to this
+    retrospective visit are a synthetic record calendar. Acute illness and ordinary specimen problems
+    are checked promptly on the original day, without waiting 14 days. Diet, exercise, time-of-day and
+    biotin effects are checked with new draws after 14 days, using an assay unaffected by biotin. This
+    does not claim correction of the same specimen, and verification values are not back-calculated from
+    hidden responses. Each verification uses the patient's trajectory on the actual verification day and
+    a new independent total CV draw. Independent total CV sampling for new draws on the same day is also
+    our approximation; short-interval biological correlation is not modelled. Reusing the original CVA
+    for the non-biotin TSH platform is our proxy. Its bias relative to the reference is still sampled
+    independently under the analyte's original B specification and printed; first correct the verification
+    result using that applicable comparison.
+  主会话2026-10-15裁定；RCV沿用EFLM及EuBIVAS配对方法参数: Decision recorded in the main session on 2026-10-15; RCV retains
+    the EFLM and EuBIVAS paired-method parameters
+  仅顺序错误不能证明EDTA污染；需有跨管转移记录及伴随低钙等支持。本研究闭合系统未检出EDTA污染。: An incorrect tube order alone cannot establish EDTA
+    contamination. A recorded transfer between tubes and supporting findings such as low calcium are required.
+    No EDTA contamination was detected with the closed system in this study.
+  保留原酶法CVA1.1%、Jaffe4.4%、CVI4.5%（原合成近似）。: Retain the original enzymatic CVA 1.1%, Jaffe 4.4% and CVI 4.5%
+    (the original synthetic approximation).
+  全麦面包、牛奶: Wholemeal bread and milk
+  内分泌门诊连续随访；甲减阶段FT4下降，伴甲状腺炎病程记录。: Ongoing endocrine outpatient follow-up. FT4 fell during the hypothyroid
+    phase, with the course of thyroiditis documented.
+  内分泌门诊连续随访；甲状腺炎恢复阶段FT4回升，症状改善。: Ongoing endocrine outpatient follow-up. FT4 rose during recovery from
+    thyroiditis, with improvement in symptoms.
+  剂量仅描述本院合成既有处方/补充剂，不是给患者的起始剂量推荐；个体化药效仍在P4选定项目上建模。既存同药疗程不另造第二条开始/停止记录；旧对照短程有明确结束日期，当前读数不归因于已结束短程。: Doses
+    describe only this hospital's synthetic existing prescriptions or supplements; they are not recommended
+    starting doses for patients. Individual drug responses remain modelled on the analyte selected in
+    P4. An existing course of the same medicine does not acquire a second invented start/stop record.
+    Historical control courses have explicit end dates; current readings are not attributed to a course
+    that has ended.
+  医生记录肝酶异常与处方时间相符，排除病毒肝炎和近期大量饮酒；随访持续异常或医生停用后恢复。: The clinician documented a temporal relationship between
+    the abnormal liver enzymes and the prescription, excluding viral hepatitis and recent heavy alcohol
+    intake. The abnormality persisted on follow-up or resolved after clinician-directed withdrawal.
+  发热及感染经过已登记，应激期与恢复期有体温和症状记录。: The fever and infection course is documented, with temperature and symptom
+    records during the stress and recovery phases.
+  同源记录按实际时间、标本条件、平台适用性判定；未作用的暴露与作用暴露共用记录模板。: Records from the same source are assessed by actual timing,
+    specimen conditions and platform applicability. Exposures with and without an effect use the same
+    record templates.
+  咖喱牛肉约 250 g、米饭: Beef curry, about 250 g, with rice
+  因哮喘急性发作由医生处方全身长效糖皮质激素，按记录疗程服用。: A clinician prescribed a long-acting systemic glucocorticoid for an
+    acute asthma exacerbation; taken for the recorded course.
+  因用药后持续肌痛由医生停用；复诊肌痛改善，近期无剧烈运动。: The clinician stopped the medicine because of persistent muscle pain
+    after treatment began. Muscle pain had improved at review; no recent strenuous exercise.
+  外伤后持续局部肌痛、淤肿；恢复期症状逐渐改善。: Persistent local muscle pain, bruising and swelling after trauma; symptoms
+    gradually improved during recovery.
+  孜然羊肉约 250 g、米饭: Cumin lamb, about 250 g, with rice
+  小炒黄牛肉约 250 g、米饭: Stir-fried beef, about 250 g, with rice
+  小米粥、凉拌木耳: Millet porridge and wood-ear mushroom salad
+  小米粥、煮鸡蛋: Millet porridge and a boiled egg
+  平衡的机制挑战集，不代表临床患病率或实验室差错发生率；四类近等份，七项目近等份，各非噪声类每项目至少两机制。先抽患者参数和独立测量误差，排除证据冲突，不按捷径读数重抽。: A balanced mechanism
+    challenge set, not an estimate of clinical prevalence or laboratory error rates. The four classes
+    and seven analytes have approximately equal shares; each analyte in each non-noise class has at least
+    two mechanisms. Sample patient parameters and independent measurement errors first, exclude conflicting
+    evidence, and do not resample using shortcut readings.
+  ? 文献支持方向和作用条件，通常不提供可跨患者外推的概率分布；以下范围用于合成患者响应或标本偏移，不冒称真实分布或额外临床阈值。真实病程/药物响应从0起连续采样：有暴露并不保证较大化验反应，不设置任意最小升降幅；零或不能从独立观测辨认的反应不发射为真实变化题。
+  : 'The literature supports direction and conditions of action, but generally does not provide probability
+    distributions that generalise across patients. The following ranges generate patient responses or
+    specimen shifts; they are not claimed as real distributions or additional clinical thresholds. Clinical-course
+    and drug responses are sampled continuously from 0: exposure does not guarantee a large laboratory
+    response, and no arbitrary minimum rise or fall is imposed. A zero response, or one that cannot be
+    distinguished from independent observations, is not emitted as a sustained-change question.'
+  ? 新采血复核；按所列实际时刻采集，空腹且前12小时无熟肉、此前14日无剧烈运动，非输液侧闭合采血，无跨管转移、无溶血，30分钟内分离；所列平台和批号经比对，不使用生物素结合体系。结果按实际采血日登记，与所列原常规报告配对；急性异常当天复核并由医生评估。
+  : 'Verification with a new blood draw at the stated actual time: fasting, no cooked meat in the preceding
+    12 hours and no strenuous exercise in the preceding 14 days. Closed-system collection from the arm
+    without the infusion, no transfer between tubes, no haemolysis, and separation within 30 minutes.
+    The listed platforms and lots have been compared; the assay does not use a biotin-binding system.
+    Results are recorded on the actual draw date and paired with the listed original routine report. Acute
+    abnormalities are checked on the same day and assessed by a clinician.'
+  新项目无可复用的患者级间隔估计；合成常规随访与既往复查间隔，按日期找最近同项目报告，不声明为经验分布。: No reusable patient-level interval estimates are
+    available for the new analytes. Routine and historical follow-up intervals are synthetic. Identify
+    the most recent report for the same analyte by date; no empirical distribution is claimed.
+  既往高甘油三酯处方随访；数周未连续服用处方药。: Follow-up of an earlier prescription for hypertriglyceridaemia. The patient
+    has not taken the prescribed medicine consistently for several weeks.
+  既往高甘油三酯处方随访；现已数周每日按处方服用。: Follow-up of an earlier prescription for hypertriglyceridaemia. The patient
+    has now taken the medicine daily as prescribed for several weeks.
+  最近吃喝如常，没有拉肚子，也没有发烧。: I've been eating and drinking as usual, with no diarrhoea or fever.
+  杂粮粥、凉拌黄瓜: Mixed-grain porridge and cucumber salad
+  此前未做同等强度训练；无持续外伤或新药暴露。: No previous training of comparable intensity; no ongoing traumatic injury or
+    new medication exposure.
+  每道非噪声题的打印表观变化必须严格超过原配对RCV；真实变化经适用方法校正与独立复核仍越线，方法或标本题校正/标准化复核后回到RCV内。不按题号删题，不修改原患者响应或偏差范围，由原供应规则补足。: Every
+    non-noise question must have a printed apparent change strictly exceeding the original paired RCV.
+    Sustained-change cases remain beyond that boundary after applicable method correction and independent
+    verification; method or specimen cases return within the RCV after correction or verification under
+    standard conditions. Do not delete questions by ID or alter the original patient response or bias
+    ranges; replenish through the original supply rules.
+  没有新出现的不舒服，小便量也没什么变化。: I've had no new symptoms, and I'm passing about as much urine as usual.
+  涮羊肉约 250 g、馒头: Lamb hotpot, about 250 g, with steamed bread
+  清炖羊肉约 250 g、面条: Lamb stew, about 250 g, with noodles
+  炒河粉（素）、蔬菜汤: Vegetarian stir-fried rice noodles and vegetable soup
+  炖牛腩约 250 g、米饭: Stewed beef brisket, about 250 g, with rice
+  烤羊肉约 250 g、馕: Roast lamb, about 250 g, with naan bread
+  燕麦片、牛奶: Oats and milk
+  牛肉拉面（牛肉约 150 g）: Hand-pulled beef noodles (about 150 g beef)
+  牛肉粉（加牛肉，约 150 g）: Rice noodles with extra beef (about 150 g)
+  牛肉面（加牛肉，约 150 g）: Noodles with extra beef (about 150 g)
+  牛肉馅饼（牛肉约 150 g）: Beef-filled flatbread (about 150 g beef)
+  独立每次总CV对数误差，沿用三标准差界限；无按目标变化幅度调噪声。: Independent total-CV log errors for each measurement, retaining the
+    three-standard-deviation limit; no noise adjustment to target a change magnitude.
+  玉米、酸奶、苹果: Sweetcorn, yoghurt and an apple
+  甲减处方随访；已连续6周每天按处方服用，FT4回升。: Hypothyroidism prescription review. Taken daily as prescribed for 6 consecutive
+    weeks; FT4 has risen.
+  甲减处方随访；连续6周每周有3天未服处方药，FT4下降。: Hypothyroidism prescription review. Did not take the prescribed medicine
+    on 3 days each week for 6 consecutive weeks; FT4 has fallen.
+  白粥、馒头: Plain rice porridge and steamed bread
+  米粉（清汤）: Rice noodles in clear broth
+  米饭、清炒时蔬: Rice and stir-fried seasonal vegetables
+  米饭、清炒菠菜、紫菜蛋花汤: Rice, stir-fried spinach, and seaweed and egg soup
+  米饭、清炒西兰花、蛋花汤: Rice, stir-fried broccoli and egg soup
+  米饭、番茄炒蛋、青菜: Rice, scrambled egg with tomatoes, and green vegetables
+  米饭、豆腐、青菜: Rice, tofu and green vegetables
+  米饭、麻婆豆腐、青菜: Rice, mapo tofu and green vegetables
+  素饺子、凉拌萝卜丝: Vegetarian dumplings and shredded radish salad
+  素馅饺子: Vegetarian dumplings
+  红烧牛肉约 250 g、面条: Braised beef, about 250 g, with noodles
+  羊肉汤泡馍（羊肉约 150 g）: Crumbled flatbread in lamb soup (about 150 g lamb)
+  羊肉粉丝汤（羊肉约 150 g）: Lamb and glass-noodle soup (about 150 g lamb)
+  腹泻后口干、尿量减少、体位性头晕；门诊复核容量状态。: Dry mouth, reduced urine output and postural dizziness after diarrhoea;
+    volume status reviewed in clinic.
+  葱爆羊肉约 250 g、花卷: Lamb stir-fried with spring onions, about 250 g, with steamed rolls
+  蒸红薯、豆浆: Steamed sweet potato and soya milk
+  蔬菜汤面: Noodles in vegetable soup
+  血脂治疗记录完整，开始用药后出现持续肌痛，排除剧烈运动；医生安排复查。: Lipid treatment is fully documented. Persistent muscle pain began
+    after starting treatment, with strenuous exercise excluded; the clinician arranged repeat testing.
+  西红柿鸡蛋面: Tomato and egg noodles
+  豆浆、包子（素馅）: Soya milk and steamed buns with vegetable filling
+  运动造成CK/ALT短暂生理释放；此处分析前指非标准采血前状态，并非体外标本损坏。持续肌损伤归真实变化。: Exercise causes transient physiological release
+    of CK/ALT. Here, the preanalytical category refers to non-standard conditions before collection, not
+    damage to a specimen outside the body. Persistent muscle injury is classified as a sustained change
+    in the patient.
+  近两周没有发热、腹泻或呕吐，饮水量和平时差不多。: I've had no fever, diarrhoea or vomiting in the last two weeks, and I've been
+    drinking about as much as usual.
+  这段时间没有生病，没有自己加服止痛药或其他药。: I've had no illness during this time and have not taken any extra painkillers
+    or other medicines on my own.
+  连续数周饮酒增加或停止饮酒，非仅单次餐前饮酒。: Increased alcohol intake or abstinence sustained over several weeks, not just
+    a single drink before a meal.
+  连续数日腹泻或呕吐，口服摄入减少；恢复期排便和摄入恢复。: Diarrhoea or vomiting for several days with reduced oral intake; bowel
+    habit and intake returned to normal during recovery.
+  酱牛肉约 250 g、米饭: Beef braised in spiced stock, about 250 g, with rice
+  采血前1–7日不习惯的高强度抗阻运动与短暂CK/ALT释放；三周前运动不解释新变化，持续损伤另归真实变化。: Unaccustomed strenuous resistance exercise 1–7
+    days before collection with transient CK/ALT release. Exercise three weeks earlier does not explain
+    a new change; persistent injury is classified separately as a sustained change in the patient.
+  采血前一天作息照旧，水喝得不多也不少。: My routine was the same as usual the day before the blood test, and I drank my
+    usual amount of water.
+  青菜面（清汤）: Noodles with green vegetables in clear broth
+  面包、酸奶: Bread and yoghurt
+  面条、青菜: Noodles and green vegetables
+  馄饨（素馅）: Wontons with vegetable filling
+  高血压/肾病随访处方，医生记录起用或停用及复查安排。: Follow-up prescription for hypertension/renal disease. The clinician documented
+    starting or stopping treatment and the repeat-testing plan.
+  高血压门诊处方，开始服药或医生停用时间已登记。: Hypertension outpatient prescription. The date of starting treatment or clinician-directed
+    withdrawal is recorded.
+  黑椒牛柳约 250 g、意面: Beef strips in black pepper sauce, about 250 g, with pasta
+  p4.contract.true_change: 'true_change: a sustained change in the level of the measurand within the patient
+    or in the clinical course, supported by timing, direction and course records. Do not treat assay interference
+    as a pharmacological effect within the patient.'
+  p4.contract.noise: 'analytic_biological_noise: analytical imprecision and random within-person variation.
+    Use when the patient is stable and there is no evidence of a matching sampling, method or clinical
+    source. RCV assesses statistical magnitude; it cannot establish the source on its own.'
+  p4.contract.preanalytical: 'preanalytical: changes in preparation, intake, collection conditions, transport
+    or specimen handling before testing that affect comparability. Transient exercise and time-of-day
+    differences also count as sampling conditions in this task. When an ingested substance interferes
+    with the assay outside the body, method_difference is also accepted.'
+  p4.contract.method_difference: 'method_difference: systematic differences between methods, platforms
+    or reagent lots, or verified interference with the analytical reaction. Evidence must apply to the
+    analyte, date and method. A method name or platform-change notice alone cannot establish the source.'
+  p4.contract.sources: 'Category sources: CLSI EP07, edition 3, Scope (exogenous/endogenous chemical interference);
+    CLSI EP09 Scope (patient-sample method comparison); EFLM-COLABIOCLI venous blood sampling recommendations,
+    Patient preparation; Fraser 2012, Reference change values (PMID 21958344); for ingested interferents,
+    also the FDA biotin safety communication and AACC 2020 guidance (doi:10.1093/jalm/jfz010). Category
+    overlap and the classification of transient sampling conditions are task conventions pending clinical
+    review.'
+  p4.contract.next: The next step is required. repeat_standardized includes a new blood draw after appropriate
+    washout, or interpretation using a verified unaffected method. no_action means no additional intervention
+    for this historical difference; routine follow-up continues. If ingested interference affected only
+    the previous reading and today's reading is standard, treat it as a distortion of the previous reading;
+    no_action is acceptable. If it affected today's reading, no_action is acceptable when the exposure has
+    ended and subsequent clean results are available; ongoing exposure requires verification.
+  p4.notice.commutable_comparison.2: Patient specimens were tested concurrently under both sets of assay
+    conditions. The comparison values apply only to the listed dates, platforms and lots.
+  p4.notice.commutable_comparison.3: Parallel patient-sample results are recorded here. Verify the applicable
+    analyte and implementation date before interpreting differences between reports.
+  p4.notice.commutable_comparison.4: The comparison used commutable patient specimens. The listed differences
+    apply to the methods and reagent lots in this document and must not be extrapolated to other batches.
+  p4.notice.historical_batches.2: The archived document records the assay system and lot used at the time.
+    Check its effective dates separately against the current report.
+  p4.notice.historical_batches.3: This is a use record from an earlier batch. The fields retain its platform,
+    reagents and period of validity.
+  p4.notice.historical_batches.4: The old method document is archived with the original report. Its period
+    of applicability and assay conditions are given in the record fields.
+  p4.event.biotin_ended: The listed supplement has been stopped. Subsequent verification under clean conditions
+    is in the laboratory records.
+  p4.event.biotin_ongoing: The patient is still taking the listed supplement at this retrospective visit.
+    It was temporarily stopped for the earlier verification as recorded and has recently been restarted.

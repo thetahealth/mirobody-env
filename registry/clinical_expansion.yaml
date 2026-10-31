@@ -1116,3 +1116,358 @@ conditions:
       delivered_results_status: not_generated_or_audited_in_this_branch
       ea2_policy: 只有实际可见结果满足上述约束且能支持目标候选时才可选;若EA2只允许唯一primary且未满足,必须显式拒绝或交协调者更改可接受金标契约,不能绕过门
       definitive_diagnosis_from_generic_profile_allowed: false
+
+evidence_paths:
+  JD-GRAVES:
+    sets:
+    - - TSH
+      - FT4
+      - TRAb
+    - - TSH
+      - FT4
+      - ThyroidUptakeUS
+    source: https://doi.org/10.1089/thy.2016.0229
+    section: 2016 ATA hyperthyroidism guideline, Recommendation 1 and section B; biochemical thyrotoxicosis plus
+      TRAb or diffuse uptake/thyroid blood flow.
+    imaging_report:
+      message: m2.result.graves_imaging
+      observations: {diffuse_increased_uptake: true, diffusely_increased_blood_flow: true}
+    review: pending
+  JD-CUSH:
+    sets:
+    - - DST
+      - UFC_24h
+    - - DST
+      - Cortisol_saliva_midnight
+    - - UFC_24h
+      - Cortisol_saliva_midnight
+    source: https://www.endocrine.org/clinical-practice-guidelines/diagnosis-of-cushing-syndrome
+    section: 'Recommendations 3.4, 3.5, 3.9: initial high-accuracy test, a different second test; concordant abnormal
+      results support further etiologic assessment. Coverage of candidate evidence, not a claim of pituitary localization.'
+    review: pending
+premise_checks:
+  JD-LADA:
+  - kind: glycaemic_diagnosis
+    fpg_min_mmol_l: 7.0
+    hba1c_min_pct: 6.5
+    same_draw: true
+    post_onset_fpg: true
+    source: https://diabetesjournals.org/care/article/48/Supplement_1/S27/157566/2-Diagnosis-and-Classification-of-Diabetes-Standards
+    section: "Table 2.1 diagnostic criteria; fasting = no caloric intake for at least 8 h; without unequivocal hyperglycaemia two abnormal results (same sample or two samples) confirm. The solver-reachable record of a case whose gold contains JD-LADA must meet this at day T. post_onset_fpg (our consistency rule): no solver-visible fasting glucose dated between the line's first symptom and T may lie below the same threshold, since the line's symptoms are those of hyperglycaemia."
+    review: pending
+  HD-UNI-19:
+  - kind: medication_exposure
+    drug_class: statin
+    indication: dyslipidemia
+    source: https://www.lipid.org/sites/default/files/files/23b45241-d23d-4112-bc52-299300e875da.pdf
+    section: Definition and clinical assessment of SAMS; temporal association with statin exposure. Day-zero exposure
+      is a synthetic scenario design; doses reuse med_course.CONCURRENT.
+    review: pending
+  HD-UNI-10:
+  - kind: renal_course
+    finding: CKDPersistence
+    minimum_observations: 4
+    span_days: 112
+    albuminuria_mg_g: 30
+    ratio: 2
+    source: https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf
+    section: 'Table 1 and Practice Points 2.1.3-2.1.5: chronicity, change exceeding variability and evaluation.
+      Four same-method observations over 112 days (legacy CKM history may predate treatment day zero), with repeated sustained ACR doubling and explicit acute-factor
+      review, are our synthetic design, not a universal diagnostic cutoff for progression.'
+    review: pending
+  JD-CKM:
+  - kind: renal_course
+    finding: CKDPersistence
+    minimum_observations: 4
+    span_days: 112
+    albuminuria_mg_g: 30
+    ratio: 2
+    source: https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf
+    section: 'Table 1 and Practice Points 2.1.3-2.1.5: chronicity, change exceeding variability and evaluation.
+      Four same-method observations over 112 days (legacy CKM history may predate treatment day zero), with repeated sustained ACR doubling and explicit acute-factor
+      review, are our synthetic design, not a universal diagnostic cutoff for progression.'
+    review: pending
+glycaemic_course:
+  conditions: [JD-LADA]
+  bundled_targets:
+    HbA1c/血糖: [FBG, HbA1c]
+  target_hba1c_pct: [8.0, 10.0]
+  hba1c_margin_pct: 0.2
+  fpg_floor_mmol_l: 8.0
+  fpg_over_eag: [0.85, 1.05]
+  eag: {slope: 1.59, intercept: -2.59}
+  source:
+    diagnostic: https://diabetesjournals.org/care/article/48/Supplement_1/S27/157566/2-Diagnosis-and-Classification-of-Diabetes-Standards
+    eag: https://doi.org/10.2337/dc08-0545
+    severity_floor: haenv/world/observations/findings_render.py#SEVERITY_FLOOR
+    glycation: registry/physio_streams.yaml#clinical_observation.state_variation.glycation_ema_days.HbA1c
+    design: ours
+  section: "HbA1c target lower bound 8.0 reuses the existing marked severity floor (ADA poor control >8%). Upper bound 10.0, margin 0.2, FPG floor 8.0 and eAG multiplier band [0.85, 1.05] are our synthetic design away from diagnostic boundaries, not universal diagnostic criteria. ADAG (Nathan et al., Diabetes Care 2008;31:1473-1478): eAG mg/dL = 28.7 x A1C - 46.7, converted to mmol/L = 1.59 x A1C - 2.59. The glycation time constant is read from the existing registry; it is a modeling choice, not a clinical response threshold."
+  review: pending
+
+renal_course_observations:
+  same_method: true
+  acute_factors_reviewed: true
+  source: https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf
+  section: 'Practice Points 2.1.3-2.1.5; Table 16 factors affecting ACR. Independently declared simulated review:
+    no fever, UTI, vigorous exercise, volume loss or newly changed nephrotoxic medicines during sampling.'
+  review: pending
+
+surface_variants:
+  上述训练在第一次抽血之后才开始；第一次抽血前并未运动。该次采血前有短期胃肠不适，后已恢复；同实验室复查见下，原异常原因未完全确定。:
+    messages:
+    - m2.surface.exercise_inactive.0
+    - m2.surface.exercise_inactive.1
+    - m2.surface.exercise_inactive.2
+    - m2.surface.exercise_inactive.3
+    source: registry/m2_diversity.yaml#incidental/factors/exercise_alt
+    section: Same independently declared inactive timing and unresolved attribution; underlying exercise study PMID
+      17764474, results.
+    review: pending
+  第一次标本并非空腹，原单沿用了空腹参考区间；后来按空腹要求重采，见下。:
+    messages:
+    - m2.surface.fasting_active.0
+    - m2.surface.fasting_active.1
+    - m2.surface.fasting_active.2
+    - m2.surface.fasting_active.3
+    source: registry/m2_diversity.yaml#incidental/factors
+    section: Original fasting scenario and sampling conditions; no new threshold or causal conclusion.
+    review: pending
+  平时很少运动，这次连续做了力量训练，次日肌肉酸胀。:
+    messages:
+    - m2.surface.exercise_quote.0
+    - m2.surface.exercise_quote.1
+    - m2.surface.exercise_quote.2
+    - m2.surface.exercise_quote.3
+    source: https://pmc.ncbi.nlm.nih.gov/articles/PMC2291230/
+    section: 'Pettersson et al., 2008, methods/results: unaccustomed weightlifting and muscle/liver enzyme changes;
+      no causal attribution from exposure alone.'
+    review: pending
+  小腿被蚊子叮了好几个包、发痒:
+    messages:
+    - m2.surface.mosquito.0
+    - m2.surface.mosquito.1
+    - m2.surface.mosquito.2
+    - m2.surface.mosquito.3
+    source: https://www.cuh.nhs.uk/patient-information/insect-bites-and-stings/
+    section: 'Symptoms: small itchy lump after a bite; site and count retain original synthetic event.'
+    review: pending
+  上颚被热汤烫到,吃东西时有点疼:
+    messages:
+    - m2.surface.scald.0
+    - m2.surface.scald.1
+    - m2.surface.scald.2
+    - m2.surface.scald.3
+    source: https://www.nhs.uk/conditions/mouth-ulcers/
+    section: 'Causes: burns while eating or drinking hot drinks; no ulcer or new diagnosis asserted.'
+    review: pending
+  晨起连打喷嚏、流清涕、鼻子痒:
+    messages:
+    - m2.surface.rhinitis.0
+    - m2.surface.rhinitis.1
+    - m2.surface.rhinitis.2
+    - m2.surface.rhinitis.3
+    source: https://www.nhs.uk/conditions/allergic-rhinitis/
+    section: 'Symptoms: sneezing, itchy and runny nose; morning timing retains original event.'
+    review: pending
+  洗头时耳内进水,次日自行缓解:
+    messages:
+    - m2.surface.ear_water.0
+    - m2.surface.ear_water.1
+    - m2.surface.ear_water.2
+    - m2.surface.ear_water.3
+    source: registry/benign_events.yaml
+    section: Existing synthetic benign event only; one-day resolution is its recorded course, not a clinical frequency
+      or a universal course.
+    review: pending
+  下楼踩空右脚踝扭到,局部酸痛:
+    messages:
+    - m2.surface.ankle.0
+    - m2.surface.ankle.1
+    - m2.surface.ankle.2
+    - m2.surface.ankle.3
+    source: https://www.nhs.uk/conditions/sprains-and-strains/
+    section: 'Symptoms of a sprain: pain after twisting an ankle; side and stair event retain original synthetic facts.'
+    review: pending
+  下楼梯踩空,冰敷后 2 天缓解:
+    messages:
+    - m2.surface.ankle_course.0
+    - m2.surface.ankle_course.1
+    - m2.surface.ankle_course.2
+    - m2.surface.ankle_course.3
+    source: registry/benign_events.yaml
+    section: Existing synthetic event course; two-day improvement is an individual observation, not a treatment effect
+      size or medical threshold.
+    review: pending
+
+  上述进食是在复查采血之后，不能解释之前的读数。第一次标本的登记注明急性胃肠不适恢复期；恢复后空腹重采见下。:
+    messages:
+    - m2.surface.meal_inactive.0
+    - m2.surface.meal_inactive.1
+    - m2.surface.meal_inactive.2
+    - m2.surface.meal_inactive.3
+    source: registry/m2_diversity.yaml
+    section: 'incidental.factors.meal_glucose: independently declared inactive timing; retain original illness and
+      repeat-sampling facts.'
+    review: pending
+  这几天鼠标用得多,右手腕酸痛:
+    messages:
+    - m2.surface.mouse.0
+    - m2.surface.mouse.1
+    - m2.surface.mouse.2
+    - m2.surface.mouse.3
+    source: https://www.nhs.uk/conditions/repetitive-strain-injury-rsi/
+    section: 'Symptoms and causes: repetitive wrist use and aching; mouse exposure, side and time are original synthetic
+      facts.'
+    review: pending
+  连续用鼠标数日,腕部劳损:
+    messages:
+    - m2.surface.mouse_context.0
+    - m2.surface.mouse_context.1
+    - m2.surface.mouse_context.2
+    - m2.surface.mouse_context.3
+    source: https://www.nhs.uk/conditions/repetitive-strain-injury-rsi/
+    section: Symptoms and causes; same original local event, not a newly confirmed diagnosis.
+    review: pending
+  爬楼后膝盖前面隐隐作痛,平地走路不疼:
+    messages:
+    - m2.surface.knee.0
+    - m2.surface.knee.1
+    - m2.surface.knee.2
+    - m2.surface.knee.3
+    source: https://leedscommunityhealthcare.nhs.uk/our-services-a-z/musculoskeletal-msk/knee-problems/known-diagnosed-knee-problems/anterior-knee-pain/
+    section: 'Symptoms: anterior pain on stairs; painless level walking retains the individual recorded event, not
+      a diagnostic exclusion.'
+    review: pending
+  爬楼后出现,平地行走无痛:
+    messages:
+    - m2.surface.knee_context.0
+    - m2.surface.knee_context.1
+    - m2.surface.knee_context.2
+    - m2.surface.knee_context.3
+    source: registry/benign_events.yaml
+    section: Original stair-related event and level-walking observation only; no new disease, interval or mechanism.
+    review: pending
+  穿新鞋走了一天,足跟磨出水泡:
+    messages:
+    - m2.surface.shoe.0
+    - m2.surface.shoe.1
+    - m2.surface.shoe.2
+    - m2.surface.shoe.3
+    source: https://www.nhs.uk/conditions/blisters/
+    section: 'Causes: skin friction including shoes; location and one-day exposure retain the original event.'
+    review: pending
+  连续熬夜赶工后出现,休息后减轻:
+    messages:
+    - m2.surface.sleep_context.0
+    - m2.surface.sleep_context.1
+    - m2.surface.sleep_context.2
+    - m2.surface.sleep_context.3
+    source: registry/benign_events.yaml
+    section: Original reported temporal association and improvement; no universal causal claim or treatment recommendation.
+    review: pending
+  前臂晒了一下午后发红、碰到就刺痛:
+    messages:
+    - m2.surface.sun.0
+    - m2.surface.sun.1
+    - m2.surface.sun.2
+    - m2.surface.sun.3
+    source: https://www.nhs.uk/conditions/sunburn/
+    section: 'Symptoms: red and sore skin after sun exposure; exact site and exposure duration retain the original
+      event.'
+    review: pending
+  最近开始负重训练，训练后大腿和肩背酸痛。:
+    messages:
+    - m2.surface.exercise_quote_recent.0
+    - m2.surface.exercise_quote_recent.1
+    - m2.surface.exercise_quote_recent.2
+    - m2.surface.exercise_quote_recent.3
+    source: registry/m2_diversity.yaml
+    section: 'incidental.factors.exercise_alt: weightlifting study PMID 17764474, methods/results; preserve reported
+      exercise and locations.'
+    review: pending
+  第一次采血在病后恢复期，未开始甲状腺药物；恢复后同方法复查见下。:
+    messages:
+    - m2.surface.thyroid_repeat.0
+    - m2.surface.thyroid_repeat.1
+    - m2.surface.thyroid_repeat.2
+    - m2.surface.thyroid_repeat.3
+    source: registry/m2_diversity.yaml
+    section: incidental.factors.illness_tsh; NICE NG145 recommendations 1.2.6, 1.2.8, 1.2.10; no new timing threshold.
+    review: pending
+  泳池水刺激,滴人工泪液缓解:
+    messages:
+    - m2.surface.pool_context.0
+    - m2.surface.pool_context.1
+    - m2.surface.pool_context.2
+    - m2.surface.pool_context.3
+    source: registry/benign_events.yaml
+    section: Original individual exposure and recorded response only; not a universal treatment effect or a prescription.
+    review: pending
+  当时短期腹泻、吃得少，休息补水后症状消退。:
+    messages:
+    - m2.surface.illness_quote.0
+    - m2.surface.illness_quote.1
+    - m2.surface.illness_quote.2
+    - m2.surface.illness_quote.3
+    source: registry/m2_diversity.yaml
+    section: 'incidental.factors.illness_tsh: preserve individual illness and recovery, without assigning thyroid
+      causation from exposure alone.'
+    review: pending
+  那阵子早晨常吃面包，有时配含糖饮料。:
+    messages:
+    - m2.surface.bread_drink.0
+    - m2.surface.bread_drink.1
+    - m2.surface.bread_drink.2
+    - m2.surface.bread_drink.3
+    source: registry/m2_diversity.yaml
+    section: 'incidental.factors.meal_glucose: original reported meal pattern only, not a new population frequency.'
+    review: pending
+  工作日早餐一般是面包和牛奶。:
+    messages:
+    - m2.surface.bread_milk.0
+    - m2.surface.bread_milk.1
+    - m2.surface.bread_milk.2
+    - m2.surface.bread_milk.3
+    source: registry/m2_diversity.yaml
+    section: 'incidental.factors.meal_glucose: same original breakfast, without adding fasting status or diagnosis.'
+    review: pending
+  抽血前两天有上述训练，暂停训练后肌肉酸痛消退；同实验室复查见下。:
+    messages:
+    - m2.surface.exercise_active.0
+    - m2.surface.exercise_active.1
+    - m2.surface.exercise_active.2
+    - m2.surface.exercise_active.3
+    source: registry/m2_diversity.yaml
+    section: 'incidental.factors.exercise_alt: retain original two-day exposure timing and individual recovery; not
+      a universal exercise effect interval.'
+    review: pending
+  换了新洗衣液后两个手腕发痒:
+    messages:
+    - m2.surface.detergent.0
+    - m2.surface.detergent.1
+    - m2.surface.detergent.2
+    - m2.surface.detergent.3
+    source: https://www.nhs.uk/conditions/contact-dermatitis/
+    section: 'Symptoms and causes: itching and detergents; no new diagnosis or established causal attribution.'
+    review: pending
+  趾甲剪太短后嵌进肉里、一压就疼:
+    messages:
+    - m2.surface.toenail.0
+    - m2.surface.toenail.1
+    - m2.surface.toenail.2
+    - m2.surface.toenail.3
+    source: https://www.nhs.uk/conditions/ingrown-toenail/
+    section: 'Symptoms and prevention: nail growing into toe, pain and avoiding overly short cutting; retain original
+      event.'
+    review: pending
+  口罩戴了一整天,耳朵后面压得疼:
+    messages:
+    - m2.surface.mask.0
+    - m2.surface.mask.1
+    - m2.surface.mask.2
+    - m2.surface.mask.3
+    source: registry/benign_events.yaml
+    section: Original local pressure and individual exposure only; no new medical mechanism, duration limit or management
+      claim.
+    review: pending

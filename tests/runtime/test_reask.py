@@ -19,6 +19,15 @@ from haenv.runtime.transport import make_envelope
 FIXTURE = (_TEST_ROOT / 'tests') / "fixtures/reask"
 
 
+@pytest.fixture(autouse=True)
+def archived_language():
+    from haenv import i18n
+    before = i18n.current()
+    i18n.set_current('zh')
+    yield
+    i18n.set_current(before)
+
+
 @pytest.fixture(scope="module", autouse=True)
 def expand_archive(tmp_path_factory):
     import gzip

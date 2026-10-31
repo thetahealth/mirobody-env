@@ -36,7 +36,8 @@ def gates():
 # ------------------------------------------------------------------------------ SA-1 callbacks
 
 def _get(raw, k):
-    return (raw.get(k) if isinstance(raw, dict) else getattr(raw, k, None)) or {}
+    from haenv.i18n.identity import source
+    return source((raw.get(k) if isinstance(raw, dict) else getattr(raw, k, None)) or {})
 
 
 def _plan_of(raw):

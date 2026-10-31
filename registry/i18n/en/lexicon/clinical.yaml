@@ -1,0 +1,2446 @@
+entries:
+  ? "\n· 本题部分数据要**购买**:get_menu 列出可买的项目、价格、预算与余额;order_test(target) 买一项(可在一轮里买多项)。买到的监测流之后也可以用 get_series\
+    \ 读。\n  ⚠️ 预算点不全整张菜单 —— 必须挑;超出余额的项目不会执行。菜单里可能有与这位患者无关的项,点了照样计费。\n  ⚠️ 预算用尽而仍未作答,本题按未作答处理。\n  ⚠️ 检查项(菜单\
+    \ tests)买过即计入「你开的检查」 —— `tests_to_order` 里只需再填菜单未列的检查。\n  · 结果为「无法提供可解释结果」的项目不是正常或阴性,不能据此排除疾病。"
+  : "\n· Some data in this question must be **purchased**: get_menu lists available items, prices, budget\
+    \ and remaining balance; order_test(target) purchases an item (multiple items may be purchased in\
+    \ one round). Purchased monitoring streams can subsequently be read with get_series.\n  ⚠️ The budget\
+    \ cannot cover the whole menu: choose selectively. Items exceeding the remaining balance will not\
+    \ be executed. The menu may include items unrelated to this patient; these are still charged if selected.\n\
+    \  ⚠️ If the budget runs out before you answer, the question is marked unanswered.\n  ⚠️ Purchased\
+    \ investigations (menu tests) already count as \"investigations you ordered\"; in `tests_to_order`,\
+    \ include only further investigations absent from the menu.\n  · A result marked \"no interpretable\
+    \ result available\" is neither normal nor negative and cannot be used to exclude disease."
+  '*低密度胆固醇': '*LDL cholesterol'
+  '*甘油三酯': '*triglycerides'
+  '*糖化血红蛋白': '*glycated haemoglobin'
+  '*葡萄糖': '*glucose'
+  '*谷丙转氨酶': '*alanine aminotransferase'
+  '*谷草转氨酶': '*aspartate aminotransferase'
+  1 型糖尿病患者不适用。: Not applicable to patients with type 1 diabetes.
+  1 年内跌倒 ≥ 2 次、受伤需就医、无法自行起身、跌倒时意识丧失或衰弱者，转综合跌倒评估。: Refer for comprehensive falls assessment if there have
+    been ≥ 2 falls in 1 year, injury requiring medical care, inability to get up independently, loss of
+    consciousness during a fall or frailty.
+  1,25-二羟维生素D: 1,25-dihydroxyvitamin D
+  10mg生物素后1–5小时且本次使用经核实敏感的链霉亲和素-生物素夹心TSH法，读数可偏低；无此架构的平台或72小时后不据此认定。: Readings may be falsely low 1–5 hours
+    after 10 mg biotin when the current TSH assay is a verified susceptible streptavidin–biotin sandwich
+    method. Do not infer this on platforms without that architecture or after 72 hours.
+  10–15 分钟后复测；仍 < 4.0 mmol/L 则再给一份，最多重复 3 轮；3 轮后仍未恢复，或再次变得迟钝 → 按严重低血糖转急诊。: Recheck after 10–15 minutes.
+    If still < 4.0 mmol/L, give another portion, for at most 3 rounds. If not recovered after 3 rounds,
+    or responsiveness declines again → emergency department for severe hypoglycaemia.
+  12 小时内痛过但已缓解且心电图正常，或末次疼痛在 12–72 小时前 → 当日评估。: Pain within the last 12 hours that has resolved with a
+    normal ECG, or last pain 12–72 hours ago → same-day assessment.
+  12 岁及以上，以头痛为主诉就诊。: Age 12 years or older, presenting with headache.
+  16 岁以下者不适用。: Not applicable below age 16 years.
+  17-羟孕酮: 17-hydroxyprogesterone
+  1mg地塞米松抑制试验: 1 mg dexamethasone suppression test
+  1型: type 1
+  2 型糖尿病: type 2 diabetes mellitus
+  2 型糖尿病患者不适用，起始药应为 ACE 抑制剂或 ARB。: Not applicable to patients with type 2 diabetes; start with an ACE
+    inhibitor or ARB.
+  2 型糖尿病成人，正在使用或拟开始二甲双胍。: Adults with type 2 diabetes taking or about to start metformin.
+  24h尿游离皮质醇: 24h urinary free cortisol
+  24小时尿游离皮质醇(UFC): 24-hour urinary free cortisol (UFC)
+  24小时尿钙: 24-hour urinary calcium
+  25-羟维生素D: 25-hydroxyvitamin D
+  3c型糖尿病: type 3c diabetes mellitus
+  4 周内已用过口服激素疗程、或长期口服激素者不适用。: Not applicable after a course of oral corticosteroids in the last 4 weeks
+    or during long-term oral corticosteroid therapy.
+  48–72 小时内复诊；一年需多个激素疗程者评估骨质疏松预防。: Review within 48–72 hours; assess osteoporosis prevention if multiple
+    corticosteroid courses are needed in a year.
+  48–72 小时复评，皮疹进展则按上一步升级。: Reassess in 48–72 hours; if the rash progresses, escalate as in the preceding
+    step.
+  5 分钟内达峰的雷击样头痛，或有新神经功能缺损、意识受损 → 转急诊。: Thunderclap headache reaching maximum intensity within 5 minutes,
+    new neurological deficit or impaired consciousness → emergency department.
+  50 岁及以上（或衰弱者）近 1 年内跌倒、因跌倒就诊，头部未受外伤。: Age 50 years or older (or frail), with a fall in the last 1 year
+    or presenting after a fall, without head injury.
+  6 个月内 ≥ 2 次或 12 个月内 ≥ 3 次发作 → 送尿培养并评估诱因。: ≥ 2 episodes in 6 months or ≥ 3 in 12 months → send urine
+    culture and assess predisposing factors.
+  65 岁以下，TSH 高于参考值但 < 10 mIU/L 两次，且有甲减症状 → 可试用 6 个月，症状无改善则停。: Below age 65 years, TSH above the reference
+    range but < 10 mIU/L on two occasions, with hypothyroid symptoms → consider a 6-month trial; stop
+    if symptoms do not improve.
+  65 岁及以上、TSH < 10 mIU/L 者不常规治疗，只随访。: 'Age 65 years or older with TSH < 10 mIU/L: do not routinely treat;
+    follow up only.'
+  80 岁以上、有直立性低血压史者，加药前先测站立血压，收缩压低于 110 mmHg 暂不加药。: 'Above age 80 years with a history of orthostatic hypotension:
+    measure standing blood pressure before adding medication; defer if systolic pressure is below 110
+    mmHg.'
+  80 岁以下诊室目标 < 140/90 mmHg，80 岁及以上 < 150/90 mmHg。: Clinic target < 140/90 mmHg below age 80 years; < 150/90
+    mmHg at age 80 years or older.
+  ACEI 既往最大耐受剂量复评: Review of previously established maximum tolerated ACEI dose
+  ACEI 起用前均值取最近一次 ACEI 事件之后至上次比较采血日的停药期读数，无可用读数时以上次读数为基线。: For the pre-ACEI mean, use off-treatment readings
+    after the latest ACEI event and up to the previous comparison draw. If none are available, use the
+    previous reading as baseline.
+  ACEI 起用或停用: ACEI initiation or discontinuation
+  ACEI/ARB剂量及高血压已稳定，低风险且肾功能和血钾本周正常，无急性病、共病风险或新指征，仍安排下周常规重复肾功能和血钾。: ACEI/ARB dose and hypertension are
+    stable, risk is low and renal function and potassium were normal this week, with no acute illness,
+    comorbidity risk or new indication, yet routine renal function and potassium are ordered again next
+    week.
+  ACEI/ARB起用或加量后按1至2周复查肾功能和血钾；低风险稳定高血压按年度计划复查。: Repeat renal function and serum potassium 1 to 2 weeks
+    after starting or increasing ACEI/ARB; review annually in low-risk stable hypertension.
+  ACTH+垂体/肾上腺影像: ACTH + pituitary/adrenal imaging
+  ACTH兴奋试验: ACTH stimulation test
+  ACTH兴奋试验皮质醇反应: cortisol response to ACTH stimulation
+  ADA 2025 6.2为至少每年两次；未达标、近期换药、频繁/严重低或高血糖、健康状态变化时可更频繁（如每3个月）。这是最低频次，不单独用于惩罚短间隔，有此类新指征也不按稳定半年条款扣分。: ADA
+    2025 6.2 specifies at least twice yearly; testing may be more frequent (e.g. every 3 months) for unmet
+    targets, recent medication changes, frequent/severe hypoglycaemia or hyperglycaemia, or health changes.
+    This is a minimum frequency, not grounds alone to penalise short intervals. With such new indications,
+    do not apply the stable half-yearly rule as a penalty.
+  ANA + 抗着丝点抗体/抗Scl-70: ANA + anticentromere antibodies/anti-Scl-70
+  AST/ALT/血小板并计算FIB-4: AST/ALT/platelets and FIB-4 calculation
+  CKD 进展: CKD progression
+  CKD患者如起用或加量RAAS拮抗剂，按1至2周复查eGFR和血钾，异常或新风险时由医生提前监测。: In CKD, repeat eGFR and potassium 1 to 2 weeks after
+    starting or increasing a RAAS antagonist; the clinician may monitor earlier for abnormalities or new
+    risks.
+  CKD患者起用/加量RAAS拮抗剂之前及之后1至2周查eGFR、血钾；异常结果、合用升钾药或急性病可能需要更早/更频繁，不把1至2周当禁止更早检查的硬下界。: In CKD, check eGFR and
+    potassium before and 1 to 2 weeks after starting/increasing a RAAS antagonist. Abnormal results, concomitant
+    potassium-raising drugs or acute illness may require earlier/more frequent checks; 1 to 2 weeks is
+    not a hard lower bound prohibiting earlier testing.
+  COPD急性加重在基层管理时不常规送痰培养；住院、脓痰、治疗不改善、需针对病原调整治疗等新指征除外。不能从高碳酸呼衰记录自动推断所有人都有COPD。: Do not routinely send sputum
+    culture for COPD exacerbations managed in primary care. New indications such as hospital admission,
+    purulent sputum, failure to improve or need for pathogen-directed treatment are exceptions. Do not
+    infer COPD in every patient with hypercapnic respiratory failure.
+  COPD急性加重本次在基层管理，无治疗失败等新指征，仍只为常规筛查送痰培养。: This COPD exacerbation is managed in primary care without a
+    new indication such as treatment failure, yet sputum culture is sent solely for routine screening.
+  COPD急性加重送医院后按指征查血常规、电解质、心电图及胸片，发热时评估血培养。: After hospital referral for COPD exacerbation, obtain full
+    blood count, electrolytes, ECG and chest radiograph as indicated; assess blood cultures with fever.
+  COPD急性加重送医院时可查胸片、血气、心电图、血常规、尿素/电解质；脓痰可送痰培养、发热可取血培养，不能因这些名称扣分。: For hospital referral with COPD exacerbation,
+    chest radiograph, blood gases, ECG, full blood count and urea/electrolytes may be checked; culture
+    sputum if purulent and blood if febrile. Do not penalise these test names.
+  CT肺动脉造影: CT pulmonary angiography
+  CT肺动脉造影(CTPA): CT pulmonary angiography (CTPA)
+  CVA逐项采用EuBIVAS已发表的双份测量实测值，CVI采用EFLM全球估计；不得把CVA称为EFLM统一常数。论文CVA对应研究平台与低浓度范围，例行实验室应使用长期质控值；在本院不同已比对平台间复用此研究CVA是合成简化，尚需检验科评审。: CVA
+    uses the published analyte-specific EuBIVAS duplicate-measurement estimates; CVI uses EFLM global
+    estimates. Do not describe CVA as a universal EFLM constant. The published CVA corresponds to the
+    study platforms and low concentration range; routine laboratories should use long-term quality-control
+    values. Reusing this study CVA across different compared local platforms is a synthetic simplification
+    requiring laboratory review.
+  C反应蛋白: C-reactive protein
+  C反应蛋白(CRP): C-reactive protein (CRP)
+  C肽: C-peptide
+  D-二聚体: D-dimer
+  DOAC：每年至少查肾功能、血红蛋白与肝功能。: 'DOAC: check renal function, haemoglobin and liver function at least annually.'
+  FIB-4指数: FIB-4 index
+  GAD抗体/IA-2抗体: GAD antibodies/IA-2 antibodies
+  GLP-1 受体激动剂调量: GLP-1 receptor agonist dose adjustment
+  HFE基因检测: HFE genetic testing
+  HbA1c/血糖: HbA1c/blood glucose
+  HbA1c·空腹血糖(先确认糖尿病本身): HbA1c · fasting glucose (first confirm diabetes itself)
+  HbA1c及降糖治疗稳定时每6个月；尚未稳定时按个体需要每3至6个月。仅在稳定状态、距上次测定的间隔及无新指征均明确时，过早安排同项常规重复才扣分；不把首次测定/时间未知的测定当重复。: Measure
+    HbA1c every 6 months if the result and glucose-lowering treatment are stable; otherwise every 3 to
+    6 months according to individual need. Penalise premature routine repetition of the same test only
+    when stability, the previous test interval and absence of a new indication are all established. Do
+    not treat initial testing or testing with unknown previous timing as repetition.
+  HbA1c和降糖治疗已稳定，刚做完HbA1c，无新指征且不换药，仍安排下周常规重复HbA1c。: HbA1c and glucose-lowering treatment are stable, HbA1c
+    has just been measured and there is no new indication or medication change, yet routine HbA1c is ordered
+    again next week.
+  HbA1c和降糖治疗稳定时按每6个月的慢病计划监测；不稳定时按个体需要每3至6个月复评。: Monitor HbA1c under the chronic disease plan every 6 months
+    when the result and glucose-lowering treatment are stable; otherwise reassess every 3 to 6 months
+    according to individual need.
+  IFCC动力学法: IFCC kinetic method
+  IFCC速率法: IFCC rate method
+  Jaffe 苦味酸速率法: Jaffe alkaline picrate kinetic method
+  Jaffe/酶法比对: Jaffe/enzymatic method comparison
+  MIBG(必要时): MIBG (if needed)
+  MIBG核素显像: MIBG scintigraphy
+  ? NEWS2 适用于年满 16 岁的非妊娠病人。病历中有既往或本次住院血气确认高碳酸呼衰，并由临床人员明确登记目标血氧 88–92% 时使用 SpO2 Scale 2；其余使用 Scale 1。Scale
+    2 未吸氧时：≤83% 计 3，84–85% 计 2，86–87% 计 1，≥88% 计 0；吸氧时 88–92% 计 0，93–94% 计 1，95–96% 计 2，≥97% 计 3，低于 88%
+    同前。吸氧另加 2 分。其余评分与分诊优先级照原表。
+  : 'NEWS2 applies to non-pregnant patients aged 16 years or older. Use SpO2 Scale 2 only when previous
+    or current inpatient blood gases confirm hypercapnic respiratory failure and a clinician has explicitly
+    recorded an oxygen saturation target of 88–92%; otherwise use Scale 1. Scale 2 on room air: ≤83% scores
+    3, 84–85% scores 2, 86–87% scores 1, ≥88% scores 0; on supplemental oxygen: 88–92% scores 0, 93–94%
+    scores 1, 95–96% scores 2, ≥97% scores 3; below 88% as above. Add 2 points for supplemental oxygen.
+    Other scoring and triage priorities follow the original table.'
+  NG115 1.3.1 与 Table 7；1.3.15；1.3.16；1.3.18；NHS 哮喘发作页: NG115 1.3.1 and Table 7; 1.3.15; 1.3.16; 1.3.18;
+    NHS asthma attack page
+  NICE CG151 §§1.3.1-1.4.1; St George’s 急性肿瘤规程: NICE CG151 §§1.3.1-1.4.1; St George’s acute oncology protocol
+  NT-proBNP/心超: NT-proBNP/echocardiography
+  OGTT+胰岛素: OGTT + insulin
+  OGTT-生长激素抑制试验: OGTT–growth hormone suppression test
+  OGTT生长激素抑制试验: OGTT growth hormone suppression test
+  R0 问诊清单里任一为「是」:胸痛或胸部压迫感、晕倒、新出现的意识混乱、静息时气促、一侧肢体无力或说话含糊 → 立即急诊。: 'R0 Any positive item in the symptom
+    checklist: chest pain or pressure, fainting, new confusion, breathlessness at rest, unilateral limb
+    weakness or slurred speech → emergency department immediately.'
+  R0a 已有头部外伤，即使当前生命体征正常、无昏迷呕吐，病历确认仍在抗凝治疗 → 立即急诊。本次用药核对确认遵从现行处方，并核对旧处方覆盖日期及停药记录；只有跌倒而未碰头、或抗凝已结束者不触发本条。: R0a
+    Head injury with ongoing anticoagulation confirmed in the record, even with normal current vital signs
+    and no loss of consciousness or vomiting → emergency department immediately. Today's medication reconciliation
+    must confirm adherence to the current prescription and check coverage dates and discontinuation records.
+    A fall without head impact or completed anticoagulation does not trigger this rule.
+  R0a、R0b 属于急性条款，均优先于 NEWS2；原 R0 症状仍最优先。: R0a and R0b are acute rules and take priority over NEWS2; original
+    R0 symptoms retain highest priority.
+  R0b 病历确认近 6 周内实际接受系统性抗癌治疗，今天新出现全身不适并有感染相关诉述 → 立即联系肿瘤团队并立即到急诊评估疑似中性粒细胞减少性脓毒症；低热甚至没有高热不能排除。已结束超过 6 周且恢复、仅计划而未给药者不触发。: R0b
+    The record confirms actual systemic anticancer treatment within the last 6 weeks, with new systemic
+    illness and infection-related complaints today → contact the oncology team immediately and attend
+    the emergency department immediately for suspected neutropenic sepsis. Low-grade fever or absence
+    of high fever cannot exclude it. Treatment completed more than 6 weeks ago with recovery, or treatment
+    planned but not administered, does not trigger this rule.
+  R1 按今天的家庭测量算 NEWS2(RCP 2017,SpO2 第 1 表、未吸氧;意识按问诊清单)。NEWS2 ≥ 7 → 立即急诊。: R1 Calculate NEWS2 from today's
+    home measurements (RCP 2017, SpO2 Scale 1, on room air; consciousness from the checklist). NEWS2 ≥
+    7 → emergency department immediately.
+  R10 NEWS2 为 1–4 且无单项 3 分 → 常规复诊或 24 小时内由医生评估均可；持续症状、心衰等共病需结合病历及时复评。: R10 NEWS2 1–4 with no individual
+    score of 3 → either routine follow-up or clinician assessment within 24 hours is acceptable; persistent
+    symptoms or comorbidities such as heart failure require timely reassessment using the record.
+  ? R10a 仅心率带来 NEWS2 1 分（其余参数 0），病历已有心电图及临床评估证实长期无症状窦性慢心率，今日心率仍在已登记基线范围，且无新头晕、晕倒、胸部症状、气促，本次用药核对确认相关药物近期未变化
+    → 按原随访计划居家观察。新下降、旧慢心率曾恢复正常、仅病名或未核实基线者不适用；此前急性条款优先。
+  : R10a Heart rate alone gives NEWS2 1 point (all other parameters 0), with prior ECG and clinical assessment
+    confirming long-standing asymptomatic sinus bradycardia, today's rate within the registered baseline
+    range, no new dizziness, fainting, chest symptoms or breathlessness, and today's reconciliation confirming
+    no recent relevant medication change → observe at home under the existing follow-up plan. Not applicable
+    to a new decline, a decline after previous normalisation, a diagnosis alone or an unverified baseline;
+    earlier acute rules take priority.
+  R10a 满足时先用稳定基线条款，再考虑 R10；R0 至 R9 的更紧急条款仍优先。: If R10a is met, apply the stable-baseline rule before R10;
+    more urgent rules R0 to R9 retain priority.
+  R11 糖尿病人近 7 晚有夜间最低值 < 3.9 但都不低于 3.0 mmol/L(ADA 1 级)→ 常规复诊。: R11 Diabetes with overnight minima < 3.9
+    but none below 3.0 mmol/L over the last 7 nights (ADA level 1) → routine follow-up.
+  R12 今天 ≥ 2 次家庭血压 ≥ 140/90 mmHg 但未达 R6/R7 → 常规复诊。: R12 ≥ 2 home blood pressure readings ≥ 140/90 mmHg
+    today, below R6/R7 criteria → routine follow-up.
+  R13 NEWS2 为 0、只有轻症(咽痛、咳嗽等)→ 居家观察或常规复诊都可。: R13 NEWS2 0 with mild symptoms only (sore throat, cough, etc.)
+    → either observation at home or routine follow-up is acceptable.
+  R14 以上都不符合 → 居家观察。单次可穿戴异常(运动时手表心率、手表松动时血氧、某晚睡眠差)，当天可靠复测或其余日子正常时，不单独决定去向；今天可靠的指夹血氧、家庭心率与其它前置条款仍有效。: R14
+    None of the above → observation at home. An isolated wearable abnormality (exercise watch heart rate,
+    oxygen saturation with a loose watch, one poor night's sleep) does not alone determine disposition
+    when a reliable repeat today or readings on other days are normal. Today's reliable finger oxygen
+    saturation, home heart rate and other earlier rules still apply.
+  R2 NEWS2 为 5–6 → 立即急诊。: R2 NEWS2 5–6 → emergency department immediately.
+  R3 NEWS2 ≤ 4 且其余单项得 3 分(体温 = 35.0 ℃、收缩压 ≥ 220 mmHg)→ 24 小时内就医。NEWS2 的体温 ≤ 35.0 ℃计 3 分不变;低于 35.0 ℃已由 R3a 优先转急诊。: R3
+    NEWS2 ≤ 4 with another individual score of 3 (temperature = 35.0 ℃, systolic blood pressure ≥ 220
+    mmHg) → seek care within 24 hours. Temperature ≤ 35.0 ℃ still scores 3 in NEWS2; below 35.0 ℃ already
+    requires immediate emergency care under R3a.
+  R3a NEWS2 ≤ 4,但呼吸 ≤ 8 或 ≥ 25 次/分、收缩压 ≤ 90 mmHg、心率 ≥ 131 次/分,或家庭体温 < 35.0 ℃(疑似低体温;均为单项 3 分)→ 立即急诊;低温读数需立即核实,不可因等待复测延误求助。: R3a
+    NEWS2 ≤ 4 but respiratory rate ≤ 8 or ≥ 25/min, systolic blood pressure ≤ 90 mmHg, heart rate ≥ 131/min,
+    or home temperature < 35.0 ℃ (suspected hypothermia; each scores 3 individually) → emergency department
+    immediately. Check the low temperature immediately; waiting for a repeat measurement must not delay
+    seeking help.
+  R3b NEWS2 ≤ 4,未吸氧 SpO2 ≤ 91%(单项 3 分)→ 立即急诊或 24 小时内就医,两者都可。: R3b NEWS2 ≤ 4 with room-air SpO2 ≤ 91% (individual
+    score 3) → either emergency department immediately or medical care within 24 hours is acceptable.
+  R3c NEWS2 ≤ 4,心率 ≤ 40 次/分(单项 3 分),无 R0 症状 → 立即急诊或 24 小时内就医,两者都可。: R3c NEWS2 ≤ 4 with heart rate ≤ 40/min
+    (individual score 3), without R0 symptoms → either emergency department immediately or medical care
+    within 24 hours is acceptable.
+  R4 糖尿病人近 3 天有一次低血糖需要别人帮忙才处理(ADA 3 级)→ 立即急诊或 24 小时内就医,两者都可。: R4 Diabetes with an episode of hypoglycaemia
+    requiring another person's assistance in the last 3 days (ADA level 3) → either emergency department
+    immediately or medical care within 24 hours is acceptable.
+  R5 近 7 晚里有 ≥ 2 晚 CGM 夜间最低值 < 3.0 mmol/L(ADA 2 级)→ 24 小时内就医,调整降糖方案。: R5 ≥ 2 of the last 7 nights with
+    a CGM minimum < 3.0 mmol/L (ADA level 2) → medical care within 24 hours to review glucose-lowering
+    treatment.
+  R6 今天 ≥ 2 次家庭血压 ≥ 180/110 mmHg(收缩压或舒张压任一达到),且问诊清单有剧烈头痛或视物模糊 → 立即急诊。: R6 ≥ 2 home blood pressure readings
+    ≥ 180/110 mmHg today (either systolic or diastolic threshold), with severe headache or blurred vision
+    on the checklist → emergency department immediately.
+  R7 今天 ≥ 2 次 ≥ 180/110 mmHg 但无上述症状 → 尽快复核(ESC 2024:最好一周内),24 小时内就医或常规复诊都可。: 'R7 ≥ 2 readings ≥ 180/110
+    mmHg today without the symptoms above → prompt review (ESC 2024: preferably within a week); either
+    medical care within 24 hours or routine follow-up is acceptable.'
+  R7a 心衰病人今天 ≥ 2 次 ≥ 180/110 mmHg 但无上述症状 → 24 小时内就医。: R7a Heart failure with ≥ 2 readings ≥ 180/110 mmHg
+    today without the symptoms above → medical care within 24 hours.
+  R8 心衰病人今天晨重比 3 天前晨重多 2 kg 以上 → 24 小时内就医(或按医嘱加利尿剂并当天联系医生)。: R8 Heart failure with today's morning weight
+    more than 2 kg above the morning weight 3 days ago → medical care within 24 hours (or increase diuretic
+    as prescribed and contact the clinician today).
+  R9 近 3 天手表 ≥ 2 次提示心律不齐、无 R0 症状 → 24 小时内就医做心电图(手表提示不能确诊房颤)。: R9 ≥ 2 watch irregular rhythm alerts in
+    the last 3 days without R0 symptoms → medical care within 24 hours for an ECG (watch alerts cannot
+    establish atrial fibrillation).
+  RCV 与回归散布不是可辨认的个体内水平变化百分比；材料不支持精确分解时应说明估计限制。: Neither RCV nor regression scatter identifies the percentage
+    change in an individual's true level. State estimation limits when the material does not support precise
+    decomposition.
+  ? RCV 是两次测量的参考变化量。以小变异的对数近似，单次总 CV = sqrt(CVI² + CVA²)，双侧 95% RCV = 1.96 × sqrt(CV0² + CV1²)；观测对数差为
+    ln(本次/上次)，百分比差为 100 × (本次/上次 − 1)。本院合成校准沿用血肌酐 CVI 4.5%、酶法 CVA 1.1%、Jaffe CVA 4.4%；同酶法约 12.8%、同 Jaffe
+    约 17.5%、两法各一次约 15.3%（对数尺度）。这些是既有登记参数，不能替代具体实验室质控；EuBIVAS 的酶法 CVI 为 4.4%（95% CI 4.2–4.7），碱性苦味酸法为 4.7%（4.4–4.9）；沿用的
+    4.5% 为本院合成近似，非论文两法的精确点估计。范围内的变化也可以有记录支持的临床来源，范围外也须先核对方法与采样条件。
+  : RCV is the reference change value for two measurements. Using the small-variation log approximation,
+    total CV for one measurement = sqrt(CVI² + CVA²), and two-sided 95% RCV = 1.96 × sqrt(CV0² + CV1²).
+    The observed log difference is ln(current/previous), and percentage difference is 100 × (current/previous
+    − 1). Local synthetic calibration retains serum creatinine CVI 4.5%, enzymatic CVA 1.1% and Jaffe
+    CVA 4.4%; the same-method enzymatic RCV is about 12.8%, same-method Jaffe about 17.5%, and one of
+    each about 15.3% (log scale). These existing registered parameters do not replace laboratory-specific
+    quality control. EuBIVAS enzymatic CVI is 4.4% (95% CI 4.2–4.7) and alkaline picrate CVI 4.7% (4.4–4.9);
+    the retained 4.5% is a local synthetic approximation, not either exact study point estimate. Changes
+    within the range may still have a documented clinical source; outside it, check methods and sampling
+    conditions first as well.
+  TPOAb 阳性者复查间隔缩短为每 6 个月 1 次。: If TPOAb positive, shorten the repeat interval to 1 check every 6 months.
+  TSH早晨与下午时段不同，可有昼夜节律差；时段一致时不凭存在下午记录定性。: Morning versus afternoon TSH sampling may reflect circadian variation.
+    An afternoon record alone does not establish this source if both draws were in the same time period.
+  '`join_macro` 只判 `join_type` 的三选一,不读 `join_reason`; 本点区分「答对且说得出理由」与只答对。': '`join_macro` judges only
+    the three-way `join_type` choice and does not read `join_reason`; this item distinguishes a correct
+    answer with an explanation from a correct answer alone.'
+  '`tests_recall` / `disc_recall` 只判是否列到(集合运算),不判理由; 「开单」与「知道为什么开」是两件事,后者只能在自由文本里判。': '`tests_recall`
+    / `disc_recall` check listing only (set operations), not reasoning. Ordering an investigation and
+    knowing why to order it are distinct; the latter can only be assessed in free text.'
+  drug.amlodipine: amlodipine
+  drug.atorvastatin: atorvastatin
+  drug.dapagliflozin: dapagliflozin
+  drug.dulaglutide: dulaglutide
+  drug.enalapril: enalapril
+  drug.gliclazide: gliclazide modified-release tablets
+  drug.levothyroxine: levothyroxine sodium
+  drug.liraglutide: liraglutide
+  drug.losartan: losartan
+  drug.metformin: metformin
+  drug.semaglutide: semaglutide
+  drug.tirzepatide: tirzepatide
+  eGFR 30–44 → 不新开始；已在用者评估获益风险，剂量减半后继续；eGFR < 30 → 停用，改用其他降糖药。: eGFR 30–44 → do not initiate; for existing
+    treatment, assess benefits and risks and continue at half the dose. eGFR < 30 → stop and use another
+    glucose-lowering drug.
+  eGFR < 60 者每 6 个月查 1 次肾功能。: 'eGFR < 60: check renal function 1 time every 6 months.'
+  eGFR/血肌酐: eGFR/serum creatinine
+  eGFR监测按NG203表2的GFR/ACR分层最低次数并个体化；本快照缺完整分层时不指定统一年度次数。表2为最低频次，不能反过来据此扣更频繁监测；新发现肾功能降低的短期确认检查不扣分。: Individualise
+    eGFR monitoring using the GFR/ACR-stratified minimum frequencies in NG203 Table 2. Do not prescribe
+    one annual frequency when the snapshot lacks complete stratification. Table 2 gives minimum frequencies;
+    it does not justify penalising more frequent monitoring. Do not penalise short-term confirmatory testing
+    for newly reduced renal function.
+  encounter.p3: Chronic medication follow-up
+  encounter.p4: Follow-up test interpretation
+  freq.daily: daily
+  freq.once_daily: once daily
+  freq.once_daily_sc: subcutaneously once daily
+  freq.once_nightly: once nightly
+  freq.weekly_sc: subcutaneously once weekly
+  m2.clinical.phrase_0: Longitudinal renal function and urine albumin record
+  m2.clinical.phrase_1: serum lipase
+  m2.clinical.phrase_10: Liver stiffness and fat quantification with secondary specialist assessment
+  m2.clinical.phrase_11: Short-term serum creatinine record
+  m2.clinical.phrase_12: serum creatinine
+  m2.clinical.phrase_13: urine albumin/creatinine ratio
+  m2.clinical.phrase_14: suggests steatosis
+  m2.clinical.phrase_15: below the steatosis threshold
+  m2.clinical.phrase_4: twelve-lead ECG recording
+  m2.clinical.phrase_7: Pancreatic and peripancreatic imaging description
+  m2.disease.MASLD: metabolic dysfunction-associated steatotic liver disease
+  m2.disease.T2D: type 2 diabetes mellitus
+  m2.disease.dyslipidemia: dyslipidaemia
+  m2.disease.hypertension: hypertension
+  m2.disease.obesity: obesity
+  m2.distractors.phrase_10: mild specimen haemolysis
+  m2.distractors.phrase_11: haemolysed specimen
+  m2.distractors.phrase_12: 'Laboratory note: haemolysed specimen; repeat recommended'
+  m2.distractors.phrase_13: haemolytic anaemia
+  m2.distractors.phrase_17: infectious/inflammatory disease
+  m2.distractors.phrase_19: blood collected while seated
+  m2.distractors.phrase_2: mild specimen haemolysis
+  m2.distractors.phrase_21: phaeochromocytoma
+  m2.distractors.phrase_23: smoking before sampling
+  m2.distractors.phrase_25: Cushing syndrome
+  m2.distractors.phrase_29: hypothyroidism
+  m2.distractors.phrase_3: specimen haemolysis (+)
+  m2.distractors.phrase_31: low 25-OH vitamin D
+  m2.distractors.phrase_33: primary hyperparathyroidism
+  m2.distractors.phrase_34: marked specimen lipaemia (high triglycerides)
+  m2.distractors.phrase_35: lipaemic specimen
+  m2.distractors.phrase_36: 'Laboratory note: lipaemic specimen'
+  m2.distractors.phrase_37: syndrome of inappropriate antidiuretic hormone secretion
+  m2.distractors.phrase_38: blood collected from the arm receiving an infusion
+  m2.distractors.phrase_39: blood collected during infusion
+  m2.distractors.phrase_4: 'Laboratory note: mild specimen haemolysis'
+  m2.distractors.phrase_41: anaemia
+  m2.distractors.phrase_42: Low titre 1:80, also common in healthy people
+  m2.distractors.phrase_43: titre 1:80, speckled pattern
+  m2.distractors.phrase_44: systemic lupus erythematosus
+  m2.distractors.phrase_46: non-fasting
+  m2.distractors.phrase_48: insulin resistance
+  m2.distractors.phrase_49: high potassium
+  m2.distractors.phrase_5: hyperkalaemia
+  m2.distractors.phrase_50: hyperkalaemia
+  m2.distractors.phrase_51: high triglycerides
+  m2.distractors.phrase_52: hypertriglyceridaemia
+  m2.distractors.phrase_53: haemolytic anaemia
+  m2.distractors.phrase_54: infection
+  m2.distractors.phrase_55: inflammation
+  m2.distractors.phrase_56: phaeochromocytoma
+  m2.distractors.phrase_57: phaeochromocytoma
+  m2.distractors.phrase_58: Cushing syndrome
+  m2.distractors.phrase_59: hypothyroidism
+  m2.distractors.phrase_60: hypothyroidism
+  m2.distractors.phrase_61: hyperparathyroidism
+  m2.distractors.phrase_62: hyperparathyroidism
+  m2.distractors.phrase_63: hyponatraemia
+  m2.distractors.phrase_64: inappropriate antidiuretic hormone secretion
+  m2.distractors.phrase_65: anaemia
+  m2.distractors.phrase_66: lupus
+  m2.distractors.phrase_67: lupus erythematosus
+  m2.distractors.phrase_68: insulin resistance
+  m2.distractors.phrase_7: non-fasting
+  m2.distractors.phrase_9: hypertriglyceridaemia
+  m2.encounter.acute_triage: Acute presentation
+  m2.encounter.chronic_med_adjustment: chronic disease follow-up
+  m2.encounter.diagnostic_visit: Outpatient visit
+  m2.encounter.followup_interpretation: follow-up testing
+  m2.hist.followup.no_persisting: No similar persistent abnormality subsequently.
+  m2.hist.followup.none: No persistent abnormality.
+  m2.hist.followup.not_evaluated: Not further assessed at that time; current symptoms require separate
+    assessment.
+  m2.hist.followup.typing_incomplete: No valid typing completed at that time; separate assessment is now
+    required.
+  m2.hist.result.control_normal: Recheck at that time found no abnormality in this test; see the original
+    report for values and reference range.
+  m2.hist.result.prior_positive: Previously positive; report available for review
+  m2.hist.result.screen_then_negative: Initial screening was suspicious, repeat negative; the original
+    report records the repeat result.
+  m2.hist.result.typing_failed: Initial screening was suspicious, typing yielded no interpretable result;
+    the original report documents specimen quality problems.
+  m2.hist.result.uninterpretable_then_negative: The result was uninterpretable at that time; subsequent
+    repeat negative.
+  m2.lab.method.direct: direct measurement
+  m2.obs.negative: negative
+  m2.obs.negative_normal: Negative / no significant abnormality detected
+  m2.obs.positive: positive
+  m2.obs.positive_abnormal: Positive / abnormal, suggesting a pathological change
+  m2.obs.typing_unusable: Specimen quality control inadequate; no interpretable typing result available
+  m2.rcv.note.0: Repeat test, same laboratory as previously
+  m2.rcv.note.1: Outpatient repeat test
+  m2.rcv.note.2: follow-up testing
+  m2.rcv_points_to.phrase_0: worsening glycaemic control
+  m2.rcv_points_to.phrase_1: worsening glycaemic control
+  m2.rcv_points_to.phrase_10: uncontrolled blood glucose
+  m2.rcv_points_to.phrase_11: poorly controlled diabetes
+  m2.rcv_points_to.phrase_12: worsening dyslipidaemia
+  m2.rcv_points_to.phrase_13: hypercholesterolaemia
+  m2.rcv_points_to.phrase_14: hyperlipidaemia
+  m2.rcv_points_to.phrase_15: high triglycerides
+  m2.rcv_points_to.phrase_16: hypertriglyceridaemia
+  m2.rcv_points_to.phrase_17: liver injury
+  m2.rcv_points_to.phrase_18: elevated transaminases
+  m2.rcv_points_to.phrase_19: hepatitis
+  m2.rcv_points_to.phrase_2: worsening dyslipidaemia
+  m2.rcv_points_to.phrase_20: liver injury
+  m2.rcv_points_to.phrase_21: elevated transaminases
+  m2.rcv_points_to.phrase_22: hepatitis
+  m2.rcv_points_to.phrase_3: hypertriglyceridaemia
+  m2.rcv_points_to.phrase_4: liver injury
+  m2.rcv_points_to.phrase_5: liver injury
+  m2.rcv_points_to.phrase_6: worsening glycaemic control
+  m2.rcv_points_to.phrase_7: uncontrolled blood glucose
+  m2.rcv_points_to.phrase_8: poorly controlled diabetes
+  m2.rcv_points_to.phrase_9: worsening glycaemic control
+  m2.scene.no_meds: The patient is not currently taking medication
+  m2.scene.unwell: feeling unwell
+  m2.section.clinic_document: Clinic clinical documents, by date
+  m2.section.interview: Interview record, by date
+  m2.section.lab_document: Laboratory documents, by effective date
+  m2.section.labs: Laboratory reports, by report date
+  m2.section.med_reconciliation: Medication reconciliation, by reconciliation date
+  m2.section.notes: Outpatient course, by encounter date
+  m2.section.prescription: Prescription record, by issue date
+  m2.source.clinic_documents: Clinic clinical documents
+  m2.source.clinic_followup_interview: Supplementary outpatient interview
+  m2.source.clinic_interview: Outpatient interview
+  m2.source.clinic_recheck: Outpatient repeat assessment record
+  m2.source.lab_report: Laboratory report
+  m2.source.lipid_method: Laboratory lipid assay method document
+  m2.source.med_reconciliation: Outpatient medication reconciliation
+  m2.source.outside_lab: External laboratory report
+  m2.source.progress_note: Outpatient progress notes
+  m2.specimen_note.0: Fasting venous blood
+  m2.specimen_note.1: Fasting blood draw on waking
+  m2.specimen_note.10: Fasting antecubital venous draw at 8 am
+  m2.specimen_note.11: Repeat test
+  m2.specimen_note.2: Routine outpatient blood draw
+  m2.specimen_note.3: Morning fasting venous blood draw
+  m2.specimen_note.4: Fasting blood draw on the follow-up day
+  m2.specimen_note.5: Outpatient repeat blood draw
+  m2.specimen_note.6: fasting
+  m2.specimen_note.7: Routine blood draw
+  m2.specimen_note.8: Test sent to an external laboratory; results checked
+  m2.specimen_note.9: Outpatient blood draw; specimen acceptable
+  m2.test.elastography: Liver elastography (VCTE/MRE if needed)
+  m2.unit.per_hour: /hour
+  m2.workup.applies: Current initial diagnostic stage and saved conditional facts
+  m2.workup.excludes: Localisation/staging tests after confirmation are not automatically required initial
+    investigations
+  masld伴进展期纤维化: MASLD with advanced fibrosis
+  p2.hist.test.ecg12: twelve-lead ECG
+  p3.agg.home_sbp_7d: 7-day mean home systolic blood pressure
+  p3.change.observe: observation
+  p3.change.renew: prescription renewal
+  p3.change.start: initiation
+  p3.context.no_trigger: no obvious precipitant
+  p3.emr.complaint.revisit: Follow-up visit
+  p3.emr.complaint.visit: chronic disease follow-up
+  p3.emr.rx.see_record: See the prescription record for that day
+  p3.event.prescribed: prescription
+  p3.hist.exposure.penicillin: penicillins
+  p3.hist.reaction.angioedema: angioedema
+  p3.hist.received.outside_record: Original external records brought for verification
+  p3.hist.secondary.none: not found
+  p3.hist.see_course: see clinical course
+  p3.hist.state.active: active
+  p3.hist.state.revoked: revoked
+  p3.hist.symptom.angioedema: Lip and tongue swelling, hoarseness
+  p3.hist.symptom.dizzy_sweat: Sudden dizziness and sweating
+  p3.hist.symptom.sweat_tremor: Sweating and hand tremor
+  p3.hist.unverified: verification pending
+  p3.hist.verified: verified
+  p3.illness.cold: common cold
+  p3.lab.ck: creatine kinase
+  p3.lab.creatinine: serum creatinine
+  p3.lab.glucose: blood glucose
+  p3.lab.potassium: serum potassium
+  p3.lab.renal_panel: renal function and electrolytes
+  p3.menu.adverse_event_record: Dated history of medication, symptoms, CK results, withdrawal and rechallenge
+  p3.menu.clinic_documents: Clinic clinical documents
+  p3.menu.clinic_protocol: This clinic's reassessment and medication adjustment protocols
+  p3.menu.clinic_target: This clinic's target for this patient
+  p3.menu.condition: Condition treated by the drug being adjusted
+  p3.menu.control_axis: Control indicator
+  p3.menu.current_medications: Current medication list checked at follow-up
+  p3.menu.dispensing_record: Dispensing transactions, by dispensing date
+  p3.menu.documented_course_only: Symptom course recorded solely from the original record
+  p3.menu.dose_ladder: Dose ladder for this drug
+  p3.menu.drug: Drug being adjusted
+  p3.menu.encounter_record: Outpatient progress notes, by encounter date
+  p3.menu.event_history_record: Patient interview record, by date
+  p3.menu.home_measurements: Patient-submitted home measurements, by date
+  p3.menu.home_pressure_record: Seven-day mean home systolic blood pressure submitted at follow-up, from
+    the same original record as this visit's control axis
+  p3.menu.known_comorbidity: Known comorbidities
+  p3.menu.lab_results: Laboratory results, by sampling date
+  p3.menu.medication_review: Outpatient medication reconciliation, by date
+  p3.menu.note: Description
+  p3.menu.other_medications: Complete dated medication record for the patient's other drugs (outside the
+    scope of adjustment in this question)
+  p3.menu.pill_count_today: Today's pill count
+  p3.menu.prescription_record: Prescription transactions, by issue date
+  p3.menu.refill_record: Dispensing record for this drug
+  p3.menu.review_from_day: Start day of the course under current review
+  p3.menu.symptom_diary: 'Symptom diary: symptom, onset day, severity, current status'
+  p3.menu.today: Today's day of the course
+  p3.menu.visits: 'Previous follow-up visits: control readings, prescribed doses, initiation/increase/renewal'
+  p3.reading.not_due: Not yet due for repeat testing
+  p3.reading.not_measured: Not measured
+  p3.rule.ae.axis_dosed: But this drug's dose follows the control indicator; symptoms alone do not justify
+    reduction unless the indicator is below the lower target limit
+  p3.rule.ae.lower: Dose reduction indicated
+  p3.rx.none: No medication
+  p3.rx.pending: To be decided at this visit
+  p3.rx.stopped: discontinued
+  p3.severity.mild: mild
+  p3.severity.moderate: moderate
+  p3.source.consult: Outpatient interview record
+  p3.source.progress_note: Outpatient progress record
+  p3.status.ongoing: ongoing to date
+  p3.status.resolved: resolved
+  p3.stub.not_read: Records not reviewed
+  p3.stub.printed_rules: Follow this clinic's printed rules
+  p3.unit.x_uln: times the upper reference limit
+  p4.action.new_onset: new onset
+  p4.action.recovered: recovery
+  p4.action.start: started taking
+  p4.action.start_regular: started regular use
+  p4.action.stop_regular: interrupted regular use
+  p4.action.stopped_by_doctor: stopped by clinician
+  p4.arm.left: left
+  p4.arm.right: right
+  p4.assay.non_biotin: Does not use a biotin-binding system
+  p4.assay.routine: Routine assay system
+  p4.assay.streptavidin_biotin: Streptavidin–biotin sandwich assay
+  p4.collection.closed_vacuum: Closed vacuum system
+  p4.collection.cross_tube_transfer: Cross-tube transfer
+  p4.drug.biotin: biotin
+  p4.event.biotin_10mg: Took a 10 mg supplement
+  p4.event.long_term_rx_start: Long-term prescription started
+  p4.exercise.unaccustomed_resistance: Unaccustomed high-intensity resistance training
+  p4.exposure.platform_comparison: Platform comparison
+  p4.fasting.unrecorded: Not recorded
+  p4.followup.case.acei_stop_fall: Creatinine falls after ACEI discontinuation
+  p4.followup.case.distortion_previous: Collection, specimen or method distortion affects only the previous
+    reading; today's reading is standard
+  p4.followup.case.distortion_today: Collection, specimen or method distortion affects today's reading
+  p4.followup.case.noise: The change is due to measurement error and within-person biological variation
+  p4.followup.next.act_on_change: clinician assessment and management of the change
+  p4.followup.next.no_action: No additional management needed for this change (continue routine monitoring)
+  p4.followup.next.repeat_standardized: repeat under standard conditions to confirm
+  p4.food.after_draw: Food intake after blood draw
+  p4.food.cooked_pork: A serving of cooked pork
+  p4.food.rice_vegetables: Rice and vegetables
+  p4.hemo.mild: mild (1+)
+  p4.hemo.none: none
+  p4.hemolysis.marked: marked haemolysis
+  p4.hemolysis.none_seen: no haemolysis seen
+  p4.infusion.saline: 0.9% sodium chloride
+  p4.lab.outpatient: Outpatient laboratory
+  p4.lab.partner: Partner laboratory
+  p4.lab.poc_point: Outpatient point-of-care testing station
+  p4.lot.current: Current lot
+  p4.lot.new: New lot
+  p4.lot.old: Previous lot
+  p4.lot.verification: Verification lot
+  p4.meal.breakfast: Breakfast
+  p4.meal.breakfast_d2: Breakfast two days earlier
+  p4.meal.dinner_d1: Dinner the previous day
+  p4.meal.dinner_d2: Dinner two days earlier
+  p4.meal.lunch: Lunch
+  p4.meal.lunch_d2: Lunch two days earlier
+  p4.meal.main: Main meal
+  p4.med.stop: discontinued
+  p4.method.jaffe_picrate: Jaffe alkaline picrate kinetic method
+  p4.method.tsh_non_biotin: TSH assay without a biotin-binding system
+  p4.note.poc_glucose: Same-day fasting capillary glucose measured with a point-of-care glucose meter
+  p4.notice.batch_method: This batch follows the listed method document; the report retains the platform
+    and reagent lot used.
+  p4.notice.commutable_comparison: Parallel comparison using commutable patient samples; check applicability
+    against the report's platform, lot and implementation date.
+  p4.notice.historical_batches: The listed documents concern historical testing batches; reports record
+    the platform and reagents actually used at the time.
+  p4.notice.listed_method: This period uses the assay method listed in the report; method documentation
+    and quality control follow that method.
+  p4.notice.same_analyzer: Same analyser model and reagent manufacturer; method comparison passed.
+  p4.notice.same_maker_new_lot: New reagent lot from the same manufacturer; between-lot comparison passed.
+  p4.platform.comparison: Comparison platform
+  p4.platform.non_biotin_verification: Non-biotin verification platform
+  p4.platform.old: Previous platform
+  p4.platform.routine: Routine platform
+  p4.procedure.default: Process specimens according to the analyte method document; test whole blood immediately
+    at the point of care.
+  p4.processing.cold_whole_blood_6h: Unseparated whole blood refrigerated for 6 hours before centrifugation
+  p4.processing.immediate: Immediate testing
+  p4.processing.plasma_then_cold: Refrigerated after plasma separation
+  p4.processing.room_temp_3h: Separated after 3 hours at room temperature
+  p4.processing.within_30min: Separated within 30 minutes of collection
+  p4.reader.no_records: Records not reviewed
+  p4.rule.acei_start_or_stop: Indicated ACEI initiation/discontinuation occurs between the reports; stable
+    treatment cannot explain a new difference. For creatinine rise ≤30%, prefer repeat testing according
+    to indication and risk; do not independently stop treatment.
+  p4.rule.acute_illness: New febrile infection-related stress or recovery between draws must be documented
+    in the course. An old resolved infection does not explain the current glucose change.
+  p4.rule.alcohol_change: A change in alcohol intake over several weeks matches the ALT or TG direction;
+    one old social meal is insufficient for attribution.
+  p4.rule.biotin_tsh: Readings may be falsely low 1–5 hours after 10 mg biotin when the current TSH assay
+    is a verified susceptible streptavidin–biotin sandwich method. Do not infer this on platforms without
+    that architecture or after 72 hours.
+  p4.rule.cold_delayed_separation: An unseparated cellular specimen is refrigerated with delayed separation;
+    refrigeration of already separated plasma does not establish potassium leakage.
+  p4.rule.dehydration: New dehydration or recovery after fluids between draws is supported by the clinical
+    course. An old diarrhoeal illness resolved long ago has no effect.
+  p4.rule.edta_contamination: Blood transferred from a K-EDTA tube to a chemistry tube, supported by a
+    transfer record and abnormally low calcium; an abnormal tube order alone is insufficient for diagnosis.
+  p4.rule.fibrate_adherence: There is a high-TG indication; missed doses or resumed treatment over several
+    weeks match TG changes. Old stable treatment does not explain a new difference.
+  p4.rule.gastrointestinal_loss: New persistent diarrhoea/vomiting or recovery after clinician treatment
+    changes potassium levels; an old resolved event has no effect.
+  p4.rule.glucocorticoid: Glucose rises after recent clinician initiation of a long-acting systemic corticosteroid
+    and falls after discontinuation. Topical treatment or a short course stopped before both draws has
+    no effect.
+  p4.rule.glucose_glycolysis: Plain unseparated whole blood left at room temperature for 2–4 hours. Do
+    not infer glycolysis with a citrate-buffered inhibitor tube or separation within 30 minutes.
+  p4.rule.hemolysis: Free haemoglobin on the potassium report exceeds that method's validated limit. A
+    normal index or a different analyte does not establish potassium release.
+  p4.rule.hepatotoxic_drug: Persistent liver enzyme changes within the corresponding post-prescription
+    window, with clinician documentation excluding other common causes. A drug name alone cannot diagnose
+    drug-induced liver injury.
+  p4.rule.infusion_sampling: An ongoing ipsilateral saline infusion with sampling proximal to the infusion
+    site; contralateral sampling is not affected by this contamination.
+  p4.rule.jaffe_enzymatic_switch: Different creatinine methods, Jaffe and enzymatic, with an applicable
+    patient-sample comparison supporting the difference. Do not assume all Jaffe readings are higher or
+    differ by a fixed percentage.
+  p4.rule.meat_meal: Cooked meat 1–4 hours before collection; a meal two days earlier does not explain
+    today's change.
+  p4.rule.muscle_injury: Persistent traumatic muscle injury or recovery is documented. Transient pre-draw
+    exercise is classified separately as a sampling condition under the protocol.
+  p4.rule.nonfasting: Food intake differs before the draws, with a recent meal affecting glucose/TG. Routine
+    non-fasting TG is not an error; the explanation is a change in conditions.
+  p4.rule.platform_calibration: Different report platforms, with a same-direction offset in applicable
+    commutable patient-sample comparisons. Do not name platform change as the source if the platforms
+    show no difference.
+  p4.rule.reagent_lot: Same method, different reagent lots, with applicable patient-sample comparison
+    supporting a same-direction offset. A new lot verified to have no difference is not named as the source.
+  p4.rule.recent_exercise: Unaccustomed high-intensity resistance exercise 1–7 days before collection
+    with transient CK/ALT release. Exercise three weeks earlier does not explain a new change; persistent
+    injury is classified separately as a change in the true level.
+  p4.rule.sampling_time: Morning versus afternoon TSH sampling may reflect circadian variation. An afternoon
+    record alone does not establish this source if both draws were in the same time period.
+  p4.rule.statin_myopathy: An established indication, with new persistent muscle symptoms and raised CK
+    after treatment, a temporal relationship and strenuous exercise excluded. Old stable treatment is
+    not sufficient causation.
+  p4.rule.thiazide: Potassium falls after starting an indicated thiazide for hypertension and recovers
+    after clinician discontinuation; a stable dose cannot explain a new change.
+  p4.rule.thyroiditis: Outpatient records document the hypothyroid phase of thyroiditis or recovery, with
+    concordant FT4 and TSH. Do not name this source from the TSH difference alone without a clinical course/accompanying
+    results.
+  p4.rule.thyroxine_adherence: Documented hypothyroidism treatment with missed or resumed intake sustained
+    for at least 6 weeks, supported by the FT4 direction. Missed doses long ago have no effect.
+  p4.rule_head.cold_delayed_separation: Refrigerated unseparated cellular specimen with delayed separation
+  p4.rule_head.edta_contamination: Transfer from a K-EDTA tube to a chemistry tube, supported by a transfer
+    record and abnormally low calcium
+  p4.rule_head.glucose_glycolysis: Plain unseparated whole blood left at room temperature for 2–4 hours
+  p4.rule_head.hemolysis: Free haemoglobin on the potassium report exceeds the method's validated limit
+  p4.rule_head.infusion_sampling: Ongoing ipsilateral saline infusion with sampling proximal to the infusion
+    site
+  p4.rule_head.sampling_time: Different morning/afternoon TSH sampling periods may reflect circadian variation
+  p4.sample.capillary: Finger capillary whole blood
+  p4.sample.serum_default: Venous blood (serum clot-activator tube)
+  p4.section.diet_record: Diet record, by registration date
+  p4.section.event_history_record: Outpatient progress notes and patient statements, by encounter date
+  p4.section.known_comorbidity: Known comorbidities
+  p4.section.laboratory_method_record: Laboratory method notices and usage records, by date
+  p4.section.medication_record: Medication record, by prescription date
+  p4.section.outpatient_record: Outpatient follow-up progress notes, by encounter date
+  p4.section.patient_remarks: Patient statements, by registration date
+  p4.section.report: Laboratory reports, by sampling date
+  p4.section.specimen_policy: Specimen stability policy printed by the laboratory
+  p4.section.specimen_procedure: Laboratory specimen protocols, by publication date
+  p4.site.antecubital: Antecubital vein
+  p4.site.contralateral_antecubital: Contralateral antecubital vein
+  p4.site.proximal_to_infusion: Vein proximal to the infusion site
+  p4.source.batch_method_use: Laboratory batch method usage record
+  p4.source.historical_comparison: Laboratory historical comparison notice
+  p4.source.method_notice_batch_use: Laboratory method notice and testing batch usage record
+  p4.source.method_reagent_notice: Laboratory method and reagent usage notice
+  p4.source.method_reagent_use: Laboratory method and reagent usage record
+  p4.source.specimen_procedure: Laboratory specimen handling protocol
+  p4.source.standardized_verification: Laboratory standardised verification record
+  p4.transfer.k_edta_tube: K-EDTA tube
+  p4.transfer.original_tube: Original tube
+  p4.tube.citrate_inhibitor: Citrate-buffered inhibitor tube
+  p4.tube.li_heparin_plain: Plain lithium heparin tube
+  p4.tube.li_heparin_plasma: Lithium heparin plasma tube
+  p4.tube_order.edta_before_chemistry: EDTA tube before chemistry tube
+  protocol.doc.applies: Applicability
+  protocol.doc.exceptions: Exceptions
+  protocol.doc.excludes: Exclusions
+  protocol.doc.field: protocol.doc.field
+  protocol.doc.name: Name
+  protocol.doc.sources: Sources
+  protocol.doc.steps: Steps
+  protocol.follow_library: Follow this clinic's protocols
+  protocol.library: This clinic's protocol library
+  protocol.news2.field.hr: heart rate
+  protocol.news2.field.rr: respiratory rate
+  protocol.news2.field.sbp: systolic blood pressure
+  protocol.news2.field.spo2: SpO2 Scale 1
+  protocol.news2.field.temp: temperature
+  protocol.news2.scale_exception: Calculate all NEWS2 rules using the SpO2 scale authorised in the record
+    and add points for supplemental oxygen. Scale 1 on room air is the default in the rules; it does not
+    override registered scale 2 or actual oxygen therapy.
+  protocol.p3.documented_course_only: Symptom status records only the course explicitly documented in
+    the original record. Absence of documentation establishes neither resolution nor persistence. Later
+    resolution cannot replace checking medication at onset, escalation dates and other causes.
+  protocol.source.med_policy: Derive reassessment, attribution, adherence and comorbidity rules from the
+    original table; check the prescription separately for the patient's target
+  protocol.source.med_table: This clinic's chronic medication table and registered product information
+    and guidelines
+  protocol.source.provisional: Provisional local operational mapping; requires clinical review
+  protocol.source.registry_table: Original registered table
+  protocol.source.scale2_policy: Check scale 2 eligibility, bands and oxygen-therapy points against the
+    source individually; home triage dispositions follow this clinic's rules
+  protocol.source.triage_table: This clinic's triage management table
+  record.source.clinic_life: Outpatient and life history record
+  β-羟丁酸: β-hydroxybutyrate
+  γ-干扰素释放试验: Interferon-γ release assay
+  γ-干扰素释放试验(IGRA): Interferon-γ release assay (IGRA)
+  γ-谷氨酰转移酶: γ-glutamyltransferase
+  「Choice of antibiotic」表；Pyelonephritis 指向 NG111: '"Choice of antibiotic" table; Pyelonephritis refers
+    to NG111'
+  一只眼睛红红的发痛,怕光,看东西糊,眼科说是眼内发炎给了治疗: One eye was red and painful, light hurt and my vision was blurred; the
+    eye clinic said it was inflammation inside the eye and treated it
+  一天拉两三次稀的: I pass loose stools two or three times a day
+  一线：呋喃妥因缓释 100 mg，每日 2 次，共 3 天（要求 eGFR ≥ 45）；一线备选：甲氧苄啶 200 mg，每日 2 次，共 3 天（仅限耐药风险低者）。: 'First line: nitrofurantoin
+    modified release 100 mg 2 times daily for 3 days (requires eGFR ≥ 45). First-line alternative: trimethoprim
+    200 mg 2 times daily for 3 days (only with low resistance risk).'
+  三种药物仍不达标，转专科评估继发性高血压。: If uncontrolled on three drugs, refer for specialist assessment of secondary
+    hypertension.
+  上午空腹时心慌手抖、讲话答非所问,吃点东西十几分钟就好: In the morning before eating, my heart races, my hands shake and my answers
+    do not make sense; food makes it better in ten-odd minutes
+  上腹持续隐痛,偶尔向后背窜,弯腰蜷着能轻一些: Persistent dull upper abdominal pain, sometimes radiating to the back, eased
+    by bending forward and curling up
+  上述四药复评，有症状、起病日期和处方剂量变化记录。: Review of the four drugs above with records of symptoms, onset dates and
+    prescribed dose changes.
+  上述四药复评，需要连续取药记录与今天药盒计数。先查原处方起始日、各次取药数量及日期、规格变化与今天剩余天数；取药日期本身不能证明已服用。: Review of the four drugs above
+    requires consecutive dispensing records and today's pill count. Check the original prescription start,
+    quantities and dates of each dispensing, strength changes and days remaining today; a dispensing date
+    alone does not prove intake.
+  下列数字是本院合成方法文件的条件及明显支持证据范围，不是通用诊断阈值；病例远离条件边界。干扰验证界限依具体方法，本包登记本院文件。: The following numbers describe conditions
+    and clear supporting evidence ranges in local synthetic method documents, not universal diagnostic
+    thresholds. Cases lie away from condition boundaries. Interference validation limits are method-specific;
+    this pack registers local documents.
+  下呼吸道感染经临床评估后仍不清楚是否需抗菌药，可查床旁CRP支持决定；不得因写CRP或血常规名称扣分。: After clinical assessment of lower respiratory
+    tract infection, point-of-care CRP may support a decision if antibiotic need remains unclear. Do not
+    penalise CRP or full blood count names.
+  下班后脚背肿、睡一觉消一些: The tops of my feet swell after work and go down a little after a night's sleep
+  下腰背痛夜间加重、晨僵超过一小时,活动后反而减轻: Low back pain worse at night, morning stiffness lasting over an hour, relieved
+    by activity
+  下腹/大腿内侧宽紫红纹 + 易瘀青 + 近端肌无力: Broad violaceous striae on lower abdomen/inner thighs + easy bruising + proximal
+    muscle weakness
+  下颌线反复炎性痤疮: Recurrent inflammatory acne along the jawline
+  不授权患者: does not authorise the patient to
+  不治疗者每年复查 TSH，出现症状时随时复查。: If untreated, repeat TSH annually and whenever symptoms occur.
+  不耐受: intolerance
+  不胖无家族史却新发糖尿病: New-onset diabetes despite no obesity or family history
+  不良反应，停用: adverse effect; discontinued
+  不良反应，减量: adverse effect; dose reduced
+  不良反应，暂停: adverse effect; held
+  与可靠基线相比的短期肌酐变化: Short-term creatinine change against a reliable baseline
+  专科门诊记录: Specialist outpatient record
+  丙氨酸氨基转移酶: alanine aminotransferase
+  两份原报告所用方法、平台或批号有区别，适用患者标本比对文件支持同向差异，故须先用可比检测条件复核，不能将检测条件差异当作患者疾病加重: The two original reports differ
+    in method, platform or lot, and an applicable patient-sample comparison supports a difference in the
+    same direction. Recheck under comparable testing conditions first; do not interpret testing-condition
+    differences as clinical deterioration
+  两侧小腿下端按下去有个坑: Pressing the lower part of either leg leaves a dent
+  两句话真的矛盾(同一主语被要求既做又不做): The two statements truly conflict (the same actor is asked both to do and not
+    to do the action)
+  两条大腿肌肉酸胀、没力气: Both thighs feel sore, swollen and weak
+  两次TSH采样时段不同: different times of day for the two TSH samples
+  两次报告之间有相符的用药覆盖或新发病程改变，时间与读数方向一致，标本或方法记录不能替代解释这一病程，故由医生结合该经过评估处置: A corresponding change in medication
+    coverage or new clinical course between reports matches the timing and direction of readings. Specimen
+    or method records do not provide an alternative explanation for this course; the clinician should
+    assess and manage in that context
+  两次方法及有效采样条件可比，所列暴露须按实际日期、适用项目及条件核对，没有支持本次新来源的相符记录，故先按波动解释；复查用于核实差异是否持续，而非凭单次数值调整治疗: Methods and valid
+    sampling conditions are comparable. Check listed exposures against actual dates, applicable analytes
+    and conditions; no matching record supports a new source for this change, so first interpret it as
+    variation. Repeat testing checks persistence, rather than adjusting treatment on a single value
+  两次采血之间的ACEI起用或停用: ACEI initiation or discontinuation between draws
+  两次采血之间的全身糖皮质激素用药变化: change in systemic corticosteroid treatment between draws
+  两次采血之间的噻嗪用药变化: change in thiazide treatment between draws
+  两次采血之间的容量不足病程: volume depletion between draws
+  两次采血之间的新发感染病程: new infection between draws
+  两次采血之间的胃肠道丢失病程: gastrointestinal fluid loss between draws
+  两次采血前进食条件不同: different food intake conditions before the draws
+  两次采血前进食状态不一致，近期餐食会影响血糖/TG；不把常规非空腹TG称为错误，解释的是条件改变。: Food intake differs before the draws, with a recent
+    meal affecting glucose/TG. Routine non-fasting TG is not an error; the explanation is a change in
+    conditions.
+  两次采血间新发脱水或补液恢复并有病程支持；已恢复很久的旧腹泻不作用。: New dehydration or recovery after fluids between draws is supported
+    by the clinical course. An old diarrhoeal illness resolved long ago has no effect.
+  两次间隔 3 个月 TSH 均 ≥ 10 mIU/L → 考虑开始左甲状腺素。: TSH ≥ 10 mIU/L on two occasions 3 months apart → consider starting
+    levothyroxine.
+  严重低血糖: severe hypoglycaemia
+  严重低血糖定义与复评方向来自 ADA；不再恢复已发生严重事件的更高剂量是既有本院最大耐受剂量映射，非指南对终身再挑战的绝对禁令。: The definition and reassessment approach
+    for severe hypoglycaemia come from ADA. Not restoring a higher dose associated with a severe event
+    is the existing local maximum tolerated dose mapping, not an absolute guideline prohibition on lifelong
+    rechallenge.
+  严重低血糖指身体或精神功能受损而需要他人协助恢复，不以某个血糖数值作为必要条件。: Severe hypoglycaemia means impaired physical or mental function
+    requiring another person's assistance for recovery; no particular glucose value is required.
+  中轴型脊柱关节炎: axial spondyloarthritis
+  中轴型脊柱关节炎(强直性脊柱炎): axial spondyloarthritis (ankylosing spondylitis)
+  临床心境兴趣和功能综合评估: Comprehensive clinical assessment of mood, interest and function
+  临床心理状态及功能评估: Clinical psychological and functional assessment
+  为怕难受而在两餐之间加餐,半年体重反而涨了五公斤: I snack between meals to avoid feeling unwell; over half a year I have gained
+    five kilograms instead
+  主要为评估窦房结功能障碍而做心内电生理检查；因其他适应证已经进行电生理检查时评估窦房结功能除外。: Intracardiac electrophysiological testing primarily
+    to assess sinus node dysfunction; assessment during electrophysiology already indicated for another
+    reason is excluded.
+  乏力: fatigue
+  乏力、爬楼腿软: Fatigue and leg weakness climbing stairs
+  乏力、爬楼腿软,活动后加重 + 手指麻木: Fatigue and leg weakness climbing stairs, worse after activity + finger numbness
+  乏力、舌炎/口角炎: Fatigue, glossitis/angular cheilitis
+  乏力、视物模糊: Fatigue, blurred vision
+  乏力、骨痛: Fatigue, bone pain
+  乳果糖氢呼气试验: Lactulose hydrogen breath test
+  乳果糖氢呼气试验峰值: Peak lactulose hydrogen breath test value
+  乳酸脱氢酶: lactate dehydrogenase
+  乳酸脱氢酶(LDH): lactate dehydrogenase (LDH)
+  事件属于其他药物、未实际使用该更高剂量，或有明确非药物原因者，不据此限制本药剂量。: Events involving another drug, a higher dose never actually
+    taken or an established non-drug cause do not constrain this drug's dose.
+  二甲双胍: metformin
+  二甲双胍与肾功能的用药规则: Metformin prescribing rules and renal function
+  二甲双胍（双胍类，口服）: metformin (biguanide, oral)
+  交替性臀区深部疼痛,久坐后明显: Alternating deep buttock pain, worse after prolonged sitting
+  仅在已按临床标准同意开始抗凝时，不常规仅为进一步卒中风险分层做经胸超声；建立基线、复律、疑似结构性心脏病等目的除外。若此前提在资料或方案中未建立，不扣分。: Only when anticoagulation
+    has already been agreed on clinical grounds, do not routinely perform transthoracic echocardiography
+    solely for further stroke risk stratification. Baseline assessment, cardioversion and suspected structural
+    heart disease are exceptions. Do not penalise unless this prerequisite is established in the data
+    or plan.
+  仅在已经确认为无症状窦性心动过缓或一度房室传导阻滞、且无结构性心脏病临床证据时，不常规做心脏影像（含超声）；未证实心律类型或存在症状/结构性心脏病疑点，不据此扣分。: Do not routinely
+    perform cardiac imaging (including echocardiography) only when asymptomatic sinus bradycardia or first-degree
+    atrioventricular block is confirmed and there is no clinical evidence of structural heart disease.
+    Do not penalise when rhythm type is unconfirmed, symptoms are present or structural disease is suspected.
+  仅有偏低血糖数值、自行进食或轻微不适而不需要他人救助的事件，不据此认定严重低血糖或限制剂量。: A low glucose value alone, self-treatment with food
+    or mild symptoms not requiring another person's assistance do not establish severe hypoglycaemia or
+    a dose limit.
+  仅有单次低 eGFR、没有可比较基线或从未实际使用该更高剂量者，不据此认定剂量限制。: A single low eGFR, no comparable baseline or a higher dose
+    never actually taken does not establish a dose limit.
+  今天的病程日: Today's day of the course
+  今天的药盒计数: Today's pill count
+  从含K-EDTA管转移血液至生化管，有转移记录及异常低钙支持；仅采血管顺序异常不足以诊断。: Blood transferred from a K-EDTA tube to a chemistry tube,
+    supported by a transfer record and abnormally low calcium; an abnormal tube order alone is insufficient
+    for diagnosis.
+  他汀: statin
+  他汀既往最大耐受剂量复评: Review of previously established maximum tolerated statin dose
+  他汀治疗者无症状时不测肌酸激酶CK；有肌痛、压痛、无力或其他临床指征时可测，不能用旧肌痛记录认定本次无症状。: Do not measure creatine kinase CK in asymptomatic
+    statin users. Myalgia, tenderness, weakness or other clinical indications permit testing; an old myalgia
+    record does not establish that the patient is asymptomatic now.
+  他汀相关肌病: statin-associated myopathy
+  他汀相关肌肉症状: statin-associated muscle symptoms
+  代谢相关进展期肝纤维化: metabolic dysfunction-associated advanced liver fibrosis
+  代谢阻力: metabolic resistance
+  休息 15 分钟后在同一部位复测体温，确认 ≥ 38.0 ℃。: Rest for 15 minutes and repeat temperature at the same site; confirm
+    ≥ 38.0 ℃.
+  低密度胆固醇: LDL cholesterol
+  低密度脂蛋白胆固醇: low-density lipoprotein cholesterol
+  低密度脂蛋白胆固醇（LDL-C）: low-density lipoprotein cholesterol (LDL-C)
+  低热: low-grade fever
+  低血糖: hypoglycaemia
+  低血糖发作（心慌、出汗，进食后缓解）: Hypoglycaemic episodes (palpitations and sweating, relieved by eating)
+  低血糖（心慌、手抖、出冷汗，进食后缓解）: Hypoglycaemia (palpitations, hand tremor and cold sweats, relieved by eating)
+  体位性头晕（起身、站起时头晕、眼前发黑）: Postural dizziness (dizziness and darkening vision on rising or standing)
+  体内水平真实变化: true change in the patient's level
+  体检血钙偏高伴口渴多尿: High calcium on health screening with thirst and polyuria
+  体检说血糖血压都超标了: My health check said my blood sugar and blood pressure were both too high
+  体温在腋下测得的，读数加 0.5 ℃ 后再按本表判断。: For an axillary temperature, add 0.5 ℃ before applying this table.
+  体重变化: weight change
+  体重增加: weight gain
+  体重记录，按日期: Weight record, by date
+  ? 作答的「不建议做的事」(what_not_to_do)与「具体动作」(specific_action) **是否真的互相矛盾**? ⚠️ 只有当两句话的**执行主语相同**时才算矛盾 —— 「不要**自行**调整药物」与「转诊后由**医生**调整剂量」**不矛盾**(主语不同)。
+  : Do the answer's what_not_to_do and specific_action **actually contradict each other**? ⚠️ Count a
+    contradiction only when the **actor is the same**. "Do not adjust medication **yourself**" and "a
+    **clinician** adjusts the dose after referral" **do not conflict** (different actors).
+  作答里(任意自由文本处)**是否说明了金标推荐检查中至少一项的「必要性理由」** —— 即这项检查**为什么能把主诊断与别的可能分开**? ⚠️ 只**列出**检查名不算;必须有「因为…所以要查」这一层。: Does
+    the answer (any free-text field) **explain why at least one gold-recommended investigation is necessary**,
+    i.e. **how it distinguishes the main diagnosis from alternatives**? ⚠️ Merely **listing** a test does
+    not count; an explicit reason for testing is required.
+  使用ACEI/ARNI/ARB/MRA时，起用/每次加量后1至2周查肾功能及电解质；最大耐受剂量稳定后每3至6个月，任何可能损害肾功能的时点可复查。本条仅排除合理监测，不在药物/风险/上次日期缺失时推断重复违规。: For
+    ACEI/ARNI/ARB/MRA, check renal function and electrolytes 1 to 2 weeks after initiation/each increase;
+    every 3 to 6 months once stable at the maximum tolerated dose, and whenever renal function may be
+    compromised. This rule only protects reasonable monitoring; do not infer prohibited repetition if
+    medication, risk or previous test dates are missing.
+  使用本病人最近观察窗口的取药记录，不用其它患者、其它药物或今天之后的记录；提前取药余量与换规格时点都应按本条计算。: Use this patient's dispensing records within
+    the latest observation window, not other patients', other drugs' or post-today records. Account for
+    early refill stock and timing of strength changes under this rule.
+  依那普利: enalapril
+  依那普利（ACEI）: enalapril (ACEI)
+  依那普利（ACEI，口服）: enalapril (ACEI, oral)
+  促甲状腺激素: thyroid-stimulating hormone
+  促甲状腺激素（TSH）: thyroid-stimulating hormone (TSH)
+  促甲状腺素受体抗体: thyrotropin receptor antibodies
+  促肾上腺皮质激素: adrenocorticotropic hormone
+  健康档案，按日期: Health record, by date
+  傍晚脚踝发胀、鞋子变紧: My ankles swell in the evening and my shoes feel tight
+  儿童、妊娠不套用；夜间手表最低血氧不替代本次指夹读数。: Not applicable to children or pregnancy. Lowest overnight watch oxygen
+    saturation does not substitute for the current finger reading.
+  儿茶酚胺分泌性肿瘤: catecholamine-secreting tumour
+  先排除上尿路：发热、寒战、腰痛或恶心呕吐 → 转肾盂肾炎规程；尿试纸查白细胞酯酶与亚硝酸盐，两项均阴性则不太可能是细菌性尿路感染。: 'First exclude upper urinary tract
+    infection: fever, rigors, flank pain or nausea/vomiting → pyelonephritis protocol. Test urine leucocyte
+    esterase and nitrite; if both are negative, bacterial UTI is unlikely.'
+  ? 先核对同项目上次报告及其方法、采血前饮食和用药经过。仅有数值差异不能命名来源；方法比对的偏移可正可负，不假设 Jaffe 法恒偏高。与方向及时间相符的单一临床来源优先解释，多种来源冲突时不能判定。没有相符来源且情况稳定时考虑分析与个体内波动；RCV
+    用于评价变化幅度，不用作来源类别的互斥界限。这是原本院来源判读约定，需检验科复核。
+  : First check the previous report for the same analyte, its method, pre-draw diet and medication history.
+    A numerical difference alone cannot identify the source; method-comparison offsets may be positive
+    or negative. Do not assume Jaffe is always higher. Prefer a single clinical source matching timing
+    and direction; conflicting sources leave the source undetermined. With no matching source and stable
+    status, consider analytical and within-person variation. RCV assesses change magnitude, not mutually
+    exclusive source categories. This existing local source-interpretation convention requires laboratory
+    review.
+  先核对是否按医嘱服药，询问漏服与自行停药，未解决依从性前不加药。: First check prescribed medication use; ask about missed doses and
+    self-discontinuation. Do not add medication before addressing adherence.
+  入睡困难: difficulty falling asleep
+  全科: general practice
+  全科/自我观察: general practice/self-observation
+  全身不适: feeling generally unwell
+  其余任一红旗 → 当日做进一步检查或转专科。: Any other red flag → further same-day investigations or specialist referral.
+  内分泌科: endocrinology
+  内因子抗体: intrinsic factor antibodies
+  内源性高胰岛素: endogenous hyperinsulinism
+  内科: internal medicine
+  冠心病: coronary artery disease
+  冷汗: cold sweat
+  几乎不饮酒却ALT/AST持续高,B超非重度脂肪肝: Persistently raised ALT/AST despite minimal alcohol; ultrasound shows
+    fatty liver, not severe
+  出汗: sweating
+  分析与个体内生物学波动: analytical and within-person biological variation
+  分诊: triage
+  利拉鲁肽（GLP-1 受体激动剂，每日皮下注射）: liraglutide (GLP-1 receptor agonist, daily subcutaneous injection)
+  到院预检台，成人（16 岁及以上），测得体温 ≥ 38.0 ℃，尚未明确感染部位。: Adults (age 16 years or older) at the triage desk, temperature
+    ≥ 38.0 ℃, infection site not yet established.
+  加药: add medication
+  加药前查肌酐、eGFR 与血钾；加药后 2–4 周复测血压与肾功能。: Check creatinine, eGFR and serum potassium before adding medication;
+    repeat blood pressure and renal function after 2–4 weeks.
+  加量当天换新规格发药，旧规格余药不再计入）与今天的药盒计数估算最近 90 天（开始用药不足 90 天的，自开始用药日起）的服药覆盖率，低于 80% 视为依从不足；: 'On the escalation
+    day, dispense the new strength and exclude remaining old-strength stock) and today''s pill count to
+    estimate intake coverage over the latest 90 days (or since initiation if treatment duration is less
+    than 90 days). Coverage below 80% indicates poor adherence; '
+  动态心电图: ambulatory ECG
+  动态血糖，按日期: Continuous glucose monitoring, by date
+  化学发光免疫法: Chemiluminescence immunoassay
+  匹伐他汀: pitavastatin
+  十二导联心电图: twelve-lead ECG
+  十二指肠活检(须在未停麸质前): Duodenal biopsy (before stopping gluten)
+  十二指肠黏膜活检: duodenal mucosal biopsy
+  午夜唾液皮质醇: midnight salivary cortisol
+  半年增重,严格低碳+运动两周体重几乎不降: Weight gain over half a year; little weight loss despite two weeks of strict carbohydrate
+    restriction and exercise
+  华法林: warfarin
+  华法林：查 INR，多数适应证目标 2.0–3.0，对照病历里的目标范围。: 'Warfarin: check INR; target 2.0–3.0 for most indications, using
+    the target range in the record.'
+  单次低 eGFR 或仅有高血压名称不能代替已确诊的慢性肾脏病合并白蛋白尿；本条不用于其它药、其它肾病场景或未授权的处方调整。: A single low eGFR or a hypertension
+    label alone cannot substitute for confirmed chronic kidney disease with albuminuria. This rule does
+    not apply to other drugs, other renal scenarios or unauthorised prescription changes.
+  单相抑郁障碍: unipolar depressive disorder
+  单眼红痛畏光、视物模糊,眼科按虹膜睫状体炎处理: Unilateral red, painful eye with photophobia and blurred vision, treated as
+    iridocyclitis by ophthalmology
+  卡托普利: captopril
+  卧床8h+仍白天严重嗜睡、开会开车犯困: Severe daytime sleepiness despite 8h+ in bed; drowsy during meetings and driving
+  卵巢/代谢线: ovarian/metabolic component
+  厄贝沙坦: irbesartan
+  历次复诊:控制指标读数、处方剂量、起始/加量/续方: 'Previous follow-up visits: control readings, prescribed doses, initiation/increase/renewal'
+  原发性甲状旁腺功能亢进: primary hyperparathyroidism
+  原发性甲状旁腺功能亢进(高钙血症): primary hyperparathyroidism (hypercalcaemia)
+  原发性甲状腺功能减退: primary hypothyroidism
+  原发性甲状腺功能减退 + 糖尿病: primary hypothyroidism + diabetes mellitus
+  原发性甲状腺功能减退 + 维生素B12缺乏(亚急性联合变性): primary hypothyroidism + vitamin B12 deficiency (subacute combined degeneration)
+  原发性甲状腺功能减退(桥本): primary hypothyroidism (Hashimoto thyroiditis)
+  原发性甲状腺功能减退(桥本) + 成人隐匿性自身免疫糖尿病(LADA): primary hypothyroidism (Hashimoto thyroiditis) + latent autoimmune
+    diabetes in adults (LADA)
+  原发性甲状腺功能减退(桥本) + 维生素B12缺乏(亚急性联合变性): primary hypothyroidism (Hashimoto thyroiditis) + vitamin B12 deficiency
+    (subacute combined degeneration)
+  原发性肾上腺皮质功能减退(Addison): primary adrenal insufficiency (Addison disease)
+  原发性醛固酮增多症: primary aldosteronism
+  原发性醛固酮增多症 + 多囊卵巢综合征(PCOS): primary aldosteronism + polycystic ovary syndrome (PCOS)
+  原发性醛固酮增多症 + 库欣综合征: primary aldosteronism + Cushing syndrome
+  原发性醛固酮增多症 + 成人隐匿性自身免疫糖尿病(LADA): primary aldosteronism + latent autoimmune diabetes in adults (LADA)
+  原发性醛固酮增多症 + 早期2型糖尿病/胰岛素抵抗: primary aldosteronism + early type 2 diabetes/insulin resistance
+  原发性醛固酮增多症 + 糖尿病: primary aldosteronism + diabetes mellitus
+  原发性醛固酮增多症 + 维生素B12缺乏(亚急性联合变性): primary aldosteronism + vitamin B12 deficiency (subacute combined degeneration)
+  原发性醛固酮增多症 + 胰岛素抵抗: primary aldosteronism + insulin resistance
+  原醛: primary aldosteronism
+  ? 参考：Carobene et al. Clin Chem 2017;63:1527–1536, EuBIVAS，酶法/碱性苦味酸法 CVI 4.4%/4.7%、CVA 1.1%/4.4%；链接：https://pubmed.ncbi.nlm.nih.gov/28720681/；本院约定：原
+    CVI 4.5% 为既有合成近似，CVA 与对数 RCV 近似未改。
+  : 'Reference: Carobene et al. Clin Chem 2017;63:1527–1536, EuBIVAS, enzymatic/alkaline picrate CVI 4.4%/4.7%,
+    CVA 1.1%/4.4%; link: https://pubmed.ncbi.nlm.nih.gov/28720681/; local policy: the original CVI 4.5%
+    is an existing synthetic approximation; CVA and the log RCV approximation are unchanged.'
+  ? 参考：Evaluation and comparison of Abbott Jaffe and enzymatic creatinine methods, Fig 3，230 个血清标本；链接：https://pmc.ncbi.nlm.nih.gov/articles/PMC6816857/；本院约定：原回归合成校准与酶法比较参照，非
+    IDMS 计量参考定义。
+  : 'Reference: Evaluation and comparison of Abbott Jaffe and enzymatic creatinine methods, Fig 3, 230
+    serum samples; link: https://pmc.ncbi.nlm.nih.gov/articles/PMC6816857/; local policy: existing regression-based
+    synthetic calibration with the enzymatic method as comparison reference, not an IDMS metrological
+    reference definition.'
+  ? 参考：Evaluation of the impact of delayed centrifugation，22 位参与者；链接：https://pmc.ncbi.nlm.nih.gov/articles/PMC7433244/；本院约定：6
+    小时稳定性文字沿用现有标本规程，需检验科复核。
+  : 'Reference: Evaluation of the impact of delayed centrifugation, 22 participants; link: https://pmc.ncbi.nlm.nih.gov/articles/PMC7433244/;
+    local policy: the 6-hour stability statement retains the existing specimen protocol and requires laboratory
+    review.'
+  ? 参考：NICE NG203 1.1.4，采血前 12 小时不吃肉；链接：https://www.nice.org.uk/guidance/ng203/chapter/Recommendations；本院约定：选择相邻同项目报告并核对采样条件，非指南规定的唯一比较对象。
+  : 'Reference: NICE NG203 1.1.4, avoid meat for 12 hours before sampling; link: https://www.nice.org.uk/guidance/ng203/chapter/Recommendations;
+    local policy: select adjacent reports for the same analyte and check sampling conditions; not the
+    sole comparator prescribed by the guideline.'
+  ? 参考：Nair et al. Diabetes Care 2014;37:483–487，1/2/4 小时与 12 小时空腹；链接：https://pubmed.ncbi.nlm.nih.gov/24062331/；本院约定：既有
+    1–24 小时保守读者范围保留，实际餐后 1–4 小时与前两日记录分开。
+  : 'Reference: Nair et al. Diabetes Care 2014;37:483–487, 1/2/4 hours and a 12-hour fast; link: https://pubmed.ncbi.nlm.nih.gov/24062331/;
+    local policy: the existing conservative reader window of 1–24 hours is retained; actual meals 1–4
+    hours before sampling are distinguished from records two days earlier.'
+  ? 参考：Preiss et al. Ann Clin Biochem 2007;44:35–42；链接：https://pubmed.ncbi.nlm.nih.gov/17270090/；本院约定：采用已有熟肉绝对增量合成模型，未从研究估计个体概率分布。
+  : 'Reference: Preiss et al. Ann Clin Biochem 2007;44:35–42; link: https://pubmed.ncbi.nlm.nih.gov/17270090/;
+    local policy: uses the existing synthetic absolute increment model for cooked meat; no individual
+    probability distribution was estimated from the study.'
+  ? 参考：Sacks et al. Guidelines and Recommendations for Laboratory Analysis in the Diagnosis and Management
+    of Diabetes Mellitus, 2023；链接：https://pmc.ncbi.nlm.nih.gov/articles/PMC10516260/；本院约定：空腹定义及血糖标本处理按项目核对。
+  : 'Reference: Sacks et al. Guidelines and Recommendations for Laboratory Analysis in the Diagnosis and
+    Management of Diabetes Mellitus, 2023; link: https://pmc.ncbi.nlm.nih.gov/articles/PMC10516260/; local
+    policy: check fasting definitions and glucose specimen handling for the specific analyte.'
+  ? 参考：WHO Laboratory Quality Management System handbook，定量检测的批次质控与记录；链接：https://extranet.who.int/lqsi/sites/default/files/attachedfiles/LQMS%206%207%208%20Quality%20Control.pdf；本院约定：每个已有检测批次均提供所用方法文件记录，不仅提供患者换方法时的通知；不合成额外采血或质控读数。
+  : 'Reference: WHO Laboratory Quality Management System handbook, quantitative testing batch quality
+    control and records; link: https://extranet.who.int/lqsi/sites/default/files/attachedfiles/LQMS%206%207%208%20Quality%20Control.pdf;
+    local policy: provide method usage records for every existing testing batch, not only notices when
+    the patient''s method changes; do not synthesise additional draws or quality-control readings.'
+  参考：熟牛肉餐酶法肌酐研究，2 小时均值峰；链接：https://pubmed.ncbi.nlm.nih.gov/29842868/；本院约定：沿用既有登记观测，不统一套为基线百分比。: 'Reference:
+    Cooked beef meal study using enzymatic creatinine, mean peak at 2 hours; link: https://pubmed.ncbi.nlm.nih.gov/29842868/;
+    local policy: retain existing registered observations; do not impose a universal percentage of baseline.'
+  双下肢可凹性水肿 + 活动后气短: Bilateral pitting leg oedema + exertional breathlessness
+  双下肢肌肉疼痛: bilateral leg muscle pain
+  双侧大腿肌肉酸痛: Bilateral thigh myalgia
+  双侧小腿前方红色触痛结节,两周内自行变暗消退: Red tender nodules on the anterior lower legs bilaterally, darkening and resolving
+    spontaneously within two weeks
+  双眼干涩畏光、视物发雾,人工泪液效果有限: Dry eyes with photophobia and hazy vision bilaterally, limited benefit from artificial
+    tears
+  反复低热、乏力、脱发、口腔溃疡: Recurrent low-grade fever, fatigue, hair loss and oral ulcers
+  反复口腔溃疡+皮肤疖子,补维生素无效: Recurrent oral ulcers + skin boils, no benefit from vitamins
+  反应缓解后恢复: Restarted after the reaction resolved
+  反酸烧心夜间明显,抬高床头加抑酸仅部分缓解: Reflux and heartburn worse at night; only partial relief from raising the head
+    of the bed and acid suppression
+  发作后面色苍白、乏力: Pallor and fatigue after episodes
+  发作时同步血糖·胰岛素·C肽·β-羟丁酸(必要时72小时饥饿试验): Simultaneous glucose · insulin · C-peptide · β-hydroxybutyrate during
+    an episode (72-hour fast if needed)
+  发作时血压骤升(220/120)、间歇正常: Abrupt blood pressure rise during episodes (220/120), normal between episodes
+  发烧拉肚子那两天: During those two days of fever and diarrhoea
+  发热: fever
+  发热 > 3 天，或体温 ≥ 39.5 ℃ → 当日门诊评估。: Fever > 3 days or temperature ≥ 39.5 ℃ → same-day outpatient assessment.
+  发热 ≤ 3 天、无上述症状、生命体征平稳 → 居家补液与退热，72 小时内复测。: Fever ≤ 3 days, no symptoms above, stable vital signs → oral
+    fluids and antipyretic treatment at home; recheck within 72 hours.
+  发热合并单个关节红肿，怀疑化脓性关节炎者不适用，先做关节穿刺。: Not applicable if fever with a single red, swollen joint suggests septic
+    arthritis; perform joint aspiration first.
+  取最近 3 个月内的 eGFR；没有就当日加查肌酐；eGFR ≥ 45 mL/min/1.73 m² → 可开始或继续，常规用药。: Use an eGFR from the last 3 months;
+    if unavailable, check creatinine today. eGFR ≥ 45 mL/min/1.73 m² → may start or continue usual treatment.
+  取药流水，按发药日期: Dispensing transactions, by dispensing date
+  受凉后打喷嚏、流清涕、嗓子疼,没发烧: Sneezing, clear runny nose and sore throat after getting cold, without fever
+  口服激素: oral corticosteroids
+  口角炎: angular cheilitis
+  另问：咳嗽或用力时诱发、体位性头痛、50 岁后新发并有颞部压痛、急性闭角型青光眼表现。: Also ask about cough/exertion triggers, postural headache,
+    new headache after age 50 with temporal tenderness, and features of acute angle-closure glaucoma.
+  只见病名或单次旧心率不认定长期基线；曾恢复正常后的再下降不适用稳定条款。: A diagnosis alone or one previous low heart rate does not establish
+    a long-standing baseline. A decline after normalisation does not qualify for the stable-baseline rule.
+  司美格鲁肽（GLP-1 受体激动剂，每周皮下注射）: semaglutide (GLP-1 receptor agonist, weekly subcutaneous injection)
+  吃一点就饱、饭后反酸想吐: I feel full after a little food, with acid reflux and nausea after meals
+  吃了含伪麻黄碱的感冒药后: After taking cold medicine containing pseudoephedrine
+  吃完饭就想去厕所、有点恶心: After meals I want to use the toilet and feel a little sick
+  吃得更少: eating less
+  吃得更少却持续增重 + 显著怕冷: Continued weight gain despite eating less + marked cold intolerance
+  同侧正在输生理盐水且采血在输液点近心侧；对侧采血不受此污染影响。: An ongoing ipsilateral saline infusion with sampling proximal to the
+    infusion site; contralateral sampling is not affected by this contamination.
+  同侧输液近心侧采血: blood drawn proximal to an ipsilateral infusion
+  同名尿检与血检、不同单位未经换算的读数不能直接比较；缺少报告或来源冲突时应补齐资料。: Urine and blood tests with the same name, or values in different
+    units without conversion, cannot be compared directly. Obtain missing reports or resolve conflicting
+    sources first.
+  同型半胱氨酸/甲基丙二酸(MMA): homocysteine/methylmalonic acid (MMA)
+  同方法不同试剂批号，适用患者标本比对支持同向偏移；已核实无差异的新批号不命名来源。: Same method, different reagent lots, with applicable patient-sample
+    comparison supporting a same-direction offset. A new lot verified to have no difference is not named
+    as the source.
+  同期体重掉了六公斤,没有刻意减重也没加运动: I lost six kilograms over the same period, without trying to lose weight or exercising
+    more
+  后腰疼,夜里更厉害,早上起来僵一个多钟头,动一动倒轻松些: My lower back hurts more at night; it is stiff for over an hour in the
+    morning, but moving helps
+  向心性肥胖:躯干变胖而四肢变细、腰围增: 'Central obesity: increasing trunk fat and waist circumference with thinner limbs'
+  含热量餐食: Calorie-containing meal
+  呼吸内科: respiratory medicine
+  呼吸暂停: apnoea
+  呼吸暂停低通气指数: apnoea–hypopnoea index
+  呼吸科: respiratory medicine
+  呼吸线: respiratory component
+  咳: cough
+  咳嗽: cough
+  哮喘发作按 NHS 的发作处理页：蓝色吸入剂每 30–60 秒 1 喷，最多 10 喷，仍无好转拨打 999。: 'For an asthma attack, follow the NHS attack
+    page: 1 puff of the blue inhaler every 30–60 seconds, up to 10 puffs; call 999 if there is still no
+    improvement.'
+  哮喘急性发作: acute asthma attack
+  喉咙: throat
+  喝了一大杯奶茶后: After a large cup of milk tea
+  嗓: throat
+  嗓子干痒: dry, itchy throat
+  嗜铬细胞瘤: phaeochromocytoma
+  嗜铬细胞瘤 + 原发性甲状腺功能减退(桥本): phaeochromocytoma + primary hypothyroidism (Hashimoto thyroiditis)
+  嘴唇干裂: chapped lips
+  固体餐胃排空显像(至少3小时,优选4小时): Solid-meal gastric emptying scintigraphy (at least 3 hours, preferably 4 hours)
+  在 CCB 基础上加 ACE 抑制剂、ARB 或噻嗪样利尿剂中的一种。: Add one of an ACE inhibitor, ARB or thiazide-like diuretic to the
+    CCB.
+  在题面所列数周内安排医疗评估并携带已有记录: arrange clinical assessment within the weeks stated in the question and bring
+    existing records
+  在题面所列数日内安排医疗评估并携带已有记录: arrange clinical assessment within the days stated in the question and bring
+    existing records
+  地塞米松: dexamethasone
+  坎地沙坦: candesartan
+  垂体MRI: Pituitary MRI
+  垂体及肾上腺影像: Pituitary and adrenal imaging
+  培哚普利: perindopril
+  基线: baseline
+  基线及48小时/7天血肌酐复核: Baseline and repeat serum creatinine at 48 hours/7 days
+  声音发哑: hoarse voice
+  处于临终关怀阶段者不适用。: Not applicable during end-of-life care.
+  处方后相符时间窗有持续肝酶变化及医生排除其它常见原因的记录；单有药名不能诊断药物性肝损伤。: Persistent liver enzyme changes within the corresponding
+    post-prescription window, with clinician documentation excluding other common causes. A drug name
+    alone cannot diagnose drug-induced liver injury.
+  处方流水，按开具日期: Prescription transactions, by issue date
+  处方记录，按开具日期: Prescription record, by issue date
+  复核不耐受证据：肌肉症状的时间、CK 值、TSH、维生素 D 与相互作用药物；持续全身性肌肉症状且 CK > 5 倍正常上限，7 天后复查；仍 > 5 倍则不再用他汀。 CK 升高但不足 5 倍的，可从低剂量或隔日给药再试一次。: 'Review
+    evidence of intolerance: timing of muscle symptoms, CK, TSH, vitamin D and interacting drugs. With
+    persistent generalised muscle symptoms and CK > 5 times the upper limit of normal, repeat after 7
+    days; if still > 5 times, do not restart a statin. If CK is elevated but below 5 times, consider a
+    trial of low-dose or alternate-day treatment.'
+  复诊时提交的七日家庭收缩压均值，来自本次控制轴的同一份原始记录: Seven-day mean home systolic blood pressure submitted at follow-up,
+    from the same original record as this visit's control axis
+  复诊时核对的在用药物清单: Current medication list checked at follow-up
+  外伤和治疗期间不适的家庭分诊: Home triage for injury and illness during treatment
+  多关节痛 + 打鼾 + 头痛: Polyarthralgia + snoring + headache
+  多关节痛、晨僵: Polyarthralgia, morning stiffness
+  多囊: polycystic ovaries
+  多囊卵巢综合征: polycystic ovary syndrome
+  多囊卵巢综合征(PCOS): polycystic ovary syndrome (PCOS)
+  多囊卵巢综合征(PCOS) + 原发性甲状腺功能减退: polycystic ovary syndrome (PCOS) + primary hypothyroidism
+  多囊卵巢综合征(PCOS) + 原发性甲状腺功能减退(桥本): polycystic ovary syndrome (PCOS) + primary hypothyroidism (Hashimoto
+    thyroiditis)
+  多导睡眠监测(PSG)/AHI: Polysomnography (PSG)/AHI
+  多尿: polyuria
+  多尿、口渴、便秘: Polyuria, thirst, constipation
+  多尿口渴、血糖持续高: Polyuria and thirst, persistently high glucose
+  多饮: polydipsia
+  多饮、多尿: Polydipsia, polyuria
+  夜尿3-4次(前列腺+血糖正常)+性欲下降: Nocturia 3-4 times (normal prostate assessment + glucose) + reduced libido
+  夜尿口渴+ 自发性低钾3.1: Nocturia and thirst + spontaneous hypokalaemia 3.1
+  夜尿增多 + 泡沫尿: Increased nocturia + foamy urine
+  夜间小腿抽筋,补钙镁只部分缓解: Nocturnal calf cramps, only partly relieved by calcium and magnesium
+  大便次数增多/稀便: Increased stool frequency/loose stools
+  大便油腻、马桶水面有油花,冲不太干净: My stools are greasy, with oil on the toilet water, and do not flush cleanly
+  大细胞性倾向: macrocytic tendency
+  大腿和小腿肌肉酸痛、上楼费劲: My thigh and calf muscles are sore and climbing stairs is hard
+  天热在外面晒了一下午后: After spending a hot afternoon outdoors
+  天门冬氨酸氨基转移酶: aspartate aminotransferase
+  失眠: insomnia
+  失眠 ≥ 3 个月且影响日间功能 → 提供睡眠卫生建议，转失眠的认知行为治疗（CBT-I）；询问咖啡因、酒精、轮班、夜间疼痛与夜尿，并核对用药（β 受体阻滞剂、糖皮质激素、利尿剂）。: Insomnia
+    ≥ 3 months affecting daytime function → offer sleep hygiene advice and refer for cognitive behavioural
+    therapy for insomnia (CBT-I). Ask about caffeine, alcohol, shift work, nocturnal pain and nocturia;
+    review medication (β-blockers, corticosteroids, diuretics).
+  失眠与焦虑的筛查及转介: Screening and referral for insomnia and anxiety
+  头晕: dizziness
+  头痛: headache
+  头痛同时有剧烈眼痛、视力下降、恶心呕吐者，先按青光眼处理，当日眼科会诊。: 'Headache with severe eye pain, reduced vision and nausea/vomiting:
+    manage as glaucoma first, with same-day ophthalmology consultation.'
+  头痛的红旗筛查与转诊: Headache red-flag screening and referral
+  头部外伤: head injury
+  奥美沙坦: olmesartan
+  妇科内分泌/生殖内分泌: gynaecological endocrinology/reproductive endocrinology
+  妊娠或产后 6 周内者不适用，走产科头痛规程。: Not applicable during pregnancy or within 6 weeks postpartum; use the obstetric
+    headache protocol.
+  妊娠或备孕者不适用。: Not applicable during pregnancy or when planning pregnancy.
+  妊娠者不适用。: Not applicable during pregnancy.
+  字面扫描分不出主语,判不了「不建议做的事」与「具体动作」是否真矛盾; 主语消解是二值的,适合由裁判判定。 方向:`true` = 有矛盾 = 差。聚合时取补(见 `polarity`)。: 'Literal
+    scanning cannot resolve actors or judge true conflict between what_not_to_do and specific_action.
+    Actor resolution is binary and suitable for judging. Direction: `true` = contradiction = poor. Complement
+    during aggregation (see `polarity`).'
+  定位检查:胰腺增强CT或超声内镜(**在生化确证之后**): 'Localisation: contrast-enhanced pancreatic CT or endoscopic ultrasound
+    (**after biochemical confirmation**)'
+  家人测指尖血糖: Capillary glucose measured by a family member
+  家人目击打鼾中憋气—猛吸气: Family witnessed breath-holding followed by a gasp during snoring
+  家庭 CGM 低血糖分诊: Home CGM hypoglycaemia triage
+  家庭急性症状与无异常处理: Home management of acute symptoms and normal observations
+  家庭慢心率的既往评估复核: Review of previous assessment for slow heart rate at home
+  家庭收缩压 7 日均值: 7-day mean home systolic blood pressure
+  家庭收缩压 7 日均值低于 120 mmHg 时不再加量。: Do not increase the dose further if the 7-day mean home systolic blood
+    pressure is below 120 mmHg.
+  家庭测量，按日期: Home measurements, by date
+  家庭监测: home monitoring
+  家庭监测感染与 NEWS2 分诊: Home infection monitoring and NEWS2 triage
+  家庭自测血压: Self-measured home blood pressure
+  家庭血压异常分诊: Triage of abnormal home blood pressure
+  家庭血压，按日期: Home blood pressure, by date
+  家里人感冒之后: After someone at home had a cold
+  容量不足: volume depletion
+  容量不足相关急性肾损伤: volume depletion-related acute kidney injury
+  对照住院指征：呼吸困难程度、整体状况、活动水平、发绀、意识、外周水肿、是否已在长期氧疗。: 'Check hospital admission criteria: degree of breathlessness,
+    overall condition, activity, cyanosis, consciousness, peripheral oedema and existing long-term oxygen
+    therapy.'
+  对照实际抗癌给药日期和本次新发全身不适，落实规程的治疗时间窗；不能以低NEWS2或没有高热排除该急性条款: Check actual anticancer administration dates and
+    today's new systemic illness against the protocol treatment window. Low NEWS2 or absence of high fever
+    cannot exclude this acute rule
+  小剂量地塞米松抑制试验后血清皮质醇: Serum cortisol after low-dose dexamethasone suppression
+  小腿: lower leg
+  尚不能判定变化来源时先补齐记录；本条不授权患者自主开药、停药或改剂量。: If the source of change remains uncertain, obtain missing records
+    first. This rule does not authorise the patient to independently prescribe, stop medication or change
+    doses.
+  尚未试过降低剂量或换用另一种他汀者不适用。: Not applicable before trying a lower dose or another statin.
+  就诊后针对心动过缓安排十二导联心电图；为核查可逆原因查电解质（血钾）和甲状腺功能TSH。: After attendance, arrange a twelve-lead ECG for bradycardia
+    and electrolytes (potassium) and thyroid function TSH to assess reversible causes.
+  尿培养及药敏: Urine culture and susceptibility
+  尿常规: urinalysis
+  尿白蛋白/肌酐(UACR): Urine albumin/creatinine (UACR)
+  尿白蛋白/肌酐比值: urine albumin/creatinine ratio
+  尿蛋白: urinary protein
+  尿蛋白/肌酐比: urine protein/creatinine ratio
+  尿试纸白细胞酯酶: Urine dipstick leucocyte esterase
+  尿路感染: urinary tract infection
+  尿路感染或肾盂肾炎: urinary tract infection or pyelonephritis
+  尿酮体: urinary ketones
+  局限性斑丘疹、无全身症状 → 暂停最近 6 周内新加的药，抗组胺药对症；同时有发热、淋巴结肿大或嗜酸性粒细胞升高 → 当日查肝肾功能并转专科。: Localised maculopapular rash
+    without systemic symptoms → hold drugs added in the last 6 weeks and give symptomatic antihistamines.
+    With fever, lymphadenopathy or eosinophilia → same-day liver/renal function tests and specialist referral.
+  局限皮肤型硬化: limited cutaneous sclerosis
+  屁股深处左边右边轮着疼,坐久了更明显: It hurts deep inside my buttocks, alternating sides and worse after sitting a long
+    time
+  左右总有一只眼又红又疼,见光难受,视线模糊,眼科当眼内炎症处理的: One eye or the other keeps getting red and painful, light hurts and
+    vision blurs; the eye clinic treated inflammation inside the eye
+  左甲状腺素: levothyroxine
+  左甲状腺素钠（甲状腺激素，口服，早餐前空腹）: levothyroxine sodium (thyroid hormone, oral, fasting before breakfast)
+  己糖激酶法（静脉血浆）: Hexokinase method (venous plasma)
+  已到诊室的成人，当前胸痛，或 72 小时内有过疑似心源性的胸痛。: Adults already at the clinic with current chest pain or suspected
+    cardiac chest pain within the last 72 hours.
+  已在使用 ACE 抑制剂或 ARB，或已用 2 种及以上降压药者不适用。: Not applicable if already taking an ACE inhibitor or ARB, or 2
+    or more antihypertensives.
+  已在使用左甲状腺素者不适用，走已治疗甲减的监测规程。: Not applicable if already taking levothyroxine; use the treated hypothyroidism
+    monitoring protocol.
+  已在服用抗凝药或有消化道出血史者，阿司匹林由接诊医生决定，不自动给。: For current anticoagulation or a history of gastrointestinal bleeding,
+    the receiving clinician decides on aspirin; do not give it automatically.
+  已在跌倒预防专科门诊随访、有综合评估记录者不适用。: Not applicable to patients already followed in a specialist falls prevention
+    clinic with a comprehensive assessment record.
+  已按临床标准同意开始抗凝；本次仍安排经胸心脏超声，仅为进一步卒中风险分层，并无基线、复律或结构性心脏病评估目的。: Anticoagulation is already agreed on clinical
+    grounds, yet transthoracic echocardiography is arranged solely for further stroke risk stratification,
+    with no baseline, cardioversion or structural heart disease assessment purpose.
+  已有心电图记录且无新症状或病情变化者，原有手表提示按其余规则评估。: If atrial fibrillation is already ECG-documented and there are no
+    new symptoms or clinical changes, assess existing watch alerts under the other rules.
+  已有明确其它原因的症状不机械归因于药；开始用药前症状不能归因于本药。: Do not mechanically attribute symptoms with an established alternative
+    cause to medication. Symptoms predating treatment cannot be attributed to this drug.
+  已有适应证，用药后新发持续肌症状及CK升高有时间关系且排除剧烈运动；旧稳定用药不是充分病因。: An established indication, with new persistent muscle
+    symptoms and raised CK after treatment, a temporal relationship and strenuous exercise excluded. Old
+    stable treatment is not sufficient causation.
+  已知合并症: Known comorbidities
+  已确诊颅内占位或脑血管病、正在专科随访者不适用。: Not applicable to known intracranial mass lesions or cerebrovascular disease
+    under specialist follow-up.
+  已耐受剂量下仍未达标，且已核实依从和足够复评时间，复核方案并考虑低血糖风险较低的其他药物。: If still above target at the tolerated dose, with adherence
+    and sufficient reassessment time verified, review the regimen and consider other drugs with lower
+    hypoglycaemia risk.
+  已耐受剂量下仍未达标，且已核实依从和足够复评时间，维持已耐受剂量并由医生考虑其他降压药或更换方案。: If still above target at the tolerated dose, with
+    adherence and sufficient reassessment time verified, maintain the tolerated dose and have the clinician
+    consider another antihypertensive or a different regimen.
+  已诊断痛风或表现典型（单关节红肿热痛，常见于第一跖趾关节）的急性发作。: Acute flare of diagnosed gout or typical presentation (a red, swollen,
+    hot, painful single joint, commonly the first metatarsophalangeal joint).
+  已进食: Has eaten
+  带日期的既往用药、症状、CK 检验与停药及再用经过: Dated history of medication, symptoms, CK results, withdrawal and rechallenge
+  干咳: dry cough
+  干咳数月伴活动后气促,两轮抗生素无效: Dry cough for months with exertional breathlessness, no response to two courses
+    of antibiotics
+  平台比对: Platform comparison
+  平地快走即气促,干咳持续数月: Breathlessness on brisk walking on level ground, dry cough for months
+  平均红细胞体积: mean corpuscular volume
+  床旁血糖仪（指尖毛细血管全血）: Point-of-care glucose meter (finger capillary whole blood)
+  库欣: Cushing syndrome
+  库欣综合征: Cushing syndrome
+  库欣综合征 + 维生素B12缺乏(亚急性联合变性): Cushing syndrome + vitamin B12 deficiency (subacute combined degeneration)
+  度拉糖肽（GLP-1 受体激动剂，每周皮下注射）: dulaglutide (GLP-1 receptor agonist, weekly subcutaneous injection)
+  开始新药 1–6 周内出现皮疹的成人。: Adults with rash within 1–6 weeks of starting a new drug.
+  开车途中出冷汗、视物发花,靠路边休息并进食后缓解: Cold sweats and blurred vision while driving, relieved by pulling over to
+    rest and eat
+  弥漫性毒性甲状腺肿: diffuse toxic goitre
+  强直性脊柱炎: ankylosing spondylitis
+  归并是一个二分:哪些归进去、哪些排出来。只说归进去的那一半, 等于没有做那个判断。与 `excl_grounded_rate`(判排除的接地)不同, 本点判是否做了排除,只能在自由文本里看出来。: 'Grouping
+    requires two decisions: what belongs and what is excluded. Describing only what belongs leaves the
+    other decision unmade. Unlike `excl_grounded_rate` (grounding of exclusions), this item asks whether
+    exclusions were made, observable only in free text.'
+  归并理由(join_reason)里,**是否指名了至少两条具体的临床表现**来支撑归并判断? ⚠️ 「共同指向同一病理过程」「多系统受累」这类**不指名任何表现**的说法不算。: Does join_reason
+    **name at least two specific clinical findings** supporting the grouping? ⚠️ Phrases such as "point
+    to the same pathological process" or "multisystem involvement" **without naming any finding** do not
+    count.
+  归并理由里,**是否指名了被判为「独立事件」的那些表现**(即不归入主线的那些)?: Does the grouping rationale **name the findings judged to
+    be independent events**, i.e. those excluded from the main explanation?
+  当前仍痛，或 12 小时内痛过且心电图异常或无法做 → 急救转送。: Ongoing pain, or pain within the last 12 hours with an abnormal or
+    unavailable ECG → emergency transfer.
+  当前复评病程的起始日: Start day of the course under current review
+  当前心率落在已评估的长期无症状基线内，本次用药核对无近期相关药物变化，并排除新症状和更早的急性条款: Current heart rate lies within the previously assessed
+    long-standing asymptomatic baseline; today's medication reconciliation confirms no recent relevant
+    drug change, with new symptoms and earlier acute rules excluded
+  当前确有头部外伤，并经本次核对仍按现行抗凝处方服药；旧处方须覆盖今天且没有停药证据: There is a current head injury and today's reconciliation
+    confirms continued adherence to the current anticoagulant prescription. The earlier prescription must
+    cover today with no evidence of discontinuation
+  彼此独立的良性事件: independent benign events
+  心内科: cardiology
+  心力衰竭: heart failure
+  心力衰竭(新发或加重): heart failure (new or worsening)
+  心力衰竭加重: worsening heart failure
+  心动过缓初始评估可做十二导联心电图；针对可逆原因查电解质（尤其血钾）、甲状腺功能/TSH等定向血检。Figure 1推荐ECG及定向血检，Table 7列电解质异常和甲减；这些名称由该初始路径映射，不是每例强制全查。: Initial
+    bradycardia assessment may include a twelve-lead ECG and targeted blood tests for reversible causes,
+    such as electrolytes (especially potassium) and thyroid function/TSH. Figure 1 recommends ECG and
+    targeted blood tests; Table 7 lists electrolyte abnormalities and hypothyroidism. These names are
+    mapped from that initial pathway, not mandatory universal testing.
+  心悸: palpitations
+  心悸、手抖: Palpitations, hand tremor
+  心慌: My heart is racing
+  心慌、手发抖: My heart is racing and my hands are shaking
+  心房颤动: atrial fibrillation
+  心电图: electrocardiogram
+  心电记录不规则RR且无重复P波: ECG with irregular RR intervals and no repetitive P waves
+  心肾: cardiorenal
+  心肾代谢综合征:2型糖尿病失控 + 慢性肾病进展: 'cardiorenal metabolic syndrome: uncontrolled type 2 diabetes + chronic kidney
+    disease progression'
+  心衰: heart failure
+  心衰使用ACEI/ARNI/ARB/MRA时按起用或加量后1至2周、稳定最大耐受剂量后每3至6个月监测肾功能和电解质。: In heart failure on ACEI/ARNI/ARB/MRA,
+    monitor renal function and electrolytes 1 to 2 weeks after initiation or escalation and every 3 to
+    6 months once stable at the maximum tolerated dose.
+  心衰加重: worsening heart failure
+  心衰已有左室功能评估，临床状态和治疗均未变，也无手术或器械治疗考虑，仍仅为例行筛查再做超声测EF。: Heart failure with prior left ventricular function
+    assessment, no clinical or treatment change and no surgical or device treatment under consideration,
+    yet repeat echocardiographic EF is ordered solely for routine screening.
+  心衰无临床状态变化、无可能显著改变心功能的治疗干预、也非侵入性操作/器械治疗候选时，不常规重复评估左室功能（如重复超声测EF）；首次基线及上述新指征除外。: Do not routinely reassess
+    left ventricular function (e.g. repeat echocardiographic EF) in heart failure without clinical change,
+    treatment likely to substantially alter cardiac function or candidacy for invasive/device treatment.
+    Initial baseline and these new indications are exceptions.
+  心衰晨重与心律提示复核: Review of morning weight and rhythm alerts in heart failure
+  心超客观充血及心功能评估: Echocardiographic assessment of congestion and cardiac function
+  心跳快、手抖、睡不踏实: Fast heartbeat, shaky hands and restless sleep
+  必要时胰腺CT/MRI: Pancreatic CT/MRI if needed
+  怕热: heat intolerance
+  怕热多汗、焦虑失眠: Heat intolerance and sweating, anxiety and insomnia
+  急性加重: acute exacerbation
+  急性发作: acute attack
+  急性失代偿性心力衰竭: acute decompensated heart failure
+  急性心力衰竭: acute heart failure
+  急性感染: acute infection
+  急性病/短程用药仅在新发状态与此前稳定读数之间判起病方向；当前1月至多年复查间隔不能把已结束的短程或急病恢复解释成相对于当时正常基线的反向改变。慢性处方中断则要求上次采血已在治疗中。: For acute
+    illness/short treatment courses, infer onset direction only between the new state and preceding stable
+    readings. With current repeat intervals from 1 month to years, a completed course or recovered acute
+    illness cannot explain an opposite change from a baseline that was normal at that time. Chronic prescription
+    interruption requires treatment to have been in progress at the previous draw.
+  急性痛风发作的首选治疗: First-line treatment of an acute gout flare
+  急性肾损伤（脱水）: acute kidney injury (dehydration)
+  急性胆囊炎: acute cholecystitis
+  急性胰腺炎: acute pancreatitis
+  急性腹泻、呕吐或严重脱水期间暂停用药，恢复进食 48 小时后再服。: Hold during acute diarrhoea, vomiting or severe dehydration; restart
+    48 hours after resuming food intake.
+  急症: emergency
+  性激素六项/睾酮·SHBG(FAI): Six-hormone sex hormone panel/testosterone · SHBG (FAI)
+  性激素结合球蛋白: sex hormone-binding globulin
+  总睾酮: total testosterone
+  总胆固醇: total cholesterol
+  总胆红素: total bilirubin
+  患处冰敷，作为药物治疗的补充；已在用的降尿酸药不停；发作期间不新开始降尿酸药，缓解后再评估。: Apply ice to the affected area alongside medication.
+    Continue existing urate-lowering therapy; do not initiate it during the flare; reassess after resolution.
+  患者其他药的完整带日期用药记录(不在本题调整范围): Complete dated medication record for the patient's other drugs (outside the
+    scope of adjustment in this question)
+  患者提交的家庭测量记录，按日期: Patient-submitted home measurements, by date
+  ? 患者标本比对的patient_sample_difference_pct为所列方法、平台或试剂批相对reference_method、reference_platform或reference_lot的百分比差；正数表示所列条件的读数较参照高，负数表示较参照低。仅项目相符、实际条件匹配及文件在该采血日适用时才使用，不能把其它批次的比对套到本次。
+  : In patient-sample comparisons, patient_sample_difference_pct is the percentage difference for the
+    listed method, platform or reagent lot relative to reference_method, reference_platform or reference_lot.
+    Positive means higher and negative lower than the reference. Use only for the matching analyte and
+    actual conditions when the document applies on that draw day; do not apply another lot's comparison.
+  患者自述问诊记录，按日期: Patient interview record, by date
+  患者自述，按登记日期: Patient statements, by registration date
+  情绪低落、记忆减退: Low mood, memory impairment
+  意识不清或不能吞咽者不适用，改走静脉葡萄糖或胰高血糖素。: Not applicable if unconscious or unable to swallow; use intravenous glucose
+    or glucagon instead.
+  感冒了,鼻塞流涕、嗓子痛,有点低烧: I had a cold with a blocked, runny nose, sore throat and a slight fever
+  感冒发烧那几天: During the days with a cold and fever
+  感冒后头重、没精神,吃了几天感冒药就好了: My head felt heavy and I had no energy after a cold; a few days of cold medicine
+    helped
+  感染: infection
+  慢性肾病: chronic kidney disease
+  慢性肾脏病: chronic kidney disease
+  慢性肾脏病进展: chronic kidney disease progression
+  慢性阻塞性肺疾病: chronic obstructive pulmonary disease
+  慢病复评服药覆盖核查: Review of medication coverage at chronic disease follow-up
+  慢病复诊: chronic disease follow-up
+  慢病用药不良反应归因: Attribution of adverse effects in chronic medication
+  慢病用药剂量与复评间隔: Chronic medication doses and reassessment intervals
+  慢阻肺: chronic obstructive pulmonary disease
+  慢阻肺急性加重的门诊处理: Outpatient management of an acute COPD exacerbation
+  成人 TSH 高于参考范围、游离 T4 正常，且尚未使用左甲状腺素。: Adults with TSH above the reference range, normal free T4 and no
+    current levothyroxine treatment.
+  成人主诉持续睡眠困难 ≥ 3 个月，或自述长期过度担忧。: Adults reporting persistent difficulty sleeping for ≥ 3 months or long-standing
+    excessive worry.
+  成人发热的预检分诊: Triage of fever in adults
+  成人家庭分诊，本次外伤或新不适需要对照处方及治疗经过。: Adult home triage requiring prescription and treatment history checks for
+    today's injury or new illness.
+  成人急性腹泻的脱水评估: Dehydration assessment in adult acute diarrhoea
+  成人急性腹泻，病程 ≤ 14 天，能口服进食饮水。: Adults with acute diarrhoea lasting ≤ 14 days who can eat and drink orally.
+  成人慢病用药复诊，复评药为格列齐特、阿托伐他汀、依那普利或左甲状腺素。: Adult chronic medication follow-up assessing gliclazide, atorvastatin,
+    enalapril or levothyroxine.
+  成人本次复评依那普利，无论是否诊断 CKD，需查同药更高剂量的旧处方、加量前后血钾和肌酐原报告、其他原因排查及减量后的恢复。: 'Adults undergoing enalapril review,
+    with or without CKD: check prior higher-dose prescriptions of the same drug, original potassium and
+    creatinine reports before/after escalation, exclusion of other causes and recovery after reduction.'
+  成人本次复评依那普利，病历确诊慢性肾脏病及白蛋白尿。须在病历核实慢性肾脏病、白蛋白尿及在用药，再读本次家庭血压目标、重复读数、血钾、肌酐与处方。: Adults undergoing enalapril
+    review with confirmed chronic kidney disease and albuminuria. Verify CKD, albuminuria and current
+    medication in the record, then read today's home blood pressure target, repeated readings, potassium,
+    creatinine and prescription.
+  成人本次复评格列齐特，需查同药更高剂量的旧处方、当时低血糖及救助记录、减量后的经过和目前低剂量耐受情况。: 'Adults undergoing gliclazide review: check previous
+    higher-dose prescriptions of the same drug, hypoglycaemia and assistance records, the course after
+    reduction and current lower-dose tolerability.'
+  成人本次复评阿托伐他汀，需查既往肌痛、CK、撤药与再用经过。须查同药更高剂量的旧处方、当时症状与 CK 原报告、停药后的变化、继发原因排查及是否再激发。: 'Adults undergoing atorvastatin
+    review: check previous myalgia, CK, withdrawal and rechallenge. Review previous higher-dose prescriptions
+    of the same drug, original symptom and CK records, changes after withdrawal, exclusion of secondary
+    causes and any recurrence on rechallenge.'
+  成人目前无相关症状，心率与以往临床评估需要比较。: Adults without current relevant symptoms whose heart rate needs comparison
+    with previous clinical assessment.
+  成人线上咨询，已完成急性症状筛查及本次监测核查。: Adult online consultation with completed acute symptom screening and current
+    monitoring checks.
+  成人线上咨询，连续晨重或可穿戴心律提示需要复核。: Adult online consultation requiring review of serial morning weights or wearable
+    rhythm alerts.
+  成人线上家庭监测分诊，有本次生命体征及症状问诊。: Adult online home monitoring triage with current vital signs and symptom interview.
+  成人线上家庭血压咨询，已完成今天重复测量与症状筛查。: Adult online home blood pressure consultation with today's repeated measurements
+    and symptom screening completed.
+  成人血液检验复查；先查完整报告流和实际适用的检验科方法、标本文件。: Adult repeat blood testing; first review the complete report stream
+    and the laboratory method and specimen documents that actually apply.
+  成人随访复查，已经核对比较的两次报告、方法、标本处理及用药记录，并确定变化来源。: Adult follow-up test review after checking the two compared
+    reports, methods, specimen handling and medication records and determining the source of change.
+  成人隐匿性自身免疫(LADA): latent autoimmune diabetes in adults (LADA)
+  成人隐匿性自身免疫糖尿病(LADA): latent autoimmune diabetes in adults (LADA)
+  成人高血压，目前仅用一种钙通道阻滞剂（CCB），诊室血压持续超过目标，且动态或家庭血压确认。: Adults with hypertension taking only one calcium channel
+    blocker (CCB), with clinic blood pressure persistently above target, confirmed by ambulatory or home
+    measurements.
+  房颤: atrial fibrillation
+  房颤等适应证下长期口服华法林或直接口服抗凝药（DOAC）的门诊随访。: Outpatient follow-up of long-term warfarin or direct oral anticoagulant
+    (DOAC) treatment for atrial fibrillation or another indication.
+  手抖: hand tremor
+  手指皮肤紧绷发亮、握拳受限,戒指戴不上: Tight shiny finger skin limiting fist closure; rings no longer fit
+  手指麻木: finger numbness
+  手环夜间血氧掉到84-88%: Wristband overnight oxygen saturation falls to 84-88%
+  手脚对称发麻像针扎: My hands and feet are equally numb on both sides, like pins and needles
+  手脚对称麻木: symmetric numbness of hands and feet
+  手脚对称麻木、针刺感: Symmetric numbness and pins and needles in hands and feet
+  手臂酸: Sore arms
+  手表数据，按日期: Watch data, by date
+  手表节律提示条款仅用于病历里尚无心电图记录房颤者；: 'The watch rhythm alert rule applies only if atrial fibrillation is not already
+    ECG-documented in the record; '
+  手部干燥脱皮: Dry, peeling skin on the hands
+  打针后两三天一直恶心、没胃口: I feel sick and have no appetite for two or three days after the injection
+  把可疑药物、反应的症状与严重程度、发生日期写入药物过敏记录。: Record the suspected drug, reaction symptoms and severity, and onset
+    date in the drug allergy record.
+  抑郁: depression
+  抗 U1-RNP 抗体: anti-U1-RNP antibodies
+  抗U1-RNP抗体: anti-U1-RNP antibodies
+  抗dsDNA/抗Sm: anti-dsDNA/anti-Sm
+  抗凝: anticoagulation
+  抗双链DNA抗体: anti-double-stranded DNA antibodies
+  抗核抗体: antinuclear antibodies
+  抗炎: anti-inflammatory treatment
+  抗生素: antibiotics
+  抗甲状腺过氧化物酶抗体: thyroid peroxidase antibodies
+  抗癌治疗: anticancer treatment
+  抗缪勒管激素: anti-Müllerian hormone
+  抗肌内膜抗体: anti-endomysial antibodies
+  抗肌内膜抗体EMA: Anti-endomysial antibodies EMA
+  抗阻训练: resistance training
+  报告平台不同，适用文件中可交换患者标本比对有同向偏移；无差异的平台互换不命名来源。: Different report platforms, with a same-direction offset
+    in applicable commutable patient-sample comparisons. Do not name platform change as the source if
+    the platforms show no difference.
+  报告平台差异及适用患者标本比对偏移: report platform difference and applicable patient-sample comparison offset
+  抽筋: cramps
+  持续增重: continued weight gain
+  持续甲状腺素服药覆盖改变: sustained change in thyroxine intake coverage
+  持续肌肉损伤病程: ongoing muscle injury
+  持续饮酒改变: sustained change in alcohol intake
+  指名了 ≥2 条具体表现: names ≥2 specific findings
+  指名了至少一条被排除的独立事件: names at least one excluded independent event
+  按原条款顺序逐项核对，第一条符合者生效；已确诊情况须查原病历。: Check rules in the original order; the first matching rule applies.
+    Verify established diagnoses in the original record.
+  按慢病计划在起用或调整降脂治疗后2至3个月复查血脂和转氨酶，稳定后按年度安排血脂复评。: Under the chronic disease plan, repeat lipids and transaminases
+    2 to 3 months after starting or changing lipid-lowering treatment; arrange annual lipid review once
+    stable.
+  按方案逐级加量: Stepwise dose escalation according to plan
+  按日期对照原处方、当时事件记录及后续处方；不能用本轮起始日前发生这一点排除既往更高剂量的不耐受。: Compare the original prescription, contemporaneous
+    events and subsequent prescriptions by date. Occurrence before the start of this review course does
+    not exclude previous higher-dose intolerance.
+  ? 按项目、单位与标本核对今天报告；比较报告取同项目、单位与标本可比且在今天之前最近一次已完成报告，以采样日期及时刻排序。更早的同项目报告仍用于观察长期经过和核对起用前基线。不要把最早、数值最接近或最近的其它项目选作上次报告。这是本院相邻复查的比较约定，非所有临床情形的唯一比较方式。
+  : Check today's report by analyte, unit and specimen. Select as comparator the latest completed report
+    before today with the same analyte and comparable units and specimen, ordered by collection date and
+    time. Earlier reports for that analyte still inform the long-term course and pre-initiation baseline.
+    Do not select the earliest, numerically closest or latest different-analyte report as the previous
+    report. This is the local adjacent-repeat comparison convention, not the only valid comparison in
+    every clinical situation.
+  按高血压靶器官评估需要安排尿ACR、HbA1c、电解质、肌酐/eGFR、血脂和十二导联心电图，核对是否已有结果。: Arrange urine ACR, HbA1c, electrolytes, creatinine/eGFR,
+    lipids and a twelve-lead ECG as needed for hypertensive target-organ assessment; check existing results.
+  换季降温后: After the seasonal weather turned cold
+  换院区检测（同型号分析仪、同厂家试剂）: Testing at another campus (same analyser model and reagent manufacturer)
+  排除TSH/PRL/17-OHP: Exclude with TSH/PRL/17-OHP
+  排除机械性梗阻的胃镜或相关影像: Gastroscopy or relevant imaging to exclude mechanical obstruction
+  控制指标: Control indicator
+  控制指标未达标而依从不足时，暂不调整剂量，先核实服药情况。: If the control indicator is above target with poor adherence, do not
+    adjust the dose yet; verify intake first.
+  搬家扛了一天箱子后: After carrying boxes all day while moving house
+  支气管舒张后肺功能: Post-bronchodilator spirometry
+  支气管镜下活检: Bronchoscopic biopsy
+  支气管镜下活检(必要时): Bronchoscopic biopsy (if needed)
+  收缩压降 ≥ 20 mmHg 或舒张压降 ≥ 10 mmHg 记为体位性低血压。: A systolic fall ≥ 20 mmHg or diastolic fall ≥ 10 mmHg constitutes
+    orthostatic hypotension.
+  数周持续饮酒量变化: sustained change in alcohol intake over several weeks
+  数周贝特类服药覆盖改变: change in fibrate intake coverage over several weeks
+  数周饮酒量变化与ALT或TG方向相符；一次旧聚餐不足以归因。: A change in alcohol intake over several weeks matches the ALT or TG
+    direction; one old social meal is insufficient for attribution.
+  新发头痛且有免疫低下、HIV 或恶性肿瘤史 → 同样进一步检查。: New headache with immunosuppression, HIV or a history of malignancy
+    → further investigation as well.
+  新发心力衰竭: new-onset heart failure
+  新发房颤: new-onset atrial fibrillation
+  新发持续腹泻/呕吐或医生治疗后的恢复改变钾水平；旧已恢复事件无效。: New persistent diarrhoea/vomiting or recovery after clinician treatment
+    changes potassium levels; an old resolved event has no effect.
+  新发糖尿病 + 高血压: New-onset diabetes + hypertension
+  新发高血压≈148/95,严格低盐一月无改善: New hypertension ≈148/95, no improvement after a month of strict salt restriction
+  新药后皮疹的分级处理: Graded management of rash after a new drug
+  ? 方法：Jaffe 与酶法的校准、非肌酐反应物和样本特性不同，差值可正可负。已登记 Abbott c16000 血清比对为 Jaffe(mg/dL) = 0.0486546 + 0.971448 ×
+    酶法(mg/dL)，残差 SD 0.08285 mg/dL，1 mg/dL = 88.4 μmol/L；这是该研究回归及散布，不能逐患者精确倒算。不得统一减去一个固定百分比。来源在本次还是上次，要看两份报告和有效通知中的
+    comparison_reference_method；本院合成实验室以酶法作为比较参照，这不是把酶法称为计量参考方法 IDMS。换院区、仪器或试剂批号本身不证明读数不可比，查当时方法比对与质控通知。同方法贯穿两次时，方法名称的存在不构成互换。
+  : 'Methods: Jaffe and enzymatic assays differ in calibration, non-creatinine reactants and sample characteristics;
+    differences may be positive or negative. The registered Abbott c16000 serum comparison is Jaffe(mg/dL)
+    = 0.0486546 + 0.971448 × enzymatic(mg/dL), residual SD 0.08285 mg/dL, 1 mg/dL = 88.4 μmol/L. This
+    is the study''s regression and scatter, not an exact patient-level inverse calculation. Do not subtract
+    one fixed percentage universally. Whether the source affects the current or previous result depends
+    on both reports and comparison_reference_method in the applicable notice. The local synthetic laboratory
+    uses the enzymatic method as comparison reference; this does not call it the IDMS metrological reference
+    method. A campus, instrument or reagent lot change alone does not prove non-comparability; check contemporaneous
+    method comparison and quality-control notices. If the same method spans both draws, its name alone
+    does not establish interchange.'
+  无发热、抗生素无效: No fever, antibiotics ineffective
+  无发热盗汗: No fever or night sweats
+  无可靠的本家族检查禁止清单；仅有下方慢病监测依据时派生。: No reliable investigation prohibition list for this family; derive only
+    when chronic monitoring evidence below applies.
+  无外伤: No trauma
+  无家族史: no family history
+  无尿、意识改变或收缩压 < 90 mmHg → 转急诊静脉补液；正在使用利尿剂、ACE 抑制剂、ARB、二甲双胍或 SGLT2 抑制剂者，病期暂停这些药并 24 小时内联系医生。: Anuria, altered
+    consciousness or systolic blood pressure < 90 mmHg → emergency department for intravenous fluids.
+    If taking diuretics, ACE inhibitors, ARBs, metformin or SGLT2 inhibitors, hold these during illness
+    and contact the clinician within 24 hours.
+  无怀孕可能: no possibility of pregnancy
+  无明确过敏时给阿司匹林 300 mg 负荷量，转送时随病人附书面记录。: If no known allergy, give aspirin 300 mg loading dose and send
+    a written record with the patient during transfer.
+  无相符作用来源、体内水平稳定，且变化在双侧95% RCV内；RCV不能单独确定其余来源。: No matching active source, stable true level and change
+    within the two-sided 95% RCV; RCV alone cannot establish the other sources.
+  无红旗 → 按原发性头痛处理，记录头痛日记，排查止痛药过度使用。: No red flags → manage as primary headache, record a headache diary
+    and assess for medication overuse.
+  无统一: no unifying process
+  无统一病理:彼此独立的良性事件: 'no unifying pathology: independent benign events'
+  无需系统性排查;针对各自症状对症/观察即可: No systemic investigation required; manage each symptom symptomatically or observe
+  既往及复查肾功能和UACR: Previous and repeat renal function and UACR
+  既往在本药更高剂量出现血钾 ≥6.0 mmol/L 或肌酐较加量前升高超过 30%，排除其他原因且退回原剂量后恢复，则本次不再恢复该剂量。: 'Previous potassium ≥6.0 mmol/L
+    or creatinine increase exceeding 30% from before escalation at a higher dose of this drug, with other
+    causes excluded and recovery after returning to the prior dose: do not restore that dose today.'
+  既往在本药更高剂量出现需他人救助的低血糖，且无明确其他原因，则本次不再恢复该剂量；核对后续减量、恢复及当前低剂量耐受记录。: 'Previous hypoglycaemia requiring another
+    person''s assistance at a higher dose of this drug, without an established alternative cause: do not
+    restore that dose today. Check subsequent dose reduction, recovery and current lower-dose tolerability.'
+  早上眼睑发肿: Puffy eyelids in the morning
+  早上起床时头晕、站一会儿才好: I feel dizzy getting out of bed in the morning and only improve after standing a while
+  早晨空腹血糖6.9,躺很久才睡着,情绪也差得很: Morning fasting glucose 6.9, taking a long time to fall asleep and feeling
+    very low
+  早期2型糖尿病: early type 2 diabetes
+  早期2型糖尿病/胰岛素抵抗: early type 2 diabetes/insulin resistance
+  时机按适应证与风险由医生确定: timing determined by the clinician according to indication and risk
+  明确脱水、其他升钾药物或肾毒性药物等原因已解释变化者，不机械归因于本药。: If dehydration, other potassium-raising drugs, nephrotoxic drugs
+    or another established cause explains the change, do not mechanically attribute it to this drug.
+  显著怕冷: marked cold intolerance
+  晕: dizziness
+  晕厥: syncope
+  晨8点血清皮质醇: Serum cortisol at 8 am
+  晨血皮质醇: Morning blood cortisol
+  普伐他汀: pravastatin
+  普通外科: general surgery
+  普通未分离全血室温放置2–4小时；柠檬酸缓冲抑制管或30分钟内分离时不据此判定糖酵解。: Plain unseparated whole blood left at room temperature
+    for 2–4 hours. Do not infer glycolysis with a citrate-buffered inhibitor tube or separation within
+    30 minutes.
+  普通肌痛、未查 CK 的主诉或从未实际用过的剂量不能当作已确诊最大耐受剂量；复评同时核对目前低剂量已耐受及本次控制目标。: Ordinary myalgia, a complaint without
+    CK testing or a dose never actually taken cannot establish a confirmed maximum tolerated dose. Also
+    verify current lower-dose tolerability and today's control target.
+  替尔泊肽（GIP/GLP-1 受体激动剂，每周皮下注射）: tirzepatide (GIP/GLP-1 receptor agonist, weekly subcutaneous injection)
+  替米沙坦: telmisartan
+  最大耐受剂量: maximum tolerated dose
+  最近特别爱吃咸: I've been craving salty food lately
+  月经稀发、周期推迟40+天: Infrequent menses, cycles delayed by 40+ days
+  月经量多经期延长 + 清淡饮食却血脂高、反应迟钝: Heavy prolonged menses + high lipids despite a light diet, slowed responses
+  有严重呼吸困难或意识受损，或 SpO2 < 90% → 转院治疗。: Severe breathlessness, impaired consciousness or SpO2 < 90% → transfer
+    to hospital.
+  有伴随结果支持的甲状腺炎病程: thyroiditis course supported by accompanying results
+  有局灶症状（咳嗽伴气促、尿路刺激症状）→ 转对应规程。: Localising symptoms (cough with breathlessness, urinary symptoms) → corresponding
+    protocol.
+  有持续外伤肌损伤或其恢复记录；短暂采血前运动状态另按规程归采样条件。: Persistent traumatic muscle injury or recovery is documented. Transient
+    pre-draw exercise is classified separately as a sampling condition under the protocol.
+  有时四肢发软一阵歇会儿就好: Sometimes my arms and legs feel weak for a while, then improve with rest
+  有时间关系及肌症状支持的他汀相关变化: statin-related change supported by timing and muscle symptoms
+  有甲减治疗记录，漏服或恢复服药持续至少6周，FT4方向支持；很久以前的漏服不作用。: Documented hypothyroidism treatment with missed or resumed
+    intake sustained for at least 6 weeks, supported by the FT4 direction. Missed doses long ago have
+    no effect.
+  有病程及排除记录支持的药物相关肝酶变化: drug-related liver enzyme change supported by the course and exclusion records
+  有症状时规范尿培养: Properly collected urine culture during symptoms
+  有转移和低钙支持的EDTA污染: EDTA contamination supported by transfer and low calcium
+  有适应证的ACEI起用/停用发生在两次报告之间；稳定用药不能解释新差。肌酐升幅≤30%首选按适应证风险复查，不自主停药。: Indicated ACEI initiation/discontinuation
+    occurs between the reports; stable treatment cannot explain a new difference. For creatinine rise
+    ≤30%, prefer repeat testing according to indication and risk; do not independently stop treatment.
+  有高TG适应证，数周漏服或恢复用药与TG相符；旧稳定用药不解释新差。: There is a high-TG indication; missed doses or resumed treatment
+    over several weeks match TG changes. Old stable treatment does not explain a new difference.
+  有高血压适应证的噻嗪利尿剂起用后钾下降，医生停用后恢复；稳定剂量不能解释新变化。: Potassium falls after starting an indicated thiazide for hypertension
+    and recovers after clinician discontinuation; a stable dose cannot explain a new change.
+  服用别嘌醇、卡马西平或磺胺类药物者，出现任何皮疹都按急症处理。: Any rash while taking allopurinol, carbamazepine or sulfonamides is
+    treated as an emergency.
+  未分离全血延迟处理的糖酵解: glycolysis in unseparated whole blood with delayed processing
+  未分离标本冷藏并延迟分离: refrigeration of an unseparated specimen with delayed separation
+  未分离细胞的标本冷藏并延迟分离；分离后的血浆冷藏不据此认定钾外漏。: An unseparated cellular specimen is refrigerated with delayed separation;
+    refrigeration of already separated plasma does not establish potassium leakage.
+  未取得实际取药或计数记录时不能假定完全服药；其它药取药不能当作本药覆盖。: Without actual dispensing or pill-count records, do not assume
+    full intake. Dispensing of another drug does not establish coverage of this one.
+  未完成问诊不能视为否认；不能跳过其余条款直接给兜底去向。: An incomplete symptom interview does not establish denial. Do not skip
+    the other rules and directly choose the fallback disposition.
+  未用药的亚临床甲减随访: Follow-up of untreated subclinical hypothyroidism
+  未确诊 CKD 或白蛋白尿者不套用；需查原肾脏专科记录和实际血压目标。: Not applicable without confirmed CKD or albuminuria; check the
+    original nephrology record and actual blood pressure target.
+  未确诊心衰不能套用心衰合并高血压条款；单个手表估计值不作袖带测量。: Do not apply the heart failure/hypertension rule without confirmed
+    heart failure. A single watch estimate is not a cuff measurement.
+  未确诊心衰者不单凭体重走心衰路径；已有心电图确诊房颤且本次症状无变化者不按新发提示处理。: Do not use weight alone to enter the heart failure pathway
+    without confirmed heart failure. ECG-confirmed atrial fibrillation without current symptom change
+    is not a new alert.
+  未确诊的 COPD: undiagnosed COPD
+  未碰头的跌倒不套用头部外伤条款；已结束且恢复的旧疗程不当作正在治疗。: A fall without head impact does not qualify for the head injury
+    rule. A completed earlier treatment course with recovery is not ongoing treatment.
+  未达标，加量: Target not reached; dose increased
+  本条不作诊室内即时补糖；传感器假低值需核实；严重症状先看急性条款。: This rule does not cover immediate glucose treatment in the clinic.
+    Verify possible falsely low sensor readings; apply acute rules first for severe symptoms.
+  本次他汀治疗无肌痛、压痛、无力或其他症状，仍仅为常规筛查安排肌酸激酶CK。: The current statin user has no myalgia, tenderness, weakness
+    or other symptoms, yet creatine kinase CK is ordered solely for routine screening.
+  本次安排心内电生理检查，主要为了筛查窦房结功能障碍，没有其他电生理检查适应证。: Intracardiac electrophysiological testing is arranged primarily
+    to screen for sinus node dysfunction, with no other electrophysiological indication.
+  本次标本溶血: haemolysis of the current specimen
+  本次正在发生的不良反应、低血压、依从不足或尚未达到复评时间，仍先按对应规程处理。: For current adverse effects, hypotension, poor adherence or
+    an incomplete reassessment interval, apply the corresponding protocol first.
+  本次正在发生的症状、治疗过量、依从不足或尚未达到复评时间，仍先按对应规程处理。: For current symptoms, overtreatment, poor adherence or an incomplete
+    reassessment interval, apply the corresponding protocol first.
+  本次疑似呼吸道感染，我安排快速床旁流感病原检测，仅用它决定是否开抗菌药，并无监测或感染控制等其他目的。: For suspected respiratory infection today, I arrange
+    a rapid point-of-care influenza pathogen test solely to decide whether to prescribe antibiotics, without
+    a surveillance, infection control or other purpose.
+  本次血糖核实及低血糖原因评估不列入禁止项；仅有下方慢病监测依据时派生。: Today's glucose verification and hypoglycaemia cause assessment
+    are not prohibited; derive only when chronic monitoring evidence below applies.
+  本次跌倒伴头部外伤，且在服用抗凝药或抗血小板药（阿司匹林单药除外）者，改走头外伤规程。: A fall with head injury while taking anticoagulants or
+    antiplatelets (except aspirin alone) requires the head injury protocol.
+  本病人其它药不属本次调整范围；本次需查原处方及最近一次起用或加量时间。: This patient's other drugs are outside today's adjustment scope;
+    check the original prescription and latest initiation or escalation date.
+  本药的取药记录: Dispensing record for this drug
+  本规程不授权患者自行开药、停药或改剂量。: This protocol does not authorise the patient to independently prescribe, stop
+    medication or change doses.
+  本轮只校准P2，未核实这些快照的额外适用场景；P4的no_action不再触发precision，M2沿用其既有预算与必需检查约束。: Only P2 is calibrated in this round;
+    additional applicability in these snapshots is unverified. P4 no_action no longer triggers precision;
+    M2 retains its existing budget and required-investigation constraints.
+  本院他汀复评：既往同药更高剂量出现肌痛且 CK 超过正常上限 10 倍、无继发原因并经停药消退，不再恢复该剂量；: 'Local statin review: previous myalgia on
+    a higher dose of the same drug with CK exceeding 10 times the upper limit of normal, no secondary
+    cause and resolution after withdrawal: do not restore that dose; '
+  本院依从性判定：按取药记录（提前取药的余量顺延计入；: 'Local adherence assessment: use dispensing records (carry forward early-refill
+    stock; '
+  本院复评与调药规程: This clinic's reassessment and medication adjustment protocols
+  本院对慢性肾脏病合并白蛋白尿的降压方案：肾素-血管紧张素系统抑制剂加至最高批准且可耐受剂量；: 'Local antihypertensive regimen for chronic kidney disease
+    with albuminuria: titrate the renin–angiotensin system inhibitor to the highest approved and tolerated
+    dose; '
+  本院对慢性肾脏病合并白蛋白尿的降压方案：肾素-血管紧张素系统抑制剂加至最高批准且可耐受剂量；家庭收缩压 7 日均值低于 120 mmHg 时不再加量。: 'Local antihypertensive
+    regimen for chronic kidney disease with albuminuria: titrate the renin–angiotensin system inhibitor
+    to the highest approved and tolerated dose; do not increase further if the 7-day mean home systolic
+    blood pressure is below 120 mmHg.'
+  本院对该患者的目标值: This clinic's target for this patient
+  本院检验科: This clinic's laboratory
+  本院检验科（另一院区，同型号分析仪、同厂家试剂）: This clinic's laboratory (another campus, same analyser model and reagent
+    manufacturer)
+  标准复查: standard repeat tests
+  标准复查包括肾功能及血钾: Standard repeat tests include renal function and serum potassium
+  标准复查包括肾功能及血钾，时机按适应证与风险由医生确定，不统一套用慢性肾病的间隔。: Standard repeat tests include renal function and serum potassium;
+    the clinician determines timing by indication and risk. Do not apply the chronic kidney disease interval
+    universally.
+  标签 2.3；NG28 1.18.1: Label 2.3; NG28 1.18.1
+  核对合并用药与饮酒：抗血小板药、NSAID、SSRI、过量饮酒都增加出血风险。: 'Review concomitant medication and alcohol: antiplatelets,
+    NSAIDs, SSRIs and excessive alcohol all increase bleeding risk.'
+  核对本例目标及有效医嘱；本次建议由医生审核后执行。: Check this patient's target and valid prescription; today's recommendation
+    is implemented after clinician review.
+  格列齐特: gliclazide
+  格列齐特缓释片（磺脲类，口服）: gliclazide modified-release tablets (sulfonylurea, oral)
+  桥本: Hashimoto thyroiditis
+  检查视力、足部与鞋、认知情绪、尿失禁、饮酒，并评估骨质疏松风险。: Check vision, feet and footwear, cognition, mood, urinary incontinence
+    and alcohol; assess osteoporosis risk.
+  检测方法或平台批号差异: difference in assay method or platform/lot
+  检验报告，按报告日期: Laboratory reports, by report date
+  检验报告，按采样日期: Laboratory reports, by sampling date
+  检验科印出的标本稳定性规定: Specimen stability policy printed by the laboratory
+  检验科文档，按生效日期: Laboratory documents, by effective date
+  检验科方法通知与使用记录，按日期: Laboratory method notices and usage records, by date
+  检验科标本规程，按发布日期: Laboratory specimen protocols, by publication date
+  检验结果，按采样日期: Laboratory results, by sampling date
+  检验解读: laboratory interpretation
+  横纹肌: striated muscle
+  次/小时: /hour
+  正在使用阿卡波糖的患者必须用葡萄糖片或果汁，不可用蔗糖或糕点。: Patients taking acarbose must use glucose tablets or fruit juice, not
+    sucrose or cakes.
+  正在化疗、中性粒细胞减少或长期使用免疫抑制剂者不适用，走肿瘤发热规程。: Not applicable during chemotherapy, neutropenia or long-term immunosuppression;
+    use the oncology fever protocol.
+  正在化疗或使用免疫抑制剂者不适用。: Not applicable during chemotherapy or immunosuppressant use.
+  步态不稳、平衡变差: Unsteady gait and impaired balance
+  比较报告: Report comparison
+  氟伐他汀: fluvastatin
+  氢氯噻嗪: hydrochlorothiazide
+  氨氯地平（钙通道阻滞剂，口服）: amlodipine (calcium channel blocker, oral)
+  氯沙坦: losartan
+  水肿消退后恢复: Restarted after oedema resolved
+  沿用既有小变异对数近似1.96×sqrt(CV0²+CV1²)，新项目两次总CV由CVI/CVA确定。TG和TSH较大CVI时这是合成近似，不能冒称精确对数正态RCV；不用此近似制造刀刃。: Retain
+    the existing small-variation log approximation 1.96×sqrt(CV0²+CV1²); total CV for each of the two
+    measurements of a new analyte follows CVI/CVA. For TG and TSH with larger CVI this is a synthetic
+    approximation, not an exact log-normal RCV. Do not use it to construct borderline cases.
+  泌乳素: prolactin
+  泌尿外科: urology
+  泡沫尿/下肢水肿: Foamy urine/leg oedema
+  洛伐他汀: lovastatin
+  测卧位与站立 3 分钟血压。: Measure supine blood pressure and standing blood pressure at 3 minutes.
+  测指尖血糖确认 < 3.9 mmol/L，并记录症状与最近一次进食、用药时间。 给约 15–20 g 速效碳水（5 片葡萄糖片，或小半杯果汁），不给巧克力等含脂食物。: Confirm capillary
+    glucose < 3.9 mmol/L; record symptoms and the most recent food intake and medication times. Give about
+    15–20 g of fast-acting carbohydrate (5 glucose tablets or a small half-glass of fruit juice); avoid
+    fatty foods such as chocolate.
+  浑身乏力: generalised fatigue
+  浑身没劲,爬楼梯腿发软,动得越多越明显,手指还发麻: I have no energy, my legs feel weak on stairs, activity makes it worse and
+    my fingers are numb
+  消化内科: gastroenterology
+  消化内科/肝病科: gastroenterology/hepatology
+  清晨家人叫不醒一次,喂了糖水后清醒,自述前一晚只吃了少量晚饭: One morning the family could not wake the patient; responsiveness returned
+    after sugar water. The patient reported eating only a little dinner the night before
+  清醒患者低血糖的现场处理: Immediate management of hypoglycaemia in a conscious patient
+  游离甲状腺素: free thyroxine
+  游离血红蛋白: free haemoglobin
+  溶血指数: haemolysis index
+  焦虑: anxiety
+  熟肉: cooked meat
+  熟肉在采血前1–4小时；两日前餐食不解释当日变化。: Cooked meat 1–4 hours before collection; a meal two days earlier does not
+    explain today's change.
+  熬夜赶工两天后: After staying up late to finish work for two days
+  爬楼腿软: leg weakness climbing stairs
+  牙龈和掌纹发黑: darkening of gums and palmar creases
+  独立: independent
+  狼疮: lupus
+  献血后: After donating blood
+  瑞舒伐他汀: rosuvastatin
+  甘油三酯: triglycerides
+  生物素: biotin
+  生长激素: growth hormone
+  用 GAD-2 筛查焦虑，总分 ≥ 3 分 → 继续做 GAD-7；GAD-7 ≥ 10 分 → 转心理治疗（认知行为治疗），不首选药物。: Screen with GAD-2; total ≥ 3
+    → complete GAD-7. GAD-7 ≥ 10 → refer for psychological therapy (cognitive behavioural therapy); medication
+    is not first line.
+  用动态或家庭血压确认：日间均值 ≥ 135/85 mmHg 才算未控制。: 'Confirm with ambulatory or home blood pressure: daytime mean
+    ≥ 135/85 mmHg indicates uncontrolled blood pressure.'
+  用药: medication
+  用药 48 小时症状无改善 → 送尿培养，换用二线药。: No symptom improvement after 48 hours of treatment → urine culture and
+    switch to a second-line drug.
+  ? 用药与处置：核对上次与今天之间的起用、停用及剂量记录；ACEI 起用可使肌酐上升、停用后可下降，时间与方向必须相符；更早且已稳定的用药不自动解释这次变化。GLP-1 加量仅有日期邻近不足以判定肌酐来源，还须核对体重等相应生理经过。来源核对后的下一步处置完整分支见同库“随访复查变化的下一步处置”（HP-461CC110），其中
+    ACEI 的 30% 为观测读数升幅，起用前均值按该文件规定；其它来源遵循失真在本次或仅在上次的分支。
+  : 'Medication and management: check initiations, discontinuations and doses between the previous report
+    and today. ACEI initiation may raise creatinine and discontinuation may lower it; timing and direction
+    must match. Earlier stable treatment does not automatically explain this change. Proximity of GLP-1
+    escalation alone is insufficient to identify the creatinine source; also check corresponding physiological
+    changes such as weight. For all next-step branches after source verification, see "Next steps for
+    changes on follow-up testing" (HP-461CC110) in the same library. Its ACEI 30% is the observed reading
+    rise; use that document''s pre-initiation mean definition. Other sources follow whether distortion
+    affects today''s sample or only the previous one.'
+  用药审查: medication review
+  用药核对，按核对日期: Medication reconciliation, by reconciliation date
+  用药记录，按处方日期: Medication record, by prescription date
+  甲亢: hyperthyroidism
+  甲减: hypothyroidism
+  甲旁亢: hyperparathyroidism
+  甲状旁腺: parathyroid
+  甲状旁腺激素: parathyroid hormone
+  甲状旁腺线: parathyroid component
+  甲状腺: thyroid
+  甲状腺功能亢进: hyperthyroidism
+  甲状腺功能亢进 + 原发性肾上腺皮质功能减退(Addison): hyperthyroidism + primary adrenal insufficiency (Addison disease)
+  甲状腺功能亢进 + 糖尿病: hyperthyroidism + diabetes mellitus
+  甲状腺功能亢进 + 维生素B12缺乏(亚急性联合变性): hyperthyroidism + vitamin B12 deficiency (subacute combined degeneration)
+  甲状腺功能亢进(Graves): hyperthyroidism (Graves disease)
+  甲状腺功能亢进(Graves) + 原发性肾上腺皮质功能减退(Addison): hyperthyroidism (Graves disease) + primary adrenal insufficiency
+    (Addison disease)
+  甲状腺功能亢进(Graves) + 成人隐匿性自身免疫糖尿病(LADA): hyperthyroidism (Graves disease) + latent autoimmune diabetes
+    in adults (LADA)
+  甲状腺功能亢进(Graves) + 维生素B12缺乏(亚急性联合变性): hyperthyroidism (Graves disease) + vitamin B12 deficiency (subacute
+    combined degeneration)
+  甲状腺功能减退: hypothyroidism
+  甲状腺功能减退既往治疗: Previous hypothyroidism treatment
+  甲状腺摄碘率/超声: Thyroid radioiodine uptake/ultrasound
+  甲状腺摄碘率及超声: Thyroid radioiodine uptake and ultrasound
+  甲状腺炎病程: thyroiditis course
+  甲状腺线: thyroid component
+  甲襞毛细血管镜: Nailfold capillaroscopy
+  甲襞毛细血管镜检查: Nailfold capillaroscopy
+  电解质(低钠高钾): Electrolytes (low sodium, high potassium)
+  男性或留置导尿管者不适用。: Not applicable to men or patients with an indwelling catheter.
+  疑似心衰可测NT-proBNP并按评估安排超声；病情变化时心衰检查不受稳定期重复影像限制。: For suspected heart failure, NT-proBNP and echocardiography
+    may be arranged according to assessment. Testing for a clinical change is not subject to stable-phase
+    repeat-imaging restrictions.
+  疑似急性呼吸道感染，仅为决定是否开抗菌药而安排快速床旁病原学或流感检测；监测、感染控制、季节性抗病毒治疗等其他目的不在此限制内。: Rapid point-of-care pathogen or influenza
+    testing in suspected acute respiratory infection solely to decide on antibiotic prescribing. Other
+    purposes, including surveillance, infection control or seasonal antiviral treatment, are outside this
+    restriction.
+  疑似房颤且发现不规则脉搏时做十二导联心电图确认，有无症状均可；不能因心电图名称扣分。: Confirm suspected atrial fibrillation with an irregular
+    pulse using a twelve-lead ECG, whether symptomatic or not; do not penalise the ECG name.
+  疑似脓毒症在急性医院经评估为高/中风险时可查血气（含血糖、乳酸）、血培养、血常规、CRP、尿素/电解质、肌酐、肝功及凝血；不能把急诊针对新指征的检查当成套餐违规。: For suspected sepsis
+    assessed as high/moderate risk in an acute hospital, testing may include blood gases (including glucose
+    and lactate), blood cultures, full blood count, CRP, urea/electrolytes, creatinine, liver function
+    and coagulation. Do not treat emergency tests for new indications as prohibited blanket testing.
+  疼痛在 72 小时前且无并发症 → 详细评估，并查心电图与肌钙蛋白。: Pain more than 72 hours ago without complications → detailed assessment,
+    ECG and troponin.
+  病历中已记录对该药确认过敏者不适用，按既有过敏记录处理。: Not applicable if a confirmed allergy to this drug is already recorded;
+    follow the existing allergy record.
+  病历中没有他汀不耐受确诊记录者不适用（仅一次肌肉酸痛不算）。: Not applicable without confirmed statin intolerance in the record (a
+    single episode of muscle soreness does not suffice).
+  病历同时确诊哮喘者不适用，按哮喘加重处理。: Not applicable if asthma is also diagnosed in the record; manage as asthma exacerbation.
+  病历已确诊他汀不耐受，LDL-C 仍未达标，需要选择非他汀降脂药。: Confirmed statin intolerance in the record with LDL-C still above
+    target, requiring a non-statin lipid-lowering drug.
+  病历有慢性荨麻疹或湿疹，且本次皮疹形态与既往相同者不适用。: Not applicable if chronic urticaria or eczema is recorded and today's
+    rash has the same morphology as before.
+  病历有慢性酸中毒或酮症酸中毒史者不适用。: Not applicable with recorded chronic acidosis or ketoacidosis.
+  病历有机械瓣膜或中重度二尖瓣狭窄者不适用 DOAC 部分。: The DOAC section does not apply to mechanical heart valves or moderate/severe
+    mitral stenosis.
+  病历有炎症性肠病、乳糜泻或已确诊肠易激综合征者不适用。: Not applicable with recorded inflammatory bowel disease, coeliac disease
+    or confirmed irritable bowel syndrome.
+  病历有甲状腺手术或放射性碘治疗史者不适用。: Not applicable after thyroid surgery or radioiodine treatment.
+  病历确诊偏头痛，且本次发作与既往头痛日记中的发作性质相同者不适用。: Not applicable to confirmed migraine when today's attack matches
+    previous attacks in the headache diary.
+  病历确诊慢阻肺的成人，气促、咳嗽或痰量较平时明显加重，能在门诊处理。: Adults with recorded COPD, with breathlessness, cough or sputum
+    volume clearly worse than usual, suitable for outpatient management.
+  病因: aetiology
+  症状事件，按日期: Symptom events, by date
+  症状在近 3 个月内由亲人去世或重大事件诱发的，先随访 4 周，不立即转介。: If symptoms were triggered by bereavement or a major event within
+    the last 3 months, follow up for 4 weeks before referral.
+  症状日记:症状、起病日、程度、现状: 'Symptom diary: symptom, onset day, severity, current status'
+  症状有明确其他原因或再激发耐受良好者不据此限制加量。: Symptoms with an established alternative cause or good tolerance on rechallenge
+    do not limit escalation under this rule.
+  症状有明确其它原因或再用耐受者不据此限制剂量；一次肌痛主诉不足以确认不耐受。: Symptoms with an established alternative cause or tolerability
+    on re-use do not limit the dose under this rule. One myalgia complaint does not confirm intolerance.
+  症状经过仅按原始记录登记: Symptom course recorded solely from the original record
+  症状缓解后恢复: Restarted after symptoms resolved
+  症状缓解后逐步恢复饮食；有发热或便血时不用止泻药。: Gradually resume diet after symptoms resolve. Do not use antidiarrhoeals
+    with fever or bloody stools.
+  痉挛: spasm
+  痛风: gout
+  痰量增多且变脓，或呼吸困难加重 → 同时用抗生素，按本院抗菌药物处方规程选药。: Increased and purulent sputum, or worsening breathlessness
+    → add antibiotics selected under this clinic's antimicrobial prescribing protocol.
+  登记空腹、实为餐后采血: Recorded as fasting, actually collected after a meal
+  白细胞计数: white blood cell count
+  白细胞计数(WBC): white blood cell count (WBC)
+  白蛋白尿: albuminuria
+  白蛋白尿性肾脏病降压复评: Antihypertensive review in albuminuric kidney disease
+  皮疹: rash
+  皮疹出现在 3 周内接种疫苗之后者不适用。: Not applicable to rash following vaccination within 3 weeks.
+  皮肤一年整体变灰暗(少晒、防晒无效)+ 性欲减退: Progressive generalised grey-dark skin over a year (unaffected by sun avoidance/sunscreen)
+    + reduced libido
+  皮肤疼痛、水疱、脱皮、口眼黏膜受累、面唇肿胀或喘鸣 → 立即转急诊。: Skin pain, blisters, peeling, oral/ocular mucosal involvement, facial/lip
+    swelling or wheeze → emergency department immediately.
+  皮肤黏膜色素沉着加深: Progressive skin and mucosal hyperpigmentation
+  皮质醇增多: hypercortisolism
+  皮质醇线: cortisol component
+  盐负荷等原醛确诊试验: Confirmatory primary aldosteronism tests, e.g. salt loading
+  目前已证实耐受的低剂量未达标时维持最大耐受剂量并加用非他汀药。: If still above target at the lower dose already shown to be tolerated,
+    maintain the maximum tolerated dose and add a non-statin drug.
+  相符因素作用于标注的采血日，影响的是该次采样条件；仅上次受影响而今天标准时无需因旧失真加治，本次受影响时须避开该条件重新采样确认: The matching factor acts on the labelled
+    draw day and affects that sample's conditions. If only the previous sample was affected and today's
+    is standard, do not intensify treatment for the old distortion. If today's is affected, resample without
+    that condition to confirm
+  眼前发黑: My vision goes dark
+  眼睑退缩/凝视、月经稀少: Lid retraction/staring gaze, infrequent menses
+  眼科: ophthalmology
+  着凉后: After getting cold
+  睡够8h仍极度乏力,静息心率56: Extreme fatigue despite 8h sleep, resting heart rate 56
+  睡眠医学科: sleep medicine
+  睡眠呼吸暂停: sleep apnoea
+  短效支气管扩张剂按需加量，教会患者使用间隔装置。: Increase short-acting bronchodilator as needed; teach spacer use.
+  硬皮病: scleroderma
+  确定不耐受 → 用依折麦布（二级预防可直接替代他汀）；二级预防 LDL-C > 2.0 mmol/L 仍未达标 → 加贝派地酸，或转专科评估 PCSK9 抑制剂。: Confirmed intolerance
+    → ezetimibe (may directly replace a statin in secondary prevention). If secondary-prevention LDL-C
+    remains > 2.0 mmol/L and above target → add bempedoic acid or refer for specialist assessment for
+    a PCSK9 inhibitor.
+  确认是发作期：关节红肿热痛，起病在 24 小时内达高峰；一线三选一：NSAID、秋水仙碱或短程口服糖皮质激素，按合并症与合用药物选择。: 'Confirm a flare: a red, swollen,
+    hot, painful joint, reaching peak intensity within 24 hours. Choose one first-line option: NSAID,
+    colchicine or a short course of oral corticosteroids, according to comorbidities and concomitant medication.'
+  确诊他汀不耐受后的降脂方案: Lipid-lowering treatment after confirmed statin intolerance
+  确诊试验(盐负荷等): Confirmatory tests (e.g. salt loading)
+  碱性磷酸酶: alkaline phosphatase
+  磺脲类: sulfonylureas
+  磺脲类/格列奈类药物筛查: Sulfonylurea/glinide screen
+  磺脲类既往最大耐受剂量复评: Review of previously established maximum tolerated sulfonylurea dose
+  社区获得性肺炎: community-acquired pneumonia
+  离子选择电极法: Ion-selective electrode method
+  离心: centrifugation
+  秋水仙碱用于 eGFR 30–59 者，剂量减半，并只用 1 个疗程。: For eGFR 30–59, halve the colchicine dose and give only 1 course.
+  空腹: fasting
+  ? 空腹与标本：空腹血糖应确认至少 8 小时未摄入热量，不能仅按早晨采血或报告登记判断。肌酐比较尤其核对肉类餐；采血后才进食不影响已采标本。检查血清/血浆/指尖全血、采样与离心时间、室温放置、溶血指数和报告备注，并查询采样日期时已生效且覆盖该项目的方法与标本规程。酶法肌酐在有关研究的延迟处理中较稳定，动力学
+    Jaffe 延迟超过 6 小时可升高；本院当前印出的 6 小时规程是既有合成操作映射，不能将 2 小时等待普遍认作肌酐异常，也不能据此宣称所有项目均稳定 6 小时。血糖未及时分离另有糖酵解风险，按其项目文件处理。
+  : 'Fasting and specimens: confirm at least 8 hours without caloric intake for fasting glucose; morning
+    sampling or a fasting label alone does not establish this. For creatinine, specifically check meat
+    intake; eating after collection cannot affect the collected specimen. Check serum/plasma/finger whole
+    blood, collection and centrifugation times, room-temperature storage, haemolysis index and report
+    notes. Consult method and specimen protocols effective on the collection date and covering that analyte.
+    In the relevant delayed-processing studies, enzymatic creatinine was relatively stable, while kinetic
+    Jaffe could rise after more than 6 hours. The current printed local 6-hour policy is an existing synthetic
+    operational mapping; a 2-hour wait does not universally establish abnormal creatinine, nor does this
+    prove every analyte stable for 6 hours. Delayed glucose separation carries a separate glycolysis risk;
+    follow its analyte document.'
+  空腹爬山时: While hiking without eating
+  空腹胰岛素: fasting insulin
+  空腹胰岛素/HOMA-IR: Fasting insulin/HOMA-IR
+  空腹血糖: fasting blood glucose
+  空腹血糖/HbA1c: Fasting glucose/HbA1c
+  空腹血糖/OGTT/HbA1c: Fasting glucose/OGTT/HbA1c
+  空腹血糖6.9 + 入睡困难、情绪低落: Fasting glucose 6.9 + difficulty falling asleep and low mood
+  空腹血糖查出6.9,晚上睡不着,心情也一直很低落: My fasting glucose was 6.9; I cannot sleep at night and have been feeling
+    very low
+  突眼性甲状腺肿: exophthalmic goitre
+  窦性慢心率: sinus bradycardia
+  立即做 12 导联静息心电图，目标 10 分钟内完成；问疼痛特点：持续 > 15 分钟、伴恶心出汗气短、向手臂背部下颌放射、血流动力学不稳。: 'Perform a resting 12-lead ECG
+    immediately, aiming for completion within 10 minutes. Ask about pain features: duration > 15 minutes,
+    nausea/sweating/breathlessness, radiation to arm/back/jaw and haemodynamic instability.'
+  立即安排急诊评估并携带已有记录: arrange emergency assessment immediately and bring existing records
+  第2、3掌指关节晨僵隐痛,热敷护腕无效: Morning stiffness and dull pain in the 2nd and 3rd metacarpophalangeal joints,
+    unrelieved by warm compresses or wrist supports
+  第一次去健身房练腿后: After my first leg workout at the gym
+  类肉瘤病: sarcoidosis
+  粪弹性蛋白酶-1: faecal elastase-1
+  粪弹性蛋白酶-1(胰腺外分泌功能): Faecal elastase-1 (exocrine pancreatic function)
+  糖代谢: glucose metabolism
+  糖代谢线: glucose metabolism component
+  糖化: glycation
+  糖化血红蛋白: glycated haemoglobin
+  糖化血红蛋白（HbA1c）: glycated haemoglobin (HbA1c)
+  糖尿病: diabetes mellitus
+  糖尿病成人线上咨询，有夜间 CGM 记录及是否需要他人协助的问诊。: Adult online diabetes consultation with overnight CGM records and
+    questions about need for assistance from others.
+  糖类抗原19-9: carbohydrate antigen 19-9
+  糖类抗原19-9(CA19-9): carbohydrate antigen 19-9 (CA19-9)
+  糖耐量: glucose tolerance
+  系统性硬化症: systemic sclerosis
+  系统性硬化症(局限皮肤型): systemic sclerosis (limited cutaneous)
+  系统性红斑: systemic erythema
+  系统性红斑狼疮: systemic lupus erythematosus
+  系统性红斑狼疮(SLE): systemic lupus erythematosus (SLE)
+  系统性红斑狼疮(SLE) + 原发性甲状旁腺功能亢进(高钙血症): systemic lupus erythematosus (SLE) + primary hyperparathyroidism (hypercalcaemia)
+  红旗: red flags
+  红肿硬结,护肤/外用无明显效: Red, swollen indurations; no significant benefit from skin care/topical treatment
+  组织转谷氨酰胺酶 IgA 抗体: tissue transglutaminase IgA antibodies
+  组织转谷氨酰胺酶IgA抗体(tTG-IgA): tissue transglutaminase IgA antibodies (tTG-IgA)
+  细菌感染处方疗程: Prescription course for bacterial infection
+  经阴道超声(PCOM)或AMH: Transvaginal ultrasound (PCOM) or AMH
+  结构化用药审查：降压药、利尿剂、镇静催眠药、降糖药，评估能否减量或停用。: 'Structured medication review: assess reduction or discontinuation
+    of antihypertensives, diuretics, sedatives/hypnotics and glucose-lowering drugs.'
+  结节病: sarcoidosis
+  维生素B12缺乏(亚急性联合变性): vitamin B12 deficiency (subacute combined degeneration)
+  维生素B12缺乏(亚急性联合变性) + 多囊卵巢综合征(PCOS): vitamin B12 deficiency (subacute combined degeneration) + polycystic
+    ovary syndrome (PCOS)
+  维生素B12缺乏(亚急性联合变性) + 成人隐匿性自身免疫糖尿病(LADA): vitamin B12 deficiency (subacute combined degeneration) + latent
+    autoimmune diabetes in adults (LADA)
+  维生素B12缺乏(亚急性联合变性) + 糖尿病: vitamin B12 deficiency (subacute combined degeneration) + diabetes mellitus
+  维生素b12: vitamin b12
+  缬沙坦: valsartan
+  缺铁性贫血: iron deficiency anaemia
+  缺铁性贫血（消化道慢性失血）: iron deficiency anaemia (chronic gastrointestinal blood loss)
+  老年: older adults
+  老年人跌倒后的评估: Assessment after a fall in an older adult
+  老觉得累,上楼腿软,一活动更重,指头麻麻的: I keep feeling tired, my legs are weak on stairs, activity makes it worse and
+    my fingers tingle
+  联系门诊预约常规随访，携带原报告及本次症状记录供复评: contact the clinic for routine follow-up and bring original reports and
+    today's symptom record for reassessment
+  肉样瘤病: sarcoidosis
+  肉类餐: meat meal
+  肉类餐窗口、本院相邻报告选择、来源判读与方法参照属于既有合成操作约定，保留临床复核标记，不新增判分阈值或接受集合。: The meat-meal window, local adjacent-report
+    selection, source interpretation and method reference are existing synthetic operational conventions.
+    Retain clinical review flags; add no scoring thresholds or acceptance sets.
+  ? 肉类餐：熟肉带入的肌酐可使血肌酐在餐后数小时升高。Nair 等在 1、2、4 小时取样，12 小时空腹后效应消失；Preiss 等在 1–2 小时观察到升高，后续研究酶法均值峰在 2 小时。NICE
+    NG203 1.1.4 建议 eGFR 肌酐采血前 12 小时不吃肉。本院既有记录读者保守核对餐后 1–24 小时的可能暴露，这是合成判读范围，非文献证明效应持续到 24 小时；本批实际近期肉类餐在
+    1–4 小时，前两日的餐在范围外，未使用这一区间边界出题。上次餐后高而本次标准采样可表现为下降。复查前记录实际食物、日期、时刻，不只采信空腹标签。
+  : 'Meat meals: creatinine from cooked meat may raise serum creatinine for several hours after eating.
+    Nair et al. sampled at 1, 2 and 4 hours; the effect disappeared after a 12-hour fast. Preiss et al.
+    observed increases at 1–2 hours; a later study found an enzymatic mean peak at 2 hours. NICE NG203
+    1.1.4 advises no meat for 12 hours before an eGFR creatinine draw. The existing local record reader
+    conservatively checks possible exposure 1–24 hours after meals. This synthetic interpretation window
+    is not evidence that the effect lasts 24 hours. In this batch, actual recent meat meals occurred 1–4
+    hours before collection; meals two days earlier lie outside the window, and its boundary was not used
+    to construct questions. A previous post-meal high followed by standard sampling today may appear as
+    a fall. Record actual food, date and time before retesting; do not rely only on the fasting label.'
+  肌无力: muscle weakness
+  肌痛: myalgia
+  肌红蛋白: myoglobin
+  肌肉: muscle
+  肌肉损伤: muscle injury
+  肌肉症状已查明有其他原因（甲减、剧烈运动、药物相互作用）者不适用。: Not applicable if another cause of muscle symptoms is established
+    (hypothyroidism, strenuous exercise, drug interaction).
+  肌肉痛: muscle pain
+  肌肉酸痛: muscle soreness
+  肌肉酸痛、乏力: Muscle soreness and fatigue
+  肌肉酸痛乏力: muscle soreness and weakness
+  肌肉酸痛，停用: muscle soreness; discontinued
+  肌肉酸痛，减量: Muscle soreness; dose reduced
+  肌肉酸痛，暂停: Muscle soreness; held
+  肌酐: creatinine
+  肌酐Jaffe与酶法不同且适用患者标本比对支持差异；不假定所有Jaffe恒高或恒差固定百分比。: Different creatinine methods, Jaffe and enzymatic,
+    with an applicable patient-sample comparison supporting the difference. Do not assume all Jaffe readings
+    are higher or differ by a fixed percentage.
+  肌酐方法切换及适用患者标本比对差异: creatinine method switch and applicable patient-sample comparison difference
+  肌酐检测方法 Jaffe 法与酶法互换: Switch between Jaffe and enzymatic creatinine methods
+  肌酸激酶: creatine kinase
+  肌酸激酶(CK): creatine kinase (CK)
+  肝: liver
+  肝病科: hepatology
+  肝胆生化(ALP/GGT/总胆红素): Hepatobiliary biochemistry (ALP/GGT/total bilirubin)
+  肝脏弹性成像(VCTE/必要时MRE): Liver elastography (VCTE/MRE if needed)
+  肝酶超过正常上限 3 倍的，先查肝病原因，再决定是否使用依折麦布。: If liver enzymes exceed 3 times the upper limit of normal, investigate
+    liver disease before deciding on ezetimibe.
+  肝铁定量MRI: Liver iron quantification by MRI
+  肝铁定量MRI/活检: Liver iron quantification by MRI/biopsy
+  肢端肥大: acromegaly
+  肢端肥大症: acromegaly
+  肾: kidney
+  肾上腺CT/AVS: Adrenal CT/AVS
+  肾上腺影像及分侧取血评估: Adrenal imaging and lateralisation by venous sampling
+  肾上腺皮质功能减退: adrenal insufficiency
+  肾上腺皮质线: adrenal cortical component
+  肾上腺线: adrenal component
+  肾上腺结构影像评估: Structural adrenal imaging assessment
+  肾上腺髓质线: adrenal medullary component
+  肾内科: nephrology
+  肾内科/心内科: nephrology/cardiology
+  肾功能: renal function
+  肾功能下降: declining renal function
+  肾功能不全: renal impairment
+  肾功能和血钾: renal function and serum potassium
+  肾功能恶化: worsening renal function
+  肾功能或白蛋白尿异常持续至少三个月: Abnormal renal function or albuminuria persisting for at least three months
+  肾损: kidney injury
+  肾病: kidney disease
+  肾盂肾炎: pyelonephritis
+  肾结石发作/镜下血尿: Renal colic/microscopic haematuria
+  肾脏受累: renal involvement
+  肾脏线: renal component
+  肾脏超声: Renal ultrasound
+  肾脏超声/尿钙: Renal ultrasound/urinary calcium
+  肾脏超声/尿钙(必要时:评估并发症与与FHH鉴别): 'Renal ultrasound/urinary calcium (if needed: complications and differentiation
+    from FHH)'
+  肾脏超声及尿钙评估: Renal ultrasound and urinary calcium assessment
+  胃出口机械性梗阻检查: Investigation for mechanical gastric outlet obstruction
+  胃排空延迟: delayed gastric emptying
+  胃肠道不适，停用: gastrointestinal symptoms; discontinued
+  胃肠道不适，减量: Gastrointestinal symptoms; dose reduced
+  胃肠道不适，暂停: Gastrointestinal symptoms; held
+  胃肠道丢失: gastrointestinal loss
+  胃肠道反应明显，减量: Significant gastrointestinal adverse effects; dose reduced
+  胃肠道反应明显，暂停: Significant gastrointestinal adverse effects; held
+  胃轻瘫: gastroparesis
+  胃轻瘫(胃排空延迟): gastroparesis (delayed gastric emptying)
+  胃轻瘫或 GLP-1 相关胃排空延迟: gastroparesis or GLP-1-related delayed gastric emptying
+  胃镜+结肠镜: Gastroscopy + colonoscopy
+  胃镜及结肠镜: Gastroscopy and colonoscopy
+  胆囊及胆道超声: Gallbladder and biliary ultrasound
+  胆囊结石: gallbladder stones
+  胆囊结石及局部炎症的超声评估: Ultrasound assessment of gallbladder stones and local inflammation
+  胆石症: cholelithiasis
+  胆石症或急性胆囊炎: cholelithiasis or acute cholecystitis
+  胰岛素: insulin
+  胰岛素抗体: insulin antibodies
+  胰岛素抵抗: insulin resistance
+  胰岛素样生长因子-1: insulin-like growth factor-1
+  胰岛素瘤: insulinoma
+  胰岛素瘤(内源性高胰岛素性): insulinoma (endogenous hyperinsulinaemic)
+  胰岛素瘤(内源性高胰岛素性低血糖): insulinoma (endogenous hyperinsulinaemic hypoglycaemia)
+  胰岛素自身抗体: insulin autoantibodies
+  胰岛自身免疫线: islet autoimmunity component
+  胰腺增强CT或MRI/MRCP: Contrast-enhanced pancreatic CT or MRI/MRCP
+  胰腺外分泌肿瘤: exocrine pancreatic tumour
+  胰腺外分泌肿瘤相关新发糖尿病: new-onset diabetes associated with an exocrine pancreatic tumour
+  胰腺定位检查: Pancreatic localisation investigations
+  胰腺影像与急性炎症相符的改变: Pancreatic imaging changes consistent with acute inflammation
+  胰腺癌相关糖尿病: pancreatic cancer-associated diabetes
+  胸痛: chest pain
+  胸痛明确由外伤或带状疱疹引起者不适用。: Not applicable if chest pain is clearly due to trauma or herpes zoster.
+  胸部X线: Chest X-ray
+  胸部影像新局灶浸润: New focal infiltrate on chest imaging
+  胸部高分辨率CT: High-resolution chest CT
+  胸部高分辨率CT + 肺功能(DLCO): High-resolution chest CT + pulmonary function (DLCO)
+  脂肪性肝病伴进展期纤维化: steatotic liver disease with advanced fibrosis
+  脂肪酶: lipase
+  脊柱关节炎: spondyloarthritis
+  脚后跟一踩地就疼,跟腱靠近脚跟那里一按也疼,歇着不见好: My heel hurts when it touches the ground and where the Achilles tendon
+    joins it is tender; rest does not help
+  脱水: dehydration
+  脱水相关急性肾损伤: dehydration-related acute kidney injury
+  腰下面疼得晚上加重,早晨僵硬超过一小时,走动起来反而好点: My lower back hurts worse at night and stays stiff for over an hour in
+    the morning, but walking helps
+  腰部酸痛: Lower back pain
+  腹泻: diarrhoea
+  腹部CT/MRI: Abdominal CT/MRI
+  腹部CT或MRI肾上腺占位评估: Assessment for an adrenal mass by abdominal CT or MRI
+  腿软: Leg weakness
+  臀部里面酸疼,左右轮着来,坐得久就加重: It aches deep in my buttocks, alternating sides and worse the longer I sit
+  自身免疫分型: autoimmune subtype
+  自身免疫糖尿病: autoimmune diabetes
+  自身免疫线: autoimmune component
+  至少一项给出了必要性理由: gives a necessity rationale for at least one investigation
+  至少每年评估一次抗凝的必要性与质量，并写入病历。: Assess the need for and quality of anticoagulation at least annually and document
+    this in the record.
+  舌头发红光滑: A red, smooth tongue
+  舌炎: glossitis
+  舒张后肺功能持续气流阻塞: Persistent airflow obstruction on post-bronchodilator spirometry
+  良性: benign
+  艾迪生: Addison disease
+  若本次疑似房颤并发现不规则脉搏，安排十二导联心电图确认。: If atrial fibrillation is suspected with an irregular pulse today, arrange
+    a twelve-lead ECG to confirm.
+  药疹: drug eruption
+  葡萄糖: glucose
+  蛋白尿: proteinuria
+  血/24h尿 甲氧基肾上腺素类(metanephrines): Blood/24h urine metanephrines
+  血β-羟丁酸: Blood β-hydroxybutyrate
+  血压三药联用仍≈148/95难控: Blood pressure still ≈148/95 despite three drugs
+  血压未达标，加量: Blood pressure above target; dose increased
+  血小板计数: platelet count
+  血尿: haematuria
+  血常规MCV: Full blood count with MCV
+  血沉: erythrocyte sedimentation rate
+  血浆总同型半胱氨酸: total plasma homocysteine
+  血浆游离甲氧基肾上腺素: plasma free metanephrine
+  血浆肾素活性: plasma renin activity
+  血浆醛固酮: plasma aldosterone
+  血液/神经线: haematological/neurological component
+  血液检验报告的比较与采样条件核对: Blood test report comparison and sampling-condition check
+  血液科: haematology
+  血液科/神经内科: haematology/neurology
+  血清ACE·可溶性IL-2受体: Serum ACE · soluble IL-2 receptor
+  血清ACE及可溶性IL-2受体: Serum ACE and soluble IL-2 receptor
+  血清tTG-IgA + 总IgA(除外IgA缺乏): Serum tTG-IgA + total IgA (exclude IgA deficiency)
+  血清总IgA: total serum IgA
+  血清甲基丙二酸: serum methylmalonic acid
+  血清维生素B12: serum vitamin B12
+  血清肌酐: serum creatinine
+  血清脂肪酶: serum lipase
+  血清钙: serum calcium
+  血清钠: serum sodium
+  血清钾: serum potassium
+  血清铁蛋白: serum ferritin
+  血清铁蛋白·25-羟维生素D·骨密度: Serum ferritin · 25-hydroxyvitamin D · bone mineral density
+  血甘油三酯(TG): Blood triglycerides (TG)
+  血糖: blood glucose
+  血糖 ≥ 4.0 mmol/L 且症状缓解后，补充一份可持续升糖的食物（饼干、三明治）；记录诱因，并通知开具降糖药的医生复核方案。: Once blood glucose is ≥ 4.0 mmol/L
+    and symptoms resolve, give longer-acting carbohydrate (biscuits, sandwich). Record the precipitant
+    and notify the glucose-lowering prescriber to review treatment.
+  血糖失控: uncontrolled blood glucose
+  血糖控制不佳: poor glycaemic control
+  血糖未达标，加量: Blood glucose above target; dose increased
+  血糖评估: Glucose assessment
+  血红蛋白: haemoglobin
+  血胰岛素: Blood insulin
+  血脂: lipids
+  血脂四项(TC/TG/HDL-C/LDL-C): Lipid panel (TC/TG/HDL-C/LDL-C)
+  血脂异常: dyslipidaemia
+  血脂异常治疗: Treatment for dyslipidaemia
+  血脂未达标，加量: Lipids above target; dose increased
+  血色病: haemochromatosis
+  血色病(铁过载): haemochromatosis (iron overload)
+  血钙(校正): Blood calcium (corrected)
+  血钙·24h尿钙·1,25-(OH)2D: Blood calcium · 24h urinary calcium · 1,25-(OH)2D
+  血钾: serum potassium
+  血钾达到 6.0 mmol/L 的处理须先核对已停用其他可能升钾的药；肌酐变化须排查容量不足和合并药物等原因。: For potassium reaching 6.0 mmol/L, first check
+    that other drugs that may raise potassium have been stopped. For a creatinine change, assess volume
+    depletion, concomitant drugs and other causes.
+  补体C3: complement C3
+  补体C3/C4: Complement C3/C4
+  补体C4: complement C4
+  补液: fluid replacement
+  被调整的药: Drug being adjusted
+  被调整的药所治疗的疾病: Condition treated by the drug being adjusted
+  裁判模型与生成侧模型分开维护;换裁判模型是一次口径变更,新旧读数不并排。: The judge model is maintained separately from generation-side
+    models. Changing the judge changes the assessment standard; do not compare old and new measurements
+    side by side.
+  规程文本，按日期: Protocol text, by date
+  规范固体餐胃排空延迟: Delayed gastric emptying on a standard solid-meal study
+  记录皮疹形态、分布、起病距新药的天数，以及有无发热、黏膜受累、水疱。: Record rash morphology, distribution, days since the new drug started,
+    and the presence or absence of fever, mucosal involvement or blisters.
+  记忆减退: memory impairment
+  记忆减退、情绪改变: Memory impairment, mood changes
+  设备记录，按日期: Device record, by date
+  评估脱水：口干、尿少色深、站立头晕，站立收缩压较卧位降 ≥ 20 mmHg；便血、体温 ≥ 38.5 ℃、剧烈腹痛或病程 > 7 天 → 当日就诊并送粪便检查。 轻度脱水：口服补液盐，每次稀便后补 200–250 mL，少量多次。: 'Assess
+    dehydration: dry mouth, reduced dark urine, postural dizziness, standing systolic pressure fall ≥
+    20 mmHg from supine. Bloody stools, temperature ≥ 38.5 ℃, severe abdominal pain or duration > 7 days
+    → same-day medical review and stool testing. Mild dehydration: oral rehydration salts, 200–250 mL
+    after each loose stool, in frequent small amounts.'
+  诊室内清醒、能吞咽的成人，指尖血糖 < 3.9 mmol/L。: Conscious adults in the clinic, able to swallow, with capillary glucose
+    < 3.9 mmol/L.
+  诊室处置: in-clinic management
+  试剂批号差异及适用患者标本比对偏移: reagent lot difference and applicable patient-sample comparison offset
+  试剂批间比对: Between-lot reagent comparison
+  询问出血、黑便、跌倒与漏服；高血压控制不佳者同步处理。: Ask about bleeding, melaena, falls and missed doses; address poorly controlled
+    hypertension at the same time.
+  该药的剂量阶梯: Dose ladder for this drug
+  说明: Description
+  谷丙转氨酶: alanine aminotransferase
+  谷氨酸脱羧酶抗体: glutamic acid decarboxylase antibodies
+  谷草转氨酶: aspartate aminotransferase
+  赖诺普利: lisinopril
+  走路脚跟落地就痛,跟腱连脚跟处按着也痛,休息不减: My heel hurts when I step down, the Achilles attachment is tender and rest
+    does not help
+  起始或调整后 3 个月复查血脂。: Repeat lipids 3 months after initiation or adjustment.
+  起用/调整降脂药后2至3个月查完整血脂及转氨酶；稳定一级预防可考虑年度血脂，二级预防提供年度血脂。不把年度血脂当硬性最短间隔，有疗效/依从/换药等指征可早查。: Check a full lipid
+    profile and transaminases 2 to 3 months after starting/changing lipid-lowering drugs. Consider annual
+    lipids in stable primary prevention and offer annual lipids in secondary prevention. Annual review
+    is not a hard minimum interval; response, adherence or drug changes may justify earlier testing.
+  起身时头晕、眼前发黑: I feel dizzy and my vision goes dark when I stand up
+  足跟着地痛与跟腱止点压痛,休息不缓解: Heel pain on weight-bearing and Achilles insertion tenderness, unrelieved by rest
+  跌倒: fall
+  跌倒时有短暂意识丧失者，同时按晕厥规程评估心律与直立性血压，不只做跌倒评估。: If transient loss of consciousness occurred during the fall,
+    assess rhythm and orthostatic blood pressure under the syncope protocol as well; do not limit assessment
+    to falls.
+  跑完半程马拉松后: After running a half-marathon
+  跨规程仍按条款 R0、R1、R2、R3a、R3b、R3c、R3、R4、R5、R6、R7a、R7、R8、R9、R10、R11、R12、R13、R14 顺序，第一条符合者决定。: Across protocols,
+    apply R0, R1, R2, R3a, R3b, R3c, R3, R4, R5, R6, R7a, R7, R8, R9, R10, R11, R12, R13, R14 in that
+    order; the first matching rule decides.
+  踝部水肿，停用: ankle oedema; discontinued
+  踝部水肿，减量: Ankle oedema; dose reduced
+  踝部水肿，暂停: Ankle oedema; held
+  蹲下站起来眼前发黑、要扶一下: My vision goes dark when I stand from a squat and I need to hold on to something
+  转介: referral
+  转诊: referral
+  转铁蛋白饱和度: transferrin saturation
+  辛伐他汀: simvastatin
+  达格列净 10 mg 每日（肾内科处方）: dapagliflozin 10 mg daily (nephrology prescription)
+  达诊断阈值: diagnostic threshold met
+  过敏: allergy
+  近 2 周有境外旅行史者，病程 > 3 天即送粪便检查。: With overseas travel in the last 2 weeks, send stool tests if symptoms
+    last > 3 days.
+  近 2 周有自伤或自杀想法者不适用，当日转精神科急诊评估。: Not applicable with thoughts of self-harm or suicide in the last 2 weeks;
+    arrange same-day emergency psychiatric assessment.
+  近 3 个月 eGFR < 30 或血钾 > 5.5 mmol/L 者不适用。: Not applicable with eGFR < 30 or potassium > 5.5 mmol/L in
+    the last 3 months.
+  近 3 个月 eGFR < 45 者不适用呋喃妥因部分，改用其他一线药。: The nitrofurantoin section does not apply with eGFR < 45 in the
+    last 3 months; use another first-line drug.
+  近 3 个月内有急性疾病住院者，先在恢复后复测，不适用本表。: After hospitalisation for acute illness in the last 3 months, repeat
+    testing after recovery; this table does not apply.
+  近 3 个月用过甲氧苄啶或有耐药史者，不选甲氧苄啶，改用呋喃妥因。: If trimethoprim was used in the last 3 months or resistance is recorded,
+    choose nitrofurantoin instead.
+  近 6 个月 INR 有 2 次 > 5 或 1 次 > 8，或 2 次 < 1.5 → 重新评估抗凝方案。: In the last 6 months, INR > 5 on 2 occasions,
+    > 8 on 1 occasion, or < 1.5 on 2 occasions → reassess anticoagulation.
+  近 6 个月 INR 达标时间比例（TTR）< 65% → 同样重新评估抗凝方案。: Time in therapeutic range (TTR) < 65% over the last 6 months
+    → also reassess anticoagulation.
+  近 7 天内有急性肾损伤（肌酐较基线升高 ≥ 50%）者不适用，先处理肾损伤。: Not applicable with acute kidney injury in the last 7 days
+    (creatinine ≥ 50% above baseline); manage kidney injury first.
+  近 7 天有活动性出血者不适用，走出血处理。: Not applicable with active bleeding in the last 7 days; use the bleeding pathway.
+  ? 近 7 晚仅 1 晚 CGM 最低值 < 3.0 mmol/L（2 级）也需核实低值与诱因、由医生复评降糖方案；不能当作无关异常。若第一条命中的去向为常规复诊或居家观察，则本院接受 24 小时内评估或常规复诊并及时复评方案，不接受仅居家观察；先前更紧急的条款不被降级。
+  : Even 1 of the last 7 nights with CGM minimum < 3.0 mmol/L (level 2) requires verification of the low
+    reading and precipitants and clinician review of glucose-lowering treatment; it cannot be dismissed
+    as unrelated. If the first matching disposition is routine follow-up or observation at home, this
+    clinic accepts assessment within 24 hours or routine follow-up with prompt treatment review, but not
+    observation at home alone. Earlier, more urgent rules are not downgraded.
+  近三个月口渴多尿,单位体检发现血糖高: Thirst and polyuria for three months; high glucose found at a workplace health check
+  近期医生起用长效全身糖皮质激素后血糖升高，停用后回落；局部用药或两次前已停用的短程不作用。: Glucose rises after recent clinician initiation of a
+    long-acting systemic corticosteroid and falls after discontinuation. Topical treatment or a short
+    course stopped before both draws has no effect.
+  近期更换过抗菌药或抗真菌药的华法林患者，在换药后 3–5 天加查一次 INR。: For warfarin patients with a recent antibiotic or antifungal
+    change, add an INR check 3–5 days after the change.
+  近期生物素摄入与本次敏感测定方法: recent biotin intake with the current susceptible assay method
+  这些家族无独立、普遍适用且已核实的检查禁止清单；仅在可见慢病或实际用药匹配上述登记时出precision。NG120的抗菌药不推荐不能转译为检查禁令；低风险无症状心脏筛查条款也不能套到风险未建立者。: These
+    families have no separate, universally applicable verified investigation prohibition list. Derive
+    precision only when visible chronic disease or actual medication matches the registrations above.
+    NG120 antibiotic non-recommendations cannot be converted into test prohibitions; low-risk asymptomatic
+    cardiac screening rules cannot be applied without established risk status.
+  进行性乏力: progressive fatigue
+  进行性乏力、消瘦: Progressive fatigue and weight loss
+  连喝两杯浓咖啡后: After two strong coffees in succession
+  连续两天爬山后: After hiking on two consecutive days
+  送检延迟、未及时离心: Delayed transport, not centrifuged promptly
+  选 NSAID 的，同时加用质子泵抑制剂保护胃；NSAID、秋水仙碱、口服激素都不能用或无效 → 关节腔或肌肉注射糖皮质激素。: With an NSAID, add a proton pump inhibitor
+    for gastric protection. If NSAIDs, colchicine and oral corticosteroids are all contraindicated or
+    ineffective → intra-articular or intramuscular corticosteroid.
+  逐日对照原处方及加量前后原始化验，并查减量或停药后的恢复和目前低剂量耐受记录。: Compare original prescriptions and laboratory reports before/after
+    escalation by day; check recovery after reduction or withdrawal and current lower-dose tolerability.
+  遇冷时手指先发白、继而发紫、复温后潮红,伴麻痛: Fingers turn white then blue in the cold, flushing on rewarming, with numbness
+    and pain
+  遗传性: hereditary
+  遗传性血色病: hereditary haemochromatosis
+  遗传性血色病(铁过载): hereditary haemochromatosis (iron overload)
+  避免长期使用苯二氮䓬类，单次处方不超过 2 周；4 周后复评 GAD-7 与睡眠日记；无改善再转精神科。: Avoid long-term benzodiazepines; each prescription
+    must not exceed 2 weeks. Reassess GAD-7 and the sleep diary after 4 weeks; refer to psychiatry if
+    unimproved.
+  酶法: Enzymatic method
+  酶法（GPO-PAP）: Enzymatic method (GPO-PAP)
+  酶法（肌氨酸氧化酶法）: Enzymatic method (sarcosine oxidase)
+  醛固酮: aldosterone
+  醛固酮/肾素比值(ARR): Aldosterone/renin ratio (ARR)
+  采血前熟肉摄入: cooked meat intake before sampling
+  采血前状态或标本条件改变: change in pre-draw state or specimen conditions
+  采血前近期高强度抗阻运动: recent high-intensity resistance exercise before sampling
+  采血前进食熟肉: Cooked meat eaten before blood draw
+  采血管类型（促凝血清管或肝素锂抗凝血浆管）: Collection tube type (serum clot-activator or lithium heparin anticoagulated
+    plasma tube)
+  采血间新发发热感染应激或恢复有病程支持；已恢复的旧感染不解释本次血糖变化。: New febrile infection-related stress or recovery between draws
+    must be documented in the course. An old resolved infection does not explain the current glucose change.
+  重性抑郁障碍: major depressive disorder
+  针刺感: pins and needles
+  针对疑似心衰按临床评估需要查NT-proBNP。: Check NT-proBNP for suspected heart failure as clinically indicated.
+  钙通道阻滞剂单药后血压未达标的加药: Adding medication when blood pressure remains above target on CCB monotherapy
+  钴胺: cobalamin
+  钾: potassium
+  钾报告游离血红蛋白超过该方法已验证界限；正常指数或其它项目不据此判断钾释放。: Free haemoglobin on the potassium report exceeds that method's
+    validated limit. A normal index or a different analyte does not establish potassium release.
+  铁过载: iron overload
+  长期口服抗凝治疗的随访: Follow-up of long-term oral anticoagulation
+  门诊: outpatient care
+  门诊处理：泼尼松龙 30 mg 每日 1 次，共 5 天，尽早开始。: 'Outpatient treatment: start prednisolone 30 mg 1 dose daily for
+    5 days as early as possible.'
+  门诊复查病程记录，按就诊日期: Outpatient follow-up progress notes, by encounter date
+  门诊复诊记录: Outpatient follow-up record
+  门诊用药核对记录，按日期: Outpatient medication reconciliation, by date
+  门诊疑似心源性急性胸痛的处置: Management of suspected acute cardiac chest pain in outpatients
+  门诊病程与患者自述记录，按就诊日期: Outpatient progress notes and patient statements, by encounter date
+  门诊病程记录，按就诊日期: Outpatient progress notes, by encounter date
+  门诊病程，按就诊日期: Outpatient course, by encounter date
+  门诊病程，按日期: Outpatient course, by date
+  门诊记录FT4与TSH相符的甲状腺炎甲减阶段或恢复；没有病程/伴随结果不得仅用TSH差值命名。: Outpatient records document the hypothyroid phase of
+    thyroiditis or recovery, with concordant FT4 and TSH. Do not name this source from the TSH difference
+    alone without a clinical course/accompanying results.
+  问头晕性质；有旋转性眩晕的做 Dix–Hallpike 手法。: Clarify the dizziness; perform the Dix–Hallpike manoeuvre for rotational
+    vertigo.
+  问清跌倒经过、受伤部位，以及能否自行起身；有骨折或畸形体征先做影像。: Ask how the fall occurred, sites of injury and ability to get up
+    independently; image first if there are signs of fracture or deformity.
+  问红旗：发热伴头痛加重、5 分钟内达到最痛、新出现的神经功能缺损、认知或人格改变、意识受损、3 个月内头部外伤。: 'Ask about red flags: worsening headache with
+    fever, maximum pain within 5 minutes, new neurological deficit, cognitive/personality change, impaired
+    consciousness or head injury within 3 months.'
+  问诊复核与对症观察评估: Symptom review and symptomatic observation assessment
+  问诊记录，按日期: Interview record, by date
+  问诊：咳嗽气促、尿频尿痛、腹泻、皮疹、颈部僵硬、新出现的意识改变；有颈部僵硬或新出现的意识改变 → 转急诊处理。: Ask about cough/breathlessness, urinary frequency/dysuria,
+    diarrhoea, rash, neck stiffness and new altered consciousness; neck stiffness or new altered consciousness
+    → emergency department.
+  阈值与排除其他原因来自 NICE/SPS；本次不再恢复已确认不耐受的更高剂量沿用既有本院映射，肌酐恰为30%的边界不扩展既有判据。: Thresholds and exclusion of other
+    causes come from NICE/SPS. Not restoring a confirmed intolerable higher dose today follows the existing
+    local mapping; the existing criterion is not extended to a creatinine change of exactly 30%.
+  阵发性剧烈头痛 + 心悸 + 大汗三联: Paroxysmal severe headache + palpitations + profuse sweating
+  阻塞性睡眠呼吸暂停: obstructive sleep apnoea
+  阻塞性睡眠呼吸暂停(OSA): obstructive sleep apnoea (OSA)
+  阻塞性睡眠呼吸暂停(OSA) + 原发性甲状旁腺功能亢进(高钙血症): obstructive sleep apnoea (OSA) + primary hyperparathyroidism (hypercalcaemia)
+  阻塞性睡眠呼吸暂停(OSA) + 成人隐匿性自身免疫糖尿病(LADA): obstructive sleep apnoea (OSA) + latent autoimmune diabetes in
+    adults (LADA)
+  阻塞性睡眠呼吸暂停(OSA) + 早期2型糖尿病/胰岛素抵抗: obstructive sleep apnoea (OSA) + early type 2 diabetes/insulin resistance
+  阻塞性睡眠呼吸暂停(OSA) + 糖尿病: obstructive sleep apnoea (OSA) + diabetes mellitus
+  阻塞性睡眠呼吸暂停(OSA) + 系统性红斑狼疮(SLE): obstructive sleep apnoea (OSA) + systemic lupus erythematosus (SLE)
+  阿托伐他汀: atorvastatin
+  阿托伐他汀（他汀类，口服）: atorvastatin (statin, oral)
+  阿莫西林克拉维酸: amoxicillin/clavulanic acid
+  降压药: antihypertensives
+  降脂治疗12个月的转氨酶检查完成后，无新临床指征不再重复；起用/换药/调剂量后2至3个月及12个月检查、已知肝病/异常结果的监测除外，不能仅因写肝功扣分。: After the 12-month transaminase
+    check on lipid-lowering treatment, do not repeat without a new clinical indication. Checks 2 to 3
+    months and 12 months after initiation/switch/dose adjustment, and monitoring for known liver disease
+    or abnormal results, are exceptions. Do not penalise the liver function name alone.
+  院内诊疗文档: Clinic clinical documents
+  院内诊疗文档，按日期: Clinic clinical documents, by date
+  随访: follow-up
+  随访复查: follow-up testing
+  随访复查变化的下一步处置: Next steps for changes on follow-up testing
+  随访门诊记录: Follow-up clinic record
+  隔天拉稀、肚子隐隐胀: I have loose stools on alternate days and a mild bloated feeling
+  难治高血压: resistant hypertension
+  难治高血压,严格低盐+三联降压仍≈146/96: Resistant hypertension, still ≈146/96 despite strict salt restriction and triple
+    antihypertensive therapy
+  雷米普利: ramipril
+  青铜: bronze pigmentation
+  静息气促严重、发绀、意识受损、新出现外周水肿或独居无法自理者不适用，直接转院。: Not applicable with severe breathlessness at rest, cyanosis,
+    impaired consciousness, new peripheral oedema or living alone and unable to self-care; transfer directly
+    to hospital.
+  静脉注射碘造影剂前 eGFR 30–60 者停药，48 小时后复查肾功能再恢复；每年至少查 1 次 eGFR；有肾病或高龄者每 6 个月查 1 次。: With eGFR 30–60, hold before
+    intravenous iodinated contrast and restart after checking renal function at 48 hours. Check eGFR at
+    least 1 time annually; with kidney disease or advanced age, 1 time every 6 months.
+  静脉血（促凝血清管）: Venous blood (serum clot-activator tube)
+  静脉血（肝素锂抗凝血浆管）: Venous blood (lithium heparin anticoagulated plasma tube)
+  非妊娠成年女性下尿路感染的处理: Management of lower UTI in non-pregnant adult women
+  非妊娠成年女性，有尿频、尿痛症状，无发热、腰痛。: Non-pregnant adult women with frequency and dysuria, without fever or flank
+    pain.
+  非意愿体重明显下降: Significant unintentional weight loss
+  非意愿消瘦 + 心悸、手抖: Unintentional weight loss + palpitations, hand tremor
+  非诺贝特: fenofibrate
+  面容变粗、鼻唇增厚、多汗: Coarsened facial features, thickened nose/lips and sweating
+  面诊评估下呼吸道感染后，如仍不清楚是否需抗菌药，可查CRP辅助决定。: After in-person assessment of lower respiratory infection, CRP may
+    aid the decision if antibiotic need remains unclear.
+  面部蝶形红斑、光敏: Facial butterfly rash, photosensitivity
+  鞋码/戒指变大、手足增大: Increased shoe/ring size, enlarged hands and feet
+  页面首段与「When to get medical help」: Opening paragraph and "When to get medical help"
+  顽固便秘,增纤维+益生菌无效: Refractory constipation, unrelieved by added fibre and probiotics
+  预检: initial triage
+  颈后天鹅绒样发黑增厚,去角质一周无效: Velvety darkening and thickening of the posterior neck, unrelieved by a week of
+    exfoliation
+  颈后对称发黑增厚、去角质无效: Symmetric darkening and thickening of the posterior neck, unaffected by exfoliation
+  风湿免疫科: rheumatology
+  食管测压或钡餐: Oesophageal manometry or barium study
+  食管测压或钡餐评估: Oesophageal manometry or barium study
+  餐后明显困倦 + 口渴、多尿感: Marked postprandial drowsiness + thirst and increased urination
+  饥饿感: hunger
+  饭前心慌手抖、出冷汗，吃点东西就好: Before meals my heart races, my hands shake and I break into a cold sweat; eating
+    helps
+  饭后肚子胀、大便不成形: My stomach bloats after meals and my stools are loose
+  饮食记录，按登记日期: Diet record, by registration date
+  饿: hungry
+  首次 TSH 升高后 3 个月复测 TSH 与游离 T4，排除一过性升高；可查一次甲状腺过氧化物酶抗体（TPOAb），不重复查。: Repeat TSH and free T4 3 months after
+    the first elevated TSH to exclude a transient rise. TPOAb may be measured once; do not repeat it.
+  验光度数没变却视物时清时糊(甜食后加重): Intermittently blurred vision despite unchanged refraction (worse after sweets)
+  骨痛: bone pain
+  骨盆正位X线: AP pelvic X-ray
+  骶髂关节MRI: Sacroiliac joint MRI
+  骶髂关节MRI(脂肪抑制序列): Sacroiliac joint MRI (fat-suppressed sequences)
+  高密度脂蛋白胆固醇: high-density lipoprotein cholesterol
+  高甘油三酯治疗: Treatment for high triglycerides
+  高皮质醇血症: hypercortisolism
+  高血压: hypertension
+  高血压专科: hypertension specialist
+  ? 高血压用ACEI/ARB起用或加量后1至2周查eGFR/肌酐、钠、钾，风险较高者可7天；稳定后每年。只在明确低风险稳定期、最近正常检查日期明确且无新指征时，过早常规重复才扣分；急性病、高钾风险、肾功能恶化、CKD/心衰或个体医嘱需要更频繁监测时不扣分。
+  : In hypertension, check eGFR/creatinine, sodium and potassium 1 to 2 weeks after starting/increasing
+    ACEI/ARB, or at 7 days for higher risk; annually once stable. Penalise premature routine repetition
+    only with explicitly established low-risk stability, a known recent normal test date and no new indication.
+    Do not penalise more frequent monitoring for acute illness, hyperkalaemia risk, declining renal function,
+    CKD/heart failure or individual medical instructions.
+  高血压随访: Hypertension follow-up
+  高血压靶器官损害初始评估可查尿ACR及血尿、HbA1c、电解质、肌酐/eGFR、总胆固醇/HDL、眼底及十二导联心电图；列这些项目本身不扣分，也不要求本次重新全查。: Initial hypertensive
+    target-organ assessment may include urine ACR and haematuria testing, HbA1c, electrolytes, creatinine/eGFR,
+    total cholesterol/HDL, fundoscopy and a twelve-lead ECG. Listing these does not itself incur a penalty,
+    nor must all be repeated today.
+  高血糖: hyperglycaemia
+  高钙: high calcium
+  黑朦: transient visual blackout
+  # Registry-wide coverage: record labels, units, history displays and protocol text.
+  乳糖不耐受和功能性肠道问题也可引起腹胀稀便；需结合菜单中的抗体、总IgA和必要的黏膜检查。: Lactose intolerance and functional bowel problems can also cause
+    bloating and loose stools; interpret together with the antibodies and total IgA on the menu and, where necessary,
+    mucosal examination.
+  自测体温: Self-measured temperature
+  卒中或短暂性脑缺血发作史: history of stroke or transient ischaemic attack
+  定性: qualitative
+  定性(0=阴性 1=阳性): qualitative (0=negative 1=positive)
+  恶性肿瘤史: history of malignancy
+  手表节律提示条款仅用于病历里尚无心电图记录房颤者；已有心电图记录且无新症状或病情变化者，原有手表提示按其余规则评估。: The watch rhythm alert rule applies only if atrial fibrillation
+    is not already ECG-documented in the record; if atrial fibrillation is already ECG-documented and there are no
+    new symptoms or clinical changes, assess existing watch alerts under the other rules.

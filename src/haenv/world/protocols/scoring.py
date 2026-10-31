@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from haenv.i18n.text import L
+
 from haenv.resources.regpath import load_registry
 from haenv.resources.regpath import registry_cached
 from haenv.world.history.history_dependency import uniform
@@ -49,8 +51,8 @@ def receipt(block: dict, scale: int, missing: str | None = None) -> dict:
     scores = parts(block, scale=scale, missing=missing)
     return {"instrument": "NEWS2", "spo2_scale": scale, "total": sum(scores.values()),
             "parameter_scores": scores, "input_observations": inputs,
-            "input_stage": "本次家庭测量首次上传（补测前）", "source": "家庭监测系统自动计算",
-            "missing_handling": "未收到字段计 0 分" if missing else "所有字段均已收到"}
+            "input_stage": L("news2.input_stage.first_upload"), "source": L("news2.source.system"),
+            "missing_handling": L("news2.missing.zero" if missing else "news2.missing.none")}
 
 
 def _normal(field: str, block: dict):
@@ -108,4 +110,4 @@ def attach(block: dict, case_id: str):
     rec, _kind, _eligible = expected(block, case_id)
     block["home_check_today"]["system_news2"] = rec
     if any(v is None for v in rec["input_observations"].values()):
-        block["home_check_today"]["measurement_stage"] = "首次上传后完成补测；下列生命体征为今天补齐后的读数"
+        block["home_check_today"]["measurement_stage"] = L("news2.measurement_stage.completed")

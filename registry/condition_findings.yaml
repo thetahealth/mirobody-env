@@ -495,16 +495,16 @@ condition_findings:
       role: screening
       trajectory: progressive
       n: 2
-      penetrance: 0.92
-      penetrance_source: "[abstract] Luksameejaroenchai C et al, J Diabetes Investig, 2026, doi:10.1111/jdi.70449(成人起病 T1D/LADA 初诊空腹血糖中位 259 mg/dL, 摘要已读); 越界比例 0.92 为据此的估计"
+      penetrance: 1.0
+      penetrance_source: "defining criterion of diabetes (ADA Standards of Care 2025 §2); day-T values follow clinical_expansion.yaml#glycaemic_course"
     - id: FBG
       direction: high
       magnitude: marked
       role: screening
       trajectory: progressive
       n: 2
-      penetrance: 0.92
-      penetrance_source: "[abstract] 同上, doi:10.1111/jdi.70449(初诊 FBG 中位 259 [174-345] mg/dL, 下四分位远高于参考上限); 比例为估计"
+      penetrance: 1.0
+      penetrance_source: "defining criterion of diabetes (ADA Standards of Care 2025 §2); day-T values follow clinical_expansion.yaml#glycaemic_course"
     - id: C_peptide
       direction: low
       magnitude: mild
@@ -699,6 +699,7 @@ condition_findings:
     all_normal: true
     note: '`all_normal: true` 与''没声明 findings''必须分得开: 前者是''查了、都正常''(有信息),后者是''这个条件还没写谱''(内容欠账)。'
   HD-UNI-01:
+    source: registry/literature_evidence.yaml#HD-UNI-01
     review: pending
     findings:
     - id: tTG_IgA
@@ -748,6 +749,7 @@ condition_findings:
     note: 吸收不良的下游(铁、维D)先于血清学被注意到 —— 所以 Ferritin/VitD25 标 progressive、tTG_IgA 只有 1 次。tTG-IgA 判读依赖总 IgA,本层不渲染总
       IgA,故它不足以单独定诊(`single_finding_solvable` 应保持不报警)。
   HD-UNI-02:
+    source: registry/literature_evidence.yaml#HD-UNI-02
     review: pending
     findings:
     - id: ANA
@@ -785,6 +787,7 @@ condition_findings:
       n: 1
     note: 'CRP 正常而 ESR 轻升是刻意的:局限型硬化症通常没有显著急性期反应,这一对可以把它与感染/炎性关节病拉开,而单看任一个都拉不开。'
   HD-UNI-03:
+    source: registry/literature_evidence.yaml#HD-UNI-03
     review: pending
     findings:
     - id: HLAB27
@@ -815,6 +818,7 @@ condition_findings:
       n: 1
     note: HLA-B27 既非必要也非充分(见词表注)。炎性指标标 fluctuating × 3 次 —— 一次正常不排除,这正是与机械性腰背痛要靠多次才分得开的地方。
   HD-UNI-04:
+    source: registry/literature_evidence.yaml#HD-UNI-04
     review: pending
     findings:
     - id: Ca
@@ -883,6 +887,7 @@ condition_findings:
       n: 1
     note: '高钙 + PTH 受抑是这条题的核心对子(结节病的高钙由 1,25-(OH)2D 驱动)。单看高钙会指向甲旁亢 —— 判据要抓的正是「只看一个数就定诊」这种错。'
   HD-UNI-05:
+    source: registry/literature_evidence.yaml#HD-UNI-05
     review: pending
     findings:
       - {id: FBG, direction: low, magnitude: moderate, role: confirmatory, trajectory: episodic, n: 3}
@@ -897,6 +902,7 @@ condition_findings:
       任何单看一次血糖低的读法都做不了这道题 —— 判据要抓的正是「不在发作当时取血就下结论」。
       谱里刻意不含定位影像:影像是确证之后的一步,把它放进谱会把次序这个考点抹掉。
   HD-UNI-06:
+    source: registry/literature_evidence.yaml#HD-UNI-06
     review: pending
     findings:
       - {id: FBG, direction: high, magnitude: moderate, role: screening, trajectory: progressive, n: 3, penetrance: 0.60, penetrance_source: "[expert_estimate] expert_estimate: 胰腺癌确诊时糖尿病/高血糖约 50-65%(临床记忆值), 无 PMID 核对; 此处病种为胰腺癌相关新发糖尿病, 取 0.60"}
@@ -911,6 +917,7 @@ condition_findings:
       因此"不开单直接开药"在这道题上是结构上可判的错。
 
   HD-UNI-07:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-07/sources
     review: pending
     findings:
     - id: NTproBNP
@@ -931,6 +938,7 @@ condition_findings:
       n: 1
     note: 需症状/体征与客观心功能/充血证据综合确认;NT-proBNP 升高不能单独确诊,保留射血分数不作前提
   HD-UNI-08:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-08/sources
     review: pending
     findings:
     - id: ECGAtrialPattern
@@ -950,6 +958,7 @@ condition_findings:
       n: 1
     note: 须医生复核真实心电图记录;PPG、HRV 或设备提示只能提出候选,短时阴性记录不排除阵发性发作
   HD-UNI-09:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-09/sources
     review: pending
     findings:
     - id: Cr
@@ -970,6 +979,7 @@ condition_findings:
       n: 1
     note: 血肌酐48小时增加≥26.5 μmol/L,或7天内≥基线1.5倍,或尿量<0.5 mL/kg/h持续6小时之一可支持AKI;脱水病因仍须容量、用药、尿液和梗阻评估
   HD-UNI-10:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-10/sources
     review: pending
     findings:
     - id: Cr
@@ -991,6 +1001,7 @@ condition_findings:
       n: 1
     note: 肾损伤标志或eGFR<60 mL/min/1.73m²持续≥3个月支持CKD;进展还需可靠纵向下降/白蛋白尿变化超出变异并排除急性因素
   HD-UNI-11:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-11/sources
     review: pending
     findings:
     - id: CRP
@@ -1029,6 +1040,7 @@ condition_findings:
       n: 1
     note: 此模板是伴局部疼痛及炎症的候选急性胆囊炎:局部表现+全身炎症为疑诊,再加相符影像为确诊;仅结石不能证明胆囊炎
   HD-UNI-12:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-12/sources
     review: pending
     findings:
     - id: Lipase
@@ -1056,6 +1068,7 @@ condition_findings:
       n: 1
     note: 确诊须三项中至少两项:相符腹痛、脂肪酶或淀粉酶≥3×当地ULN、相符影像;未满足时仅候选。marked与参考带生成不能保证≥3×ULN,消费方必须检查实际值
   HD-UNI-13:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-13/sources
     review: pending
     # Explicit synthetic secondary-report design, not measurements from patients.
     # AASLD 2023 Table 5; EASL 2024 Table 6. Quality: EASL-ALEH 2015 pp.5-6.
@@ -1103,6 +1116,7 @@ condition_findings:
       n: 1
     note: FIB-4为风险分层,须二级无创检查与肝病专科判断,有指征时活检;不能单凭FIB-4、ALT/AST诊断纤维化。未有既往分期只称首次识别进展期候选,不证明126天内进展
   HD-UNI-14:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-14/sources
     review: pending
     findings:
     - id: Hb
@@ -1136,6 +1150,7 @@ condition_findings:
       n: 1
     note: Hb降低结合铁研究确认缺铁;慢性消化道失血为需查明的候选病因,检查消化道并评估其他失血、摄入或吸收异常后才可归因
   HD-UNI-15:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-15/sources
     review: pending
     findings:
     - id: UrineDip
@@ -1156,6 +1171,7 @@ condition_findings:
       magnitude: moderate
     note: 本例发热+腰背痛选择上尿路感染候选,须尿检、尿培养/药敏及梗阻风险评估;单纯膀胱炎为另一无系统症状变体,不是本例确定结论
   HD-UNI-16:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-16/sources
     review: pending
     findings:
     - id: CRP
@@ -1177,6 +1193,7 @@ condition_findings:
       n: 1
     note: 相符症状结合影像学新浸润支持CAP,白细胞和CRP不作单独确诊;评估生命体征及就医场所,不从手表血氧直接确定重症
   HD-UNI-17:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-17/sources
     review: pending
     findings:
     - id: PostBDObstruction
@@ -1186,6 +1203,7 @@ condition_findings:
       n: 1
     note: 有症状或暴露的适当背景下,舒张后FEV1/FVC<0.7支持确诊;0.6-0.8应择日复查。一次正常或单次异常都结合质量、年龄与鉴别判断
   HD-UNI-18:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-18/sources
     review: pending
     findings:
     - id: DepressionAssessment
@@ -1205,6 +1223,7 @@ condition_findings:
       n: 1
     note: 经有能力的临床人员综合评估持续心境/兴趣、病程与功能及竞争病因;PHQ-9用于筛查/随访,可穿戴睡眠步数不能确诊
   HD-UNI-19:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-19/sources
     review: pending
     findings:
     - id: CK
@@ -1225,6 +1244,7 @@ condition_findings:
       n: 1
     note: 此黄色模板选择轻度CK高的SAMS候选,不是已确诊严重肌病;需用药时序、相互作用、运动及甲状腺等竞争因素与临床随访判断关联
   HD-UNI-20:
+    source: registry/clinical_expansion.yaml#conditions/HD-UNI-20/sources
     review: pending
     findings:
     - id: GastricRetention

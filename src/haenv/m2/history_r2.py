@@ -1,5 +1,7 @@
 """Matched historical reports and allocation, on the generation path only."""
 from __future__ import annotations
+
+from haenv.i18n.text import J, L, Msg, T as tpl, numsub
 from haenv.world.history.history_dependency import old_day
 from haenv.world.history.history_dependency import rate
 from haenv.world.history.history_dependency import table
@@ -44,28 +46,27 @@ def finalize(raw, cid, plan):
     if result:
         result = archival_result(result, day, T) if enabled(plan) else [{**x, "ts": day} for x in result]
     if not active:
-        result = [{"ts": day, "value": "阴性", "flag": "NEGATIVE", "finding_id": fid, "name": spec.get("name_cn", fid)}]
+        result = [{"ts": day, "value": L("m2.obs.negative"), "flag": "NEGATIVE", "finding_id": fid, "name": spec.get("name_cn", fid)}]
         if enabled(plan):
             result = [control_observation(fid, spec, cid, day)]
         if typing_positive:
             # A genotype does not seroconvert. An unusable earlier typing
             # report can be inert without contradicting a current positive.
-            result[0].update(value="标本质控不足，无法提供可解释的分型", flag="UNINTERPRETABLE")
+            result[0].update(value=L("m2.obs.typing_unusable"), flag="UNINTERPRETABLE")
     # A historical result is retained as a full laboratory report, with the
     # original finding vocabulary, not an inferred diagnosis or a role label.
     row = {"day": old_day("m2", cid, T), "source": src, "finding": fid,
            "name": spec.get("name_cn", fid), "observation": result,
-           "result": "既往阳性，报告可核对" if active else "当时初筛可疑，复查阴性；原报告记录复查结果。",
-           "followup": "当时未进一步评估，当前症状需另行评估。" if active else "后续未有同类持续异常。"}
+           "result": L("m2.hist.result.prior_positive" if active else "m2.hist.result.screen_then_negative"),
+           "followup": L("m2.hist.followup.not_evaluated" if active else "m2.hist.followup.no_persisting")}
     if not active and typing_positive:
-        row.update(result="当时初筛可疑，分型未获可解释结果；原报告记录标本质量问题。",
-                   followup="当时未完成有效分型，当前需另行评估。")
+        row.update(result=L("m2.hist.result.typing_failed"),
+                   followup=L("m2.hist.followup.typing_incomplete"))
     elif not active and enabled(plan):
-        row["result"] = config("m2")["control_phrasing"].get(fid,
-            "当时复核未见该项异常，数值与参考范围见原报告。")
+        row["result"] = config("m2")["control_phrasing"].get(fid, L("m2.hist.result.control_normal"))
     if active and not result:
         active = False
-        row.update(observation=[], result="当时结果无法解释，后复查阴性。", followup="未有持续异常。")
+        row.update(observation=[], result=L("m2.hist.result.uninterpretable_then_negative"), followup=L("m2.hist.followup.none"))
     raw.prediction_context["archived_laboratory_record"] = [row]
     raw.prediction_context["record_policy"] = table()["packs"]["m2"]["protocol"]
     if active:
@@ -79,10 +80,10 @@ def finalize(raw, cid, plan):
         if not framed:
             g["history_dependency"]["look_alike"] = g.pop("look_alike")
         known = raw.user_profile.get("known_conditions") or []
-        if (known and can_move_prior_diagnoses(raw)
+        if (known and can_move_prior_diagnoses(raw, plan)
                 and uniform("history-diagnosis-omission", cid) < config("m2")["diagnosis_omission"]["value"]):
             raw.prediction_context["prior_encounter_narrative"] = [{"day": day, "source": src,
-                "text": "既往门诊随访病史：" + "、".join(known) + "。当时继续原方案，相关症状与检查见原始记录。"}]
+                "text": tpl("m2.hist.prior_narrative", conditions=J("enum", known))}]
             raw.user_profile["known_conditions"] = []
             if framed:
                 g["diagnosis_narrative_only"] = True
@@ -98,18 +99,24 @@ def finalize(raw, cid, plan):
                 g["history_dependency"]["diagnosis_narrative_only"] = True
 
 
-def can_move_prior_diagnoses(raw):
+def can_move_prior_diagnoses(raw, plan=None):
     """Keep the current risk context required by a declared secondary assessment.
 
     The existing assay renderer requires structured metabolic risk information;
     it must remain available when the current report is generated or purchased.
-    Other past diagnoses can be documented solely in the encounter narrative.
+    An explained-away symptom also requires its established explaining condition
+    in the current structured profile, as required by the EA-1 audit. Other past
+    diagnoses can be documented solely in the encounter narrative.
     """
     from haenv.resources.registry import condition_findings_for_case
     from haenv.resources.registry import load_findings
     spec = (raw.adjudication.get("ddx") or {}).get("spec_id")
     profile = condition_findings_for_case(load_findings()).get(spec) or {}
-    return not profile.get("secondary_assessment")
+    known = set((getattr(raw, "user_profile", None) or {}).get("known_conditions") or ())
+    explained = ((plan or {}).get("explain_away") or {}).get("lines") or ()
+    needs_known = any(known.intersection(symptom.get("explainer") or ())
+                      for line in explained for symptom in line.get("symptoms") or ())
+    return not (profile.get("secondary_assessment") or needs_known)
 
 
 
@@ -123,7 +130,7 @@ def control_observation(fid, spec, cid, day):
     from haenv.world.validation.difficulty_r2 import config
     row = {"ts": day, "finding_id": fid, "name": spec.get("name_cn", fid)}
     if spec.get("qualitative"):
-        return {**row, "value": config("m2")["control_phrasing"].get(fid, "阴性 / 未见明显异常"),
+        return {**row, "value": config("m2")["control_phrasing"].get(fid, L("m2.obs.negative_normal")),
                 "flag": "NEGATIVE"}
     from haenv.world.observations.findings_render import _band
     from haenv.world.observations.findings_render import _value
@@ -141,7 +148,6 @@ def archival_result(result, day, today):
     and the documented observation interval remain the production result's.
     """
     from datetime import date, timedelta
-    import re
     shift = int(day) - int(today)
     def move(value):
         if isinstance(value, list):
@@ -153,8 +159,19 @@ def archival_result(result, day, today):
             if isinstance(value.get("date"), str):
                 out["date"] = (date.fromisoformat(value["date"]) + timedelta(days=shift)).isoformat()
             return out
-        if isinstance(value, str):
-            return re.sub(r"第(-?\d+)天", lambda m: f"第{int(m[1]) + shift}天", value)
+        if isinstance(value, Msg) and value.kind == "tpl":
+            slots = {k: (v + shift if k.startswith("day") and isinstance(v, int) else move(v))
+                     for k, v in value.slots.items()}
+            return tpl(value.key, **slots)
+        if isinstance(value, Msg) and value.kind == "join":
+            return J(value.key, [move(v) for v in value.slots["items"]])
+        if isinstance(value, str) and not isinstance(value, Msg):
+            # Migration for an externally supplied legacy report (generated
+            # observations above already carry typed day slots).
+            import re
+            pairs = [(m[1], str(int(m[1]) + shift)) for m in re.finditer(r"第(-?\d+)天", value)]
+            moved = re.sub(r"第(-?\d+)天", lambda m: f"第{int(m[1]) + shift}天", value)
+            return numsub(L(value), moved, pairs) if pairs else value
         return value
     return move(result)
 

@@ -273,6 +273,13 @@ def balance_step(pack, job, batch, ref, seed, n, out, env, rec, jobs):
     import importlib
     import yaml
     from tools.validation import pack_audit as PA
+    from haenv.world.validation.difficulty_r2 import enabled
+    if pack == "p3" and enabled():
+        # The 1.4 medication protocol fixes clinical quotas before generation.
+        # A free classifier may report a shortcut, but cannot remove patients
+        # or alter selection. The ordinary batch audit still runs below.
+        rec["selection_policy"] = "clinical quotas and patient hashes; shortcut filtering disabled"
+        return batch
     os.environ.setdefault("HAENV_PACK_SEED", seed)
     for attempt in range(3):
         A = importlib.import_module(PA.PACKS[pack]).audit(n_items=n, seed=seed)

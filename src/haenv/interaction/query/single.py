@@ -34,7 +34,7 @@ def single_view(payload):
         return payload
     pc = payload.prediction_context
     block = pc[adapter.block]
-    if block.get("rules_delivery") != "library" or block.get("protocol_library") != "本院规程库":
+    if block.get("rules_delivery") != "library" or not isinstance(block.get("protocol_library"), str):
         return payload
     store = RecordStore(payload, int(pc["prediction_time_T"]), adapter)
     store.specs()

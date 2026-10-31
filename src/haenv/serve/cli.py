@@ -5,6 +5,7 @@ import argparse
 import sys
 
 from haenv.serve.session import load_question
+from haenv.i18n.text import MissingText
 
 
 def main(argv=None):
@@ -14,13 +15,14 @@ def main(argv=None):
         p = sub.add_parser(name)
         p.add_argument('--pack', required=True, help='Saved batch directory or pack manifest JSON')
         p.add_argument('--question', required=True, help='Question ID in payloads.jsonl')
+        p.add_argument('--lang', choices=('en', 'zh'), help='Require the saved batch language')
         if name == 'fhir':
             p.add_argument('--port', type=int, default=8000)
             p.add_argument('--host', default='127.0.0.1')
             p.add_argument('--anchor', default='2000-01-01', help='ISO date for case day zero')
     args = parser.parse_args(argv)
     try:
-        session = load_question(args.pack, args.question)
+        session = load_question(args.pack, args.question, language=args.lang)
         if args.transport == 'mcp':
             from haenv.serve.mcp_server import run
             run(session)
@@ -32,7 +34,7 @@ def main(argv=None):
                     server.serve_forever()
                 except KeyboardInterrupt:
                     pass
-    except (OSError, ValueError, RuntimeError) as exc:
-        print(str(exc), file=sys.stderr)
+    except (OSError, ValueError, RuntimeError, MissingText) as exc:
+        print(f'{type(exc).__name__}: {exc}', file=sys.stderr)
         return 2
     return 0

@@ -16,7 +16,7 @@ retired_record: superseded by ddx.scope2
 framing_ref: DDX_SCOPE_PROMPT
 # Fingerprint of the runtime template object (not of the source literal, whose `\` line
 # continuations hash differently).
-framing_sha256: 7e3c5b4f89e852a2
+framing_sha256: a0c5bfa1f4195b57
 answer_space: free            # the diagnosis name is free text (no disease names in the driver vocabulary)
 hint_level: 0
 budget: {max_rounds: 1}

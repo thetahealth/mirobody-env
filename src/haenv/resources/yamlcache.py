@@ -13,13 +13,13 @@ import copy
 import os
 import pathlib
 
-#: (path, mtime_ns, size) -> parsed doc. Append-only, never evicted.
-_CACHE: dict[tuple[str, int, int], object] = {}
+#: (path, mtime_ns, size, wrap_text) -> parsed doc. Append-only, never evicted.
+_CACHE: dict[tuple[str, int, int, bool], object] = {}
 
 STATS = {"hit": 0, "miss": 0, "off": 0}
 
 
-def load_yaml(path: str | pathlib.Path):
+def load_yaml(path: str | pathlib.Path, *, wrap_text: bool = True):
     """Read and parse a YAML file, returning a private deep copy.
 
     A missing file raises `OSError`; it is never folded into `None`.
@@ -28,15 +28,22 @@ def load_yaml(path: str | pathlib.Path):
 
     p = pathlib.Path(path)
     st = p.stat()
-    if os.environ.get("HAENV_NO_YAML_CACHE") == "1":
+    key = (str(p.resolve()), st.st_mtime_ns, st.st_size, wrap_text)
+    disabled = os.environ.get("HAENV_NO_YAML_CACHE") == "1"
+    if disabled:
         STATS["off"] += 1
-        return yaml.safe_load(p.read_text(encoding="utf-8"))
-    key = (str(p.resolve()), st.st_mtime_ns, st.st_size)
-    if key in _CACHE:
+    elif key in _CACHE:
         STATS["hit"] += 1
         return copy.deepcopy(_CACHE[key])
-    STATS["miss"] += 1
+    else:
+        STATS["miss"] += 1
     doc = yaml.safe_load(p.read_text(encoding="utf-8"))
+    # Catalogs need raw text: wrapping a lexicon while loading it recurses into itself.
+    if wrap_text:
+        from haenv.i18n.text import wrap
+        doc = wrap(doc)
+    if disabled:
+        return doc
     _CACHE[key] = doc
     return copy.deepcopy(doc)
 

@@ -14,6 +14,7 @@ SYNTHETIC data, evaluation only, not medical advice.
 from __future__ import annotations
 
 import collections
+
 import math
 import re
 import statistics
@@ -36,9 +37,6 @@ ACEI_INDICATIONS = {"hypertension", "CKD", "T2D", "heart_failure", "CAD"}
 #: clinical shorthand in a patient sentence: a lab abbreviation, a chart word, a template joiner,
 #: a value with a unit (R13 doctor voice)
 SHORTHAND = re.compile(r"[A-Za-z]{2,}|B超|新发|无家族史|持续高|显著| \+ |\d+(\.\d+)?\s*(mmol|mg|g/|kg|cm|mmHg|μmol|umol|U/L|%)")
-HEAVY_MEAT = ("羊肉串", "牛腩", "酱牛肉")
-
-
 def comorb_of(it) -> str | None:
     return (it["gold"].get("comorbidity") or {}).get("code")
 
@@ -99,7 +97,7 @@ def _extend(items, n_items, seed, base, *, directions):
     branches = {(it["class"], it["gold"].get("next_step")) for it in base}
     spec_counts = collections.Counter(it.get("spec") for it in base)
     analyte_counts = collections.Counter((it["class"], it["gold"].get("analyte")) for it in base)
-    cause_counts = collections.Counter((it["gold"].get("analyte"), it["gold"].get("cause")) for it in base)
+    cause_counts = collections.Counter((it["class"], it["gold"].get("cause")) for it in base)
     from haenv.world.validation.shared_audit import take_patient
     for cell, n in sorted(need.items(), key=str):
         if have[cell] > n:
@@ -113,8 +111,8 @@ def _extend(items, n_items, seed, base, *, directions):
             if eligible and eligible[0]["gold"].get("diversity_version"):
                 # Balanced mechanism challenge design, declared in the registry.
                 # No amplitude, model response or shortcut score enters selection.
-                rank = lambda x: (analyte_counts[(x["class"], x["gold"]["analyte"])],
-                                  cause_counts[(x["gold"]["analyte"], x["gold"].get("cause"))])
+                rank = lambda x: (cause_counts[(x["class"], x["gold"].get("cause"))],
+                                  analyte_counts[(x["class"], x["gold"]["analyte"])])
                 least = min(map(rank, eligible))
                 eligible = [x for x in eligible if rank(x) == least]
             it = take_patient(eligible, spec_counts, lambda x: h01(tag, x["case_id"]))
@@ -122,7 +120,7 @@ def _extend(items, n_items, seed, base, *, directions):
             available.remove(it)
             branches.add((it["class"], it["gold"].get("next_step")))
             analyte_counts[(it["class"], it["gold"].get("analyte"))] += 1
-            cause_counts[(it["gold"].get("analyte"), it["gold"].get("cause"))] += 1
+            cause_counts[(it["class"], it["gold"].get("cause"))] += 1
     return out
 
 
@@ -166,27 +164,50 @@ def _blk(it) -> dict:
 
 def acei_without_indication(it) -> list[str]:
     known = set((it["sp"].get("user_profile") or {}).get("known_conditions") or ())
-    acei = any("依那普利" in m["drug"] for m in _blk(it).get("medication_record") or ())
+    from haenv.p4.features import _drug_key, _is_acei
+    from haenv.p4.diversity import table as _dt
+    from haenv.p4.textmatch import is_text
+    ex = _dt()["rules"]["acei_start_or_stop"]["exposure"]
+    acei = any(_is_acei(m["drug"]) or _drug_key(m["drug"]) == "enalapril" or is_text(m["drug"], ex)
+               for m in _blk(it).get("medication_record") or ())
     return ["ACEI without an indication"] if acei and not known & ACEI_INDICATIONS else []
 
 
 def fasting_after_noon(it) -> list[str]:
+    from haenv.world.labworld import tables
+    from haenv.p4.textmatch import is_text
+    label = tables()["render"]["fasting_label"]
     return [x["time"] for x in _blk(it).get("report") or ()
-            if "空腹" in str(x.get("fasting")) and int(x["time"].split(":")[0]) >= 12]
+            if is_text(x.get("fasting"), label) and int(x["time"].split(":")[0]) >= 12]
 
 
 def dose_direction_flips(it) -> list[str]:
     seq = collections.defaultdict(list)
     for m in _blk(it).get("medication_record") or ():
-        if "→" in m["event"]:
-            a, b = [float(v) for v in m["event"].replace("剂量", "").split("→")]
-            seq[m["drug"]].append(1 if b > a else -1)
+        from haenv.p4.textmatch import slot
+        from haenv.p4.features import _drug_key
+        for key in ("p4.med.change", "med.event.dose_change"):
+            a, b = slot(m["event"], key, "prev"), slot(m["event"], key, "new")
+            if a is not None and b is not None:
+                seq[_drug_key(m["drug"]) or m["drug"]].append(1 if float(b) > float(a) else -1)
+                break
     return [d for d, q in seq.items() if sum(1 for i in range(1, len(q)) if q[i] != q[i - 1]) >= 3]
 
 
 def heavy_meat_breakfast(it) -> list[str]:
     return [e["food"] for d in _blk(it).get("diet_record") or () for e in d["entries"]
-            if e["meal"] == "早餐" and any(w in e["food"] for w in HEAVY_MEAT)]
+            if _is_breakfast(e["meal"]) and _is_heavy_meat(e["food"])]
+
+
+def _is_heavy_meat(food) -> bool:
+    from haenv.p4.textmatch import is_any
+    from haenv.world.labworld import tables
+    return is_any(food, tables()["render"]["heavy_meat_foods"])
+
+
+def _is_breakfast(meal) -> bool:
+    from haenv.p4.textmatch import is_text
+    return is_text(meal, "p4.meal.breakfast")
 
 
 def noise_with_method_offset(it) -> list[str]:
@@ -199,8 +220,9 @@ def noise_with_method_offset(it) -> list[str]:
 
 
 def doctor_voice(it) -> list[str]:
+    from haenv.p4.textmatch import phrase_id
     return [str(e.get("symptom")) for e in it["sp"].get("evidence_ledger") or ()
-            if e.get("source_type") == "patient_reported_symptom" and SHORTHAND.search(str(e.get("symptom") or ""))]
+            if e.get("source_type") == "patient_reported_symptom" and SHORTHAND.search(str(phrase_id(e.get("symptom")) or ""))]
 
 
 # ------------------------------------------------------------------------------ P-10

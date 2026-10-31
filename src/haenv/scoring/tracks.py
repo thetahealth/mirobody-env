@@ -7,6 +7,7 @@ SYNTHETIC, evaluation only, not medical advice.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 from haenv.scoring.matching.aliases import _CLAUSE_END
 from haenv.scoring.matching.aliases import _NEG_CUES
@@ -224,7 +225,7 @@ def _judging_synonyms() -> dict[str, tuple[str, ...]]:
         for a, e in raw.items():
             if not isinstance(e, dict) or not str(e.get("why") or "").strip():
                 raise ValueError(f"threads.yaml judging_synonyms {a!r}: needs a mapping with `why`")
-            bad = set(e) - {"why", "names"}
+            bad = set(e) - {"why", "names", "source"}
             if bad:
                 raise ValueError(f"threads.yaml judging_synonyms {a!r}: unregistered fields {sorted(bad)}")
             names = tuple(str(n) for n in (e.get("names") or ()))
@@ -240,13 +241,65 @@ _SYNONYM_CACHE: list[dict] = []
 
 
 def judging_names(aliases) -> list[str]:
-    """`aliases` plus the judging-side synonyms registered for any of them.
+    """Names for judging only: registered synonyms, reviewed English and variants.
 
-    The gold names a disease in one wording (the kernel aliases, which are also the leak-scan
-    words and stay as they are); a model may use another ("肾上腺皮质功能不全" for
-    "肾上腺皮质功能减退"). Rival wordings a synonym would otherwise catch are declared in
-    `vocab_alias_excludes.yaml`.
+    Kernel and leak-scan aliases stay unchanged. Exclusions registered in
+    `vocab_alias_excludes.yaml` carry over to longer names containing their keys.
     """
+    return list(_judging_names(tuple(aliases or ())))
+
+
+@lru_cache(maxsize=1)
+def _judging_english():
+    from haenv.resources.registry import _load_yaml
+    names = _load_yaml("judging_aliases_en.yaml").get("names")
+    if not isinstance(names, dict) or any(
+            not isinstance(k, str) or not isinstance(v, str) or not v.isascii()
+            for k, v in names.items()):
+        raise ValueError("judging_aliases_en.yaml: names must map strings to ASCII strings")
+    variants = _load_yaml("threads.yaml").get("english_variants") or {}
+    if not isinstance(variants, dict) or set(variants) - {
+            "source", "spelling_pairs", "possessive_eponyms"}:
+        raise ValueError("threads.yaml english_variants: unregistered fields")
+    pairs = variants.get("spelling_pairs")
+    eponyms = variants.get("possessive_eponyms")
+    if not isinstance(pairs, list) or any(
+            not isinstance(p, list) or len(p) != 2 or any(
+                not isinstance(s, str) or not s or not s.isascii() for s in p)
+            for p in pairs):
+        raise ValueError("threads.yaml english_variants: pairs must be two ASCII strings")
+    if not isinstance(eponyms, dict) or any(
+            not isinstance(s, str) or not s or not s.isascii()
+            for pair in eponyms.items() for s in pair):
+        raise ValueError("threads.yaml english_variants: eponyms must be ASCII strings")
+    return names, pairs, eponyms
+
+
+def _english_variants(name, pairs, eponyms):
+    forms = {name.lower()}
+    for x, y in pairs:
+        for f in list(forms):
+            if x in f:
+                forms.add(f.replace(x, y))
+            if y in f and x not in f:
+                forms.add(f.replace(y, x))
+    for f in list(forms):
+        spaced = f.replace("-", " ")
+        forms.add(spaced)
+        words = spaced.split()
+        for i in range(len(words) - 1):
+            forms.add(" ".join(words[:i] + [words[i] + "-" + words[i + 1]] + words[i + 2:]))
+    for f in list(forms):
+        possessive, bare = f, f
+        for eponym, owned in eponyms.items():
+            possessive = re.sub(r"\b" + re.escape(eponym) + r" (?=\w)", owned + " ", possessive)
+            bare = re.sub(r"\b" + re.escape(owned) + r" (?=\w)", eponym + " ", bare)
+        forms.update((possessive, bare))
+    return sorted({clean for f in forms if (clean := " ".join(f.split()))})
+
+
+@lru_cache(maxsize=4096)
+def _judging_names(aliases: tuple) -> tuple:
     tab = _judging_synonyms()
     out = [a for a in (aliases or ())]
     seen = {str(a).lower() for a in out}
@@ -255,7 +308,22 @@ def judging_names(aliases) -> list[str]:
             if n.lower() not in seen:
                 out.append(n)
                 seen.add(n.lower())
-    return out
+    if any(isinstance(a, str) and a.startswith("无统一病理") for a in out):
+        return tuple(out)
+    english, pairs, eponyms = _judging_english()
+    for a in list(out):
+        if isinstance(a, str) and not a.isascii():
+            n = english.get(a)
+            if n and n.lower() not in seen:
+                out.append(n)
+                seen.add(n.lower())
+    for a in list(out):
+        if isinstance(a, str) and a.isascii():
+            for n in _english_variants(a, pairs, eponyms):
+                if n.lower() not in seen:
+                    out.append(n)
+                    seen.add(n.lower())
+    return tuple(out)
 
 
 def dx_rank_of(out, names) -> dict:

@@ -15,6 +15,8 @@ PAYLOAD_POLICIES = (
     ("tests", "W.adjudication.m2_workup", "haenv.m2.workup", "gold_derivations"),
     ("red_flag_present", "W.latent_premise.meta._external.m2.critical",
      "haenv.m2.workup", "gold_derivations"),
+    ("diagnosis", "W.latent_premise.meta._external.m2.confirmation",
+     "haenv.m2.confirmation", "gold_derivations"),
 )
 
 

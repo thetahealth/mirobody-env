@@ -37,10 +37,11 @@ def library_block(block: dict, pack: str) -> dict:
     if pack == "p3":
         out.pop("dose_ladder", None)
     day = int(out["today_day" if pack == "p2" else "today"])
-    out.update(rules_delivery="library", protocol_library="本院规程库",
-               today_date=f"病程第 {day} 天（日期相对于本记录第 0 天）",
-               encounter_type={"p2": "线上家庭监测分诊", "p3": "慢病用药复诊", "p4": "随访复查解读"}[pack],
-               instruction="按本院规程处理")
+    from haenv.i18n.text import L, T
+    out.update(rules_delivery="library", protocol_library=L("protocol.library"),
+               today_date=T("record.today_date", day=day),
+               encounter_type=L(f"encounter.{pack}"),
+               instruction=L("protocol.follow_library"))
     return out
 
 

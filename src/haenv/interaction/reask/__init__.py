@@ -10,6 +10,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from haenv.interaction.query.gated import PURCHASE
+from haenv.i18n.runtime import runtime_text
 from haenv.interaction.query.loop import FORCE_FINAL
 from haenv.interaction.query.profile import returned_rows
 
@@ -34,7 +35,7 @@ def final_split(trace):
     if not messages or messages[-1].get("role") != "assistant" or messages[-1].get("tool_calls"):
         raise ValueError("stored conversation does not end in a final assistant answer")
     prefix = messages[:-1]
-    forced = bool(prefix and prefix[-1].get("role") == "user" and prefix[-1].get("content") == FORCE_FINAL)
+    forced = bool(prefix and prefix[-1].get("role") == "user" and (trace.get("stop") == "forced_final" or (not trace.get("stop") and getattr(prefix[-1].get("content"), "key", None) == FORCE_FINAL.key)))
     return prefix[:-1] if forced else prefix, messages[-1], forced
 
 
@@ -249,7 +250,7 @@ class Batch:
                         self._receipts[cell.get("case_id"), cell.get("solver")].add(request["prompt_sha256"])
             wants, basis = self._receipts[question, model], "receipts"
         store = self.store(question, model)
-        messages = prefix + ([{"role": "user", "content": FORCE_FINAL}] if forced else [])
+        messages = prefix + ([{"role": "user", "content": runtime_text(FORCE_FINAL)}] if forced else [])
         for can_order in (True, False):
             specs = _specs(store, {"menu": [], "budget": 0, "spent": 0}, can_order)
             tools = [s.neutral() for s in specs]
@@ -342,7 +343,7 @@ def build_unit(batch, question, model, repeat, source_items, *, arms=tuple(ARMS)
             items["half"] = half(decisive, model, question, repeat, half_seed)
         # Ineligible units have no half request, rather than an empty injection labeled half.
     requests = {arm: {"system": trace["system"],
-                      "messages": deepcopy(prefix + injected(items[arm]) + [{"role": "user", "content": FORCE_FINAL}]),
+                      "messages": deepcopy(prefix + injected(items[arm]) + [{"role": "user", "content": runtime_text(FORCE_FINAL)}]),
                       "tools": check["tools"], "items": items[arm]}
                 for arm in arms if arm in items}
     return {"model": model, "question": question, "repeat": repeat,

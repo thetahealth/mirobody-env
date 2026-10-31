@@ -28,6 +28,8 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import J, L, Msg, T as tpl
+from haenv.world.observations.events_text import phrase_ids
 from haenv.resources.regpath import registry_path
 from haenv.resources.regpath import registry_cached
 from haenv.m2.workup import pre_review_rules
@@ -55,9 +57,7 @@ FRAME_NAMES = {"F0": "weight_regain_bridge", "F1": "acute_triage",
 _ABNORMAL = ("high", "low", "positive")
 _MAG_ORDER = {"marked": 0, "moderate": 1, "mild": 2, None: 3}
 #: Specimen notes shared by every push item, so a note's presence or length does not mark a role.
-_NOTES_PLAIN = ("空腹静脉血", "晨起空腹采血", "门诊常规采血", "上午空腹静脉采血", "复诊当日空腹采血",
-                "门诊复查采血", "空腹", "常规采血", "外院送检,结果已核对", "门诊抽血,标本合格",
-                "晨8点空腹肘静脉采血", "复查")
+_NOTES_PLAIN = tuple(L(f"m2.specimen_note.{i}") for i in range(12))
 
 
 def _u(*path) -> float:
@@ -201,7 +201,8 @@ def registry_gold_tests() -> frozenset[str]:
 def m2_extra_items() -> dict[str, str]:
     """name -> kind of the items an F1-F3 menu adds to the integration menu."""
     gold = registry_gold_tests()
-    return {**M2_DISCRIMINATORS, **{t: k for t, k in M2_GOLD_ITEMS.items() if t in gold}}
+    return {L(t): k for t, k in {**M2_DISCRIMINATORS,
+            **{t: k for t, k in M2_GOLD_ITEMS.items() if t in gold}}.items()}
 
 
 def m2_catalogue() -> list[str]:
@@ -209,7 +210,7 @@ def m2_catalogue() -> list[str]:
     from haenv.interaction.gated import discriminator_tests
     from haenv.interaction.gated import test_catalogue
     base = test_catalogue() + discriminator_tests()
-    return base + [t for t in m2_extra_items() if t not in base]
+    return [L(t) for t in base + [t for t in m2_extra_items() if t not in base]]
 
 
 def m2_menu_findings(target: str, findings: dict | None = None) -> tuple[str, ...]:
@@ -389,6 +390,10 @@ def m2_menu_for(orig, sp, withheld: dict, case_id: str = "", m2_case: bool = Fal
     for t, k in m2_extra_items().items():
         if t not in have:
             items.append({"target": t, "kind": k, "real": None, "is_test": True, "cost": COST.get(k, 5.0)})
+    # Targets are registry phrase ids; attach their rendering identity at the
+    # M2 menu boundary, including names returned by the shared catalogue.
+    for item in items:
+        item["target"] = L(item["target"])
     items.sort(key=lambda x: hashlib.sha256(f"{case_id}|{x['target']}".encode()).hexdigest())
     return BudgetedMenu(items, budget) if budget is not None else items
 
@@ -411,7 +416,9 @@ def m2_synth_menu_target(orig, raw, target: str, T: int):
         return None
     if t == "动态心电图":
         return None  # No ambulatory acquisition is modelled; a 10-second ECG is not Holter.
-    ids = M2_RESOLVES_TO.get(t) or G._resolves_to().get(t)
+    from haenv.m2.evidence import registry as evidence_registry
+    ids = (evidence_registry()["glycaemic_course"]["bundled_targets"].get(t)
+           or M2_RESOLVES_TO.get(t) or G._resolves_to().get(t))
     if not ids:
         pts = _on_demand(raw, target, T)
     else:
@@ -451,14 +458,12 @@ def elastography_scope(pts):
             # acquisition. Report it unavailable rather than invent readings.
             return None
         v, m = d["vcte"], d["mre"]
-        p["name"] = "肝脏弹性成像(VCTE/必要时MRE)"
+        p["name"] = L("m2.test.elastography")
         p["details"] = {k: d[k] for k in ("vcte", "mre", "specialist_assessment", "histology",
                                           "histological_stage", "sources", "synthetic", "clinical_review") if k in d}
-        p["value"] = (f'空腹{v["fasting_hours"]}小时,VCTE采用{v["probe"]}探头,'
-                      f'有效测量{v["valid_measurements"]}/{v["attempted_measurements"]}次,'
-                      f'肝硬度中位数{v["lsm_kpa"]} kPa,IQR/中位数{v["iqr_over_median"]:.2f};'
-                      f'MRE肝硬度{m["lsm_kpa"]} kPa,波传播充分且无明显伪影。'
-                      '无创读数需结合临床复评,不能单凭本检查确定病因或组织学分期。')
+        p["value"] = tpl("m2.result.elastography", fasting_hours=v["fasting_hours"], probe=v["probe"],
+                         valid=v["valid_measurements"], attempted=v["attempted_measurements"],
+                         lsm=v["lsm_kpa"], iqr=v["iqr_over_median"], mre_lsm=m["lsm_kpa"])
     return pts
 
 
@@ -501,7 +506,7 @@ def _lipid_tc(raw, pts: list[dict], T: int) -> list[dict] | None:
     if tg >= FRIEDEWALD_TG_MAX_MMOL:
         for p in pts:
             if p.get("finding_id") == "LDL":
-                p["method"] = "直接测定"
+                p["method"] = L("m2.lab.method.direct")
     fspec = _sex_spec(raw, "TC", _findings()["TC"]) or _findings()["TC"]
     lo, hi = _band(fspec)
     import haenv.interaction.gated as G
@@ -589,6 +594,16 @@ def _base_m2_synth_on_demand(orig, raw, target: str, T: int):
     fid = G._resolve_target(target.strip(), fx)
     if not fid or not G.has_reading_model(fx[fid]):
         return orig(raw, target, T)
+    # A composed spectrum retains both diseases' bounded observation models.
+    # Passing only the composite id to the generic renderer silently turns a
+    # second disease's ECG/history/imaging report into an unspecific positive.
+    spec_id, _ = spec_id_of(raw)
+    from haenv.world.clinical.clinical_evidence import _SUPPORTED, clinical_result_series
+    if not ((getattr(raw, "adjudication", None) or {}).get("ddx") or {}).get("insufficient"):
+        for comp in components(str(spec_id or "")):
+            if comp != spec_id and fid in _SUPPORTED.get(comp, ()):
+                return clinical_result_series(str(raw.case_id), comp, fid, int(T), fx,
+                    condition_findings_for_case(fx)[spec_id], dict(raw.user_profile or {}))
     if fid == "FibrosisAssessment":
         spec_id, _ = spec_id_of(raw)
         if spec_id == "HD-UNI-13":
@@ -622,6 +637,11 @@ def _base_m2_synth_on_demand(orig, raw, target: str, T: int):
     declared_dir = (decl or {}).get("direction")
     if ((getattr(raw, "adjudication", None) or {}).get("ddx") or {}).get("insufficient"):
         decl = None
+    if fid == "ThyroidUptakeUS" and decl and declared_dir == "positive" and "JD-GRAVES" in components(str(spec_id)):
+        from haenv.m2.evidence import registry
+        report = registry()["evidence_paths"]["JD-GRAVES"]["imaging_report"]
+        return [{"ts": T, "finding_id": fid, "name": fspec["name_cn"], "flag": "POSITIVE",
+                 "value": L(report["message"]), "details": dict(report["observations"])}]
     bd = base_condition_decl(raw, fid) if decl is None else None
     if fid in KIDNEY_PERSISTENCE and bd is not None:
         bd = bd if any(_reads_abnormal(raw, f, T) for f in KIDNEY_PERSISTENCE[fid]) else None
@@ -644,7 +664,7 @@ def _base_m2_synth_on_demand(orig, raw, target: str, T: int):
     case_id = getattr(raw, "case_id", "CASE")
     if bool(fspec.get("qualitative")) or declared_dir in ("positive", "negative"):
         pos = bd.get("direction") != "negative"
-        return [{"ts": T, "value": "阳性 / 异常提示病理性改变" if pos else "阴性 / 未见明显异常",
+        return [{"ts": T, "value": L("m2.obs.positive_abnormal" if pos else "m2.obs.negative_normal"),
                  "flag": "POSITIVE" if pos else "NEGATIVE", "finding_id": fid,
                  "name": fspec.get("name_cn", fid)}]
     val = _value(fspec, bd.get("direction", "high"), bd.get("magnitude", "moderate"), case_id, fid, 0)
@@ -693,13 +713,16 @@ LAB_PANEL_CLAIMS: dict[str, tuple[tuple[str, ...], str, str, str]] = {
 
 
 def visible_claim_text(raw) -> list[str]:
-    """Patient words the solver sees by day T: symptom and context of the ledger, and the frame scene."""
+    """Source phrase IDs visible by day T; persisted batches restore these from message provenance.
+
+    Claim patterns classify registry IDs, never localized display text.
+    """
     pc = getattr(raw, "prediction_context", None) or {}
     T = int(pc.get("prediction_time_T") or 10 ** 9)
-    out = [str((pc.get("m2_frame") or {}).get("scene") or "")]
+    out = list(phrase_ids((pc.get("m2_frame") or {}).get("scene") or ""))
     for e in getattr(raw, "evidence_ledger", None) or ():
         if isinstance(e, dict) and int(e.get("source_timestamp", 0) or 0) <= T:
-            out += [str(e.get("symptom") or ""), str(e.get("context") or "")]
+            out += list(phrase_ids([e.get("symptom") or "", e.get("context") or ""]))
     return [x for x in out if x]
 
 
@@ -983,10 +1006,10 @@ def threads_of(ddx: dict | None) -> list[dict]:
                     else _key_findings_of(comp))
             out.append({"name": name, "aliases": list(t["aliases"]),
                         "component": comp, "key_signals": keys})
-        from haenv.m2.history import replacements
-        return [replacements(ddx, t) for t in out]
-    from haenv.m2.history import replacements
-    return [replacements(ddx, {"name": ddx.get("diagnosis") or sid, "aliases": list(ddx.get("aliases") or []),
+        from haenv.m2.evidence import with_paths
+        return [with_paths(ddx, t) for t in out]
+    from haenv.m2.evidence import with_paths
+    return [with_paths(ddx, {"name": ddx.get("diagnosis") or sid, "aliases": list(ddx.get("aliases") or []),
              "component": sid, "key_signals": _key_findings_of(sid)})]
 
 
@@ -1020,44 +1043,44 @@ def spectrum_ids(spec_id: str) -> set[str]:
 #: is printed with (the clinical cue a careful reader uses).
 DISTRACTORS: tuple[dict, ...] = (
     {"kind": "artifact_hemolysis", "fid": "K", "direction": "high",
-     "note": ("标本轻度溶血", "标本溶血(+)", "检验科备注:标本有轻度溶血"), "source": "registry/artifact_rates.yaml (溶血 -> 血钾假性升高)",
-     "points_to": {"name": "高钾血症", "aliases": ["高钾", "高钾血症", "hyperkalemia"]}},
+     "note": (L('m2.distractors.phrase_2'), L('m2.distractors.phrase_3'), L('m2.distractors.phrase_4')), "source": L('m2.distractors.phrase_0'),
+     "points_to": {"name": L('m2.distractors.phrase_5'), "aliases": [L('m2.distractors.phrase_49'), L('m2.distractors.phrase_50'), "hyperkalemia"]}},
     {"kind": "artifact_nonfasting", "fid": "TG", "direction": "high",
-     "note": ("餐后约2小时采血", "非空腹", "患者自述采血前吃过早饭"), "source": "registry/artifact_rates.yaml (非空腹 -> TG 升高)",
-     "points_to": {"name": "高甘油三酯血症", "aliases": ["高甘油三酯", "高甘油三酯血症", "hypertriglyceridemia"]}},
+     "note": (L('m2.distractors.phrase_6'), L('m2.distractors.phrase_7'), L('m2.distractors.phrase_8')), "source": L('m2.distractors.phrase_1'),
+     "points_to": {"name": L('m2.distractors.phrase_9'), "aliases": [L('m2.distractors.phrase_51'), L('m2.distractors.phrase_52'), "hypertriglyceridemia"]}},
     {"kind": "artifact_hemolysis_ldh", "fid": "LDH", "direction": "high",
-     "note": ("标本轻度溶血", "溶血标本", "检验科备注:标本溶血,建议复查"), "source": "hemolysis releases red-cell LDH (pre-analytical artifact)",
-     "points_to": {"name": "溶血性贫血", "aliases": ["溶血性贫血", "hemolytic anemia"]}},
+     "note": (L('m2.distractors.phrase_10'), L('m2.distractors.phrase_11'), L('m2.distractors.phrase_12')), "source": "hemolysis releases red-cell LDH (pre-analytical artifact)",
+     "points_to": {"name": L('m2.distractors.phrase_13'), "aliases": [L('m2.distractors.phrase_53'), "hemolytic anemia"]}},
     {"kind": "transient_inflammation", "fid": "CRP", "direction": "high",
-     "note": ("近一周上呼吸道感染", "感冒后第5天", "上周发热咽痛,已自行好转"), "source": "transient acute-phase rise after a viral URTI",
-     "points_to": {"name": "感染/炎症性疾病", "aliases": ["感染", "炎症", "infection"]}},
+     "note": (L('m2.distractors.phrase_14'), L('m2.distractors.phrase_15'), L('m2.distractors.phrase_16')), "source": "transient acute-phase rise after a viral URTI",
+     "points_to": {"name": L('m2.distractors.phrase_17'), "aliases": [L('m2.distractors.phrase_54'), L('m2.distractors.phrase_55'), "infection"]}},
     # Specialty-test false positives pointing at a rival diagnosis (spec 2.2 item 3, lookalike type).
     {"kind": "preanalytic_metanephrine", "fid": "Metanephrine", "direction": "high",
-     "note": ("采血前饮咖啡、坐位采血", "坐位采血", "采血前一小时喝过两杯咖啡"), "source": "caffeine / seated sampling raise plasma free metanephrines",
-     "points_to": {"name": "嗜铬细胞瘤", "aliases": ["嗜铬", "嗜铬细胞瘤", "pheochromocytoma"]}},
+     "note": (L('m2.distractors.phrase_18'), L('m2.distractors.phrase_19'), L('m2.distractors.phrase_20')), "source": "caffeine / seated sampling raise plasma free metanephrines",
+     "points_to": {"name": L('m2.distractors.phrase_21'), "aliases": [L('m2.distractors.phrase_56'), L('m2.distractors.phrase_57'), "pheochromocytoma"]}},
     {"kind": "preanalytic_saliva_cortisol", "fid": "Cortisol_saliva_midnight", "direction": "high",
-     "note": ("采样前两小时内吸烟", "采样前吸烟", "采样当晚刷牙时牙龈出血"), "source": "smoking / gum bleeding before late-night salivary sampling",
-     "points_to": {"name": "库欣综合征", "aliases": ["库欣", "cushing"]}},
+     "note": (L('m2.distractors.phrase_22'), L('m2.distractors.phrase_23'), L('m2.distractors.phrase_24')), "source": "smoking / gum bleeding before late-night salivary sampling",
+     "points_to": {"name": L('m2.distractors.phrase_25'), "aliases": [L('m2.distractors.phrase_58'), "cushing"]}},
     {"kind": "recovery_tsh", "fid": "TSH", "direction": "high",
-     "note": ("上月急性病后恢复期", "肺炎痊愈后两周", "近期住院后恢复期复查"), "source": "transient TSH rise in the recovery phase of non-thyroidal illness",
-     "points_to": {"name": "甲状腺功能减退", "aliases": ["甲减", "甲状腺功能减退", "hypothyroid"]}},
+     "note": (L('m2.distractors.phrase_26'), L('m2.distractors.phrase_27'), L('m2.distractors.phrase_28')), "source": "transient TSH rise in the recovery phase of non-thyroidal illness",
+     "points_to": {"name": L('m2.distractors.phrase_29'), "aliases": [L('m2.distractors.phrase_59'), L('m2.distractors.phrase_60'), "hypothyroid"]}},
     {"kind": "vitd_secondary_pth", "fid": "PTH", "direction": "high",
-     "note": ("冬季日照少、维生素D摄入不足", "25-OH维生素D偏低", "长期室内工作、少晒太阳"), "source": "secondary PTH rise with vitamin D insufficiency",
-     "points_to": {"name": "原发性甲状旁腺功能亢进", "aliases": ["甲旁亢", "甲状旁腺功能亢进", "hyperparathyroidism"]}},
+     "note": (L('m2.distractors.phrase_30'), L('m2.distractors.phrase_31'), L('m2.distractors.phrase_32')), "source": "secondary PTH rise with vitamin D insufficiency",
+     "points_to": {"name": L('m2.distractors.phrase_33'), "aliases": [L('m2.distractors.phrase_61'), L('m2.distractors.phrase_62'), "hyperparathyroidism"]}},
     # Low-direction and qualitative benign changes, so direction and the qualitative form carry no
     # role information either (key signals include low and qualitative findings).
     {"kind": "pseudohyponatremia", "fid": "Na", "direction": "low",
-     "note": ("标本明显脂血(高甘油三酯)", "脂血标本", "检验科备注:标本乳糜样"), "source": "pseudohyponatremia in a lipaemic sample (indirect ISE)",
-     "points_to": {"name": "抗利尿激素分泌失调综合征", "aliases": ["低钠血症", "SIADH", "抗利尿激素分泌失调"]}},
+     "note": (L('m2.distractors.phrase_34'), L('m2.distractors.phrase_35'), L('m2.distractors.phrase_36')), "source": "pseudohyponatremia in a lipaemic sample (indirect ISE)",
+     "points_to": {"name": L('m2.distractors.phrase_37'), "aliases": [L('m2.distractors.phrase_63'), "SIADH", L('m2.distractors.phrase_64')]}},
     {"kind": "dilution_hb", "fid": "Hb", "direction": "low",
-     "note": ("输液同侧手臂采血", "输液中采血", "急诊补液后即刻采血"), "source": "dilution when drawn above an infusion line",
-     "points_to": {"name": "贫血", "aliases": ["贫血", "anemia"]}},
+     "note": (L('m2.distractors.phrase_38'), L('m2.distractors.phrase_39'), L('m2.distractors.phrase_40')), "source": "dilution when drawn above an infusion line",
+     "points_to": {"name": L('m2.distractors.phrase_41'), "aliases": [L('m2.distractors.phrase_65'), "anemia"]}},
     {"kind": "low_titer_ana", "fid": "ANA", "direction": "positive", "qualitative": True,
-     "note": ("低滴度1:80,健康人亦常见", "1:80", "滴度1:80,核型斑点型"), "source": "low-titre ANA in healthy adults",
-     "points_to": {"name": "系统性红斑狼疮", "aliases": ["狼疮", "红斑狼疮", "SLE", "lupus"]}},
+     "note": (L('m2.distractors.phrase_42'), "1:80", L('m2.distractors.phrase_43')), "source": "low-titre ANA in healthy adults",
+     "points_to": {"name": L('m2.distractors.phrase_44'), "aliases": [L('m2.distractors.phrase_66'), L('m2.distractors.phrase_67'), "SLE", "lupus"]}},
     {"kind": "nonfasting_insulin", "fid": "Insulin", "direction": "high",
-     "note": ("采血前已进食早餐", "非空腹", "采血前喝了含糖饮料"), "source": "post-prandial insulin read as fasting",
-     "points_to": {"name": "胰岛素抵抗", "aliases": ["胰岛素抵抗", "insulin resistance"]}},
+     "note": (L('m2.distractors.phrase_45'), L('m2.distractors.phrase_46'), L('m2.distractors.phrase_47')), "source": "post-prandial insulin read as fasting",
+     "points_to": {"name": L('m2.distractors.phrase_48'), "aliases": [L('m2.distractors.phrase_68'), "insulin resistance"]}},
 )
 #: The distractor's magnitude is drawn per case from the same tiers the key signals are rendered
 #: at, so its out-of-band distance carries no role information (RV-6).
@@ -1076,12 +1099,12 @@ DISTRACTOR_DIRECTION_P = (("high", 0.65), ("low", 0.30), ("positive", 0.05))
 #: F3 RCV distractor (spec 3.2 F3 "RCV-based distractor generator"; 2.2 item 3 "within-RCV repeat
 #: fluctuation"): what a reader taking a within-RCV repeat at face value would conclude.
 RCV_POINTS_TO = {
-    "HbA1c": {"name": "血糖控制恶化", "aliases": ["血糖控制恶化", "血糖失控", "糖尿病控制不佳"]},
-    "fasting_glucose": {"name": "血糖控制恶化", "aliases": ["血糖控制恶化", "血糖失控", "糖尿病控制不佳"]},
-    "LDL": {"name": "血脂异常加重", "aliases": ["血脂异常加重", "高胆固醇血症", "高脂血症"]},
-    "triglycerides": {"name": "高甘油三酯血症", "aliases": ["高甘油三酯", "高甘油三酯血症"]},
-    "ALT": {"name": "肝损伤", "aliases": ["肝损伤", "转氨酶升高", "肝炎"]},
-    "AST": {"name": "肝损伤", "aliases": ["肝损伤", "转氨酶升高", "肝炎"]},
+    "HbA1c": {"name": L('m2.rcv_points_to.phrase_0'), "aliases": [L('m2.rcv_points_to.phrase_6'), L('m2.rcv_points_to.phrase_7'), L('m2.rcv_points_to.phrase_8')]},
+    "fasting_glucose": {"name": L('m2.rcv_points_to.phrase_1'), "aliases": [L('m2.rcv_points_to.phrase_9'), L('m2.rcv_points_to.phrase_10'), L('m2.rcv_points_to.phrase_11')]},
+    "LDL": {"name": L('m2.rcv_points_to.phrase_2'), "aliases": [L('m2.rcv_points_to.phrase_12'), L('m2.rcv_points_to.phrase_13'), L('m2.rcv_points_to.phrase_14')]},
+    "triglycerides": {"name": L('m2.rcv_points_to.phrase_3'), "aliases": [L('m2.rcv_points_to.phrase_15'), L('m2.rcv_points_to.phrase_16')]},
+    "ALT": {"name": L('m2.rcv_points_to.phrase_4'), "aliases": [L('m2.rcv_points_to.phrase_17'), L('m2.rcv_points_to.phrase_18'), L('m2.rcv_points_to.phrase_19')]},
+    "AST": {"name": L('m2.rcv_points_to.phrase_5'), "aliases": [L('m2.rcv_points_to.phrase_20'), L('m2.rcv_points_to.phrase_21'), L('m2.rcv_points_to.phrase_22')]},
 }
 #: Share of the 95 % RCV the repeat moves by, drawn uniformly per case in this range: inside the
 #: RCV by construction (a change a careful reader does not act on).
@@ -1112,7 +1135,7 @@ def rcv_distractor_for(case_id: str, ddx: dict, meta: dict, taken: set[str]) -> 
     st = sorted(ok, key=lambda x: _h(case_id, "rcv-dis", x))[0]
     share = RCV_SHARE[0] + (RCV_SHARE[1] - RCV_SHARE[0]) * _u(case_id, "rcv-share")
     return {"kind": "rcv_fluctuation", "fid": _STREAM_FID[st], "stream": st, "rcv_share": round(share, 4),
-            "note": ("复查,与上次同一实验室", "门诊复查", "随访复查"),
+            "note": tuple(L(f"m2.rcv.note.{i}") for i in range(3)),
             "source": "within-RCV repeat (EFLM total CV, physio_streams.yaml clinical_measurement.cv)",
             "points_to": RCV_POINTS_TO[st], "direction": "toward_bound"}
 
@@ -1239,7 +1262,7 @@ def render_push(raw, T: int, plan: dict) -> list[dict]:
             pt = rcv_reading(raw, T, dis)
             note = _pick_note(dis.get("note"), cid)
         elif it["role"] == "distractor" and dis.get("qualitative"):
-            pt = {"value": "阳性", "flag": "POSITIVE", "name": spec.get("name_cn", fid)}
+            pt = {"value": L("m2.obs.positive"), "flag": "POSITIVE", "name": spec.get("name_cn", fid)}
             note = _pick_note(dis.get("note"), cid)
         elif it["role"] == "distractor":
             v = _value(spec, dis.get("direction", "high"), dis.get("magnitude", "moderate"),
@@ -1262,7 +1285,7 @@ def render_push(raw, T: int, plan: dict) -> list[dict]:
             pts = synth_on_demand(raw, fid, int(T)) or []
             p = dict(pts[0]) if pts else {}
             if p.get("flag") in ("POSITIVE", "NEGATIVE"):
-                p["value"] = "阳性" if p["flag"] == "POSITIVE" else "阴性"   # same short form for every qualitative item
+                p["value"] = L("m2.obs.positive" if p["flag"] == "POSITIVE" else "m2.obs.negative")   # same short form for every qualitative item
             pt = {k: p.get(k) for k in ("value", "unit", "ref_low", "ref_high", "flag", "name")
                   if k in p}
             note = None
@@ -1829,7 +1852,8 @@ def f2_adverse_reduction(raw, drug: str, T: int, ladder) -> dict | None:
     """
     from haenv.world.clinical.med_course import record_rows
     from haenv.world.clinical.med_course import dose_at
-    from haenv.world.clinical.med_course import DISPLAY
+    from haenv.world.clinical.med_course import drug_key
+    from haenv.i18n.text import Msg
     policy = pre_review_rules().get("adverse_reduction", {}).get(drug)
     if not policy:
         return None
@@ -1844,9 +1868,11 @@ def f2_adverse_reduction(raw, drug: str, T: int, ladder) -> dict | None:
     rows = record_rows(wm, min(int(p["ts"]) for p in pts), T, primary=True)
     failed = []
     for row in rows:
-        match = re.fullmatch(r"剂量 ([\d.]+) → ([\d.]+)", row.get("event", ""))
-        if row.get("drug") == DISPLAY[drug][0] and row.get("reason") == policy["reason"] and match:
-            before, after = map(float, match.groups())
+        ev = row.get("event")
+        # a dose change is the record row `med.event.dose_change`; its doses are its slots
+        change = isinstance(ev, Msg) and ev.kind == "tpl" and ev.key == "med.event.dose_change"
+        if drug_key(row.get("drug")) == drug and tuple(phrase_ids(row.get("reason"))) == tuple(phrase_ids(L(policy["reason"]))) and change:
+            before, after = float(ev.slots["prev"]), float(ev.slots["new"])
             if before > after > 0 and before > current:
                 failed.append((before, row))
     if not failed:
@@ -1981,7 +2007,8 @@ def _acute_events() -> dict:
 
     import yaml
     p = registry_path("acute_events.yaml")
-    return yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    from haenv.i18n.text import wrap
+    return wrap(yaml.safe_load(p.read_text(encoding="utf-8")) or {})
 
 
 def acute_event_for(case_id: str, spec_id: str, arm: str) -> dict | None:
@@ -2001,7 +2028,24 @@ def acute_event_for(case_id: str, spec_id: str, arm: str) -> dict | None:
 
 def _vitals_text(ev: dict) -> str:
     v = (ev or {}).get("vitals")
-    return f",{v['name']} {v['value']} {v['unit']}" if v else ""
+    return tpl("m2.scene.vitals", name=v["name"], value=v["value"], unit=v["unit"]) if v else ""
+
+
+def scene_with_meds(scene, meds_sentence):
+    """Replace the medication slot without reading the rendered sentence."""
+    from haenv.i18n.text import Msg
+    if isinstance(scene, Msg) and scene.kind == "tpl" and "meds" in scene.slots:
+        return tpl(scene.key, **{**scene.slots, "meds": meds_sentence})
+    # Compatibility for hand-authored legacy scenes. This is an input migration;
+    # generated scenes have typed slots before reaching this function.
+    parts = re.split(r"(?:患者)?目前(?:在用 [^。]*|未使用药物)", str(scene or ""))
+    if len(parts) != 2:
+        raise ValueError("M2 scene requires exactly one current-medication sentence")
+    return tpl("m2.scene.imported", prefix=L(parts[0]), meds=meds_sentence, suffix=L(parts[1]))
+
+
+#: chronic base conditions a frame-2 scene names (`m2.disease.<code>`)
+SCENE_DISEASES = ("T2D", "hypertension", "dyslipidemia", "MASLD", "obesity")
 
 
 # ------------------------------------------------------------------ scene templates (job generator)
@@ -2012,7 +2056,6 @@ def sync_current_medications(raw) -> None:
     still constructs a plan-time scene and has no realized dose course. No gold
     or latent plan text is rewritten here. Safe to call repeatedly after edits.
     """
-    import re
     from haenv.world.clinical.med_course import active_medicines
     from haenv.world.clinical.med_course import display
     wm = (getattr(raw, "latent_premise", None) or {}).get("world_medication")
@@ -2024,13 +2067,14 @@ def sync_current_medications(raw) -> None:
     if "history_lo" in wm:
         # the dated record behind the list over the world's record (`med_course.record_rows`)
         from haenv.world.clinical.med_course import record_rows
-        pc["medication_record"] = record_rows(wm, int(wm["history_lo"]), int(pc["prediction_time_T"]), primary=True)
+        pc["medication_record"] = record_rows(wm, int(wm["history_lo"]), int(pc["prediction_time_T"]), primary=True, overlay=True)
+    else:
+        from haenv.world.clinical.med_course import record_rows
+        pc["medication_record"] = record_rows(wm, 0, int(pc["prediction_time_T"]), primary=True, overlay=True)
     if pc.get("m2_frame"):
+        from haenv.m2.emr import med_sentence
         fr = dict(pc["m2_frame"])
-        sentence = "患者目前在用 " + "、".join(shown) if shown else "患者目前未使用药物"
-        fr["scene"], n = re.subn(r"(?:患者)?目前(?:在用 [^。]*|未使用药物)", sentence, str(fr.get("scene") or ""))
-        if n != 1:
-            raise ValueError("M2 scene requires exactly one current-medication sentence")
+        fr["scene"] = scene_with_meds(fr.get("scene"), med_sentence(shown))
         pc["m2_frame"] = fr
     raw.prediction_context = pc
     from haenv.m2.background import laboratory_documents
@@ -2052,29 +2096,22 @@ def scene_text(frame: str, raw: dict, latent: dict, case_id: str) -> str:
     F2 names the primary drug as the one its medication direction asks about. No fact is added that the case does not already contain."""
     T = int(latent.get("index_time_T") or 0)
     disease = raw.get("disease") or ""
-    meds = "患者目前在用 " + "、".join(co_medications(case_id, raw))
-    names = {"T2D": "2型糖尿病", "hypertension": "高血压", "dyslipidemia": "血脂异常",
-             "MASLD": "代谢相关脂肪性肝病", "obesity": "肥胖"}
+    meds = tpl("m2.scene.on_meds", meds=J("enum", co_medications(case_id, raw)))
     if frame == "F1":
         ev = (latent.get("m2") or {}).get("acute_event") or latent.get("acute_event")
         if ev:
-            what = f"「{ev['text']}」{_vitals_text(ev)}"
+            what = tpl("m2.scene.what_quote", quote=ev["text"], vitals=_vitals_text(ev))
         else:
             sy = [s for s in (raw.get("symptoms") or []) if isinstance(s, dict) and int(s.get("day", 10 ** 9)) <= T]
             from haenv.world.observations.events import scene_lay_sentence
-            ph = str(sy[-1]["text"]) if sy else "不适"
-            what = f"「{scene_lay_sentence(case_id, ph, raw.get('sex')) or ph}」"
-        return (f"今天(第 {T} 天)患者因{what}来诊。{meds}。请判断分诊紧急度(🔴 立即急诊 / 🟠 数日内 / "
-                f"🟡 数周内 / 🟢 常规随访)、首选检查、鉴别诊断,以及是否需要立即请临床医生复核。")
+            ph = str(sy[-1]["text"]) if sy else L("m2.scene.unwell")
+            what = tpl("m2.scene.what_quote", quote=scene_lay_sentence(case_id, ph, raw.get('sex')) or ph, vitals="")
+        return tpl("m2.scene.f1", day=T, what=what, meds=meds)
     if frame == "F2":
-        ask = ("请从完整用药记录中识别本次需要评估处置的药物,给出该药的调药方向"
-               "(先查因暂不调 / 加量 / 维持 / 减量),")
-        return (f"今天(第 {T} 天)是{names.get(disease, disease)}的慢病复诊,{meds}。{ask}"
-                f"并判断是否有其他疾病在扰乱基础病的控制。")
+        name = L(f"m2.disease.{disease}") if disease in SCENE_DISEASES else disease
+        return tpl("m2.scene.f2", day=T, disease=name, meds=meds)
     if frame == "F3":
-        return (f"今天(第 {T} 天)一次随访复查到来,结果见 `followup_result`(同一实验室,附上次结果)。{meds}。"
-                f"请就 `followed_indicator` 指出的指标,判断这两次结果的变化是否超出生物学与分析变异(RCV),"
-                f"是哪条线解释了这一变化,以及下一步怎么做。")
+        return tpl("m2.scene.f3", day=T, meds=meds)
     return ""
 
 
@@ -2156,8 +2193,8 @@ def drug_visible(row: dict, med_text: str | None) -> bool:
     need = row.get("requires_visible_drug") or ()
     if not need:
         return True
-    t = str(med_text or "").lower()
-    return any(str(d).lower() in t for d in need if str(d))
+    source_ids = [p.lower() for p in phrase_ids(med_text or "")]
+    return any(alias.lower() in p for d in need for alias in phrase_ids(d) for p in source_ids if alias)
 
 
 def visible_medication_text(scene: str | None, symptoms=()) -> str:
@@ -2172,7 +2209,7 @@ def visible_medication_text(scene: str | None, symptoms=()) -> str:
             parts += [str(x or "") for x in s]
         else:
             parts.append(str(s or ""))
-    return "\n".join(p for p in parts if p)
+    return J("lines", [p for p in parts if p])
 
 
 @functools.lru_cache(maxsize=None)
@@ -2486,4 +2523,8 @@ def _explain_line(comp: str, cov: list, out: list, mine: list, budget: int, clue
 def m2_synth_on_demand(orig, raw, target: str, T: int):
     from haenv.app.pack_hooks import Stage
     from haenv.app.pack_hooks import call_hook
-    return call_hook(Stage.M2_FINDING, _base_m2_synth_on_demand, orig, raw, target, T)
+    points = call_hook(Stage.M2_FINDING, _base_m2_synth_on_demand, orig, raw, target, T)
+    for point in points or ():
+        if point.get("flag") in ("POSITIVE", "NEGATIVE") and not isinstance(point.get("value"), Msg):
+            point["value"] = L("m2.obs.positive_abnormal" if point["flag"] == "POSITIVE" else "m2.obs.negative_normal")
+    return points

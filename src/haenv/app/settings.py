@@ -339,6 +339,8 @@ class Config(BaseModel):
     """The whole of `config.yaml` after `config.local.yaml`, the overlay and `--set`."""
     model_config = ConfigDict(extra="allow")
 
+    language: Literal['en', 'zh'] = _f('answer', 'en')
+
     background: bool | None = _f("generation")
     world: WorldSection = _f("generation", WorldSection())
 

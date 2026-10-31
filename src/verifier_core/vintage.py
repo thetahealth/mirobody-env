@@ -70,6 +70,10 @@ def assert_publishable(rows: Iterable[Mapping], current: str,
     others = {k: v for k, v in vint.items() if k != UNSTAMPED}
     unstamped = vint.get(UNSTAMPED, 0)
     bad: list[str] = []
+    # Records predating language metadata are the original Chinese corpus.
+    languages = {str(row.get('language') or 'zh') for row in rows}
+    if len(languages) > 1:
+        bad.append(f'mixed languages: {sorted(languages)} sharing one denominator')
     if len(others) > 1:
         bad.append(f"mixed version: this batch has {len(others)} judging versions {sorted(others)} "
                    f"sharing one denominator")

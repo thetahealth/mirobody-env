@@ -1,0 +1,30 @@
+# Native English medication review records; retain all numeric format slots.
+p3.pill_count.legacy: Since the last collection, today's pill box contains {left} days of treatment
+p3.change.illness_visit: Seen for {reason}; chronic medication was not changed
+p3.pill_count: 'Last collection: day {day}, {sup} days supplied. Today''s pill box contains {left} days of treatment'
+p3.review.documented_only: '{text}; any course not entered in the symptom diary is undocumented.'
+当时有长途徒步，CK {ck} 倍上限，休息后消退，原剂量继续且耐受。: Long-distance hiking at the time; CK {ck} times the upper limit of normal.
+  Symptoms subsided with rest; the original dose was continued and tolerated.
+CK {ck} 倍上限，撤药随访症状未缓解；后再用原剂量无复发，已耐受。: CK {ck} times the upper limit of normal. Symptoms did not improve after withdrawal;
+  subsequently tolerated the original dose on reintroduction, with no recurrence.
+当时查出甲状腺功能减退，CK {ck} 倍上限；纠正后原剂量继续，无复发。: Hypothyroidism identified at the time; CK {ck} times the upper limit of normal.
+  After correction, the original dose was continued without recurrence.
+p3.target.clinic_drug: 'Clinic target ({name}): {target}'
+p3.pill_count.box: 'Last collected on day {day}, with {sup} days supplied. Reconciled the compartment pill box today:
+  {left} days remaining.'
+p3.pill_count.blister: Collected {sup} days of treatment on day {day}. Remaining blister packs brought to review
+  contained {left} days of treatment.
+p3.pill_count.bottle: 'Bottle count: {sup} days dispensed on day {day}; the remaining tablets provide {left} days
+  of treatment.'
+p3.pill_count.reconciliation: 'Medication reconciliation: {sup} days supplied on day {day}; patient and nurse counted
+  {left} days remaining together.'
+p3.pill_count.pharmacy: 'Pharmacist checked the medicines brought to review: {left} days remaining. Last dispensed
+  on day {day}, with {sup} days supplied.'
+p3.pill_count.home: At this review, medicines remaining at home were reconciled as {left} days of treatment, from
+  the {sup} days collected on day {day}.
+p3.rule.absorption: Separate levothyroxine and calcium carbonate by about {hours} hours. If control is inadequate
+  with concurrent intake, keep the current dose, check administration and address absorption interference before
+  repeating; do not increase the dose immediately. With TSH in target and persistent symptoms, continue the current
+  dose and investigate other causes first. An isolated resolved symptom does not count as a current persistent symptom;
+  gliclazide-related hypoglycaemia still requires review even if food has relieved it.
+p3.rule.top_check: "Clinic dose ceiling for {name}: if {axis} is still above target at the clinic's highest dose ({top} {unit}), do not increase the dose or change drugs; keep the dose and first check adherence, administration, malabsorption (such as gastrointestinal disease) and interacting medicines."

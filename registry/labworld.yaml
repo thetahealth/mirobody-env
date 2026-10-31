@@ -17,6 +17,8 @@ status: provisional
 
 analytes:
   fasting_glucose:
+    source: registry/indicators.yaml#fasting_glucose; p4_diversity.yaml#sources.glucose
+    review: pending
     display: 空腹血糖
     unit: mmol/L
     ndigits: 2                      # indicators.yaml:fasting_glucose.ndigits
@@ -24,6 +26,7 @@ analytes:
     range: [3.0, 25.0]              # indicators.yaml payload_range
     reference: "3.9–6.1"
     default_method: 己糖激酶法（静脉血浆）
+    default_method_family: enzymatic   # an enzymatic assay (method-comparison readers)
     #: case baseline set point: median by cohort, log-SD between people
     #: pre-drug set point on day 0 (the GLP-1 term lowers it along the dose line)
     baseline:
@@ -34,6 +37,8 @@ analytes:
     marker_tokens: [fasting_glucose, HbA1c, CGM_TIR, 血糖, 糖耐量, OGTT, 糖化, 胰岛素, 低血糖, 高血糖, 糖尿病]
     band_upper_rcv: 1.51            # <= 2 x weakest non-true source effect / RCV = 2 x 0.759 = 1.518 (design 4.2 rounds to 1.52)
   creatinine:
+    source: p4_diversity.yaml#sources.eucr; WS/T 404.5-2015, adult serum creatinine intervals
+    review: pending
     display: 肌酐
     unit: μmol/L
     ndigits: 0                      # indicators.yaml:Cr.ndigits
@@ -52,6 +57,7 @@ analytes:
     reference_old_from_age: 60
     reference_review: pending       # which reference set (WS/T 404.5 vs IFCC 59-104 / 45-84)
     default_method: 酶法（肌氨酸氧化酶法）
+    default_method_family: enzymatic   # an enzymatic assay (method-comparison readers)
     baseline:
       F: {median: 64.0, sd_log: 0.12}
       M: {median: 82.0, sd_log: 0.12}
@@ -90,6 +96,7 @@ analytes:
     - 20
     reference: 3.9–6.1
     default_method: 己糖激酶法（静脉血浆）
+    default_method_family: enzymatic   # an enzymatic assay (method-comparison readers)
     cvi: 0.049
     cva:
       standard: 0.0058
@@ -181,6 +188,7 @@ analytes:
     - 12
     reference: 0.45–1.7
     default_method: 酶法（GPO-PAP）
+    default_method_family: enzymatic   # an enzymatic assay (method-comparison readers)
     cvi: 0.198
     cva:
       standard: 0.018
@@ -260,6 +268,7 @@ factors:
     typical: [80.0, 92.0]
     display: 肌酐检测方法 Jaffe 法与酶法互换
     jaffe_method: Jaffe 苦味酸速率法
+    review: pending
     source: "none verified: Peake & Whiting 2006 (PMC1784008) reports reasonably good agreement of carefully calibrated Jaffe and enzymatic methods and gives no Jaffe-vs-enzymatic percentage; the 8-20% range is unsourced (gold audit 2026-10-09); review: pending"
   hemolysis_note:
     kind: background
@@ -527,6 +536,7 @@ factors:
     reason: Effect distribution is synthetic; clinical direction and eligibility are
       sourced in p4_diversity.yaml.
   gastrointestinal_loss:
+    review: pending
     kind: true_change
     acts_on:
     - potassium
@@ -538,7 +548,7 @@ factors:
     - 100
     - 120
     display: 胃肠道丢失
-    source: p4_diversity.yaml#sources.volume
+    source: p4_diversity.yaml#sources.gastrointestinal
     ours: true
     diversity_only: true
     reason: Effect distribution is synthetic; clinical direction and eligibility are
@@ -641,7 +651,7 @@ factors:
     - 100
     - 120
     display: 持续饮酒改变
-    source: p4_diversity.yaml#sources.liver
+    source: p4_diversity.yaml#sources.alcohol
     ours: true
     diversity_only: true
     reason: Effect distribution is synthetic; clinical direction and eligibility are
@@ -706,6 +716,8 @@ factors:
 #: change, pre-analytical, noise).
 comorbidities:
   CKD:
+    source: KDIGO 2024 CKD guideline, Chapter 1; ours synthetic baseline and prevalence
+    review: pending
     display: 慢性肾脏病
     egfr: [20, 40]                  # mL/min/1.73 m2, G3b-G4 (KDIGO 2024)
     share: 0.25
@@ -736,6 +748,7 @@ effects:
     tau_days: 7
     drug: 依那普利
     dose: "10 mg qd"
+    dose_value: 10.0
     #: an ACEI is given only to a patient with one of these (condition code -> record name); a
     #: case without one is not followed on creatinine (realism rule 2026-10-02)
     indications: {hypertension: 高血压, CAD: 冠心病, heart_failure: 心力衰竭, CKD: 慢性肾脏病}
@@ -748,12 +761,18 @@ effects:
 #: below the bound is a decoy that does not act; at or past it the draw would carry a bias this world does
 #: not model, so such a wait is never generated (`gold.gold_block_consistent` refuses it). review: pending
 specimen_stability:
-  creatinine: {max_h: 6.0}
+  creatinine:
+    max_h: 6.0
+    source: p4_interpretation.yaml#protocol.sources
+    review: pending
 
 #: Rendering vocabulary of the report (no gold words; scanned by the p4 leak gate).
 render:
+  source: p4_interpretation.yaml#protocol.sources; doi:10.11613/BM.2013.022; ours (synthetic record vocabulary and tube-policy mix)
+  review: pending
   default_lab: 本院检验科
   alt_lab: 本院检验科（另一院区，同型号分析仪、同厂家试剂）
+  alt_lab_base: 本院检验科
   #: a draw between these hours is a fasting draw; any other draw is recorded as non-fasting
   fasting_hours: [7, 10]
   fasting_label: 空腹
@@ -775,9 +794,11 @@ render:
   tube_plasma_share: 0.5
   tube_serum: 静脉血（促凝血清管）
   tube_plasma: 静脉血（肝素锂抗凝血浆管）
-  #: printed once per report: the laboratory's own validated bound on the wait before centrifugation, the
-  #: visible basis on which a wait inside it carries no change (`specimen_stability`)
-  stability_statement: "本检验科标本稳定性验证：肌酐标本采血后 {h:g} 小时内离心，结果不受影响"
+  #: dish words that make a breakfast a heavy meat meal (pack audit `heavy_meat_breakfast`, read on the
+  #: canonical text of the recorded dish)
+  heavy_meat_foods: [酱牛肉约 250 g、米饭, 炖牛腩约 250 g、米饭]
+  #: the laboratory's printed bound on the wait before centrifugation is the template
+  #: `p4.stability_statement` of `registry/i18n/<lang>/templates/p4.yaml` (`render.specimen_policy`)
   #: pertinent negatives the patient gives at a draw (volume depletion, an intercurrent illness and
   #: nephrotoxic over-the-counter drugs are the acute causes a reader would otherwise have to rule out,
   #: KDIGO 2012 AKI guideline, risk factors); each item prints one per compared draw, none carries a cause
@@ -795,6 +816,8 @@ render:
   dinner_light: [米饭、清炒时蔬, 面条、青菜, 杂粮粥、凉拌黄瓜, 米饭、豆腐、青菜, 蔬菜汤面, 小米粥、凉拌木耳, 米饭、清炒菠菜、紫菜蛋花汤, 素饺子、凉拌萝卜丝]
   #: primary drugs as named on the medication record (class in brackets: the solver needs it to
   #: tell a glucose-acting dose change from any other)
+  # Stable world-key ordering used by the historical medication surface audit.
+  drug_sort_keys: [metformin, enalapril, liraglutide, semaglutide, furosemide, dexamethasone, levothyroxine, dulaglutide, tirzepatide, glimepiride, gliclazide, bisoprolol, hydrochlorothiazide, amlodipine, losartan, insulin_glargine, biotin, metoprolol, dapagliflozin, atorvastatin, amoxicillin_clavulanate, fenofibrate]
   drugs:
     semaglutide: 司美格鲁肽（GLP-1 受体激动剂，每周皮下注射）
     liraglutide: 利拉鲁肽（GLP-1 受体激动剂，每日皮下注射）
@@ -815,8 +838,11 @@ render:
 
 # Legacy control renderer. Values preserve the pre-background release; no new clinical claims.
 render_background_off:
+  source: ours; historical deterministic record vocabulary, not a clinical distribution
+  review: pending
   default_lab: 本院检验科
   alt_lab: 本院检验科（另一院区，同型号分析仪、同厂家试剂）
+  alt_lab_base: 本院检验科
   fasting_hours:
   - 7
   - 10

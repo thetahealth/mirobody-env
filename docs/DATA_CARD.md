@@ -150,11 +150,14 @@ Anyone can rebuild a pack, write a new one of any size with the generators, and 
 | Pack | Question | Answer classes | Job file | Generator | Judge group |
 |---|---|---|---|---|---|
 | ① differential diagnosis | which conditions explain the record, with tests bought on demand | a differential, tests, a review flag | `benchmarks/inputs/m2-pack1.job.yaml` | `tools/generation/m2_gen_job.py` | `haenv.m2` |
-| ② acute triage | where the patient should go now | `ed_now`, `within_24h`, `routine_followup`, `watchful_waiting` | `benchmarks/inputs/pack2-triage.job.yaml` | `tools/generation/pack2_gen_job.py` | `haenv.pack2` |
+| ② acute triage | where the patient should go now | `ed_now`, `within_24h`, `routine_followup`, `watchful_waiting`; an item may accept more than one | written by `make_pack.py --pack p2` (`p2-triage`) | `tools/generation/p2_gen_job.py` | `haenv.p2` |
 | ③ chronic medication adjustment | what to do with the drug next | `uptitrate`, `downtitrate`, `maintain`, `switch`, `check_adherence_or_adverse_effect` | `benchmarks/inputs/p3-meds.job.yaml` | `tools/generation/p3_gen_job.py` | `haenv.p3` |
 | ④ follow-up interpretation | whether the change since the last result is real, and its size | `true_change`, `analytic_biological_noise`, `preanalytical`, `method_difference` | `benchmarks/inputs/p4-followup.job.yaml` | `tools/generation/p4_gen_job.py` | `haenv.p4` |
 
-**Size and seed.** `tools/generation/make_pack.py --pack {m2,pack2,p3,p4} --n N --out DIR [--seed S]` writes
+Pack ② ships no job file; `make_pack.py --pack p2` writes it. `benchmarks/inputs/pack2-triage.job.yaml`
+(`--pack pack2`, `haenv.pack2`) is the earlier triage pipeline, which 1.4 does not publish.
+
+**Size and seed.** `tools/generation/make_pack.py --pack {m2,p2,p3,p4} --n N --out DIR [--seed S]` writes
 the job for `N` items, builds it with the deterministic generator and runs the audit; it makes no
 model call. Class counts follow each pack's proportion table (largest-remainder apportionment, split
 evenly over the cases with and without a hidden condition). The job carries `pack: {n_items,
@@ -166,10 +169,13 @@ and are reproduced byte for byte at the generation commit each batch records. Ea
 
 | Pack | Items at N = 50 | Drawn from | Answer classes |
 |---|---:|---|---|
-| ① | 50 | 44 new items and 6 bridge items from `ddx-workup` | hidden condition 31 · none 13 (new items) |
-| ② | 50 | a pool of 400 emitted cases | `ed_now` 13 · `within_24h` 13 · `routine_followup` 12 · `watchful_waiting` 12 |
-| ③ | 50 | a pool of 471 emitted cases | `maintain` 12 · `check_adherence_or_adverse_effect` 12 · `downtitrate` 10 · `uptitrate` 8 · `switch` 8 |
-| ④ | 50 | a pool of 415 emitted cases | `true_change` 13 · `analytic_biological_noise` 13 · `preanalytical` 12 · `method_difference` 12 |
+| ① | 50 | 48 new items and 2 bridge items from `ddx-workup` | hidden condition 38 · none 10 (new items) |
+| ② | 50 | a pool of 481 emitted cases | least urgent accepted class: `routine_followup` 19 · `within_24h` 16 · `watchful_waiting` 10 · `ed_now` 5; 15 items accept two classes |
+| ③ | 50 | a pool of 528 emitted cases | `uptitrate` 10 · `downtitrate` 10 · `maintain` 10 · `switch` 10 · `check_adherence_or_adverse_effect` 10 |
+| ④ | 50 | a pool of 439 emitted cases | `true_change` 13 · `analytic_biological_noise` 13 · `preanalytical` 12 · `method_difference` 12 |
+
+Pack ② is built with `--difficulty-r2 on`, as in the 1.4 packs; at the default switches its audit
+finds no item for some planned cells and stops.
 
 **Audit.** `tools/validation/pack_audit.py` checks the emitted batch: each cell of the composition the job
 planned is present, gold re-derived from the records equals the stored gold, and question-blind
@@ -431,9 +437,9 @@ set may then differ from the default board, so ranks there are indicative.
 
 ## What a case looks like
 
-Language: prompts and case content are in Chinese, both the instruction block and the free-text
-fields of the record (reported symptoms, context, events). Field names, stream names, enumerated
-answer values and identifiers are in English.
+Language: records, questions and judge prompts exist in English (the default) and in Chinese
+(see [Languages](#languages)). Field names, stream names, enumerated answer values and identifiers
+are in English in both. The frozen 1.3.x packs and their boards are Chinese.
 
 Three classes of field, each with its own path (`src/haenv/provenance/fields.py`):
 
@@ -450,6 +456,27 @@ from other gold fields) · `sampled` · `absent` (discarded: every judge on that
 
 How gold is consumed, by origin (`wq.gold_consumption_coverage`, over the frozen batches):
 structural derivation 27.6% · registry projection 50.0% · written per case 22.4%.
+
+## Languages
+
+Each language is written natively and rendered from one language-independent world. Patient
+state, events, gold answers, evidence IDs and protocol applicability are structured data; the
+language enters only when a built case is rendered. One seed therefore gives the same patients,
+gold answers and evidence IDs in English and in Chinese: `world_sha` is equal and `render_sha16`
+differs. Numbers keep their format in both languages.
+
+The English records describe the same clinic as the Chinese ones, with the same record
+structure, units (mmol/L, μmol/L, mmHg) and workflow. They are not adapted to another health
+system: there is no SOAP restructuring and no conversion to mg/dL.
+
+A batch records its language, and every row carries `language` and `render_sha16`. Each
+language's judge prompt has its own stamp (`management_rubric_sha16`). Scores are comparable
+within one language. Across languages, compare only in a paired analysis of the same seed. The
+publish gate refuses a board that mixes languages. A batch without a recorded language, such as
+any 1.3.x batch, is Chinese.
+
+Choose the language with `--lang en|zh`, `language:` in a job file or `config.yaml`, or
+`HAENV_LANG`; see [`REPRODUCE.md`](REPRODUCE.md#language).
 
 ## Geometries
 
@@ -601,6 +628,10 @@ without its fingerprint is not reproducible. For a pack, also cite its `n_items`
   a pack, 11 of 15 pairs are separable on pack ①, 0 on pack ②, 4 on pack ③ and 10 on pack ④; on the
   overall board gpt-6-sol is separable from every other model, and gemini-3.1-pro, gemini-3.7-flash and
   gpt-6-luna are not separable from one another. A larger pool per pack would separate more pairs.
+* The English records are checked automatically against the Chinese records of the same world:
+  the same case IDs, gold answers and evidence IDs; the same numbers, negation and certainty cues
+  string for string; and no Chinese characters on any surface the agent reads. No independent
+  clinician has read the English records yet.
 * The rules behind pack ② (which findings send a patient to the emergency department) and pack ③
   (when a dose change is on target, when to check adherence first) and the lay-sentence registry
   carry `review: pending`; no practising clinician has signed them off.

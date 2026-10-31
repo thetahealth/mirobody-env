@@ -27,6 +27,9 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.runtime import runtime_text
+from haenv.i18n.text import L as _L, text_of as _rt
+
 import copy
 import json
 from dataclasses import dataclass, field
@@ -52,16 +55,16 @@ class ToolSpec:
     fn: Callable[..., dict] = field(compare=False, repr=False)
 
     def neutral(self) -> dict:
-        return {"name": self.name, "description": self.description, "parameters": self.params}
+        return runtime_text({"name": self.name, "description": self.description, "parameters": self.params})
 
 
 def _obj(props: dict, required: tuple = ()) -> dict:
     return {"type": "object", "properties": props, "required": list(required)}
 
 
-_DAY = {"type": "integer", "description": "病程日(本记录第 0 天起算;负数为更早的历史)"}
-_WIN = {"from_day": {**_DAY, "description": "起始日(含);省略 = 不设下限"},
-        "to_day": {**_DAY, "description": "截止日(含);省略 = 到今天为止"}}
+_DAY = {"type": "integer", "description": _L('runtime.interaction.query.tools.module.1')}
+_WIN = {"from_day": {**_DAY, "description": _L('runtime.interaction.query.tools.module.2')},
+        "to_day": {**_DAY, "description": _L('runtime.interaction.query.tools.module.3')}}
 
 
 def row_day(row) -> int | None:
@@ -90,6 +93,44 @@ def _span(rows: list) -> dict:
     return {"first_day": min(days), "last_day": max(days)} if days else {}
 
 
+def protocol_documents():
+    """The shared serving catalog, rendered from structured protocol slots.
+
+    Older P3 generators retain the review interval as a plain string inside a
+    ladder message. Keep that legacy catalog usable without making its prose
+    the identifier of an English translation.
+    """
+    from haenv.i18n.text import Msg, T
+    from haenv.world.labworld.meds import drug, rule
+    from haenv.world.protocols.library import catalog
+    docs = copy.deepcopy(catalog())
+    for document in docs:
+        steps = []
+        for step in document['steps']:
+            if (isinstance(step, Msg) and step.key == 'protocol.med.ladder'
+                    and not isinstance(step.slots['rule'], Msg)):
+                key = step.slots['name'].key.removeprefix('drug.')
+                days = int(drug(key)['tau_rule_days'])
+                interval = T('runtime.protocol.review_interval', days=days,
+                             early_days=int(float(rule()['early_max_frac']) * days))
+                step = T(step.key, **{**step.slots, 'rule': interval})
+            steps.append(step)
+        document['steps'] = steps
+    return runtime_text(docs)
+
+
+def trusted_protocol_documents():
+    """Exact documents from each registered service edition; scope is an ID property."""
+    from haenv.p2.protocols import scope
+    from haenv.p4.protocols import document
+    docs = []
+    for active in (False, True):
+        with scope(active):
+            docs.extend(protocol_documents())
+    docs.append(runtime_text(document()))
+    return docs
+
+
 class RecordStore:
     """Read-only view of one solver payload at time T, through a pack adapter (or none)."""
 
@@ -107,9 +148,8 @@ class RecordStore:
         self.block = (self.context.pop(adapter.block, None) if adapter is not None and adapter.block else None) or {}
         self.sections = dict(adapter.sections) if adapter is not None else {}
         self.protocols = self.block.pop("protocol_library", [])
-        if self.protocols == "本院规程库":
-            from haenv.world.protocols.library import catalog
-            self.protocols = catalog()
+        if self.block.get("rules_delivery") == "library" and isinstance(self.protocols, str):
+            self.protocols = protocol_documents()
         if adapter is not None:
             # Common dated sources can live beside a pack's scene block. They
             # use the same registered-section retrieval and paging contract.
@@ -173,7 +213,7 @@ class RecordStore:
     # ---- common tools ----
     def list_sources(self) -> dict:
         labs = set(self.lab_streams())
-        streams = [{"name": k, "n_points": len(v), **_span(v), **({"lab": True} if k in labs else {})}
+        streams = [{"name": fhir.stream_id(k), "n_points": len(v), **_span(v), **({"lab": True} if k in labs else {})}
                    for k, v in sorted(self.streams.items())]
         kinds: dict[str, int] = {}
         for e in self.notes:
@@ -183,7 +223,7 @@ class RecordStore:
             if s in self.block:
                 rows = self.section_rows(s)
                 records.append({"section": s, "kind": k if isinstance(k, str) else list(k),
-                                "n_rows": len(rows), **_span(rows), "about": desc})
+                                "n_rows": len(rows), **_span(rows), "about": runtime_text(_L(desc))})
         out = {"today": self.T, "profile_fields": sorted(self.profile), "streams": streams,
                "notes": {"n": len(self.notes), "kinds": kinds, **_span(self.notes)}}
         if records:
@@ -204,25 +244,25 @@ class RecordStore:
                                               {s: self.block[s] for s in self._kind("profile")})}
 
     def get_series(self, name: str, from_day: int | None = None, to_day: int | None = None) -> dict:
-        name = str(name)
+        name = next((k for k in self.streams if fhir.stream_id(k) == str(name)), str(name))
         if name in self.streams:
-            return self._bundle(self._stream_items(name, from_day, to_day), name=name,
+            return self._bundle(self._stream_items(name, from_day, to_day), name=fhir.stream_id(name),
                                 **fhir.stream_head(name, lab=name in self.lab_streams()))
         if name in self._kind("series"):
             return self._bundle(self._section_items(name, from_day, to_day), name=name)
-        return {"found": False, "name": name, "available": sorted(self.streams) + self._kind("series")}
+        return {"found": False, "name": name, "available": sorted(fhir.stream_id(k) for k in self.streams) + self._kind("series")}
 
     def get_labs(self, name: str | None = None, from_day: int | None = None, to_day: int | None = None) -> dict:
         items = []
         for s in self.lab_streams():
-            if name in (None, "", s):
+            if name in (None, "", s, fhir.stream_id(s)):
                 items += self._stream_items(s, from_day, to_day, full=True)
         for s in self._kind("labs"):
             label = self.adapter.lab_label(self.block, s) if self.adapter is not None else s
             if name in (None, "", s) or (name and name in label):
                 items += self._section_items(s, from_day, to_day)
         if not items:
-            return {"found": False, "name": name, "available": self.lab_streams() + [
+            return {"found": False, "name": name, "available": [fhir.stream_id(s) for s in self.lab_streams()] + [
                 self.adapter.lab_label(self.block, s) if self.adapter is not None else s for s in self._kind("labs")]}
         return self._bundle(items)
 
@@ -251,29 +291,28 @@ class RecordStore:
     def common_specs(self) -> list[ToolSpec]:
         mp = self.max_points
         out = [
-            ToolSpec("list_sources", "列出这位患者截至今天有哪些数据:各监测流与本次记录各部分的条数与起止日、文字记录的类别。",
+            ToolSpec("list_sources", _rt('runtime.interaction.query.tools.common_specs.1'),
                      _obj({}), lambda: self.list_sources()),
-            ToolSpec("get_profile", "患者基本档案(年龄段、性别、已知疾病、设备等)与既往背景。", _obj({}),
+            ToolSpec("get_profile", _rt('runtime.interaction.query.tools.common_specs.2'), _obj({}),
                      lambda: self.get_profile()),
-            ToolSpec("get_series", f"读一条监测流(或记录里按日的表)在 [from_day, to_day] 内的逐点数据;一次最多 {mp} 点,"
-                                   "超出时返回最近的部分并给出往前翻页的 to_day。",
-                     _obj({"name": {"type": "string", "description": "监测流或表的名称,见 list_sources"}, **_WIN},
+            ToolSpec("get_series", _rt('runtime.interaction.query.tools.common_specs.3', s0=mp),
+                     _obj({"name": {"type": "string", "description": _rt('runtime.interaction.query.tools.common_specs.4')}, **_WIN},
                           ("name",)), self.get_series),
-            ToolSpec("get_labs", f"读化验结果(含采血时刻与随附说明);name 省略 = 全部项目。一次最多 {mp} 条。",
-                     _obj({"name": {"type": "string", "description": "化验项目名称(可省略)"}, **_WIN}),
+            ToolSpec("get_labs", _rt('runtime.interaction.query.tools.common_specs.5', s0=mp),
+                     _obj({"name": {"type": "string", "description": _rt('runtime.interaction.query.tools.common_specs.6')}, **_WIN}),
                      self.get_labs),
-            ToolSpec("get_meds", f"读用药记录(处方、剂量变化、取药、停用及原因)。一次最多 {mp} 条。",
+            ToolSpec("get_meds", _rt('runtime.interaction.query.tools.common_specs.7', s0=mp),
                      _obj(dict(_WIN)), self.get_meds),
-            ToolSpec("get_notes", f"读患者自述、生活事件与就诊记录等文字条目(可按类别与时间窗筛选)。一次最多 {mp} 条。",
-                     _obj({**_WIN, "kind": {"type": "string", "description": "类别,见 list_sources 的 notes.kinds 与 records"}}),
+            ToolSpec("get_notes", _rt('runtime.interaction.query.tools.common_specs.8', s0=mp),
+                     _obj({**_WIN, "kind": {"type": "string", "description": _rt('runtime.interaction.query.tools.common_specs.9')}}),
                      self.get_notes),
         ]
         if self.sections:
-            out.append(ToolSpec("get_record", f"按名称读本次记录的某一部分(名称见 list_sources 的 records);按日的部分可加时间窗,一次最多 {mp} 条。",
-                                _obj({"section": {"type": "string", "description": "记录部分的名称"}, **_WIN}, ("section",)),
+            out.append(ToolSpec("get_record", _rt('runtime.interaction.query.tools.common_specs.10', s0=mp),
+                                _obj({"section": {"type": "string", "description": _rt('runtime.interaction.query.tools.common_specs.11')}, **_WIN}, ("section",)),
                                 self.get_record))
         if self.protocols:
-            out.append(ToolSpec("get_protocol", "按名称、主题或关键词检索本院规程，返回适用条件、排除条件、完整步骤、例外与出处；省略条件返回全部。",
+            out.append(ToolSpec("get_protocol", _rt('runtime.interaction.query.tools.common_specs.12'),
                                 _obj({k: {"type": "string"} for k in ("name", "topic", "keyword")}), self.get_protocol))
         return out
 
@@ -286,25 +325,25 @@ def call_tool(specs: dict[str, ToolSpec], name: str, args) -> tuple[dict, str | 
     the model sees (and the trace counts), never an exception."""
     s = specs.get(str(name))
     if s is None:
-        return {"error": f"没有名为 {name} 的工具", "tools": sorted(specs)}, "unknown_tool"
+        return {"error": _rt('runtime.interaction.query.tools.call_tool.1', s0=name), "tools": sorted(specs)}, "unknown_tool"
     if isinstance(args, str):
         try:
             args = json.loads(args or "{}")
         except ValueError:
-            return {"error": "参数不是合法 JSON"}, "bad_arguments"
+            return {"error": _rt('runtime.interaction.query.tools.call_tool.2')}, "bad_arguments"
     if args is None:
         args = {}
     if not isinstance(args, dict):
-        return {"error": "参数必须是对象"}, "bad_arguments"
+        return {"error": _rt('runtime.interaction.query.tools.call_tool.3')}, "bad_arguments"
     allowed = set((s.params.get("properties") or {}))
     extra = sorted(set(args) - allowed)
     missing = [k for k in s.params.get("required") or () if k not in args]
     if extra or missing:
-        return {"error": "参数不符合工具定义", "unexpected": extra, "missing": missing}, "bad_arguments"
+        return {"error": _rt('runtime.interaction.query.tools.call_tool.4'), "unexpected": extra, "missing": missing}, "bad_arguments"
     try:
         return s.fn(**args), None
     except (TypeError, ValueError) as e:
-        return {"error": f"参数取值无效: {e}"}, "bad_arguments"
+        return {"error": _rt('runtime.interaction.query.tools.call_tool.5', s0=e)}, "bad_arguments"
 
 
 class QueryLeak(RuntimeError):
@@ -351,15 +390,13 @@ class ResultGuard:
         text = obj if isinstance(obj, str) else json.dumps(obj, ensure_ascii=False)
         bad += [f"forbidden_token:{w}" for w in self.kernel if w in text.lower()]
         if isinstance(obj, dict) and obj.get("protocols"):
-            from haenv.world.protocols.library import catalog
-            titles = [{"protocol_id": d["protocol_id"], "name": d["name"], "topics": d["topics"]} for d in catalog()]
-            if obj["protocols"] == titles:
+            titles = [{"protocol_id": d["protocol_id"], "name": d["name"], "topics": d["topics"]} for d in trusted_protocol_documents()]
+            if all(d in titles for d in obj["protocols"]):
                 text = json.dumps({k: v for k, v in obj.items() if k != "protocols"}, ensure_ascii=False)
         # A canonical, patient-independent policy legitimately names all actions.
         # Exempt only exact registry documents, never arbitrary text with a policy tag.
         if isinstance(obj, dict) and obj.get("resourceType") == "Bundle":
-            from haenv.world.protocols.library import catalog
-            docs = catalog() if any(fhir.source_of(e) == "protocol_library" for e in obj.get("entry") or ()) else []
+            docs = trusted_protocol_documents() if any(fhir.source_of(e) == "protocol_library" for e in obj.get("entry") or ()) else []
             entries = [e for e in obj.get("entry") or () if not (
                 fhir.source_of(e) == "protocol_library" and fhir.unshape(e) in docs)]
             text = json.dumps({**obj, "entry": entries}, ensure_ascii=False)

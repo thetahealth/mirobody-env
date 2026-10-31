@@ -3,6 +3,13 @@
     uv run python tools/release/make_freeze.py --revision 3 --why "..." \
         --pack <job>=<batch> ...
 
+A generated pack built in one language is declared as `--generated-pack <job>@<lang>=<batch>`;
+its receipt is keyed `<job>@<lang>`, so the zh and en builds of one job are recorded side by side,
+and the batch's recorded language must match. `<batch>` may also be the batch directory itself
+(`.../results/<task_type>/<job>/<stamp>`), for builds that live outside the output root; only the
+stamp is recorded. `--inherit-packs` carries the published `packs` of the previous anchor over
+unchanged (like `--segments-only`) while the generated packs are given fresh.
+
 Segment fingerprints are semantic (see `_sem`); `packs[*].sha256` is the raw sha256 of the
 pack's `cases.jsonl`, first 16 hex chars.
 """
@@ -87,6 +94,7 @@ def _generation_source(batch_dir: Path, _seen: set | None = None) -> dict:
 PROVENANCE_DECLARATIONS = "src/haenv/provenance/declarations.py"
 
 from haenv.provenance.declarations import (
+    RENDER,
     GENERATION,
     MANAGEMENT_JUDGING,
     JUDGING,
@@ -211,16 +219,18 @@ def _write_doc_numbers() -> None:
         print(f"   doc_numbers_check exited {r.returncode} after --write: fix the lines above by hand")
 
 
-def run_publish_gate(packs: dict, pack_types: dict, assert_publishable, not_publishable, root: Path | None = None) -> int:
+def run_publish_gate(packs: dict, pack_types: dict, assert_publishable, not_publishable, root: Path | None = None,
+                     dirs: dict | None = None) -> int:
     """Run the publish gate over every pack's saved rows. 0 = passed, 2 = rejected or not runnable.
 
-    The pack's directory comes from its declared task type (`pack_types`), never from its name. A
-    pack whose batch directory is not there is an error; a batch with no `eval.jsonl` (generated,
-    not yet run) has nothing to gate and says so on the console.
+    The pack's directory comes from its declared task type (`pack_types`), never from its name, or
+    from `dirs` when the batch directory was given explicitly. A receipt keyed `<job>@<lang>` names
+    its job in `job`. A pack whose batch directory is not there is an error; a batch with no
+    `eval.jsonl` (generated, not yet run) has nothing to gate and says so on the console.
     """
     root = _output_base() if root is None else root
     for _job, _v in packs.items():
-        _dir = root / "results" / pack_types[_job] / _job / _v["batch"]
+        _dir = (dirs or {}).get(_job) or root / "results" / pack_types[_job] / _v.get("job", _job) / _v["batch"]
         if not _dir.is_dir():
             print(f"🔴 Publish gate cannot run: batch directory {_dir} does not exist")
             return 2
@@ -250,7 +260,12 @@ def main() -> int:
     ap.add_argument("--pack", action="append", default=[],
                     metavar="JOB=BATCH", help="repeatable; JOB=batch timestamp")
     ap.add_argument("--generated-pack", action="append", default=[],
-                    metavar="JOB=BATCH", help="record an audited generation-pipeline output separately from published Q packs")
+                    metavar="JOB[@LANG]=BATCH", help="record an audited generation-pipeline output separately from published Q packs; "
+                                                    "`@LANG` keys the receipt by language (zh and en of one job side by side) and BATCH "
+                                                    "may be the batch directory")
+    ap.add_argument("--inherit-packs", action="store_true",
+                    help="carry the published `packs` of the previous anchor over unchanged while the generated packs are given "
+                         "fresh; must be combined with --supersedes and --why, and excludes --pack")
     ap.add_argument("--out", default=None)
     ap.add_argument("--allow-stale", action="store_true",
                     help="Skip the publish gate (freeze the batch anyway even with mixed/stale/unstamped judge versions); recorded in the snapshot")
@@ -261,7 +276,7 @@ def main() -> int:
     check_segments_disjoint()
 
     if args.segments_only:
-        if args.pack or args.generated_pack:
+        if args.pack or args.generated_pack or args.inherit_packs:
             print("🔴 `--segments-only` does not accept `--pack` -- packs must either all be inherited or all freshly given")
             return 2
         if args.supersedes is None or not str(args.why).strip():
@@ -315,31 +330,78 @@ def main() -> int:
     packs: dict[str, dict] = {}
     generated_packs: dict[str, dict] = {}
     pack_types: dict[str, str] = {}
+    batch_dirs: dict[str, Path] = {}
     missing = []
+    inherited_from = None
+    if args.inherit_packs:
+        if args.pack:
+            print("🔴 `--inherit-packs` does not accept `--pack` -- published packs are either all inherited or all freshly given")
+            return 2
+        if args.supersedes is None or not str(args.why).strip():
+            print("🔴 `--inherit-packs` must be combined with `--supersedes <N>` and `--why '...'`")
+            return 2
+        _prev = _previous_anchor()
+        if not _prev.get("packs"):
+            print("🔴 The previous anchor has no published packs to inherit, refusing")
+            return 2
+        packs = dict(_prev["packs"])
+        inherited_from = _prev.get("revision")
     from haenv.app.artifacts.jobmeta import pack_task_type
+    from haenv import i18n as _i18n
     for spec, generated in [(s, False) for s in args.pack] + [(s, True) for s in args.generated_pack]:
-        job, _, batch = spec.partition("=")
-        if job in pack_types:
-            print(f"🔴 Pack {job!r} is declared more than once")
+        key, _, batch = spec.partition("=")
+        job, _, lang = key.partition("@")
+        if lang:
+            if not generated:
+                print(f"🔴 `{spec}`: a language suffix applies to `--generated-pack` only")
+                return 2
+            try:
+                lang = _i18n.check(lang)
+            except _i18n.LanguageError as _e:
+                print(f"🔴 `{spec}`: {_e}")
+                return 2
+            key = f"{job}@{lang}"
+        if key in pack_types or key in packs:
+            print(f"🔴 Pack {key!r} is declared more than once")
             return 2
-        try:
-            pack_types[job] = pack_task_type(_output_base(), job, batch)
-        except ValueError as _e:
-            print(f"🔴 {_e}")
-            return 2
-        f = _output_base() / "results" / pack_types[job] / job / batch / "cases.jsonl"
+        if "/" in batch:
+            # An explicit batch directory `.../results/<task_type>/<job>/<stamp>`; only the stamp is recorded.
+            _bd = Path(batch).expanduser().resolve()
+            if _bd.parent.name != job:
+                print(f"🔴 `{spec}`: batch directory {_bd} does not belong to job {job!r}")
+                return 2
+            pack_types[key], batch, batch_dirs[key] = _bd.parent.parent.name, _bd.name, _bd
+        else:
+            try:
+                pack_types[key] = pack_task_type(_output_base(), job, batch)
+            except ValueError as _e:
+                print(f"🔴 {_e}")
+                return 2
+        f = batch_dirs.get(key, _output_base() / "results" / pack_types[key] / job / batch) / "cases.jsonl"
         if not f.exists():
             missing.append(str(f))
             continue
+        receipt_lang = None
+        if lang:
+            try:
+                receipt_lang = _i18n.batch_language(json.loads((f.parent / "batch.json").read_text(encoding="utf-8")))
+            except (OSError, ValueError) as _e:
+                print(f"🔴 `{spec}`: cannot read the batch language: {type(_e).__name__}: {_e}")
+                return 2
+            if receipt_lang != lang:
+                print(f"🔴 `{spec}`: the batch was built in {receipt_lang!r}, not {lang!r}")
+                return 2
         _jy = _resource_file(f"inputs/{job}.job.yaml")
         target = generated_packs if generated else packs
         source = _generation_source(f.parent)
-        target[job] = {"batch": batch,
+        target[key] = {"batch": batch,
                       "n": sum(1 for _ in f.open(encoding="utf-8", errors="ignore")),
                       "sha256": _sha(f),
                       "job_yaml_sha256": source.get("job_sha256") if generated else
                                          (_sha(_jy) if _jy.exists() else None),
                       "generation_source": source}
+        if receipt_lang:
+            target[key] = {"job": job, "language": receipt_lang, **target[key]}
     if missing:
         for m in missing:
             print(f"🔴 Batch does not exist: {m}")
@@ -363,6 +425,8 @@ def main() -> int:
         "packs": packs,
         "n_total": sum(v["n"] for v in packs.values()),
     }
+    if inherited_from is not None:
+        snap["packs_inherited_from"] = inherited_from
     from haenv.provenance.judging import criterion_fingerprints
     snap["judging_criteria"] = criterion_fingerprints()
     if generated_packs:
@@ -374,7 +438,9 @@ def main() -> int:
     if not args.allow_stale:
         from haenv.provenance.judging_provenance import NotPublishable
         from haenv.provenance.judging_provenance import assert_publishable
-        _rc = run_publish_gate({**packs, **generated_packs}, pack_types, assert_publishable, NotPublishable)
+        # Inherited packs were gated when they were frozen; their batches need not be on this machine.
+        _fresh = generated_packs if inherited_from is not None else {**packs, **generated_packs}
+        _rc = run_publish_gate(_fresh, pack_types, assert_publishable, NotPublishable, None, batch_dirs)
         if _rc:
             return _rc
     else:
@@ -391,7 +457,8 @@ def main() -> int:
             dst = resource_directory("anchors", layout="restructured", root=_output_base()) / f"freeze-{args.date}.json"
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(json.dumps(snap, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"rev{args.revision} · {len(packs)} packs · {snap['n_total']} cases → {dst}")
+    print(f"rev{args.revision} · {len(packs)} packs · {snap['n_total']} cases → {dst}"
+          + (f" (inherited from rev{inherited_from})" if inherited_from is not None else ""))
     for job, v in packs.items():
         print(f"   {job:<20}{v['batch']}  {v['n']:>3} cases  {v['sha256']}")
     if generated_packs:

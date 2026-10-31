@@ -14,7 +14,7 @@ difficulty_probe: P1p
 framing_ref: DDX_SCOPE2_PROMPT
 # Fingerprint of the runtime template object (not the source literal, whose `\`
 # is a line continuation). Batches with a different `framing_sha256` are not comparable.
-framing_sha256: e6287cc58e0a7e83
+framing_sha256: 0e8ed27c7110595b
 answer_space: free            # the diagnosis name is free text (no disease names in the driver vocabulary)
 hint_level: 0
 budget: {max_rounds: 1}

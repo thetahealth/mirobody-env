@@ -1,0 +1,9 @@
+# Hospital protocol library templates (zh).
+protocol.source: "参考：{cite}；链接：{url}；本院约定：{policy}。"
+protocol.cite_join: "{head}；{tail}"
+protocol.news2.band: "{lo}–{hi}：{pts} 分"
+protocol.news2.bands: "{label}：{bands}"
+protocol.news2.confusion: "新发意识混乱 {points} 分，其余清醒 0 分。"
+protocol.news2.sum: "NEWS2 各项相加（区间含端点），缺测不能当 0 分；先核对病历授权的 SpO2 量表。{bands}"
+protocol.med.ladder: "{name}：剂量阶梯 {ladder}（每日）。{rule}"
+protocol.doc.field: "{label}：{body}"

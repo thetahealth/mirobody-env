@@ -22,6 +22,8 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L, T as text
+from haenv.p4.textmatch import field_id, is_text
 from haenv.p4.plan import h01
 from haenv.p4.plan import background_on
 
@@ -59,7 +61,7 @@ def meat_slot(clock: str, case_id: str, day: int) -> tuple[str, str] | None:
     if is_fasting(clock):
         return None
     R, c = _R(), _min(clock)
-    for meal, win in (("午餐", R["lunch_window"]), ("早餐", R["breakfast_window"])):
+    for meal, win in ((L("p4.meal.lunch"), R["lunch_window"]), (L("p4.meal.breakfast"), R["breakfast_window"])):
         a, b = max(_min(win[0]), c - 240), min(_min(win[1]), c - 60)
         if a <= b:
             return meal, _hhmm(a + int(h01("p4meat-t", case_id, day) * (b - a + 1)))
@@ -88,15 +90,9 @@ def _by_factor(rec: dict, name: str) -> dict | None:
 def processing_text(hours: float, case_id: str, day: int) -> str:
     """How the report words the wait before centrifugation: three wordings, picked per draw, each with
     the number of hours (the room-temperature clause only on a wait of two hours or more)."""
-    warm = hours >= 2.0
-    if not background_on():
-        return f"采血后 {hours:.1f} 小时离心" + ("，期间室温放置" if warm else "")
-    k = int(h01("p4proc", case_id, day) * 3)
-    if k == 0:
-        return f"采血后 {hours:.1f} 小时离心" + ("，期间室温放置" if warm else "")
-    if k == 1:
-        return f"{hours:.1f} 小时后离心" + ("（采血后室温放置）" if warm else "")
-    return f"离心前放置 {hours:.1f} 小时" + ("（室温）" if warm else "")
+    warm = "_warm" if hours >= 2.0 else ""
+    k = int(h01("p4proc", case_id, day) * 3) if background_on() else 0
+    return text(f"p4.proc.wait{k}{warm}", h=hours)
 
 
 def patient_remarks(item: dict, case_id: str) -> list[dict]:
@@ -117,8 +113,7 @@ def specimen_policy(analyte: str) -> str | None:
     """The laboratory's printed bound on the wait before centrifugation (None for an analyte with no bound)."""
     from haenv.world.labworld.perturb import stability_h
     lim = stability_h(analyte)
-    from haenv.world.labworld import tables
-    return tables()["render"]["stability_statement"].format(h=lim) if lim is not None else None
+    return text("p4.stability_statement", h=lim) if lim is not None else None
 
 
 def report_row(item: dict, rec: dict, case_id: str) -> dict:
@@ -134,24 +129,25 @@ def report_row(item: dict, rec: dict, case_id: str) -> dict:
     hours = float(dp["params"]["hours"]) if dp else round(lo + (hi - lo) * h01("p4spec", case_id, d), 1)
     poc = _by_factor(rec, "poc_meter")
     jf = _by_factor(rec, "jaffe_enzymatic_switch")
-    if poc and (poc.get("role") == "cause" or (poc.get("params") or {}).get("method_throughout")):
-        lab, method = "门诊床旁检测点", F("poc_meter")["display"]
+    poc_method = bool(poc and (poc.get("role") == "cause" or (poc.get("params") or {}).get("method_throughout")))
+    if poc_method:
+        lab, method = L("p4.lab.poc_point"), F("poc_meter")["display"]
     elif poc:
-        note = "同日空腹指尖血糖用床旁血糖仪测定"
+        note = L("p4.note.poc_glucose")
     if jf and (jf.get("role") == "cause" or (jf.get("params") or {}).get("method_throughout")):
         method = F("jaffe_enzymatic_switch")["jaffe_method"]
     ls = _by_factor(rec, "lab_switch_zero_bias")
     if ls and (ls.get("params") or {}).get("reagent_change"):
-        method = method + "，试剂批号 B"
+        method = text("p4.method.reagent_lot_b", method=method)
     elif ls:
-        lab = R["alt_lab"].split("（", 1)[0] + "（另一院区）"
-    hemo = "轻度（1+）" if _by_factor(rec, "hemolysis_note") else "无"
-    if method.startswith("床旁"):
-        specimen = {"sample": "指尖毛细血管全血", "processing": "即时检测", "hemolysis_index": "—"}
+        lab = text("p4.lab.other_campus", lab=R["alt_lab_base"])
+    hemo = L("p4.hemo.mild" if _by_factor(rec, "hemolysis_note") else "p4.hemo.none")
+    if poc_method:
+        specimen = {"sample": L("p4.sample.capillary"), "processing": L("p4.processing.immediate"), "hemolysis_index": "—"}
     else:
         tb = _by_factor(rec, "tube_type")
         plasma = bool(tb and (tb.get("params") or {}).get("tube") == "li_heparin")
-        sample = (R["tube_plasma"] if plasma else R["tube_serum"]) if background_on() else "静脉血（促凝血清管）"
+        sample = (R["tube_plasma"] if plasma else R["tube_serum"]) if background_on() else L("p4.sample.serum_default")
         specimen = {"sample": sample,
                     "processing": processing_text(hours, case_id, d),
                     "hemolysis_index": hemo}
@@ -171,7 +167,7 @@ def diet_rows(item: dict, rec: dict, case_id: str) -> dict:
         t = meat_dinner_time(case_id, d) if meat else \
             f"{18 + int(h01(key + '-h', case_id, d) * 3):02d}:{int(h01(key + '-m', case_id, d) * 60):02d}"
         food = _pick(R["meals_meat"] if meat else R["dinner_light"], "p4meat" if meat else key, case_id, d)
-        return {"day": d - back, "time": t, "meal": "前一日晚餐" if back == 1 else "前两日晚餐", "food": food}
+        return {"day": d - back, "time": t, "meal": L("p4.meal.dinner_d1" if back == 1 else "p4.meal.dinner_d2"), "food": food}
 
     def two_days_before(meat: bool) -> dict:
         """The meal two days before the draw, at a breakfast, lunch or dinner slot drawn per draw (so the slot of
@@ -186,7 +182,7 @@ def diet_rows(item: dict, rec: dict, case_id: str) -> dict:
             lib, key = (R["breakfast_meat"] if k == 0 else R["meals_meat"]), "p4meat"
         else:
             lib, key = (R["meals_light"] if k == 0 else R["lunch_light"]), "p4light2"
-        return {"day": d - 2, "time": t, "meal": "前两日" + ("早餐" if k == 0 else "午餐"), "food": _pick(lib, key, case_id, d)}
+        return {"day": d - 2, "time": t, "meal": L("p4.meal.breakfast_d2" if k == 0 else "p4.meal.lunch_d2"), "food": _pick(lib, key, case_id, d)}
     # a draw can carry both a meat meal that acts (a breakfast or lunch 1-4 h before it) and a meat meal two
     # days before that does not: the two are separate perturbations of one factor
     meals = [p for p in rec.get("perturbations") or () if p.get("factor") == "meat_meal"]
@@ -197,22 +193,22 @@ def diet_rows(item: dict, rec: dict, case_id: str) -> dict:
     entries = [two_days_before(meat_dinner) if background_on() else dinner(2, "p4dinner2", meat_dinner),
                dinner(1, "p4dinner", False)]
     if is_fasting(clock):
-        entries.append({"day": d, "time": None, "meal": "早餐", "food": "采血后进食"})
+        entries.append({"day": d, "time": None, "meal": L("p4.meal.breakfast"), "food": L("p4.food.after_draw")})
         return {"draw_day": d, "draw_time": clock, "entries": entries}
     slot = meat_slot(clock, case_id, d) if meat else None
     b0, b1 = (_min(x) for x in R["breakfast_window"])
-    if slot and slot[0] == "早餐":
-        entries.append({"day": d, "time": slot[1], "meal": "早餐", "food": _pick(R["breakfast_meat"], "p4meat", case_id, d)})
+    if slot and is_text(slot[0], "p4.meal.breakfast"):
+        entries.append({"day": d, "time": slot[1], "meal": L("p4.meal.breakfast"), "food": _pick(R["breakfast_meat"], "p4meat", case_id, d)})
     else:
         t = b0 + int(h01("p4bf-t", case_id, d) * (b1 - b0 + 1))
-        entries.append({"day": d, "time": _hhmm(t), "meal": "早餐", "food": _pick(R["meals_light"], "p4bf", case_id, d)})
+        entries.append({"day": d, "time": _hhmm(t), "meal": L("p4.meal.breakfast"), "food": _pick(R["meals_light"], "p4bf", case_id, d)})
     l0, l1 = (_min(x) for x in R["lunch_window"])
     c = _min(clock)
-    if slot and slot[0] == "午餐":
-        entries.append({"day": d, "time": slot[1], "meal": "午餐", "food": _pick(R["meals_meat"], "p4meat", case_id, d)})
+    if slot and is_text(slot[0], "p4.meal.lunch"):
+        entries.append({"day": d, "time": slot[1], "meal": L("p4.meal.lunch"), "food": _pick(R["meals_meat"], "p4meat", case_id, d)})
     elif c - 30 >= l0:
         t = l0 + int(h01("p4lunch-t", case_id, d) * (min(l1, c - 30) - l0 + 1))
-        entries.append({"day": d, "time": _hhmm(t), "meal": "午餐", "food": _pick(R["lunch_light"], "p4lunch", case_id, d)})
+        entries.append({"day": d, "time": _hhmm(t), "meal": L("p4.meal.lunch"), "food": _pick(R["lunch_light"], "p4lunch", case_id, d)})
     return {"draw_day": d, "draw_time": clock, "entries": entries}
 
 
@@ -237,26 +233,26 @@ def medication_rows(item: dict, raw, T: int) -> list[dict]:
             break
         v = q.get("value")
         if prev is None:
-            out.append({"day": int(q["ts"]), "drug": nm0, "event": f"起始 {v}"})
+            out.append({"day": int(q["ts"]), "drug": nm0, "event": text("p4.med.start", dose=f"{v}")})
         elif v != prev and not v:
-            out.append({"day": int(q["ts"]), "drug": nm0, "event": f"暂停（原剂量 {prev}）", "reason": why["hold"]})
+            out.append({"day": int(q["ts"]), "drug": nm0, "event": text("p4.med.hold", dose=f"{prev}"), "reason": why["hold"]})
             lowered = True
         elif v != prev and not prev:
-            out.append({"day": int(q["ts"]), "drug": nm0, "event": f"恢复 {v}", "reason": why["back"]})
+            out.append({"day": int(q["ts"]), "drug": nm0, "event": text("p4.med.restart", dose=f"{v}"), "reason": why["back"]})
         elif v != prev:
             r = why["down"] if v < prev else (why["back"] if lowered else why["up"])
             lowered = lowered or v < prev
-            out.append({"day": int(q["ts"]), "drug": nm0, "event": f"剂量 {prev} → {v}", "reason": r})
+            out.append({"day": int(q["ts"]), "drug": nm0, "event": text("p4.med.change", prev=f"{prev}", new=f"{v}"), "reason": r})
         prev = v
     out += concurrent_rows(raw, T)
     eff = tables()["effects"]["acei_on_creatinine"]
     ac = item.get("acei") or {}
-    nm = f"{eff['drug']}（ACEI，口服）"
+    nm = text("p4.med.acei_name", drug=eff['drug'])
     ind = eff["indications"].get(ac.get("indication") or "", "")
     if ac.get("initial_on"):
-        out.append({"day": 0, "drug": nm, "event": f"长期服用 {eff['dose']}（病程开始前已在用）", "reason": ind})
+        out.append({"day": 0, "drug": nm, "event": text("p4.med.long_term_dose", dose=eff['dose']), "reason": ind})
     for ev in list(ac.get("events") or ()) + list(ac.get("decoy_events") or ()):
-        out.append({"day": int(ev["day"]), "drug": nm, "event": (f"开始 {eff['dose']}" if ev["action"] == "start" else "停用"),
+        out.append({"day": int(ev["day"]), "drug": nm, "event": (text("p4.med.begin", dose=eff['dose']) if ev["action"] == "start" else L("p4.med.stop")),
                     "reason": ind if ev["action"] == "start" else eff["stop_reason"]})
     return sorted(out, key=lambda r: (r["day"], r["drug"]))
 
@@ -288,11 +284,11 @@ def concurrent_rows(raw, T: int) -> list[dict]:
             if d > T:
                 break
             if prev is None and d == 0:
-                out.append({"day": 0, "drug": nm, "event": f"长期服用 {v:g} {unit}（病程开始前已在用）"})
+                out.append({"day": 0, "drug": nm, "event": text("p4.med.long_term", dose=f"{v:g}", unit=unit)})
             elif prev is None:
-                out.append({"day": d, "drug": nm, "event": f"起始 {v:g} {unit}"})
+                out.append({"day": d, "drug": nm, "event": text("p4.med.start_unit", dose=f"{v:g}", unit=unit)})
             elif v != prev:
-                out.append({"day": d, "drug": nm, "event": f"剂量 {prev:g} → {v:g}",
+                out.append({"day": d, "drug": nm, "event": text("p4.med.change", prev=f"{prev:g}", new=f"{v:g}"),
                             "reason": why["up"] if v > prev else why["down"]})
             prev = v
     return out
@@ -331,7 +327,7 @@ def render_block(item: dict, raw, case_id: str) -> dict:
                         [diet_rows(item, by[int(item["t0"])], case_id), diet_rows(item, by[T], case_id)]),
         **({"patient_remarks": patient_remarks(item, case_id)} if background_on() else {}),
         "medication_record": medication_rows(item, raw, T),
-        **({"known_comorbidity": f"{cm['display']} {cm['stage']} 期（肾内科随诊）"} if (cm := item.get("comorbidity")) else {}),
+        **({"known_comorbidity": text("p4.known_ckd", display=L(cm['display']), stage=cm['stage'])} if (cm := item.get("comorbidity")) else {}),
         "text_source": TEXT_SOURCE,
     }
     if item.get("source_policy") == "clinical":
@@ -345,7 +341,7 @@ def render_block(item: dict, raw, case_id: str) -> dict:
     return block
 
 
-REAGENT_NOTICE = "同厂家新批号试剂，批间比对已通过。"
+REAGENT_NOTICE = L("p4.notice.same_maker_new_lot")
 
 
 def laboratory_records(item: dict, case_id: str) -> dict:
@@ -362,14 +358,14 @@ def laboratory_records(item: dict, case_id: str) -> dict:
     lo = int(records[0]["day"])
     issued = lo - 1 - int(h01("p4-procedure-day", case_id) * 90)
     policy = specimen_policy(an)
-    procedures = [{"day": issued, "source": "检验科标本处理规程", "scope": an,
-                   "valid_from": issued, "text": policy or "按项目方法文件处理标本；床旁全血即时检测。"}]
+    procedures = [{"day": issued, "source": L("p4.source.specimen_procedure"), "scope": an,
+                   "valid_from": issued, "text": policy or L("p4.procedure.default")}]
     notices = []
     previous = None
     for r in records:
         row = report_row(item, r, case_id)
         ls = _by_factor(r, "lab_switch_zero_bias")
-        state = (row["lab"], row["method"])
+        state = (field_id(row["lab"]), field_id(row["method"]))
         if state == previous and item.get("source_policy") != "clinical":
             continue
         previous = state
@@ -377,13 +373,13 @@ def laboratory_records(item: dict, case_id: str) -> dict:
         # same-method instrument/lot. The visible methods decide which applies.
         notices.append({"day": int(r["day"]) - 1 - int(h01("p4-notice-day", case_id, r["day"]) * 7),
                         "valid_from": int(r["day"]), "scope": an,
-                        "source": "检验科方法与试剂使用通知", "lab": row["lab"], "method": row["method"],
+                        "source": L("p4.source.method_reagent_notice"), "lab": row["lab"], "method": row["method"],
                         "text": (REAGENT_NOTICE if ls and ls.get("reagent") else
-                                 "同型号分析仪、同厂家试剂；方法比对已通过。" if ls else
-                                 "本期使用报告所列检测方法；方法文件与质量控制按该方法执行。")})
+                                 L("p4.notice.same_analyzer") if ls else
+                                 L("p4.notice.listed_method"))})
         if item.get("source_policy") == "clinical":
             from haenv.p4.realize import clinical_sources
             notices[-1]["day"] = int(r["day"])
-            notices[-1]["source"] = "检验科方法通知与检测批次使用记录"
+            notices[-1]["source"] = L("p4.source.method_notice_batch_use")
             notices[-1]["comparison_reference_method"] = clinical_sources()["method_comparison"]["reference_method_display"]
     return {"laboratory_method_record": notices, "specimen_procedure": procedures}

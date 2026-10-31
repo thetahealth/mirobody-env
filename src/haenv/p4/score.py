@@ -12,11 +12,10 @@ The skill tracks the true-change recall, so averaging it in would count the same
 it is a profile reading. `next_step` is scored against a
 set of acceptable answers (`gold.next_step`), profile only.
 
-The source class is scored against `accepted_classes(gold, accept)`. By default that is the gold
-class alone. `ACCEPTED_CLASS_CHANGES` registers acceptance-set changes, each widening the credited
-classes on one gold (class, factor) cell; a change applies only when its id is passed in `accept`
-(opt-in, e.g. for a rescore of stored rows). The gold block, the emitted question and the
-next-step rule are never changed by it, and `p4_class_gold` still records the gold class.
+The source class is scored against `accepted_classes(gold, accept)`. The 1.4 default
+applies P4-AC-001 to every registered ingested-substance assay interference mechanism.
+An explicit empty `accept` tuple replays legacy single-class scoring. The canonical
+gold class stays unchanged; next steps remain independently required by decision D.
 
 A missing or unparseable class counts as wrong and a missing percentage counts as 0; a cell
 aborted by the leak gate has no answer and is scored the same way. There is no hard-gate
@@ -44,33 +43,32 @@ _SYN = {
 }
 _NEXT = ("act_on_change", "repeat_standardized", "no_action")
 
-#: Registered acceptance-set changes for the source class, keyed by the gold (class, factor) cell.
-#: Each entry lists every class credited on that cell (gold class first) and why. Inactive unless
-#: its id is passed in `accept` (`accepted_classes`, `row_atoms`).
+# Compatibility catalog for consumers that list the registered cells. The rule itself
+# is a mechanism-family predicate, so adding a sourced interference needs no code cell.
+from haenv.p4.gold import contract_table as _contract
+from haenv.p4.diversity import table as _mechanisms
 ACCEPTED_CLASS_CHANGES = {
-    ("method_difference", "biotin_tsh"): {
-        "id": "P4-AC-001",
-        "date": "2026-10-17",
-        "accept": ("method_difference", "preanalytical"),
-        "why": ("The prompt defines `preanalytical` as a sampling or specimen factor and names intake "
-                "before the draw; biotin is taken before sampling and both draws of these records use "
-                "the same assay platform, so `preanalytical` is as defensible as the gold "
-                "`method_difference`. Off by default; when enabled, either class is accepted for these "
-                "records. The next-step rule is unchanged."),
-    },
+    (entry["gold_class"], factor): {"id": change_id, **entry}
+    for change_id, entry in _contract()["acceptance_changes"].items()
+    for factor, rule in _mechanisms()["rules"].items()
+    if rule.get("mechanism_family") == entry["mechanism_family"]
 }
-_CHANGE_IDS = frozenset(e["id"] for e in ACCEPTED_CLASS_CHANGES.values())
 
 
-def accepted_classes(gold: dict, accept: tuple = ()) -> tuple:
-    """Source classes credited for this gold block: the gold class, widened by a registered
-    acceptance-set change on its (class, factor) cell only when that change's id is in `accept`."""
-    unknown = set(accept) - _CHANGE_IDS
+def accepted_classes(gold: dict, accept: tuple | None = None) -> tuple:
+    """Credit registered equivalence by default; explicit `()` replays the legacy rule."""
+    from haenv.p4.gold import contract_table as table, ingested_interference
+    changes = table()["acceptance_changes"]
+    enabled = tuple(k for k, v in changes.items() if v["default"]) if accept is None else accept
+    unknown = set(enabled) - changes.keys()
     if unknown:
         raise ValueError(f"unregistered acceptance-set change(s) {sorted(unknown)}; see ACCEPTED_CLASS_CHANGES")
     g = gold if isinstance(gold, dict) else {}
-    entry = ACCEPTED_CLASS_CHANGES.get((g.get("class"), g.get("factor")))
-    return tuple(entry["accept"]) if entry and entry["id"] in accept else (g.get("class"),)
+    entry = changes["P4-AC-001"]
+    if ("P4-AC-001" in enabled and g.get("class") == entry["gold_class"] and
+            ingested_interference(g.get("factor"))):
+        return tuple(entry["accept"])
+    return (g.get("class"),)
 
 
 def next_ok_set(gold: dict) -> tuple:
@@ -100,7 +98,7 @@ def parse_pct(said) -> float | None:
         return None
 
 
-def row_atoms(answer: dict, gold: dict, sha: str = "", accept: tuple = ()) -> dict:
+def row_atoms(answer: dict, gold: dict, sha: str = "", accept: tuple | None = None) -> dict:
     a = answer if isinstance(answer, dict) else {}
     out = dict.fromkeys(KEYS)
     if not isinstance(gold, dict) or gold.get("class") not in CLASSES:

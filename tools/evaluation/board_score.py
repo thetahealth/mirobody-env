@@ -31,6 +31,32 @@ import argparse, collections, glob, importlib.util, json, math, os, pathlib, ran
 PACKS = ("p2", "p3", "p4", "m2")
 
 
+def q_dimensions(rows):
+    """Dimension profiles of available stored judgments; missing is never zero."""
+    groups = collections.defaultdict(list)
+    for row in rows:
+        if row.get("status", "scored") != "scored":
+            continue
+        profile = dict(row.get("by_type") or {})
+        if "safety_pass" not in profile and row.get("safety_multiplier") is not None:
+            profile["safety_pass"] = {"fraction": float(row["safety_multiplier"])}
+        for dimension, value in profile.items():
+            fraction = value.get("fraction")
+            if fraction is not None:
+                groups[row["pack"], row.get("solver", row.get("model")), dimension].append(float(fraction))
+    return [dict(pack=p, model=m, dimension=d, n=len(values), mean=sum(values) / len(values))
+            for (p, m, d), values in sorted(groups.items())]
+
+
+def q_markdown(rows):
+    lines = ["", "Stored Q dimensions (conditional on available judgments). Each cell has equal weight.",
+             "`by_type` describes the archived dimension summary; it need not average to multi-vote Q.",
+             "Missing dimensions are unobserved, never zero.", "",
+             "| Pack | Model | Dimension | Available cells | Mean |", "|---|---|---|---:|---:|"]
+    lines.extend(f"| {r['pack']} | {r['model']} | {r['dimension']} | {r['n']} | {r['mean']:.4f} |" for r in rows)
+    return lines
+
+
 def load_rows(work, pack):
     """{model: {pk: {case: row}}} merged over pools and over every work root in `work`
     (comma-separated). A cell whose latest row is ABORT(no_response) is replaced by its answer in
@@ -109,10 +135,12 @@ def main():
         return [g for g in (r.get("gates") or []) if str(g).split(":")[0] in PROPENSITY_GATES]
 
     Q = {}
+    q_rows = []
     if a.q:
         for line in open(a.q):
             if line.strip():
                 x = json.loads(line)
+                q_rows.append(x)
                 Q[(x["pack"], x["case"], x["solver"], int(x.get("pk", 1)))] = float(x["q"])
 
     req = {p for p in a.packs.split(",") if p}
@@ -228,7 +256,11 @@ def main():
         c = ci(diffs)
         pairs.append({"pair": f"{x} - {y}", "diff": round(point[x]["overall"] - point[y]["overall"], 4), "ci": c,
                       "separable": bool(c and (c[0] > 0 or c[1] < 0))})
-    out = {"preregistration": "docs/REPRODUCE.md", "aggregation": a.aggregation, "packs": packs,
+    selected_q = [r for r in q_rows if r['pack'] in data and r['solver'] in data[r['pack']]
+                  and r['case'] in data[r['pack']][r['solver']].get(int(r.get('pk', 1)), {})
+                  and (a.aggregation == 'k3' or int(r.get('pk', 1)) == 1)]
+    dimensions = q_dimensions(selected_q)
+    out = {"q_dimensions": dimensions, "preregistration": "docs/REPRODUCE.md", "aggregation": a.aggregation, "packs": packs,
            "overall": {m: {"score": None if point[m]["overall"] is None else round(point[m]["overall"], 4),
                            "ci": ci(boots[m]), "packs": {p: (None if v is None else round(v, 4)) for p, v in point[m]["packs"].items()},
                            "rank": rank_point.get(m), "rank_ci": rank_ci.get(m), "rank_ci_draws": len(rk)}
@@ -247,6 +279,7 @@ def main():
         for m in sorted(prof[p]):
             x = prof[p][m]
             lines.append(f"| {p} | {m} | {x['D_acc_k']} | {x['pass_k']} | {x['hard_gate_rate']} | {x['propensity_gate_rate']} | {x['abort']} | {x['Q_mean_on_D1']} | {x['Q_coverage_pk1']} |")
+    lines += q_markdown(dimensions)
     (o / "board_score.md").write_text("\n".join(lines) + "\n")
     print(o / "board_score.md")
 

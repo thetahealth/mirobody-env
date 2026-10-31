@@ -183,6 +183,8 @@ def validate_registry() -> dict[str, int]:
     import haenv.resources.registry as _rg
     try:
         _f = _rg.load_findings()
+        from haenv.world.clinical.finding_identity import validate_aliases
+        validate_aliases(_f)
         import yaml as _y
         _rg.validate_discriminators(
             _f, _rg.condition_findings_for_case(_f),
@@ -599,10 +601,10 @@ def condition_registry(*, fresh: bool = False, include_draft: bool = False) -> d
     # Draft branch before the cache, so `include_draft=True` never returns the cached set.
     if include_draft:                                # draft conditions never enter the cache, to avoid contaminating later calls
         _k = _kernel_specs()
-        return strip_author_annotations(apply_age_limits(
+        return _phrases(strip_author_annotations(apply_age_limits(
             apply_literature_optional_tests(apply_red_flag_urgency({
                 **_k, **haenv_unified_specs(include_draft=True),
-                **haenv_comorbid_specs(_k), **haenv_independent_specs()}))))
+                **haenv_comorbid_specs(_k), **haenv_independent_specs()})))))
     if _REGISTRY_CACHE is not None and not fresh:
         return _REGISTRY_CACHE
     _k = _kernel_specs()
@@ -610,9 +612,22 @@ def condition_registry(*, fresh: bool = False, include_draft: bool = False) -> d
              **haenv_comorbid_specs(_k), **haenv_independent_specs()}
     for p in check_red_flag_urgency(specs):
         log.warning("[overlay] gold contradicts itself (corrected by apply_red_flag_urgency): %s", p)
-    _REGISTRY_CACHE = strip_author_annotations(apply_age_limits(
-        apply_literature_optional_tests(apply_red_flag_urgency(specs))))
+    _REGISTRY_CACHE = _phrases(strip_author_annotations(apply_age_limits(
+        apply_literature_optional_tests(apply_red_flag_urgency(specs)))))
     return _REGISTRY_CACHE
+
+
+def _phrases(obj):
+    """The registry with every Chinese text a lexicon phrase (its canonical text is its id), tuples
+    included: the kernel's specs are plain Python data and the kernel does not import haenv."""
+    from haenv.i18n.text import wrap
+    if isinstance(obj, tuple):
+        return tuple(_phrases(x) for x in obj)
+    if isinstance(obj, dict):
+        return {_phrases(k): _phrases(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_phrases(x) for x in obj]
+    return wrap(obj)
 
 
 def adjudication_from_condition(spec_id: str) -> dict:

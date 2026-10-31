@@ -52,10 +52,12 @@ def test_ckd_has_dated_repeated_albuminuria_not_single_late_value(inputs, cid):
     assert [comp['details']['uacr_history'][-1]] == acr
     assert [comp['details']['creatinine_history'][-1]] == cr
     acr = comp['details']['uacr_history']
-    assert len(acr) == 3 and acr[-1]['ts'] - acr[0]['ts'] == 112
+    assert len(acr) == 4 and acr[-1]['ts'] - acr[0]['ts'] == 112
     assert all(p['value'] >= 30 and p['unit'] == 'mg/g' for p in acr)
-    assert acr[-1]['value'] >= 2 * acr[0]['value']
-    assert comp['details']['progression_assessment'] == 'requires_clinical_evaluation'
+    assert all(p['value'] >= 2 * acr[0]['value'] for p in acr[-2:])
+    assert comp['details']['progression_assessment'] == 'sustained_albuminuria_increase'
+    assert comp['details']['same_method'] is True
+    assert comp['details']['acute_factors_reviewed'] is True
     assert comp['details']['egfr'] is None
     assert '阳性' not in comp['value']
 
@@ -157,7 +159,7 @@ def test_missing_or_insufficient_declaration_never_means_normal(inputs,sid,fid):
         with pytest.raises(builder().ClinicalEvidenceUnavailable):result(inputs,sid,fid,profile=profile)
 
 
-@pytest.mark.parametrize('sid,fid', [('JD-CKM','Cr'),('HD-UNI-01','Cr'),('HD-UNI-09','NOT_REGISTERED'),
+@pytest.mark.parametrize('sid,fid', [('HD-UNI-01','Cr'),('HD-UNI-09','NOT_REGISTERED'),
                                      ('JD-BENIGN2','FibrosisAssessment'),('HD-UNI-18','DepressionAssessment'),
                                      ('HD-UNI-19','CK'),('HD-UNI-20','GastricRetention'),('HD-UNI-99','Cr')])
 def test_truly_unhandled_cases_return_none_without_reading_or_normalizing_inputs(sid,fid):
@@ -288,7 +290,7 @@ def test_current_only_query_keeps_paid_history_in_the_marker(inputs,sid,fid,mark
     assert len(current)==1,'simple numeric query must not provide history for free'
     assert current[0]['ts']==168 and current[0]==historical[-1]
     assert all(p['ts']<=168 for p in historical)
-    assert len(historical)==3
+    assert len(historical)==(4 if sid=='HD-UNI-10' else 3)
     assert not any('history' in k for k in current[0]['details'])
 
 

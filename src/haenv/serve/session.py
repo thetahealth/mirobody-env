@@ -155,6 +155,9 @@ def load_question(pack, question, **kwargs):
     for key in ('max_points', 'max_calls'):
         kwargs.setdefault(key, query[key])
     batch = pack_directory(pack)
+    from haenv.i18n.runtime import select_batch_language, require_assets
+    language = select_batch_language([batch], requested=kwargs.pop('language', None))
+    require_assets(language)
     with (batch / 'payloads.jsonl').open(encoding='utf-8') as stream:
         records = (json.loads(line) for line in stream if line.strip())
         row = next((r for r in records if r['case_id'] == question or r['sp'].get('case_id') == question), None)

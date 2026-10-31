@@ -1,5 +1,6 @@
 """Old ECG confirmation and old HF diagnosis under the printed triage rules."""
 from __future__ import annotations
+from haenv.i18n.text import L, T, is_text
 from copy import deepcopy
 from haenv.world.history.history_dependency import HistoryDependency
 from haenv.world.history.history_dependency import old_day
@@ -11,7 +12,7 @@ from haenv.p2.gate import plan_of
 
 
 def diagnosed(rows):
-    return {r["condition"] for r in rows or () if r.get("conclusion") == "已记录" and r.get("condition")}
+    return {r["condition"] for r in rows or () if is_text(r.get("conclusion"), "hist.recorded") and r.get("condition")}
 
 
 def prepare(raw, cid, plan):
@@ -33,10 +34,10 @@ def finalize(raw, cid, plan):
     phrase = table()["phrasing"]
     source = phrase["encounter_sources"][int(uniform("history-source", cid) * len(phrase["encounter_sources"]))]
     row = {"day": old_day("p2", cid, T), "source": source, "condition": condition,
-           "test": "超声心动图与专科评估" if hf else "十二导联心电图",
-           "result": ("心功能减退，结合病史符合心力衰竭。" if hf else "心房颤动，心室率控制良好，随访中症状无变化。") if active else
-                     ("心功能正常，未见心衰证据。" if hf else "窦性心律，未见房颤；原不规则脉搏为房性早搏。"),
-           "conclusion": "已记录" if active else "未记录"}
+           "test": L("p2.hist.test.echo_specialist" if hf else "p2.hist.test.ecg12"),
+           "result": L(("p2.hist.result.hf_history" if hf else "p2.hist.result.af_controlled_followup") if active else
+                       ("p2.hist.result.hf_normal" if hf else "p2.hist.result.sinus_pac")),
+           "conclusion": L("hist.recorded" if active else "hist.not_recorded")}
     b["clinical_history_record"] = [row]
     b["triage_protocol"] = table()["packs"]["p2"]["protocol"]
     if active and hf:
@@ -94,7 +95,7 @@ def finalize_r2(raw, cid, plan):
     hf = g["rule"] in ("R7a_htn_severe_hf", "R8_hf_gain") or "heart_failure" in b["background"]["known_conditions"]
     role = uniform("history-role", cid) < rate("p2", plan)
     family = "heart_failure" if hf else "atrial_fibrillation"
-    if not hf and g["rule"] in ("R2_news2_medium", "R10_news2_low", "R13_news2_zero_symptom", "R14_nothing"):
+    if not hf and g["rule"] in ("R2_news2_medium", "R10_news2_low", "R10b_infection_medium_risk", "R13_news2_zero_symptom", "R14_nothing"):
         choices = R.table()["clinical_context"]["native_history_families"]["weights"]
         if plan.get("history_family"):
             family = plan["history_family"]
@@ -108,15 +109,15 @@ def finalize_r2(raw, cid, plan):
                     break
     source = table()["phrasing"]["encounter_sources"]
     row = {"day": old_day("p2", cid, T), "source": source[int(uniform("history-source", cid) * len(source))],
-           "condition": family, "conclusion": "未记录"}
+           "condition": family, "conclusion": L("hist.not_recorded")}
     if family == "heart_failure":
-        row.update(test="超声心动图与专科评估", result="心功能减退，结合症状符合心力衰竭。", conclusion="已记录")
+        row.update(test=L("p2.hist.test.echo_specialist"), result=L("p2.hist.result.hf_symptoms"), conclusion=L("hist.recorded"))
     elif family == "hypercapnic_respiratory_failure":
-        row.update(test="住院动脉血气及出院氧疗评估", blood_gas_confirmed=role,
+        row.update(test=L("p2.hist.test.abg_oxygen"), blood_gas_confirmed=role,
                    target_spo2=[88, 92] if role else None, clinical_scale=2 if role else 1,
-                   result="血气确认高碳酸呼衰，临床人员登记血氧目标。" if role else "疑似通气不足；复核血气无高碳酸呼衰，临床人员维持常规血氧评分。")
+                   result=L("p2.hist.result.hypercapnia_target" if role else "p2.hist.result.hypercapnia_excluded"))
         if role:
-            row["conclusion"] = "已记录"
+            row["conclusion"] = L("hist.recorded")
             check = b["home_check_today"]
             non_spo2 = sum(v for k, v in R.news2_parts(check, R.checklist_of(b)).items() if k != "spo2")
             low_band = g["rule"] == "R10_news2_low" and non_spo2 == 0
@@ -125,7 +126,10 @@ def finalize_r2(raw, cid, plan):
                 # Low aggregate NEWS2 at the prescribed oxygen target. A
                 # modest respiratory-rate rise stays in the existing low
                 # aggregate scenario; Scale 1 would escalate this patient.
-                if non_spo2 == 1:
+                # Infection R10 must retain its absence of medium-risk signs.
+                # R10b keeps its original RR/HR/SBP/temperature unchanged below;
+                # only oxygen saturation is reinterpreted by the archived target.
+                if non_spo2 == 1 and R.checklist_of(b).get("suspected_infection_today") is not True:
                     check["respiratory_rate_per_min"] = 22 + int(uniform("history-low-rr", cid) * 3)
                 check["spo2_pct"] = 88 + int(uniform("history-spo2", cid) * 4)
             if g["rule"] == "R2_news2_medium":
@@ -143,9 +147,9 @@ def finalize_r2(raw, cid, plan):
             pb = raw.latent_premise.get("patient_basics") or {}
             pb["comorbidities"] = list(dict.fromkeys([*pb.get("comorbidities", ()), family]))
     else:
-        row.update(test="十二导联心电图", result="窦性心律伴房性早搏，未见房颤。")
+        row.update(test=L("p2.hist.test.ecg12"), result=L("p2.hist.result.sinus_pac_no_af"))
         if role and g["rule"] != "R9_af_alerts":
-            row.update(result="心房颤动，心室率控制良好；当时随访无病情变化。", conclusion="已记录")
+            row.update(result=L("p2.hist.result.af_controlled"), conclusion=L("hist.recorded"))
             for x in b["wearable_daily"][-2:]:
                 x["irregular_rhythm_alerts"] = 1
             pb = raw.latent_premise.get("patient_basics") or {}
@@ -193,8 +197,8 @@ def apply_history_positions(raw, cid, cfg):
         spec = cfg["conditions"][family]
         if condition not in confirmed:
             rows.append({"day": core["day"], "source": core["source"], "condition": condition,
-                         "test": "既往门诊诊断记录", "result": spec["display"] + "，当时已登记。",
-                         "conclusion": "已记录"})
+                         "test": L("p2.hist.test.prior_diagnosis"), "result": T("p2.hist.result.registered", condition=spec["display"]),
+                         "conclusion": L("hist.recorded")})
         silent = uniform("history-position-silence", cid, family) < spec["silence"]
         omitted = (not silent and uniform("history-position-diagnosis", cid, family)
                    < spec["diagnosis_omission_given_recent"])

@@ -8,10 +8,19 @@ from __future__ import annotations
 SOURCE_LAYOUT = "src"
 CRITERION_DECLARATIONS = "haenv/provenance/criteria.py"
 
+#: Rendering implementation is shared; only the selected language's assets enter its stamp.
+#: Assets stay outside world and judging source segments.
+RENDER = (
+    'haenv/i18n/__init__.py', 'haenv/i18n/text.py',
+    'haenv/i18n/runtime.py', 'haenv/i18n/render_case.py', 'haenv/i18n/identity.py',
+)
+
 #: Generation segment: changing a file here changes the world (`world_sha`) and the
 #: pack must be regenerated. A registry yaml belongs here when its strings reach the
 #: prompt without passing through `inputs/*.job.yaml`, which `job_yaml_sha256` covers.
 GENERATION = (
+    'haenv/m2/premises.py', 'haenv/m2/surface.py', 'haenv/m2/evidence.py',
+    'haenv/world/clinical/finding_identity.py',
     'registry/p2_complaint_pool.yaml', 'registry/p2_complaint_prior.yaml',
     "registry/p3_clinical_sources.yaml", "registry/p4_clinical_sources.yaml",
     'haenv/scoring/management/plan.py',
@@ -88,6 +97,7 @@ GENERATION = (
 MANAGEMENT_JUDGING = (
     # Independent saved-answer rubric, deliberately outside public JUDGING.
     'haenv/scoring/management/controls_v62.py',
+    'haenv/scoring/management/evidence.py',
     'haenv/scoring/management/rubric.py', 'haenv/scoring/management/judge.py', 'haenv/scoring/management/pipeline.py',
     'haenv/scoring/management/estimate.py', "registry/management_rubric.yaml",
     'haenv/scoring/management/transport.py',
@@ -98,6 +108,14 @@ MANAGEMENT_JUDGING = (
     'haenv/scoring/management/adapters/p3.py', 'haenv/scoring/management/adapters/p4.py', 'haenv/scoring/management/adapters/m2.py',
 )
 JUDGING = (
+    'haenv/m2/evidence.py', 'haenv/p3/policy.py',
+    'registry/clinical_expansion.yaml', 'registry/p3_clinical_sources.yaml',
+    # Readers and policy resolvers can change saved-answer judgments in every language.
+    'haenv/i18n/__init__.py', 'haenv/i18n/text.py', 'haenv/i18n/runtime.py',
+    'haenv/i18n/identity.py',  # restored source identities affect saved-answer readers
+    'haenv/interaction/query/targets.py',
+    'haenv/p3/textread.py', 'haenv/p4/textmatch.py',
+    'haenv/p2/clinical_rules.py',
     "haenv_kernel/verifier.py", "haenv_kernel/gatekeeper.py", "haenv_kernel/schema.py",
     "haenv_kernel/runner.py", "haenv_kernel/solver.py",
     'haenv/scoring/llm_rubric.py', "registry/rubric_points.yaml",
@@ -145,7 +163,7 @@ JUDGING = (
     "registry/scoring_early_warning.yaml",
     "registry/scoring_tracking_review.yaml",
     "registry/conditions_independent.yaml", "registry/conditions_unified.yaml",
-    "registry/threads.yaml", "registry/rivals.yaml",
+    "registry/threads.yaml", "registry/rivals.yaml", "registry/judging_aliases_en.yaml",
     "registry/vocab_specialty.yaml", "registry/vocab_alias_excludes.yaml",
     "registry/vocab_alias_overlap_ok.yaml", "registry/composition_comorbid.yaml",
     "registry/causal_clusters.yaml", "registry/negated_findings.yaml",
@@ -260,11 +278,13 @@ JUDGING = (
 #: mounting and the publish gate, shared by every pack) is in each pack's judging segment and
 #: `haenv/world/validation/shared_audit.py` (the shared emission gate) in each pack world segment.
 M2_JUDGING = (
+    'haenv/m2/evidence.py', 'registry/clinical_expansion.yaml',
     'haenv/app/packs.py', 'haenv/world/history/history_dependency.py', "haenv/m2/history.py", "registry/history_dependency.yaml",
     "haenv/m2/hooks.py", "haenv/m2/round2.py", "haenv/m2/score.py", "haenv/m2/plugin.py",
     "haenv/m2/core.py", "registry/explain_away.yaml", "registry/base_condition_findings.yaml",
     "registry/m2_pre_review.yaml",
     "haenv/m2/workup.py",
+    "haenv/m2/confirmation.py", "registry/m2_confirmation.yaml",
     'haenv/contracts/__init__.py',
     'haenv/contracts/pack.py',
     'haenv/contracts/hooks.py',
@@ -311,6 +331,7 @@ P4_JUDGING = (
     'haenv/app/pack_hooks.py',
 )
 P4_WORLD = (
+    'haenv/p4/textmatch.py',
     'haenv/world/validation/shared_audit.py', 'haenv/world/history/history_dependency.py', "haenv/p4/history.py", "registry/history_dependency.yaml",
     'haenv/world/labworld/__init__.py', 'haenv/world/labworld/truth.py', 'haenv/world/labworld/observe.py',
     'haenv/world/labworld/perturb.py', "registry/labworld.yaml",
@@ -328,6 +349,7 @@ P4_WORLD = (
 #: of a pack-3 batch through the registered probe. It shares three lab-world modules with
 #: `P4_WORLD` (read, not changed, by pack 3).
 P3_JUDGING = (
+    'haenv/p3/policy.py', 'registry/p3_clinical_sources.yaml',
     'haenv/app/packs.py',
     "haenv/p3/score.py", "haenv/p3/plugin.py", "haenv/p3/hooks.py", "haenv/p3/gold.py",
     'haenv/world/labworld/meds.py', "registry/p3_meds.yaml", "registry/control_targets.yaml",
@@ -337,6 +359,7 @@ P3_JUDGING = (
     'haenv/app/pack_hooks.py',
 )
 PROTOCOL_WORLD = (
+    'haenv/p3/policy.py', 'registry/p3_clinical_sources.yaml',
     "haenv/p2/__init__.py", "haenv/p3/__init__.py", "haenv/p4/__init__.py",
     'haenv/world/protocols/__init__.py', 'haenv/world/protocols/library.py', 'haenv/world/protocols/delivery.py',
     'haenv/world/protocols/scoring.py', 'haenv/world/protocols/gates.py', 'haenv/world/protocols/followup.py',
@@ -352,6 +375,9 @@ PROTOCOL_WORLD = (
 )
 P4_WORLD = P4_WORLD + PROTOCOL_WORLD + ("haenv/p4/query.py",)
 P3_WORLD = PROTOCOL_WORLD + (
+    'haenv/p3/interactions.py',
+    'haenv/p3/necessity.py',
+    'haenv/p3/textread.py',
     'haenv/world/validation/shared_audit.py', 'haenv/world/history/history_dependency.py', "haenv/p3/history.py", "registry/history_dependency.yaml",
     'haenv/world/labworld/__init__.py', 'haenv/world/labworld/truth.py', 'haenv/world/labworld/observe.py',
     'haenv/world/labworld/meds.py', "registry/p3_meds.yaml", "registry/control_targets.yaml",
@@ -1008,6 +1034,14 @@ PROVENANCE_MODULES: dict[str, str] = {
 #: reason. An entry must not decide `overall` or any `absence.DENOM_FIELD` denominator;
 #: its crossing symbols are pinned in `ALLOW_SYMBOL_PIN`.
 JUDGING_IMPORT_ALLOW: dict[str, str] = {
+    'haenv/m2/confirmation.py': 'GENERATION + M2 judging segment: the M2 plugin registers its emission gate '
+                                '(matched-negative controls carry the sourced under-investigation label) and its '
+                                'gold derivation, through which `wq.gold_of` returns that label as the diagnosis '
+                                'gold of a control. The file and registry/m2_confirmation.yaml are hashed in '
+                                '`M2_JUDGING` (m2_judging_sha16) and in the world segment; the derivation keeps only '
+                                'that label, and the pairing helpers it imports (prepare, mutate_twin) are not on the '
+                                'scoring path. Both crossing symbols are pinned.',
+    'haenv/m2/premises.py': 'GENERATION: emission-time visible-premise gate registered by the M2 plugin; it never scores stored answers. The exact emission callback is pinned.',
  'haenv/world/labworld/truth.py': 'P3_WORLD/P4_WORLD true-curve generation. The onset import belongs '
                                 'to meds.response/truth, while grading uses the drug tables and '
                                 'observed refill coverage. Exact crossing is limited to onset; '
@@ -1125,8 +1159,10 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
                                             'and changing it regenerates the packs.',
  'haenv/scoring/matching/excludes.py': 'Already in GENERATION, split out of `overlay.py` with the same '
                                        "standing: the judges' alias matcher (`alias_match`) reads the "
-                                       'exclusion table through `alias_excluded_at`; the table it loads, '
-                                       '`registry/vocab_alias_excludes.yaml`, is in JUDGING on its own.',
+                                       'exclusion table through `alias_excluded_at`, and reads the table '
+                                       'itself (`ALIAS_EXCLUDES`) to carry an exclusion over to longer '
+                                       'names; the table it loads, `registry/vocab_alias_excludes.yaml`, '
+                                       'is in JUDGING on its own.',
  'haenv/scoring/semantic/source.py': 'In neither segment, split out of `anchor.py` with the same standing: '
                                      'it normalizes a file to the bytes the fingerprints hash. '
                                      '`semantic_seal.code_state` takes `semantic_bytes` from it to seal a '
@@ -1326,6 +1362,12 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
                        'helpers are pinned; the P3 score and gold implementations remain judging sources.',
  'haenv/p3/history.py': 'P3_WORLD: creates and locates historical medication records within emitted cases. '
                         'It does not grade a response; exact imported history helpers are pinned.',
+ 'haenv/p3/interactions.py': 'P3_WORLD: preregistered record interventions and emission controls. '
+                            'The pinned receipt checks world construction, never saved-answer scoring.',
+ 'haenv/p3/necessity.py': 'P3_WORLD: single-fact twins of the decisive facts g3 declares; the emission gate '
+                          'refuses an item whose decisive fact is not necessary. It never scores an answer.',
+ 'haenv/p3/plan.py': 'P3_WORLD: the clinic target for the printed age band; the gate compares the stored '
+                     'target with it. Planning only, never saved-answer scoring.',
  'haenv/p4/diversity.py': 'P4_WORLD: lab-item diversity and generation/calibration inputs. Output decisions '
                           'are scored in the separately registered P4 gold/score modules; this is not a '
                           'general lab-package exemption.',
@@ -1366,7 +1408,7 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
 
 #: Anchor version. Entries in `PENDING_ANCHOR` are only valid for this version;
 #: as soon as the anchor advances, this table must be emptied.
-PENDING_ANCHOR_REVISION = 105
+PENDING_ANCHOR_REVISION = 117
 
 #: Files added to `JUDGING` before the anchor was updated (allowed while re-anchoring
 #: is not); emptied once the anchor moves past `PENDING_ANCHOR_REVISION`.
@@ -1375,25 +1417,29 @@ PENDING_ANCHOR: dict[str, str] = {}
 #: Names each `JUDGING_IMPORT_ALLOW` module lets cross into the judging segment
 #: (`from .M import ...` binding names); must match exactly.
 ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
-    'haenv/world/labworld/truth.py': frozenset(('onset',)),
+    'haenv/m2/confirmation.py': frozenset(('confirmation_derivations', 'control_emission')),
+    'haenv/m2/premises.py': frozenset(('emission',)),
     'haenv/__init__.py': frozenset(('_data_root', '_dr', '_kp', 'data_root')),
     'haenv/app/artifacts/batch.py': frozenset(('kernel_fingerprint', 'provenance_fields', 'record_usage')),
     'haenv/app/artifacts/payloads.py': frozenset(('load_payloads',)),
     'haenv/app/artifacts/store.py': frozenset(('load_cases',)),
     'haenv/app/config.py': frozenset(('ROOT', '_lc_p', 'load_cfg')),
     'haenv/app/settings.py': frozenset(('JudgeIdentity', 'JudgeRouteSpec', 'QuerySection')),
-    'haenv/contracts/external_gold.py': frozenset(('EG', 'SLOT', '_ext_probes')),
+    'haenv/contracts/external_gold.py': frozenset(('EG', 'GATES', 'SLOT', '_ext_probes', 'register_gate')),
     'haenv/interaction/prompts.py': frozenset(('PROMPT',)),
     'haenv/interaction/trace.py': frozenset(('TraceLog', '_TraceLog', '_ci', '_rt', '_save_trace', 'save_trace')),
-    'haenv/locations.py': frozenset(('data_root', 'output_root', 'probe_directory', 'repository_root', 'source_path', 'source_root')),
+    'haenv/locations.py': frozenset(('data_root', 'output_root', 'probe_directory', 'repository_root', 'resource_path', 'source_path', 'source_root')),
     'haenv/m2/audit.py': frozenset(('emission',)),
     'haenv/m2/background.py': frozenset(('laboratory_documents', 'lookalike_record_format', 'sync_known_conditions')),
-    'haenv/m2/emr.py': frozenset(('frame_probe', 'install_emr')),
+    'haenv/m2/emr.py': frozenset(('frame_probe', 'install_emr', 'med_sentence')),
     'haenv/p2/complaints.py': frozenset(('_install_complaints',)),
-    'haenv/p2/context.py': frozenset(('finalize',)),
+    'haenv/p2/context.py': frozenset(('facts', 'finalize')),
     'haenv/p2/render.py': frozenset(('BP_DAYS', 'RD', 'Unrealizable', 'WINDOW', 'realize', 'visible_medications')),
     'haenv/p2/sources.py': frozenset(('_install_sources',)),
-    'haenv/p3/history.py': frozenset(('limiting_record',)),
+    'haenv/p3/history.py': frozenset(('limiting_record', 'limiting_inputs', 'acei_contraindicated')),
+    'haenv/p3/interactions.py': frozenset(('receipt',)),
+    'haenv/p3/necessity.py': frozenset(('failures',)),
+    'haenv/p3/plan.py': frozenset(('target_upper',)),
     'haenv/p3/render.py': frozenset(('render_block',)),
     'haenv/p4/diversity.py': frozenset(('_diversity_table', 'table', 'verification_consistent')),
     'haenv/provenance/anchor.py': frozenset(('_fingerprint_of', '_jvint', '_wvint', 'frozen_packs', 'infra_files', 'judging_fingerprint', 'judging_fp_cached', 'judging_vintages', 'world_fingerprint')),
@@ -1414,13 +1460,13 @@ ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
     'haenv/runtime/solver_accounting.py': frozenset(('fetch_endpoints', 'prepare_accounting', 'wire_settings')),
     'haenv/runtime/transport.py': frozenset(('check_pin', 'check_sampling', 'check_served', 'google_response_format', 'is_envelope', 'judge_spec', 'make_envelope', 'model_urlopen', 'proxy_for_solver', 'sent_temperature', 'solver_envelope_content', 'verify_wire')),
     'haenv/scoring/management/plan.py': frozenset(('M', 'answer')),
-    'haenv/scoring/matching/excludes.py': frozenset(('alias_excluded_at',)),
+    'haenv/scoring/matching/excludes.py': frozenset(('ALIAS_EXCLUDES', 'alias_excluded_at')),
     'haenv/scoring/semantic/budget.py': frozenset(('BudgetExceeded', 'cost_summary')),
     'haenv/scoring/semantic/runref.py': frozenset(('correction_base', 'subset_base', 'view_run')),
     'haenv/scoring/semantic/source.py': frozenset(('semantic_bytes',)),
     'haenv/scoring/slicing.py': frozenset(('_slicing',)),
     'haenv/world/clinical/indicators.py': frozenset(('_declared_ndigits', 'of')),
-    'haenv/world/clinical/med_course.py': frozenset(('DISPLAY', 'MC', 'active_medicines', 'display', 'dose_at', 'record_rows')),
+    'haenv/world/clinical/med_course.py': frozenset(('DISPLAY', 'MC', 'active_medicines', 'display', 'dose_at', 'drug_key', 'record_rows')),
     'haenv/world/clinical/relations.py': frozenset(('FRIEDEWALD_TG_DIVISOR', 'FRIEDEWALD_TG_MAX_MMOL')),
     'haenv/world/generation/build_clinical.py': frozenset(('CLINICAL_ATTEN', 'WORLD_MEDICATION_KEY', '_clinical_baselines', '_clinical_cv')),
     'haenv/world/generation/framings.py': frozenset(('DDX_PROMPT', 'DDX_SCOPE2_PROMPT', 'DDX_SCOPE_PROMPT', 'DDX_TRACE_PROMPT', '_BUILTIN_FRAMING_NAMES', '_SCOPE2_EDITS', '_SCOPE_EDITS', '_framings', 'derive_scope2_prompt', 'derive_scope_prompt', 'framing_sha256')),
@@ -1428,10 +1474,11 @@ ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
     'haenv/world/generation/world_knobs.py': frozenset(('background_enabled',)),
     'haenv/world/history/history_dependency.py': frozenset(('HistoryDependency', 'history_table', 'metadata', 'old_day', 'rate', 'register_history', 'table', 'uniform')),
     'haenv/world/labworld/__init__.py': frozenset(('analyte', 'cv_total', 'rcv95', 'tables')),
+    'haenv/world/labworld/truth.py': frozenset(('onset',)),
     'haenv/world/observations/events.py': frozenset(('E', '_inh', 'scene_lay_sentence', 'sex_words', 'shown_drugs', 'symptom_lay')),
     'haenv/world/observations/events_pools.py': frozenset(('EVENT_RATE_DEFAULTS', 'event_weeks', 'expected_event_counts')),
     'haenv/world/observations/events_streams.py': frozenset(('METRIC_BY_NAME',)),
-    'haenv/world/observations/events_text.py': frozenset(('alias_hit', 'relocate_event_history', 'scrub_menses')),
+    'haenv/world/observations/events_text.py': frozenset(('alias_hit', 'phrase_ids', 'relocate_event_history', 'scrub_menses')),
     'haenv/world/observations/findings_render.py': frozenset(('SEX_REF', '_TS_TO_PANEL', '_band', '_copula_index', '_copula_u', '_ppf', '_round', '_step', '_value', 'plausible_floor', 'tc_friedewald_residual', 'with_sex_ref')),
     'haenv/world/observations/streams.py': frozenset(('device_signals',)),
     'haenv/world/overlay.py': frozenset(('HAENV_COMORBID_PAIRS', 'RIVALS', '_cr_pub', '_fac', '_kernel_specs', 'condition_registry', 'haenv_comorbid_specs', 'haenv_independent_specs', 'rivals_for', 'spec_id_of', 'specialty_hit', 'threads_for')),

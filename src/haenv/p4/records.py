@@ -3,6 +3,8 @@ from __future__ import annotations
 
 
 def clinical_view(block):
+    if block and "comparison_draw_day" in block:
+        block = {**block, "today": int(block["comparison_draw_day"])}
     if not block or "previous_draw_day" in block:
         return block
     today = int(block["today"])

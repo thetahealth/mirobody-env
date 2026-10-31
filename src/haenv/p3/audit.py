@@ -51,8 +51,12 @@ def symptom_status_readout(items):
     data, labels, groups = [], [], []
     for it in items:
         b = it["sp"]["prediction_context"]["meds_p3"]
-        count = collections.Counter(e.get("status") for e in b["symptom_diary"])
-        data.append([count["已缓解"], count["持续至今"], count[None]])
+        from haenv.i18n.text import is_text
+        count = collections.Counter(None if e.get("status") is None else
+                                    "resolved" if is_text(e.get("status"), "p3.status.resolved") else
+                                    "ongoing" if is_text(e.get("status"), "p3.status.ongoing") else e.get("status")
+                                    for e in b["symptom_diary"])
+        data.append([count["resolved"], count["ongoing"], count[None]])
         labels.append(it["case"]["adjudication"]["meds_p3"]["class"])
         groups.append(it.get("spec") or (it["case"].get("latent_premise") or {}).get("ddx_spec_id") or it["case_id"])
     classes = sorted(set(labels))
@@ -111,6 +115,11 @@ def _extend(items: list[dict], n_items: int, seed: str, base: list[dict], *, sce
     from haenv.world.validation.shared_audit import take_patient
     cell_of = scenario_of if scenarios else lambda it: (it["gold"]["drug"], it["class"], comorb_of(it))
     cells = planned_scenarios(n_items) if scenarios else planned_cells(n_items)
+    from haenv.world.validation.difficulty_r2 import enabled
+    if scenarios and enabled():
+        from haenv.p3.interactions import quotas
+        cell_of = lambda it: (*scenario_of(it), bool(it["gold"].get("interaction_family")))
+        cells = quotas(n_items)
     PS.short(cells, collections.Counter(cell_of(it) for it in items), "p3 subtype cells" if scenarios else "p3 pack")
     for c in CLASSES:
         nh = collections.Counter(it["H"] for it in base if it["class"] == c)
@@ -163,13 +172,14 @@ def whitelist(it) -> list[str]:
     d = it["gold"]["drug"]
     sex = str((it["sp"].get("user_profile") or {}).get("sex") or "")
     from haenv.world.labworld.meds import meds
+    from haenv.p3.textread import canonical
     cf = meds()["confounders"]      # conspicuous background entries are read by G3 on their own rules (`gold.confounder_why`)
-    own = set(drug(d)["ae_symptoms"]) | {x for v in (cf["other_drug"] or {}).values() for x in v["symptoms"]} \
-        | {x["symptom"] for x in cf["intercurrent"]["illnesses"]}
+    own = {canonical(x) for x in drug(d)["ae_symptoms"]} | {canonical(x) for v in (cf["other_drug"] or {}).values() for x in v["symptoms"]} \
+        | {canonical(x["symptom"]) for x in cf["intercurrent"]["illnesses"]}
     texts = [(e.get("symptom"), e.get("context")) for e in it["sp"].get("evidence_ledger") or ()
              if e.get("source_type") == "patient_reported_symptom"]
     texts += [(e["symptom"], e.get("context")) for e in it["sp"]["prediction_context"]["meds_p3"]["symptom_diary"]
-              if e["symptom"] not in own]
+              if canonical(e["symptom"]) not in own]
     return [t for t, c in texts if not background_ok(d, t, c, sex=sex)]
 
 
@@ -230,6 +240,16 @@ def allocation_readout(pool, n_items: int, seed: str) -> dict:
             "pass": not mismatch and not policy_bad and not record_bad and nested is not False}
 
 
+def interaction_readout(pool, rows_, ctx=None):
+    from haenv.p3.interactions import receipt
+    designated = [it for it in pool if it["gold"].get("interaction_family")]
+    controls = {it["case_id"]: receipt(it["gold"]) for it in designated}
+    return {"id": "interactions", "items": len(pool), "designated": len(designated),
+            "share": len(designated) / len(pool) if pool else 0,
+            "families": dict(collections.Counter(it["gold"]["interaction_family"] for it in designated)),
+            "controls": controls, "pass": all(r["pass"] for r in controls.values())}
+
+
 def audit(n_items: int = 50, seed: str = ""):
     from haenv.world.validation.shared_audit import PackAudit
     from haenv.p3.score import cc
@@ -241,5 +261,5 @@ def audit(n_items: int = 50, seed: str = ""):
         planned_cells=lambda items, ctx: planned_cells(n_items),
         select=lambda items: assemble(items, n_items, seed, scenarios=True), prepare=lambda items, ctx: _with_h(items),
         decisive={"n_refills": drop_newest_refill}, regold=_regold,
-        realism={"whitelist": whitelist}, pack_gates={"profile": profile,
+        realism={"whitelist": whitelist}, pack_gates={"profile": profile, "interactions": interaction_readout,
             "allocation": lambda pool, rows_, ctx: allocation_readout(pool, n_items, seed)})

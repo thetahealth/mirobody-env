@@ -5,6 +5,8 @@ SYNTHETIC data, evaluation only; not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L, Msg, rewrap
+
 import haenv.world.generation.world_plugins as _wp
 
 
@@ -61,7 +63,7 @@ def scrub_annotation(text: str, aliases) -> tuple[str, list[str]]:
 
     out = re.sub(r"([((])([^))]*)([))])",
                  lambda m: _sub(re.match(r"([((])([^))]*)([))])", m.group(0))), text)
-    return out.strip(" 、,,+"), removed
+    return rewrap(text, out.strip(" 、,,+")), removed
 
 
 _INTERP_CLAUSE = __import__("re").compile(r"[、,\uff0c]?[^、,\uff0c]*倾向(?=[、,\uff0c]|$)")
@@ -72,7 +74,7 @@ def scrub_lab_interp(text: str) -> str:
     would be left empty stays as it is."""
     s = str(text or "")
     out = _INTERP_CLAUSE.sub("", s).lstrip("、,\uff0c ")
-    return out if out.strip() else s
+    return rewrap(s, out) if out.strip() else s
 
 
 _MENSES_WORDS = ("月经", "例假", "经期", "经量")
@@ -86,7 +88,7 @@ def scrub_menses(text: str, keep_empty: bool = True) -> str:
     kept = [x for x in parts[0::2] if not any(w in x for w in _MENSES_WORDS)]
     out = "、".join(k for k in kept if k.strip()) if len(kept) != len(parts[0::2]) else s
     if out.strip():
-        return out
+        return rewrap(s, out)
     return s if keep_empty else ""
 
 
@@ -125,7 +127,8 @@ def symptom_topic(text: str) -> str | None:
     Exact match on the normalized full text; similar prefixes can mean
     different things clinically.
     """
-    return _load_symptom_topics().get(_norm_symptom(text))
+    from haenv.i18n.identity import source
+    return _load_symptom_topics().get(_norm_symptom(source(text)))
 
 
 def _norm_symptom(text: str) -> str:
@@ -149,7 +152,24 @@ def relocate_event_history(raw) -> None:
     rows = []
     for event in raw.evidence_ledger or ():
         if event.get("symptom") and event.get("context"):
-            rows.append({"day": int(event["source_timestamp"]), "source": "门诊与生活史记录",
+            rows.append({"day": int(event["source_timestamp"]), "source": L("record.source.clinic_life"),
                          "symptom": event["symptom"], "history": event.pop("context")})
     pc["event_history_record"] = rows
     raw.prediction_context = pc
+
+
+def phrase_ids(value):
+    """Yield source phrase ids from a structured message or record tree."""
+    if isinstance(value, Msg):
+        if value.kind == "lex":
+            yield value.key
+        else:
+            yield from phrase_ids(value.slots)
+    elif isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from phrase_ids(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            yield from phrase_ids(item)

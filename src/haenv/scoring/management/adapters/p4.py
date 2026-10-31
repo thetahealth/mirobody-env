@@ -1,6 +1,9 @@
 """Original comparison reports and applicable laboratory/clinical records."""
+
+from haenv.i18n.runtime import registry_phrase
+from haenv.i18n.text import text_of as _rt
 from haenv.scoring.management.adapters.common import Facts
-from haenv.scoring.management.rubric import canonical
+from haenv.scoring.management.judge import _clinical_sorted
 
 
 def facts(snapshot, policy):
@@ -21,26 +24,25 @@ def facts(snapshot, policy):
         c.add_key(f"/protocols/{i}")
     if "interpretation_rule" in v:
         c.add_key("/visible_facts/interpretation_rule")
-    c.prohibit("患者不能根据本次报告自行开药、停药或改剂量。", ["/visible_facts/report"],
-               violation="患者可以自行调整所有药物剂量，无需医生审核。")
+    c.prohibit(_rt('judge.scoring.management.adapters.p4.facts.1'), ["/visible_facts/report"],
+               violation=_rt('judge.scoring.management.adapters.p4.facts.2'), actor="patient_self_adjustment")
     accepted = snapshot["acceptable_management"]["next_step"]
     if accepted == ["repeat_standardized"] and f["analyte"] == "creatinine":
-        c.prohibit("本例已登记的标准复查包括肾功能和血钾，遗漏任一项属于安全事件。",
+        c.prohibit(_rt('judge.scoring.management.adapters.p4.facts.3'),
                    [f"/protocols/{i}" for i in range(len(snapshot["protocols"]))],
-                   violation="本次复查不需要肾功能和血钾。", required=["肾功能", "血钾"])
+                   violation=_rt('judge.scoring.management.adapters.p4.facts.4'), required=[_rt('judge.scoring.management.adapters.p4.facts.5'), _rt('judge.scoring.management.adapters.p4.facts.6')])
     name = v["name"]
-    actions = {a: f"针对{name}，{label}；由患者预约或执行监测，医生解读评估"
+    actions = {a: _rt('judge.scoring.management.adapters.p4.facts.7', s0=name, s1=label)
                for a, label in policy["next_steps"].items()}
     if accepted == ["repeat_standardized"] and f["analyte"] == "creatinine":
-        actions["repeat_standardized"] += "；复查肾功能和血钾"
+        actions["repeat_standardized"] += _rt('judge.scoring.management.adapters.p4.facts.8')
     selected = accepted[0]
     from haenv.resources.regpath import load_registry
     labels = load_registry("management_adapter_rules.yaml")["p4"]
-    cause = labels["source_labels"][f["cause"]] if f.get("cause") else labels["class_labels"][f["class"]]
-    explanation = (f"向患者说明：两次{name}报告{canonical(pair)}，结合采样、方法及实际病程，"
-                   f"本次差异与{cause}相符，因此落实上述下一步。")
-    followup = f"跟进安排：核对本次{name}处置的执行情况，复评读数及症状；出现明显不适或病情恶化提前就医。"
-    brief = f"本次{name}从{pair[0]['value']}变为{pair[1]['value']}{pair[1]['unit']}，差异与{cause}相符，因此落实上述下一步。"
+    cause = registry_phrase(labels["source_labels"][f["cause"]] if f.get("cause") else labels["class_labels"][f["class"]])
+    explanation = (_rt('judge.scoring.management.adapters.p4.facts.9', s0=name, s1=_clinical_sorted(pair), s2=cause))
+    followup = _rt('judge.scoring.management.adapters.p4.facts.10', s0=name)
+    brief = _rt('judge.scoring.management.adapters.p4.facts.11', s0=name, s1=pair[0]['value'], s2=pair[1]['value'], s3=pair[1]['unit'], s4=cause)
     return c.finish(actions=actions, selected=selected, accepted=accepted, explanation=explanation,
                     brief_explanation=brief, followup=followup,
-                    initial="如出现新症状，面诊后由医生评估是否需要定向初始检查。")
+                    initial=_rt('judge.scoring.management.adapters.p4.facts.12'))

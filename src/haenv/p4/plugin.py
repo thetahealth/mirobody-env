@@ -17,40 +17,14 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L as _L, text_of as _rt
+
 NAME = "followup_p4"
 LATENT = "p4"
 PROBE_ID = "p4.followup"
 FRAMING = "P4_FOLLOWUP_PROMPT"
 
-P4_FOLLOWUP_PROMPT = """你是"随访复查解读"求解器。下面是一位患者在 index-time T 之前(含 T 日)的全部可见数据。
-`prediction_context.followup_p4` 是今天(T 日)到来的一次随访复查:被随访指标的全部历史读数与本次读数,
-每次带采血时刻、空腹登记、标本处理(离心前放置时长、溶血指数)、检测机构与方法;
-`diet_record` 是上次(`previous_draw_day`)与本次两次采血前的饮食记录;`medication_record` 是用药记录;
-`specimen_policy` 是检验科印出的标本稳定性规定;`patient_remarks` 是患者在这两次采血时的自述。
-体重等其余数据见 `longitudinal_data`。
-
-请判断本次读数相对上次读数的变化:
-① 变化的来源 `change_source`,四选一:
-   `true_change` = 患者体内该指标的真实水平变了;
-   `analytic_biological_noise` = 测量误差与个体内生物学波动,真实水平没变;
-   `preanalytical` = 采血或标本环节的因素(进食、标本放置、采血前饮食等)使这次或上次的读数偏离真实水平;
-   `method_difference` = 两次检测的方法或器械不同,使读数偏离。
-② 造成变化的因素 `factor`(从 schema 列出的值中选一个;来源为测量误差与生物学波动时填 null)。
-③ 真实水平的百分比变化 `true_change_pct`:本次真实水平相对上次真实水平变化了百分之几(下降为负)。
-④ 下一步 `next_step`:`act_on_change` 按这次变化处理 · `repeat_standardized` 在标准条件下复查确认后再判断 ·
-   `no_action` 不需要因这次变化做任何处理。
-
-医疗边界(硬约束):不自主开药/停药/改剂量。
-
-pre-T 数据(JSON):
-{payload}
-
-只输出一个 JSON 对象(无任何多余文字/markdown),schema:
-{{"change_source":"true_change|analytic_biological_noise|preanalytical|method_difference",
-"factor":"glp1_dose_change|weight_change|acei_start_or_stop|postprandial_labelled_fasting|delayed_processing|meat_meal|poc_meter|jaffe_enzymatic_switch|infusion_sampling|hemolysis|edta_contamination|cold_delayed_separation|nonfasting|glucose_glycolysis|recent_exercise|sampling_time|platform_calibration|reagent_lot|biotin_tsh|dehydration|thiazide|gastrointestinal_loss|glucocorticoid|acute_illness|thyroiditis|thyroxine_adherence|hepatotoxic_drug|alcohol_change|statin_myopathy|muscle_injury|fibrate_adherence|null",
-"true_change_pct":-12.0,
-"next_step":"act_on_change|repeat_standardized|no_action",
-"reason":"一句话依据"}}"""
+P4_FOLLOWUP_PROMPT = _L('runtime.p4.plugin.module.1')
 
 
 def _gold(meta):
@@ -93,13 +67,12 @@ def pack():
     return Pack(
         name="p4", history_dependency=POLICY, owns=_when, source="haenv.p4 (haenv/p4/plugin.py)",
         blocks=((NAME, _gold, lambda meta: None, (LATENT,), {LATENT: "knob"},
-                 "④ 随访解读包(设计 §4):来源四类与真变化幅度的金标,由世界层真值与逐点扰动记录经 G4 确定;"
-                 "题面块在测量层之后由 hooks.observe_followup 写入。"),),
+                 _rt('runtime.p4.plugin.pack.1')),),
         emission=emission(),
-        framing=(FRAMING, P4_FOLLOWUP_PROMPT, "④ 单回合无菜单的随访解读问法(设计 §4.1 作答 schema)。"),
+        framing=(FRAMING, P4_FOLLOWUP_PROMPT, _rt('runtime.p4.plugin.pack.2')),
         probe=probe_dict, judge=(NAME, _judge, KINDS, _when), mounts={"single": "out"},
-        why_not={"gated": "④ 单回合无菜单(设计 §11 K2):决定所需数据全部常显,不走购买式工具轨",
-                 "slices": "④ 不切片:一次复查一个问题", "multi": "④ 单回合,不是多轮追踪"},
+        why_not={"gated": _rt('runtime.p4.plugin.pack.3'),
+                 "slices": _rt('runtime.p4.plugin.pack.4'), "multi": _rt('runtime.p4.plugin.pack.5')},
         prompt_gold_meta=("outcome", "driver"), judging_segment="P4_JUDGING",
         base_labels=(),                         # the score reads its own block, no base-world label
         answers_action=False,                   # the answer is source class / factor / % / next step only

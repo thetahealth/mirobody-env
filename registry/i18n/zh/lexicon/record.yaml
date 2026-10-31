@@ -1,0 +1,16 @@
+# Record and encounter phrases shared by the packs (zh).
+entries:
+  protocol.library: 本院规程库
+  protocol.follow_library: 按本院规程处理
+  encounter.p2: 线上家庭监测分诊
+  encounter.p3: 慢病用药复诊
+  encounter.p4: 随访复查解读
+  news2.input_stage.first_upload: 本次家庭测量首次上传（补测前）
+  news2.source.system: 家庭监测系统自动计算
+  news2.missing.zero: 未收到字段计 0 分
+  news2.missing.none: 所有字段均已收到
+  news2.measurement_stage.completed: 首次上传后完成补测；下列生命体征为今天补齐后的读数
+  record.source.clinic_life: 门诊与生活史记录
+  record.source.device_care: 佩戴与护理记录
+  hist.recorded: 已记录
+  hist.not_recorded: 未记录

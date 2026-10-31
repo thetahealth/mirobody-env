@@ -27,6 +27,8 @@ screening_draw_policy:
     rules, and the original emission gates; never cap counts or trim records.
   ours: true
 comparison_calendar:
+  source: registry/difficulty_r2.yaml#difficulty_r2.p4.analyte_gap_ge28.creatinine; docs/spec/spec.md
+  review: pending
   remote_share: 0.55
   ours: true
   selection_source: docs/spec/spec.md
@@ -78,6 +80,8 @@ acei_first_review:
     comparisons retain their existing timelines. Response magnitude, its
     time constant, assay CVs and gold thresholds are unchanged.
 cooked_meat:
+  source: https://pubmed.ncbi.nlm.nih.gov/29842868/; https://pubmed.ncbi.nlm.nih.gov/17270090/
+  review: pending
   increment_umol_L: [4.6, 20.5]
   sampling: uniform illustrative increment between published cohort centres
   ours: true

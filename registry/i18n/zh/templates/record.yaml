@@ -1,0 +1,3 @@
+# Record templates shared by the packs (zh).
+record.today_date: "病程第 {day} 天（日期相对于本记录第 0 天）"
+p2.hist.result.registered: "{condition}，当时已登记。"

@@ -32,6 +32,65 @@ excludes:
   - diabetes insipidus
   - prediabetes
   - autoimmune diabetes
+  - type 3c diabetes
+  - diabetes associated with an exocrine pancreatic tumour
+  - diabetes associated with an exocrine pancreatic tumor
+  - pancreatic cancer-associated diabetes
+  - latent autoimmune diabetes
+  - type i diabetes
+  - pre-diabetes
+  - diabetes mellitus type 1
+  # Mirror of 甲状腺功能减退 / 甲减.
+  hypothyroid:
+  - subclinical hypothyroid
+  # Mirror of 肾病.
+  kidney disease:
+  - diabetic kidney disease
+  # Mirror of 多囊.
+  polycystic:
+  - polycystic kidney
+  - polycystic liver
+  # Mirror of 狼疮: 类狼疮.
+  lupus:
+  - lupus-like
+  - lupus like
+  # Mirror of 1型.
+  type 1:
+  - multiple endocrine neoplasia type 1
+  # ICD-10 F31 vs F32 / DSM-5-TR; ST and respiratory depression are not mood disorders.
+  depression:
+  - bipolar depression
+  - bipolar i depression
+  - bipolar ii depression
+  - manic depression
+  - st depression
+  - st-segment depression
+  - st segment depression
+  - respiratory depression
+  - without depression
+  - no depression
+  # ICD-10 F31 vs F32 / DSM-5-TR.
+  depressive:
+  - bipolar depressive
+  - bipolar disorder, depressive
+  - bipolar disorder with depressive
+  - bipolar i disorder, depressive
+  - bipolar ii disorder, depressive
+  - bipolar i disorder with depressive
+  - bipolar ii disorder with depressive
+  - bipolar affective disorder, depressive
+  - manic-depressive
+  - manic depressive
+  # Negated: the rival "fatigue from physical illness without depressive disorder".
+  - without depressive
+  - no depressive
+  # Mirror of 胆结石 (ACG guideline, Tenner et al., Am J Gastroenterol 2013;108:1400).
+  gallstone:
+  - gallstone pancreatitis
+  - gallstone-induced pancreatitis
+  - gallstone-related pancreatitis
+  - gallstone-associated pancreatitis
+  - gallstone acute pancreatitis
   甲状腺功能减退:
   - 亚临床甲状腺功能减退
   肾病:
@@ -66,6 +125,48 @@ excludes:
   1型:
   - 内分泌腺瘤病1型
   - 内分泌腺瘤1型
+  # Bipolar disorder, current episode depressed, is bipolar disorder (ICD-10 F31.3-F31.5; DSM-5-TR
+  # "bipolar I/II disorder, current or most recent episode depressed"), not the depressive episode
+  # (F32) of HD-UNI-18's gold "抑郁"; it is that item's registered rival 双相障碍抑郁发作. "无抑郁"
+  # (without depression) names the other registered rival, 躯体疾病相关乏力而无抑郁障碍.
+  抑郁:
+  - 双相抑郁
+  - 双相障碍抑郁
+  - 双相情感障碍抑郁
+  - 双相i型障碍抑郁
+  - 双相ii型障碍抑郁
+  # ICD-10 F31.3-F31.5 titles: 双相情感障碍，目前为(轻度或中度|重度)抑郁发作
+  - 目前为抑郁
+  - 目前为轻度抑郁
+  - 目前为中度抑郁
+  - 目前为重度抑郁
+  - 目前为轻度或中度抑郁
+  - 双相障碍(抑郁
+  - 双相障碍（抑郁
+  - 躁狂抑郁
+  # Negated depression ("无抑郁障碍" in the rival 躯体疾病相关乏力而无抑郁障碍); 无 alone is not a
+  # negation cue in the matcher, so the negated forms are listed here.
+  - 无抑郁
+  - 没有抑郁
+  - 无明显抑郁
+  - 不伴抑郁
+  # The abbreviation keeps the exclusion of its full name: subclinical hypothyroidism (TSH raised,
+  # FT4 normal) is not overt hypothyroidism (ATA 2014 hypothyroidism guideline, Thyroid 24:1670;
+  # 中华医学会内分泌学分会《成人甲状腺功能减退症诊治指南》2017).
+  甲减:
+  - 亚临床甲减
+  # Gallstone pancreatitis is acute pancreatitis (ACG guideline, Tenner S et al., Am J Gastroenterol
+  # 2013;108:1400), the registered rival of HD-UNI-11, not cholelithiasis or acute cholecystitis.
+  胆结石:
+  - 胆结石性胰腺炎
+  - 胆结石性急性胰腺炎
+  - 胆结石相关胰腺炎
+  - 胆结石相关性胰腺炎
+  - 胆结石相关急性胰腺炎
+  - 胆结石所致胰腺炎
+  - 胆结石所致急性胰腺炎
+  - 胆结石诱发胰腺炎
+  - 胆结石诱发急性胰腺炎
   # "类狼疮表现" (lupus-like features) does not name lupus.
   狼疮:
   - 类狼疮

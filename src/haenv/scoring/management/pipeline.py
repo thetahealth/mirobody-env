@@ -1,6 +1,9 @@
 """Read-only rejudging of saved management plans, with durable independent outputs."""
 from __future__ import annotations
 
+from haenv.i18n.runtime import select_batch_language, select_saved_language
+from haenv.i18n.text import text_of as _rt
+
 from collections import Counter
 from copy import deepcopy
 from dataclasses import asdict
@@ -41,6 +44,7 @@ CODE_FILES = (
     'haenv/scoring/management/__init__.py',
     'haenv/scoring/management/controls_v62.py',
     'haenv/scoring/management/rubric.py',
+    'haenv/scoring/management/evidence.py',
     'haenv/scoring/management/judge.py',
     'haenv/scoring/management/pipeline.py',
     'haenv/scoring/management/precision.py',
@@ -100,11 +104,25 @@ def eval_core_decision(pack, row):
 
 
 def read_jsonl(path):
-    return [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
+    path = Path(path)
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    from haenv.i18n.identity import load, restore, decode
+    if path.name == 'cases.jsonl':
+        messages = load(path)
+        return [{**r, 'case': restore(r['case'], messages.get(r['case_id']))} for r in rows]
+    if path.name == 'snapshots.jsonl' and path.with_suffix('.messages.jsonl').is_file():
+        messages = {r['key']: decode(r['snapshot']) for r in read_jsonl(path.with_suffix('.messages.jsonl'))}
+        return [{**r, 'snapshot': restore(r['snapshot'], messages.get(r['key']))} for r in rows]
+    return rows
 
 
 def write_jsonl(path, rows):
-    Path(path).write_text("".join(canonical(r) + "\n" for r in rows), encoding="utf-8")
+    path, rows = Path(path), list(rows)
+    path.write_text("".join(canonical(r) + "\n" for r in rows), encoding="utf-8")
+    if path.name == 'snapshots.jsonl':
+        from haenv.i18n.identity import encode
+        write_jsonl(path.with_suffix('.messages.jsonl'),
+                    [{'key': r['key'], 'snapshot': encode(r['snapshot'])} for r in rows])
 
 
 def code_state():
@@ -116,7 +134,10 @@ def code_state():
     if repo is not None:
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
         dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=repo, text=True).strip())
-    return {"management_code_sha16": sha256(files)[:16], "files": files,
+    from haenv import i18n
+    from haenv.i18n.text import judge_fingerprints
+    return {**judge_fingerprints(i18n.current()),
+            "management_code_sha16": sha256(files)[:16], "files": files,
             "judging_sha16": judging_fingerprint(), "git_commit": commit, "git_dirty": dirty}
 
 
@@ -231,12 +252,19 @@ def prepare(batches, out, *, run_id, mode="per_case", limit_per_model=None, incl
     _outside_sources(out, batches)
     if out.exists() and any(out.iterdir()):
         raise ValueError("Prepare requires a new output directory; use run to resume")
+    language = select_batch_language(batches)
     policy = load_policy(policy_path)
     cells, sources, snapshots = [], [], {}
     seen_controls = set()
     for batch in batches:
         cases, rows, selected, source = _batch_inputs(batch, policy)
         sources.append(source)
+        traces = {}
+        if policy["version"] == "management-rubric-v7":
+            trace_path = Path(batch) / "query_trace.jsonl"
+            if trace_path.is_file():
+                traces = {(r["case"], r["solver"]): r for r in read_jsonl(trace_path)}
+                source["files"]["query_trace.jsonl"] = digest(trace_path)
         by_identity = {(r["case"], r["solver"]): r for r in rows}
         selected.sort(key=lambda r: (r["solver"], sha256(["management-sample-v1", r["case"]])))
         taken = Counter()
@@ -248,8 +276,24 @@ def prepare(batches, out, *, run_id, mode="per_case", limit_per_model=None, incl
             snap, pack = saved["snapshot"], saved["pack"]
             snap_key = snap["facts_sha256"]
             snapshots[snap_key] = snap
-            rubric = derive(pack, snap, policy)
             row = by_identity[(cell["case"], cell["solver"])]
+            acquired = None
+            if policy["version"] == "management-rubric-v7":
+                from haenv.scoring.management.evidence import obtained_context
+                trace = traces.get((cell["case"], cell["solver"]))
+                delivered = None
+                if trace is None and not row.get("query_mode"):
+                    from haenv_kernel.schema import RawCase
+                    from haenv_kernel.build import build_instance
+                    # Build's visible side applies the canonical cutoff and redaction.
+                    # Never substitute decision_facts/world_observations for delivery.
+                    raw_case = saved["case"]
+                    if all(k in raw_case for k in ("user_profile", "evidence_ledger", "outcome_label", "label_rule", "gold_drivers", "reversal_points")):
+                        visible, _ = build_instance(RawCase(**raw_case), int(row["T"]))
+                        delivered = asdict(visible)
+                acquired = obtained_context(snap, trace=trace, query_mode=bool(row.get("query_mode")),
+                                            solver_payload=delivered)
+            rubric = derive(pack, snap, policy, obtained_evidence=acquired)
             identity = {"batch": source["batch"], "case": cell["case"], "solver": cell["solver"],
                         "endpoint": cell["endpoint"], "raw_sha256": cell["raw_sha256"],
                         "facts_sha256": snap_key, "world_sha": row["world_sha"],
@@ -314,7 +358,7 @@ def prepare(batches, out, *, run_id, mode="per_case", limit_per_model=None, incl
     out.mkdir(parents=True, exist_ok=True)
     write_jsonl(out / "cells.jsonl", cells)
     write_jsonl(out / "snapshots.jsonl", [{"key": k, "snapshot": s} for k, s in snapshots.items()])
-    manifest = {"run_id": run_id, "rubric_version": policy["version"], "policy": policy,
+    manifest = {"run_id": run_id, "language": language, "rubric_version": policy["version"], "policy": policy,
                 "code": code_state(), "mode": mode, "sources": sources,
                 "cells_sha256": digest(out / "cells.jsonl"), "snapshots_sha256": digest(out / "snapshots.jsonl"),
                 "states": dict(Counter(c["status"] for c in cells)),
@@ -347,6 +391,7 @@ def _prepare_prepared(cells_path, out, *, run_id, policy_path=None, key_file=Non
             raise ValueError("Key file must list unique original prepared cell keys")
         cells = {k: c for k, c in cells.items() if k in set(selected)}
     snapshots = _unique(read_jsonl(previous / "snapshots.jsonl"))
+    select_saved_language(old)
     policy = load_policy(policy_path) if policy_path else deepcopy(old["policy"])
     if {k: v for k, v in policy.items() if k != "judge"} != {k: v for k, v in old["policy"].items() if k != "judge"}:
         raise ValueError("Prepared replay can change only the judge, never scoring, templates or facts")
@@ -361,6 +406,8 @@ def _prepare_prepared(cells_path, out, *, run_id, policy_path=None, key_file=Non
         names.append("v5_profiles.jsonl")
         if digest(previous / names[-1]) != old["saved_inputs"]["profiles_sha256"]:
             raise ValueError("Saved v5 profiles changed")
+    if (previous / 'snapshots.messages.jsonl').is_file():
+        names.append('snapshots.messages.jsonl')
     blobs = {name: (previous / name).read_bytes() for name in names}
     manifest = {**deepcopy(old), "run_id": run_id, "policy": policy, "code": code_state(),
                 "prepared_inputs": {"previous": str(previous), "previous_run_id": old["run_id"],
@@ -435,7 +482,7 @@ def _prepare_repeat(previous, out, *, run_id):
     for name in ("judging_criteria", "judging_total_sha16"):
         if name in old["code"]:
             code[name] = old["code"][name]
-    manifest = {"run_id": run_id, "rubric_version": old["rubric_version"], "policy": old["policy"],
+    manifest = {"run_id": run_id, "language": old.get("language", "zh"), "rubric_version": old["rubric_version"], "policy": old["policy"],
                 "code": code, "mode": old["mode"], "sources": old["sources"],
                 "cells_sha256": digest(out / "cells.jsonl"),
                 "snapshots_sha256": digest(out / "snapshots.jsonl"),
@@ -450,6 +497,7 @@ def _prepare_repeat(previous, out, *, run_id):
 def validate(out):
     out = Path(out).resolve()
     manifest = json.loads((out / "manifest.json").read_text())
+    select_saved_language(manifest)
     now = code_state()
     if manifest["code"]["management_code_sha16"] != now["management_code_sha16"]:
         raise ValueError("Management code or registry changed since preparation")
@@ -478,12 +526,16 @@ def validate(out):
 
 
 def prepare_saved(previous_runs, out, *, run_id, controls_per_pack=0):
-    """Rejudge completed saved answers under v6; no old quality vote is reused."""
+    """Rejudge completed saved answers with current criteria; never reuse votes."""
     from copy import deepcopy
     from haenv.scoring.management.precision_rejudge import _identity
     from haenv.scoring.management.precision_rejudge import _unique
+    languages = {select_saved_language(json.loads((Path(run) / "manifest.json").read_text())) for run in previous_runs}
+    if len(languages) > 1:
+        raise ValueError("A judging run cannot mix source languages")
+    language = next(iter(languages), "zh")
     policy = load_policy()
-    if policy["version"] not in {"management-rubric-v6", "management-rubric-v6.1", "management-rubric-v6.2"} or not run_id or not previous_runs:
+    if policy["version"] not in {"management-rubric-v6", "management-rubric-v6.1", "management-rubric-v6.2", "management-rubric-v7"} or not run_id or not previous_runs:
         raise ValueError("Saved-answer prepare requires the v6 policy and explicit source runs")
     if type(controls_per_pack) is not int or controls_per_pack < 0:
         raise ValueError("controls_per_pack must be a nonnegative integer")
@@ -496,6 +548,7 @@ def prepare_saved(previous_runs, out, *, run_id, controls_per_pack=0):
         raise ValueError("Prepare requires a new output directory")
     cells, snapshots, profiles, sources, seal = {}, {}, [], {}, {}
     selection = {}
+    acquisitions = {}
     for previous in previous_runs:
         old = json.loads((previous / "manifest.json").read_text())
         if old["rubric_version"] != "management-rubric-v5" or run_id == old["run_id"]:
@@ -520,7 +573,25 @@ def prepare_saved(previous_runs, out, *, run_id, controls_per_pack=0):
                 raise ValueError("Real-answer selection must not import offline judge runs")
             snap = old_snaps[old_cell["snapshot_key"]]
             verify_snapshot(snap["snapshot"], policy)
-            cell = {**deepcopy(old_cell), "rubric": derive(old_cell["rubric"]["pack"], snap["snapshot"], policy)}
+            acquired = None
+            if policy["version"] == "management-rubric-v7":
+                from haenv.scoring.management.evidence import obtained_context
+                batch = Path(old_cell["source"]["batch"])
+                if batch not in acquisitions:
+                    trace_path, eval_path = batch / "query_trace.jsonl", batch / "eval.jsonl"
+                    evaluations = {(r["case"], r["solver"]): r for r in load_rows(eval_path)}
+                    traces = {(r["case"], r["solver"]): r for r in read_jsonl(trace_path)} if trace_path.is_file() else {}
+                    acquisitions[batch] = evaluations, traces
+                    seal[str(eval_path)] = digest(eval_path)
+                    if trace_path.is_file():
+                        seal[str(trace_path)] = digest(trace_path)
+                evaluations, traces = acquisitions[batch]
+                identity = old_cell["source"]["case"], old_cell["source"]["solver"]
+                evaluation = evaluations[identity]
+                acquired = obtained_context(snap["snapshot"], trace=traces.get(identity),
+                                            query_mode=bool(evaluation.get("query_mode")))
+            cell = {**deepcopy(old_cell), "rubric": derive(old_cell["rubric"]["pack"], snap["snapshot"], policy,
+                                                         obtained_evidence=acquired)}
             if cell["key"] in cells:
                 if canonical(cells[cell["key"]]) != canonical(cell):
                     raise ValueError("Overlapping saved cells differ")
@@ -573,7 +644,7 @@ def prepare_saved(previous_runs, out, *, run_id, controls_per_pack=0):
     write_jsonl(out / "cells.jsonl", cells.values())
     write_jsonl(out / "snapshots.jsonl", snapshots.values())
     write_jsonl(out / "v5_profiles.jsonl", profiles)
-    manifest = {"run_id": run_id, "rubric_version": policy["version"], "policy": policy,
+    manifest = {"run_id": run_id, "language": language, "rubric_version": policy["version"], "policy": policy,
                 "code": code_state(), "mode": "per_case", "sources": list(sources.values()),
                 "cells_sha256": digest(out / "cells.jsonl"), "snapshots_sha256": digest(out / "snapshots.jsonl"),
                 "states": dict(Counter(c["status"] for c in cells.values())),
@@ -591,6 +662,7 @@ def cell_answer(cell):
 
 
 def _tasks(cell, snapshot, manifest):
+    select_saved_language(manifest)
     rubric, answer = cell["rubric"], cell_answer(cell)
     judge_items = [i for i in rubric["items"] if not i.get("core_decision")]
     groups = ([None] if manifest["mode"] == "per_case" else [[i["id"]] for i in judge_items]) if judge_items else []
@@ -778,7 +850,7 @@ def _run(out, *, offline, ledger_path, limit_usd, cfg, concurrency, max_cells):
                 raise ValueError("Saved management result differs from raw judge responses")
         else:
             result = {"key": cell["key"], "source": cell["source"],
-                      "collection_status": "未采集" if cell["status"] == "not_collected" else cell["status"],
+                      "collection_status": _rt('judge.scoring.management.pipeline._run.1') if cell["status"] == "not_collected" else cell["status"],
                       "rubric_version": manifest["rubric_version"], "facts_sha256": cell["snapshot_key"],
                       "code": manifest["code"], "plan_sha256": cell["plan_sha256"],
                       "core_decision": cell["core_decision"],
@@ -802,6 +874,7 @@ def rescore(out, destination, *, policy_path=None):
     """Replay quality votes and code decisions without acquiring another judge vote."""
     out, destination = Path(out).resolve(), Path(destination).resolve()
     manifest = json.loads((out / "manifest.json").read_text())
+    select_saved_language(manifest)
     policy = load_policy(policy_path)
     old = manifest["policy"]
     if {k: v for k, v in policy.items() if k not in {"version", "scoring", "source"}} != {k: v for k, v in old.items() if k not in {"version", "scoring", "source"}}:

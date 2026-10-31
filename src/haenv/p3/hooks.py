@@ -104,14 +104,10 @@ def world_record(raw, item: dict) -> list:
         if m.get("overlay") and m["drug"] == item["drug"]:
             m["dose_timeline"] = line
     T = int(item["T"])
-    if "history_lo" in wm:
-        # dated rows of the other medicines over the world's record (`med_course.record_rows`): the managed
-        # drug and the comorbidity's co-medication are the item's own (overlay) and are printed by the block
-        return MC.record_rows(wm, int(wm["history_lo"]), T, skip=(item["drug"],), primary=True)
-    # a world without the record (`synth.world_history: short`, `med_dynamics: off`): the day-T list, as before
-    co = (item.get("comorbidity") or {}).get("co_medication")
-    return [MC.display(d, dose) for d, dose, m in MC.active_medicines(wm, T)
-            if d != item["drug"] and not (co and m.get("overlay") and m.get("indication") == item["comorbidity"]["code"])]
+    # The EMR projection needs dated rows in both arms of the clinical-supply
+    # preview. Short history still has a dose timeline; its record starts at 0.
+    return MC.record_rows(wm, int(wm.get("history_lo", 0)), T,
+                          skip=(item["drug"],), primary=True)
 
 
 def whitelist_ledger(raw, drug_name: str) -> None:
@@ -123,16 +119,18 @@ def whitelist_ledger(raw, drug_name: str) -> None:
     from haenv.world.labworld.meds import meds
     from haenv.p3.plan import background_ok
     from haenv.p3.plan import h01
+    from haenv.p3.textread import canonical
     reg, every = meds()["benign_complaints"], symptom_lay_every()
+    every = {canonical(k): v for k, v in every.items()}
     sex = str((getattr(raw, "user_profile", None) or {}).get("sex") or "")
-    allowed = sorted(t for t in reg if background_ok(drug_name, t, *every.get(t, ()), sex=sex))
-    used = {e.get("symptom") for e in raw.evidence_ledger or ()}
+    allowed = sorted((t for t in reg if background_ok(drug_name, t, *every.get(canonical(t), ()), sex=sex)), key=canonical)
+    used = {canonical(e.get("symptom")) for e in raw.evidence_ledger or ()}
     for e in raw.evidence_ledger or ():
         if (e.get("source_type") == "patient_reported_symptom"
                 and not background_ok(drug_name, e.get("symptom"), e.get("context"),
-                                       *every.get(e.get("symptom"), ()), sex=sex)):
-            pick = min((t for t in allowed if t not in used), key=lambda t: h01("p3bg", e.get("evidence_id"), t))
-            used.add(pick)
+                                       *every.get(canonical(e.get("symptom")), ()), sex=sex)):
+            pick = min((t for t in allowed if canonical(t) not in used), key=lambda t: h01("p3bg", e.get("evidence_id"), t))
+            used.add(canonical(pick))
             e["symptom"] = pick
             e.pop("context", None)
 

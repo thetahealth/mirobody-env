@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+
+from haenv.i18n.text import L, T
 from haenv.resources.regpath import load_registry
 from haenv.resources.regpath import registry_cached
 
@@ -22,19 +24,33 @@ def document():
     doc["steps"] += [cfg["design"]["noise"], cfg["rcv"]["reason"], cfg["analytical_cv"]["reason"]]
     doc["steps"].append(cfg["medication_world_design"]["acute_comparison_scope"])
     p = cfg["evidence_parameters"]
-    doc["steps"].append(f"本院方法文件与证据范围：游离血红蛋白验证界限{p['free_hemoglobin_limit_g_L']} g/L；EDTA转移的低钙支持范围<{p['edta_calcium_support_max_mmol_L']} mmol/L；未分离标本冷藏≤{p['cold_max_C']}℃且≥{p['cold_separation_min_h']}小时；普通全血室温糖酵解核对≥{p['glycolysis_min_h']}小时；生物素剂量{p['biotin_dose_mg']} mg；甲状腺素复评至少{p['treatment_settling_days']}日。{p['reason']}")
+    doc["steps"].append(T("p4.doc.evidence_scope", hb=p['free_hemoglobin_limit_g_L'],
+                          ca=p['edta_calcium_support_max_mmol_L'], cold_c=p['cold_max_C'],
+                          cold_h=p['cold_separation_min_h'], glyco_h=p['glycolysis_min_h'],
+                          biotin=p['biotin_dose_mg'], settle=p['treatment_settling_days'], reason=p['reason']))
     for an in cfg["design"]["analytes"]:
         a = analyte(an)
-        analytical = '、'.join(f"{method} {100*value:g}%" for method, value in a["cva"].items())
-        doc["steps"].append(f"{a['display']}：CVI={100*a['cvi']:g}%；CVA={analytical}；双侧95%对数RCV={100*rcv95(cv_total(an)):.2f}%。单位{a['unit']}。")
-    doc["steps"] += [f"{row.get('exposure', row['rule'].split('；')[0])}：{row['rule'].replace('真实变化', '体内水平改变')}（来源{row['source']}；合成响应范围见登记，不能当患者处置阈值。）" for row in cfg["rules"].values()]
-    doc["steps"] += [f"{row['exposure']}：本院合成随访取暴露或病程起点在本次采血前{row['event_lead_days'][0]}–{row['event_lead_days'][1]}日，须在两次采血之间；该生成时间范围不是通用诊断截止值。" for row in cfg["rules"].values() if row.get("event_lead_days")]
-    doc["sources"] += [f"{key}: {src['title']}；{src['url']}" for key, src in cfg["sources"].items()]
+        analytical = None
+        for method, value in a["cva"].items():
+            item = T("p4.doc.cva_item", method=method, pct=f"{100*value:g}")
+            analytical = item if analytical is None else T("p4.doc.enum", head=analytical, tail=item)
+        doc["steps"].append(T("p4.doc.analyte_cv", display=a['display'], cvi=f"{100*a['cvi']:g}", cva=analytical if analytical is not None else "",
+                              rcv=f"{100*rcv95(cv_total(an)):.2f}", unit=a['unit']))
+    doc["steps"] += [T("p4.doc.rule", exposure=row.get("exposure") or L(f"p4.rule_head.{key}"),
+                       rule=L(f"p4.rule.{key}"), source=row["source"])
+                     for key, row in cfg["rules"].items()]
+    doc["steps"] += [T("p4.doc.event_window", exposure=row['exposure'], lo=row['event_lead_days'][0],
+                       hi=row['event_lead_days'][1]) for row in cfg["rules"].values() if row.get("event_lead_days")]
+    doc["sources"] += [T("p4.doc.source", source_id=key, title=src['title'], url=src['url']) for key, src in cfg["sources"].items()]
     return doc
 
 
 def supplement(store):
     """Extend only P4 retrieval; other packs retain their exact catalog bytes."""
-    doc = document()
+    from haenv.i18n.runtime import runtime_text
+    doc = runtime_text(document())
+    if isinstance(store.protocols, str):
+        from haenv.world.protocols.library import catalog
+        store.protocols = runtime_text(catalog())
     if store.protocols and not any(d["protocol_id"] == doc["protocol_id"] for d in store.protocols):
         store.protocols = [*store.protocols, deepcopy(doc)]

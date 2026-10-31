@@ -13,40 +13,21 @@ SYNTHETIC data, evaluation only; not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L as _L
+
 import re
 
 # ---------------------------------------------------------------- the contract (schema block appended to the question)
-TRACE_SCHEMA_HINT = """
-另外再给一个 "trace" 对象,记录你的**推理过程**(它不参与结论评分,只用于过程评估):
-"trace":{{"hypotheses":[{{"name":"假说名","status":"considered|supported|excluded",
-"evidence_for":["EV-..."],"evidence_against":["EV-..."]}}],
-"tool_calls":[{{"target":"想查的信号或检查","why":"为什么查它"}}],
-"commitments":[{{"claim":"你现在承诺的判断","falsified_by":"什么观测会推翻它"}}],
-"data_notes":["数据质量问题"],"scope":"你认为超出本次判断范围的东西"}}
-⚠️ 只写你**真的**依据的证据编号;编不出来就留空数组,留空**不扣过程分**,编造会被查出来。"""
+TRACE_SCHEMA_HINT = _L('runtime.scoring.process.module.1')
 
 _EV_RE = re.compile(r"EV-[A-Za-z0-9_.\-]+")
 
 # Spec §19: tracks the gold declares but the judges do not yet cover, with a status note each.
 UNIMPLEMENTED: dict[str, str] = {
-    "discriminative_tool": "🟡 非交互形式已实现(`judges.judge_discriminative_tool`):判模型开的检查里"
-                           "有没有能把金标与近名分开的判别项。交互形式(模型点单、环境揭示结果、"
-                           "再判是否据此改判)未实现:请求-响应循环已有(`gated.run_gated`),"
-                           "但内核 `gatekeeper.query` 对不在 S 里的 target 返回 "
-                           "`{series: None, need_synth: True}`,检查项无结果可揭示。"
-                           "需在内核补合成钩子(结果须与 S 一致)。",
-    "revision_grounded": "🟡 切片形式已实现且有真实模型读数(`judges.judge_slice_revision` -> "
-                        "`rev_responsiveness`,离线对照 flip_flop 1.000 / no_revision 0.000)。"
-                        "多轮形式判据已实现(`judges.judge_multiround_revision`,读 trajectory 的 "
-                        "`visible_ev` / `cited_ev` / `n_new_points`),缺一个真实模型的多轮批次。",
-    "gap_naming_precision": "🟡 判据已实现(`discovery.judge_gap_naming`),夹具三侧对照已过"
-                            "(指了不存在的 / 指了门后有但没查的 / 指了真拿不到的)。缺批次:"
-                            "题面需多一个受构造约束的 `missing_data` 字段"
-                            "(`discovery.GAP_SCHEMA_HINT`),走新 probe(`ddx.direct` 不变)。"
-                            "现有 `data_quality.signal_quality` 的键名不受控,不能替代。",
-    "neutral_window_drift": "🟢 已实现且有真实模型读数(`rev_stability`,中性窗由 "
-                            "`slices: auto+neutral` 构造;离线对照 flip_flop 0.000 / "
-                            "no_revision 1.000)。",
+    "discriminative_tool": _L('runtime.scoring.process.module.2'),
+    "revision_grounded": _L('runtime.scoring.process.module.3'),
+    "gap_naming_precision": _L('runtime.scoring.process.module.4'),
+    "neutral_window_drift": _L('runtime.scoring.process.module.5'),
 }
 
 # ---------------------------------------------------------------- per-track status: three controlled values

@@ -39,3 +39,7 @@ _install_management_plan()
 from haenv.m2.confirmation import install_results as _install_confirmation_results
 
 _install_confirmation_results()
+
+from haenv.m2.glycaemia import install_results as _install_glycaemic_results
+
+_install_glycaemic_results()

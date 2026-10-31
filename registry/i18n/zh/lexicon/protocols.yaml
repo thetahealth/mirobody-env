@@ -1,0 +1,21 @@
+# Hospital protocol library phrases (zh).
+entries:
+  protocol.source.registry_table: 原登记表
+  protocol.source.provisional: 本院操作映射暂定，需临床复核
+  protocol.source.triage_table: 本院分诊处置表
+  protocol.source.scale2_policy: 量表2资格、分段及氧疗加分逐项核对原文；家庭分诊去向沿用本院条款
+  protocol.source.med_table: 本院慢病用药表与所登记的药品说明书、指南
+  protocol.source.med_policy: 按原表生成复评、归因、依从与合并症条款；患者目标另查医嘱
+  protocol.news2.field.rr: 呼吸频率
+  protocol.news2.field.spo2: SpO2 Scale 1
+  protocol.news2.field.sbp: 收缩压
+  protocol.news2.field.hr: 心率
+  protocol.news2.field.temp: 体温
+  protocol.news2.scale_exception: 所有 NEWS2 条款均按病历授权的 SpO2 量表计算，并计入吸氧加分；条款中的第1表、未吸氧是默认情形，不能覆盖已登记的量表2或实际氧疗。
+  protocol.p3.documented_course_only: 症状状态只登记原始记录明确记载的经过，未登记不表示已缓解或持续。一次症状后来缓解也不能替代对起病时用药、加量日期和其他原因的核对。
+  protocol.doc.name: 名称
+  protocol.doc.applies: 适用条件
+  protocol.doc.excludes: 排除条件
+  protocol.doc.steps: 步骤
+  protocol.doc.exceptions: 例外
+  protocol.doc.sources: 出处

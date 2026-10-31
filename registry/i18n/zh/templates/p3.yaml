@@ -1,0 +1,59 @@
+# Pack 3 medication record templates (zh).
+p3.dose: '{value} {unit}'
+p3.pill_count.legacy: '末次取药后，今天药盒剩余 {left} 天量'
+p3.labs.egfr: （eGFR {egfr} mL/min/1.73m²）
+p3.labs.acr: ，尿白蛋白/肌酐比 {acr} mg/g
+p3.labs.renal: 肌酐 {cr} μmol/L{egfr}，血钾 {k} mmol/L{acr}
+p3.change.increase: 加量（{old} → {new}）
+p3.change.illness_visit: 因{reason}就诊，慢病用药未调整
+p3.rx.daily: '{name} {dose} 每日'
+p3.rule.ae.head: 本院不良反应归因：{name}登记的不良反应为{ae}。
+p3.rule.ae.exposure: '{head}开始用药后出现的，归因于本药剂量，{lower}；{pre}'
+p3.rule.ae.timing: '{head}起病于最近一次加量（或开始用药）后 {lo}–{hi} 天内的，归因于本药剂量，{lower}；起病距最近一次剂量变动已满 {umin} 天的，不能归因于本药剂量，暂不调整剂量，先查其他原因；{pre}'
+p3.rule.adherence: 本院依从性判定：按取药记录（提前取药的余量顺延计入；加量当天换新规格发药，旧规格余药不再计入）与今天的药盒计数估算最近 {window} 天（开始用药不足 {window} 天的，自开始用药日起）的服药覆盖率，低于 {pct}% 视为依从不足；控制指标未达标而依从不足时，暂不调整剂量，先核实服药情况。
+p3.rule.interval: 本院复评间隔：该药加量（或开始用药）后约 {tau} 天疗效才充分显现；加量（或开始用药）后 {half} 天内复查读数仍未达标，属疗效尚未显现，不据此判定加量无效。
+p3.target.upper: '{axis} < {up} {unit}'
+p3.target.range: '{axis} {lo}–{up} {unit}'
+p3.target.clinic: 本院目标：{target}
+p3.comorbidity.ckd: '{display} {stage} 期，白蛋白尿 A3（肾内科随诊）{comed}'
+p3.comorbidity.comed: ；在用{med}
+p3.ladder: '{ladder}（每日）'
+p3.refill.dispensed: '{sup} 天量{extra}'
+p3.refill.new_strength: （加量至 {dose}，新规格）
+p3.pill_count: 末次取药（第 {day} 天，{sup} 天量）后，今天药盒剩余 {left} 天量
+p3.emr.line.complaint: 主诉：{text}。
+p3.emr.line.diagnosis: 诊断：{text}。
+p3.emr.line.rx: 处方：{text}
+p3.emr.line.record: 记录：{text}
+p3.emr.line.exam: 检查：{text}
+p3.emr.line.order: 医嘱：{text}
+p3.emr.line.pmh: 既往史：{text}
+p3.emr.line.hpi: 现病史：{text}
+p3.emr.line.drug_history: 用药史：{text}
+p3.emr.line.clinical_note: 临床记录：{text}
+p3.emr.line.verification: 资料核对：{text}
+p3.emr.line.record_state: 登记状态：{text}
+p3.emr.line.record_received: 就诊记录：{text}
+p3.emr.line.medication: 用药：{text}
+p3.emr.line.inquiry: 问诊：{text}
+p3.emr.line.course: 经过：{text}
+p3.emr.line.workup: 检查记录：{text}
+p3.emr.line.management: 处理：{text}
+p3.emr.line.followup: 随访：{text}
+p3.rx.daily_unit: '{name} {dose} {unit} 每日'
+p3.lab.result: '{value} {unit}'
+p3.today_day: 病程第 {day} 天
+p3.review.documented_only: '{text}；症状日记未填写的经过为未记载。'
+当时有长途徒步，CK {ck} 倍上限，休息后消退，原剂量继续且耐受。: 当时有长途徒步，CK {ck} 倍上限，休息后消退，原剂量继续且耐受。
+CK {ck} 倍上限，撤药随访症状未缓解；后再用原剂量无复发，已耐受。: CK {ck} 倍上限，撤药随访症状未缓解；后再用原剂量无复发，已耐受。
+当时查出甲状腺功能减退，CK {ck} 倍上限；纠正后原剂量继续，无复发。: 当时查出甲状腺功能减退，CK {ck} 倍上限；纠正后原剂量继续，无复发。
+
+p3.target.clinic_drug: '本院目标（{name}）：{target}'
+p3.pill_count.box: '末次领药为第 {day} 天，发给 {sup} 天量；本次清点分药盒，尚余 {left} 天量。'
+p3.pill_count.blister: '第 {day} 天领回 {sup} 天量；患者带来剩余铝塑板，核对后折合 {left} 天量。'
+p3.pill_count.bottle: '药瓶计数：第 {day} 天配药 {sup} 天量，本次核实余药可用 {left} 天。'
+p3.pill_count.reconciliation: '用药核对：上次第 {day} 天配发 {sup} 天量，患者与护士共同清点余药为 {left} 天量。'
+p3.pill_count.pharmacy: '药师复核本次带来的余药为 {left} 天量；最近一次配发在第 {day} 天，共 {sup} 天量。'
+p3.pill_count.home: '本次随访核对家中余药为 {left} 天量；对应第 {day} 天领取的 {sup} 天量。'
+p3.rule.absorption: '左甲状腺素与碳酸钙应间隔约 {hours} 小时；控制不佳且同服时，维持当前剂量，先核实服法并处理吸收干扰后复查，不立即加量。TSH 在目标内而症状仍持续时，维持剂量并先调查其他原因。已缓解的孤立症状不能当作当前持续症状；格列齐特相关低血糖发作即使已进食缓解仍须复评。'
+p3.rule.top_check: "本院{name}剂量上限：已用到本院最高剂量（{top} {unit}）而{axis}仍未达标时，不再加量也不换药，维持当前剂量，先核查服药依从性、服法、吸收障碍（如胃肠疾病）及合用药影响。"

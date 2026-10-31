@@ -1,0 +1,4 @@
+# Shared annotations. Existing English core entries live in shared.yaml.
+world.reversal.artifact_trap: '{noise_class}@day{day}: artefact rather than true regain; do not reverse to high risk'
+world.reversal.regain_from: 'Regain from day{day}, refuting sustained maintenance'
+world.narration.chatter: '{base}. Also, {aside}'

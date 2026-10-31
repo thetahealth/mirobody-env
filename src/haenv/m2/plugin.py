@@ -121,6 +121,9 @@ def pack():
                "F0 两侧都返回 None;F0 只带 m2_bridge,菜单与购买读数随 M2。")]
     blocks.append(("m2_workup", core.workup_gold, None, (), {},
                    "M2 initial diagnostic stage: sourced required tests, alternatives and feasible purchase budget."))
+    from haenv.m2.evidence import gold as evidence_gold
+    blocks.append(("m2_evidence", evidence_gold, None, (), {},
+                   "Sourced alternative finding sets; complete any one set per diagnostic thread."))
     if core.ROUND2:
         blocks.append((NAME_REVISION, core.push_plan, None, (), {},
                        "M2 规格 §2.2/§2.3：回合 ② 推送块的装填计划(固定 5 条:关键→鉴别→干扰→补位)与金标线、"
@@ -128,9 +131,10 @@ def pack():
     from haenv.m2.history import POLICY
     from haenv.m2.hooks import gated_row
     from haenv.m2.workup import gold_derivations
+    from haenv.m2.confirmation import gold_derivations as confirmation_derivations
     return Pack(
         name="m2", history_dependency=POLICY, gated_row=gated_row,
-        gold_derivations=gold_derivations(), owns=_when, source="haenv.m2 (haenv/m2/core.py)",
+        gold_derivations=gold_derivations() + confirmation_derivations(), owns=_when, source="haenv.m2 (haenv/m2/core.py)",
         blocks=tuple(blocks), emission=emission(),
         judge=(JUDGE, _judge, ("ddx:unified", "ddx:comorbidity", "ddx:independent"), _when),
         mounts={"single": "out", "gated": "out"},
@@ -153,7 +157,17 @@ def register() -> list:
     install()
     from haenv.m2.emr import install as install_emr
     install_emr()
-    return register_pack(pack())
+    result = register_pack(pack())
+    from haenv.contracts.external_gold import GATES, register_gate
+    if "m2_premises" not in GATES:
+        from haenv.m2.premises import emission
+        register_gate("m2_premises", emission, source="haenv.m2.premises",
+                      why="Every exposure and course premise read by diagnostic gold must be solver-reachable.")
+    if "m2_control_label" not in GATES:
+        from haenv.m2.confirmation import emission as control_emission
+        register_gate("m2_control_label", control_emission, source="haenv.m2.confirmation",
+                      why="Matched negative presentations require their sourced under-investigation label.")
+    return result
 
 
 def judges():

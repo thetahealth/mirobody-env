@@ -17,8 +17,10 @@ SYNTHETIC, for evaluation only, not medical advice.
 """
 from __future__ import annotations
 
-import json
 import re
+
+from haenv.i18n.text import Msg, T as tpl
+from haenv.world.observations.events_text import phrase_ids
 
 _REGISTRY = "gold_qualifiers.yaml"
 _NUM = re.compile(r"-?\d+(?:\.\d+)?")
@@ -41,6 +43,14 @@ def families() -> dict[str, dict]:
 
 def _ledger_value(text: str, name: str) -> float | None:
     """The first number after `name` in a lab line such as "空腹血糖 6.61 mmol/L(参考 3.9–6.1)"."""
+    if isinstance(text, Msg) and text.kind == "tpl" and text.key.startswith("m2.panel."):
+        if name not in set(phrase_ids(text.slots.get("name"))):
+            return None
+        try:
+            return float(text.slots["value"])
+        except (TypeError, ValueError):
+            return None
+    # External legacy observations may still arrive as a plain report line.
     t = str(text or "")
     if not t.startswith(name):
         return None
@@ -56,7 +66,7 @@ def confirming_evidence(conf: dict, sp) -> list[dict]:
     for kw in (conf.get("keywords") or ()):
         k = str(kw).lower()
         for e in ledger:
-            if k in json.dumps(e, ensure_ascii=False).lower():
+            if any(k in phrase.lower() for phrase in phrase_ids(e)):
                 hits.append({"evidence_id": e.get("evidence_id"),
                              "day": int(e.get("source_timestamp", -1)), "what": str(kw)})
         for name, pts in streams.items():
@@ -72,7 +82,7 @@ def confirming_evidence(conf: dict, sp) -> list[dict]:
                 if v is not None and v >= lo:
                     hits.append({"evidence_id": e.get("evidence_id"),
                                  "day": int(e.get("source_timestamp", -1)),
-                                 "what": f"{th['ledger']} {v:g} >= {lo:g}"})
+                                 "what": tpl("m2.qualifier.threshold", name=th["ledger"], value=v, minimum=lo)})
         if th.get("stream"):
             for p in (streams.get(str(th["stream"])) or ()):
                 if not isinstance(p, dict):
@@ -83,7 +93,7 @@ def confirming_evidence(conf: dict, sp) -> list[dict]:
                     continue
                 if v >= lo:
                     hits.append({"stream": th["stream"], "day": int(p.get("ts", -1)),
-                                 "what": f"{th['stream']} {v:g} >= {lo:g}"})
+                                 "what": tpl("m2.qualifier.threshold", name=th["stream"], value=v, minimum=lo)})
     return sorted(hits, key=lambda h: (h["day"], str(h.get("evidence_id") or h.get("stream"))))
 
 
@@ -144,5 +154,8 @@ def annotate(raw, sp) -> list[dict] | None:
     if got is None:
         return None
     core, recs = got
-    raw.adjudication = {**adj, "ddx": {**ddx, "core": core, "qualifiers": recs}}
+    # the derived texts are cut from the gold diagnosis: phrases of their own (canonical text = id)
+    from haenv.i18n.text import wrap
+    recs = [{**r, "segment": wrap(r["segment"]), "core": wrap(r["core"])} for r in recs]
+    raw.adjudication = {**adj, "ddx": {**ddx, "core": wrap(core), "qualifiers": recs}}
     return recs

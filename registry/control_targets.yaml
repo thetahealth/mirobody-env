@@ -43,6 +43,8 @@ axes:
     ndigits: 2
     cv_total: 0.198                 # EFLM CVI 17.7% x 1.12 (provisional)
     upper: 4.0                      # ATA 2014 (current adult guideline)
+    upper_by_age:                   # C10: the clinic target for older patients (ATA 2014 recommendation 6a)
+      - {min_age: 70, upper: 6.0, source: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4267409/", source_section: "ATA 2014 recommendation 6a and discussion: reasonable to raise the target serum TSH to 4-6 mIU/L in persons greater than age 70-80 years", review: pending}
     lower: 0.4
     over_below: 0.4                 # A22: TSH below the reference range on levothyroxine = overtreatment, reduce (ATA 2014: avoid subnormal TSH; provisional)
     range: [0.01, 150.0]

@@ -1,6 +1,8 @@
 """Reference-grounded semantic atoms and deterministic component aggregation."""
 from __future__ import annotations
 
+from haenv.i18n.runtime import policy_texts
+
 import json
 import re
 from haenv import data_root
@@ -41,7 +43,7 @@ def default_lanes(policy: dict) -> int:
 
 
 def load_policy(path=None) -> dict:
-    policy = judging_policy(load_yaml(REGISTRY if path is None else path))
+    policy = judging_policy(policy_texts(load_yaml(REGISTRY if path is None else path)))
     judge = policy["judge"]
     if policy.get("role") == "second_provider":
         if (policy["default_mode"] != "llm" or judge["model_id"].startswith("openai/")

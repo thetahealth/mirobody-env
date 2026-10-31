@@ -103,8 +103,8 @@ def discover(work, packs, *, pk=1, pools=None):
 def read_archive(directory):
     directory = Path(directory).resolve()
     manifest = validate(directory)  # Pure reads; also verifies saved source bytes.
-    if manifest["rubric_version"] not in {"management-rubric-v5", "management-rubric-v6", "management-rubric-v6.1", "management-rubric-v6.2"}:
-        raise ValueError("Board Q requires a sealed v5, v6, v6.1 or v6.2 run")
+    if manifest["rubric_version"] not in {"management-rubric-v5", "management-rubric-v6", "management-rubric-v6.1", "management-rubric-v6.2", "management-rubric-v7"}:
+        raise ValueError("Board Q requires a sealed v5, v6, v6.1, v6.2 or v7 run")
     ruler = current_fingerprints()
     stamp = manifest["code"].get("judging_criteria", {}).get("management_rubric")
     if stamp != ruler["criteria"]["management_rubric"]:
@@ -149,6 +149,7 @@ def export_rows(directory):
                "status": "not_collected", "rubric_version": manifest["rubric_version"],
                "management_rubric": manifest["code"]["judging_criteria"]["management_rubric"],
                "positive_fraction": None, "safety_multiplier": None,
+               "management_rubric_sha16": manifest["code"].get("management_rubric_sha16"),
                "core_ok": decision["correct"], "q_capped": None,
                "answer_sha256": cell.get("answer_sha256"), "facts_sha256": cell["snapshot_key"],
                "source_batch": cell["source"]["batch"], "source_runs": [str(directory)],
@@ -176,7 +177,9 @@ def export_rows(directory):
             raise ValueError("Saved verdicts or scores differ from original raw responses")
         q = summary["quality_score"]
         row.update(status=summary["status"], reason=None,
-                   q_capped=summary["rubric_score"], safety_multiplier=summary["safety_multiplier"])
+                   q_capped=summary["rubric_score"], safety_multiplier=summary["safety_multiplier"],
+                   by_type=summary["by_type"],
+                   q_type_weights=manifest["policy"]["scoring"]["type_weights"])
         if summary["status"] == "scored" and q is not None:
             # Ask the same covered scorer for the positive quality view. No
             # second weighting formula and no synthetic verdicts are introduced.

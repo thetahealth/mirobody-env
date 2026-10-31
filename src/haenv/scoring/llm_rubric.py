@@ -8,6 +8,9 @@ always `diagnostic`, so judge changes stay recomputable without model calls.
 """
 from __future__ import annotations
 
+from haenv.i18n.runtime import registry_phrase
+from haenv.i18n.text import text_of as _rt
+
 from haenv.resources.yamlcache import load_yaml as _cached_yaml
 
 import functools
@@ -163,18 +166,14 @@ def build_prompt(case: dict, answer: dict) -> tuple[str, str]:
     gold = {"join_gold": ddx.get("join_gold"), "tests": ddx.get("tests"),
             "urgency": ddx.get("urgency")}
 
-    qs = [f"{i+1}. [{n}] {s['question'].strip()}\n   回 true 表示:{s['answer_true_means'].strip()}"
+    qs = [_rt('judge.scoring.llm_rubric.build_prompt.1', s0=i + 1, s1=n, s2=registry_phrase(s['question']).strip(), s3=registry_phrase(s['answer_true_means']).strip())
           for i, (n, s) in enumerate(sorted(points().items()))]
     body = (
-        "你在核对一份临床推理作答。**只回二值,不要打分、不要给档位。**\n"
-        "对下面每一个问题回 true / false;**判不了就回 null**(不要猜,不要折成 false)。\n\n"
-        "## 金标(供对照)\n" + json.dumps(gold, ensure_ascii=False, indent=1) +
-        "\n\n## 待核对的作答(已剔除过程记录与结论字段)\n"
+        _rt('judge.scoring.llm_rubric.build_prompt.2') + json.dumps(gold, ensure_ascii=False, indent=1) +
+        _rt('judge.scoring.llm_rubric.build_prompt.3')
         + json.dumps(ans, ensure_ascii=False, indent=1) +
-        "\n\n## 逐条回答\n" + "\n".join(qs) +
-        "\n\n## 输出格式(严格 JSON,不要别的)\n"
-        '{"<得分点名>": {"value": true|false|null, "why": "<一句话理由>"}, ...}\n'
-        "⚠️ `why` 是给人审阅的,**不参与计分**;不要为了让理由好看而改 value。\n"
+        _rt('judge.scoring.llm_rubric.build_prompt.4') + "\n".join(qs) +
+        _rt('judge.scoring.llm_rubric.build_prompt.5')
     )
     return body, hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
 

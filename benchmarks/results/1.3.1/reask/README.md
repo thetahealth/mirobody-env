@@ -23,8 +23,20 @@ bar HALL reuses A, since `floor(1/2)=0`. H−A, B−H and H−C contrasts use on
 
 `answers.jsonl` contains the 535 final answer texts and their parsed differentials;
 `gold.json` supplies only the diagnosis metadata required by the released judges.
-`--check` reparses each final text, checks the saved differential, runs the released
-unified/comorbidity diagnosis judge, and requires every stored D to match. Error
+`--check` reparses each final text, checks the saved differential, runs the current
+unified/comorbidity diagnosis judge, and requires every stored D to match, except the
+answers listed in `matcher-drift-1.4.json`. The 1.4 diagnosis judge states its answer
+equivalence explicitly: an acute kidney injury attributed to volume depletion, or chronic
+kidney disease with its progression, counts when one candidate names both the disease and
+the required qualifier; a disease or qualifier left open (to watch for, under assessment,
+to be ruled out, or queried) is not named. It also accepts registered judging names of
+the gold that are not kernel aliases: sourced synonyms (`threads.yaml: judging_synonyms`),
+the reviewed English name of each Chinese gold name (`judging_aliases_en.yaml`) and its
+spelling variants.
+Under it, 20 stored answers that 1.3.1 scored wrong are correct.
+The table lists each one with its stored and current D and the diagnosis concept or
+judging name that changed it; `--check` fails on any other difference and on a listed answer that no longer
+differs. `--write-drift` regenerates the table. The released facts use the stored D. Error
 rows are excluded; an unanswered or empty final answer counts as wrong. The first
 non-error row per unit/arm is retained when preparing the inclusion list.
 

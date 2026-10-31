@@ -11,28 +11,33 @@ from __future__ import annotations
 
 import math
 
+from haenv.i18n import current
+from haenv.i18n.text import J, L, render, text_of
+from haenv.p4.textmatch import same_field
+
 from haenv.interaction.query.adapter import KeyLookup
 from haenv.interaction.query.adapter import QueryAdapter
 from haenv.interaction.query.adapter import register
 
-_HEAD = ("encounter_type", "today_date", "today", "patient_quote", "analyte", "name", "unit", "reference_range")
+_HEAD = ("encounter_type", "today_date", "today", "comparison_draw_day", "patient_quote", "analyte", "name", "unit", "reference_range")
 
 
 def _method_source_side(block, reports):
     """Resolve the non-reference draw from applicable visible laboratory notices."""
+    from haenv.p4.features import method_family
+
     def family(method):
-        if "jaffe" in str(method).lower():
-            return "jaffe"
-        if "酶法" in str(method):
-            return "enzymatic"
-        raise ValueError("unrecognised comparison reference method")
+        value = method_family(method)
+        if value not in ("jaffe", "enzymatic"):
+            raise ValueError("unrecognised comparison reference method")
+        return value
 
     references = []
     for report in reports:
         day = int(report["day"])
         applicable = [n for n in block.get("laboratory_method_record") or ()
                       if n.get("scope") == block["analyte"] and
-                      n.get("lab") == report.get("lab") and n.get("method") == report.get("method") and
+                      same_field(n.get("lab"), report.get("lab")) and same_field(n.get("method"), report.get("method")) and
                       int(n["day"]) <= day and int(n["valid_from"]) <= day]
         if not applicable:
             raise ValueError("no applicable comparison reference notice")
@@ -63,18 +68,19 @@ class P4Adapter(QueryAdapter):
 
     def header(self, block: dict) -> dict:
         out = {k: block[k] for k in _HEAD if k in block}
-        reports = [r for r in block.get("report") or [] if int(r["day"]) == int(block["today"])]
+        draw_day = int(block.get("comparison_draw_day", block["today"]))
+        reports = [r for r in block.get("report") or [] if int(r["day"]) == draw_day]
         if len(reports) != 1:
             raise ValueError("today's laboratory report is missing or ambiguous")
-        out["values"] = {"today": reports[0]["value"]}
+        out["values"] = {"comparison_draw" if "comparison_draw_day" in block else "today": reports[0]["value"]}
         remarks = [r["text"] for r in block.get("patient_remarks") or []
-                   if int(r["draw_day"]) == int(block["today"])]
+                   if int(r["draw_day"]) == draw_day]
         if remarks:
-            out["patient_quote"] = "；".join(remarks)
+            out["patient_quote"] = render(J("semicolon", remarks), current())
         return out
 
     def lab_label(self, block: dict, section: str) -> str:
-        return f"{block.get('analyte')} {block.get('name')}" if section == "report" else section
+        return text_of("p4.lab_label", analyte=block.get("analyte"), name=block.get("name")) if section == "report" else section
 
     def guard_terms(self, vp):
         from haenv.p4.gate import EN_TOKENS
@@ -152,7 +158,7 @@ class P4Adapter(QueryAdapter):
         obs = round(100.0 * (math.exp(math.log(float(r1["value"]) / float(r0["value"]))) - 1.0), 1)
         if cls not in ("true_change", "preanalytical", "method_difference"):
             return {"change_source": "analytic_biological_noise", "factor": None, "true_change_pct": 0.0,
-                    "next_step": "no_action", "reason": "变化在两次检测的波动范围内"}
+                    "next_step": "no_action", "reason": text_of("p4.reader.within_variation")}
         factor = next((c[2] for c in cands if c[0] == cls), None)
         b = sp.prediction_context["followup_p4"]
         action_candidates = cands
@@ -164,29 +170,29 @@ class P4Adapter(QueryAdapter):
         from haenv.world.protocols.followup import visible_step
         return {"change_source": cls, "factor": factor, "true_change_pct": obs if cls == "true_change" else 0.0,
                 "next_step": visible_step(sp, cls, action_candidates),
-                "reason": "按记录中与变化方向一致的因素"}
+                "reason": text_of("p4.reader.matching_direction")}
 
     def blind_answer(self, payload=None) -> dict:
         return {"change_source": "analytic_biological_noise", "factor": None, "true_change_pct": 0.0,
-                "next_step": "no_action", "reason": "未查看记录"}
+                "next_step": "no_action", "reason": text_of("p4.reader.no_records")}
 
 
 ADAPTER = register(P4Adapter(
     pack="p4", block="followup_p4", header_keys=_HEAD,
     not_patient_data=("text_source", "instruction", "today_date", "encounter_type", "rules_delivery",
-                      "comparison_basis", "interpretation_rule", "previous_draw_day", "today",
+                      "comparison_basis", "interpretation_rule", "previous_draw_day", "today", "comparison_draw_day",
                       "analyte", "name", "unit", "reference_range"),
     fhir_types={"report": "Observation", "diet_record": "DocumentReference", "medication_record": "MedicationStatement",
                 "event_history_record": "DocumentReference", "laboratory_method_record": "DocumentReference", "specimen_procedure": "DocumentReference"},
     sections={
-        "report": ("labs", "检验报告，按采样日期"),
-        "diet_record": ("record", "饮食记录，按登记日期"),
-        "specimen_policy": ("record", "检验科印出的标本稳定性规定"),
-        "event_history_record": ("record", "门诊病程与患者自述记录，按就诊日期"),
-        "outpatient_record": ("record", "门诊复查病程记录，按就诊日期"),
-        "laboratory_method_record": ("record", "检验科方法通知与使用记录，按日期"),
-        "specimen_procedure": ("record", "检验科标本规程，按发布日期"),
-        "patient_remarks": ("notes", "患者自述，按登记日期"),
-        "medication_record": ("meds", "用药记录，按处方日期"),
-        "known_comorbidity": ("profile", "已知合并症"),
+        "report": ("labs", L("p4.section.report")),
+        "diet_record": ("record", L("p4.section.diet_record")),
+        "specimen_policy": ("record", L("p4.section.specimen_policy")),
+        "event_history_record": ("record", L("p4.section.event_history_record")),
+        "outpatient_record": ("record", L("p4.section.outpatient_record")),
+        "laboratory_method_record": ("record", L("p4.section.laboratory_method_record")),
+        "specimen_procedure": ("record", L("p4.section.specimen_procedure")),
+        "patient_remarks": ("notes", L("p4.section.patient_remarks")),
+        "medication_record": ("meds", L("p4.section.medication_record")),
+        "known_comorbidity": ("profile", L("p4.section.known_comorbidity")),
     }))

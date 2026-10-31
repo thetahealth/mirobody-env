@@ -14,6 +14,8 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import L
+
 from haenv.interaction.query.adapter import KeyLookup
 from haenv.interaction.query.adapter import QueryAdapter
 from haenv.interaction.query.adapter import register
@@ -34,15 +36,25 @@ class M2Adapter(QueryAdapter):
         return False                          # M2 is asked through the gated bridge only
 
     def key_lookups(self, vp, store):
+        import itertools
         from haenv.m2.core import threads_of
+        from haenv.m2.evidence import paths_of
         from haenv.m2.score import _bought
-        keys = sorted({k for t in threads_of(((getattr(vp, "adjudication", None) or {}).get("ddx")) or {})
-                       for k in t.get("key_signals") or []})
+        threads = threads_of(((getattr(vp, "adjudication", None) or {}).get("ddx")) or {})
         def seen(k, r):
             if k.startswith("archive:"):
-                return r.get("_from") == "archived_laboratory_record" and r.get("finding") == k[8:] and bool(r.get("observation")) and r.get("result") == "既往阳性，报告可核对"
-            return bool(r.get("_from")) and k in _bought([r["_from"]])
-        return [KeyLookup(str(k), lambda _t, r, k=k: seen(k, r)) for k in keys]
+                return r.get("_from") == "archived_laboratory_record" and r.get("finding") == k[8:] and bool(r.get("observation"))
+            return bool(r.get("_from")) and (k == r.get("finding_id") or k in _bought([r["_from"]]))
+        # DNF -> CNF: profile() evaluates each lookup across all returned rows.
+        # A clause can be satisfied by any member; every clause must be seen.
+        clauses = set()
+        for thread in threads:
+            paths = paths_of(thread)
+            if paths:
+                candidates = {frozenset(p) for p in itertools.product(*paths)}
+                clauses.update(p for p in candidates if not any(q < p for q in candidates))
+        return [KeyLookup("|".join(sorted(p)), lambda _t, r, p=p: any(seen(k, r) for k in p))
+                for p in sorted(clauses, key=lambda p: sorted(p))]
 
     def read_answer(self, sp) -> dict:
         """The constant differential baseline (`baselines.ConstantDdxSolver`): M2's answer is a diagnosis,
@@ -65,15 +77,15 @@ ADAPTER = register(M2Adapter(
                 "current_medications": "MedicationStatement", "medication_record": "MedicationRequest",
                 "encounter_record": "DocumentReference", "prior_encounter_narrative": "DocumentReference"},
     sections={
-        "outpatient_laboratory_record": ("labs", "检验报告，按报告日期"),
-        "outpatient_encounter_record": ("notes", "门诊病程，按就诊日期"),
-        "archived_laboratory_record": ("labs", "检验报告，按报告日期"),
-        "followup_record": ("labs", "检验报告，按报告日期"),
-        "prior_encounter_narrative": ("notes", "门诊病程，按就诊日期"),
-        "encounter_record": ("notes", "门诊病程，按就诊日期"),
-        "current_medications": ("meds", "用药核对，按核对日期"),
-        "medication_record": ("meds", "处方记录，按开具日期"),
-        "event_history_record": ("notes", "问诊记录，按日期"),
-        "laboratory_method_record": ("record", "检验科文档，按生效日期"),
-        "clinic_documents": ("record", "院内诊疗文档，按日期"),
+        "outpatient_laboratory_record": ("labs", L("m2.section.labs")),
+        "outpatient_encounter_record": ("notes", L("m2.section.notes")),
+        "archived_laboratory_record": ("labs", L("m2.section.labs")),
+        "followup_record": ("labs", L("m2.section.labs")),
+        "prior_encounter_narrative": ("notes", L("m2.section.notes")),
+        "encounter_record": ("notes", L("m2.section.notes")),
+        "current_medications": ("meds", L("m2.section.med_reconciliation")),
+        "medication_record": ("meds", L("m2.section.prescription")),
+        "event_history_record": ("notes", L("m2.section.interview")),
+        "laboratory_method_record": ("record", L("m2.section.lab_document")),
+        "clinic_documents": ("record", L("m2.section.clinic_document")),
     }))

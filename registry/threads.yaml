@@ -108,7 +108,50 @@ finding_aliases:
 # side only. Together with the kernel aliases, each entry covers its wording in Chinese and in
 # English. Rival wordings a synonym would reach ("继发性肾上腺皮质功能不全") are declared in
 # `vocab_alias_excludes.yaml`.
+diagnosis_concepts:
+  aki_volume_depletion:
+    source:
+    - "MSD Manual Professional, Acute Kidney Injury (AKI), Etiology (reviewed February 2026): https://www.msdmanuals.cn/professional/nephrology/acute-kidney-injury/acute-kidney-injury-aki"
+    - "MSD Manual Professional, Volume Depletion: https://www.msdmanuals.com/professional/nephrology/fluid-metabolism/volume-depletion"
+    anchors: ["急性肾损伤（脱水）", "脱水相关急性肾损伤", "容量不足相关急性肾损伤", "volume depletion associated acute kidney injury"]
+    core: ["急性肾损伤", "急性肾功能衰竭", "AKI", "acute kidney injury", "acute renal failure"]
+    required:
+    - ["脱水", "容量不足", "容量耗竭", "血容量不足", "低血容量", "容量丢失", "dehydration", "volume depletion", "hypovolemia", "hypovolaemia", "hypovolemic", "hypovolaemic"]
+    note: "Prerenal alone is insufficient: the textbook also lists cardiac, hepatic and medication causes. Terms must occur in the same live ranked candidate. hypovolemic/hypovolaemic are the adjective forms."
+  ckd_progression:
+    source:
+    - "MSD Manual Professional, Chronic Kidney Disease (reviewed February 2025, updated February 2026): https://www.msdmanuals.com/professional/nephrology/chronic-kidney-disease/chronic-kidney-disease"
+    - "MSD诊疗手册专业版，慢性肾脏病: https://www.msdmanuals.cn/professional/nephrology/chronic-kidney-disease/chronic-kidney-disease"
+    anchors: ["CKD 进展", "慢性肾脏病进展", "chronic kidney disease progression"]
+    core: ["慢性肾脏病", "慢性肾病", "慢性肾功能衰竭", "CKD", "chronic kidney disease", "chronic renal failure"]
+    required:
+    - ["肾功能进行性下降", "进行性肾功能下降", "进行性", "进展", "progression", "progressive", "progressing"]
+    qualifier_bindings:
+    - terms: [progressive, progressing, progression]
+      following: '(?:\s*(?:of\s+)?(?:chronic|ckd|renal|kidney|albuminuria|deterioration)|\s*[),;.]|\s*$)'
+    - terms: ["进行性"]
+      following: '(?:慢性肾|肾功能|白蛋白尿|加重|[、,，)）])'
+    - terms: ["进展"]
+      reject_preceding: '心衰|肿瘤|乏力|气促|呼吸困难'
+    note: "Course must be explicit, not inferred from stage, persistent albuminuria, symptoms, or creatinine numbers. The generic 进行性 is handled only when it modifies kidney disease or albuminuria."
+
 judging_synonyms:
+  抑郁:
+    why: "HD-UNI-18 的 gold 名「抑郁」按子串覆盖 抑郁发作/抑郁障碍/抑郁状态;英文直译 depression 够不着 depressive episode/disorder 与缩写 MDD。双相抑郁在排他表 depression/depressive 里"
+    source: "ICD-10 F32 Depressive episode; DSM-5-TR Major depressive disorder (MDD)"
+    names: [depressive, MDD]
+  房颤:
+    why: "「房颤」是心房颤动的简称,英文对应简称 AF/AFib"
+    source: "2023 ACC/AHA/ACCP/HRS Guideline for the Diagnosis and Management of Atrial Fibrillation (abbreviation AF)"
+    names: [AF, AFib]
+  尿路感染:
+    why: "英文常用缩写 UTI"
+    source: "EAU Guidelines on Urological Infections (urinary tract infection, UTI)"
+    names: [UTI]
+  桥本:
+    why: "中文别名是单独的人名「桥本」,覆盖桥本病/桥本甲状腺炎;英文同样给出人名本身"
+    source: "ICD-10 E06.3 Autoimmune thyroiditis (Hashimoto thyroiditis)"
+    names: [Hashimoto]
   肾上腺皮质功能减退:
     why: "「肾上腺皮质功能不全/肾上腺功能不全/adrenal insufficiency」与「肾上腺皮质功能减退」是同一病名的不同译法;继发、中枢、三发型在排他表里"
     names:
@@ -151,15 +194,63 @@ judging_synonyms:
     - 自身免疫性糖尿病
     - autoimmune diabetes
   masld伴进展期纤维化:
-    why: "中文最常见的写法多一个「肝」字(进展期肝纤维化、MASLD伴进展期肝纤维化),「晚期肝纤维化」是同一分期(F3-F4)的另一译法;子串够不着「进展期纤维化」。对手「单纯脂肪变性且无进展期纤维化」不含这些词,否定写法由判分侧否定过滤"
+    why: "中文最常见的写法多一个「肝」字(进展期肝纤维化、MASLD伴进展期肝纤维化),「晚期肝纤维化」是同一分期(F3-F4)的另一译法;子串够不着「进展期纤维化」。「MASLD进展期纤维化」只是省去了「伴」字(AASLD 2023 MASLD 命名与分期:进展期纤维化即 F3-F4)。对手「单纯脂肪变性且无进展期纤维化」不含这些词,否定写法由判分侧否定过滤"
     names:
     - 进展期肝纤维化
     - 晚期肝纤维化
     - 进展性肝纤维化
     - advanced liver fibrosis
     - advanced hepatic fibrosis
+    - masld进展期纤维化
+  他汀相关肌病:
+    why: "「他汀类(药物)」是药物类名的完整写法,「他汀类相关肌病」「他汀类药物相关肌病」与内核的「他汀相关肌病」是同一个病名;子串够不着"
+    source: "Stroes ES et al., Statin-associated muscle symptoms: EAS Consensus Panel Statement, Eur Heart J 2015;36:1012-1022"
+    names:
+    - 他汀类相关肌病
+    - 他汀类药物相关肌病
+  他汀相关肌肉症状:
+    why: "同上,「他汀类(药物)相关肌肉症状」即 statin-associated muscle symptoms (SAMS)"
+    source: "Stroes ES et al., Statin-associated muscle symptoms: EAS Consensus Panel Statement, Eur Heart J 2015;36:1012-1022"
+    names:
+    - 他汀类相关肌肉症状
+    - 他汀类药物相关肌肉症状
+  胆石症:
+    why: "「胆结石」是胆石症(cholelithiasis)最常用的中文说法;胆结石性胰腺炎是急性胰腺炎(对手),在排他表 胆结石 里。英文 gallstone(s) 同理,gallstone pancreatitis 在排他表 gallstone 里"
+    source: "ICD-10 K80 Cholelithiasis (胆石症)"
+    names:
+    - 胆结石
+    - gallstone
   心力衰竭:
     why: "「心功能不全」是国内对心力衰竭的通用说法(慢性心功能不全、心功能不全加重),子串够不着「心力衰竭/心衰」"
     names:
     - 心功能不全
     - cardiac insufficiency
+
+english_variants:
+  source:
+  - "British spelling: Oxford English Dictionary / BMJ house style; American spelling: AMA Manual of Style, 11th ed."
+  - "Eponyms: AMA Manual of Style, 11th ed., 16.0 (non-possessive form preferred; possessive forms remain in common use)"
+  spelling_pairs:
+  - [haem, hem]
+  - [anaem, anem]
+  - [aemia, emia]
+  - [aemic, emic]
+  - [phaeo, pheo]
+  - [oedema, edema]
+  - [oesophag, esophag]
+  - [pnoea, pnea]
+  - [tumour, tumor]
+  - [goitre, goiter]
+  - [hypovolaem, hypovolem]
+  - [glycaem, glycem]
+  - [insulinaem, insulinem]
+  - [calcaem, calcem]
+  - [ischaem, ischem]
+  - [oestr, estr]
+  - [diarrhoea, diarrhea]
+  possessive_eponyms:
+    addison: "addison's"
+    cushing: "cushing's"
+    hashimoto: "hashimoto's"
+    conn: "conn's"
+    graves: "graves'"

@@ -50,6 +50,10 @@ status: provisional
 
 drugs:
   gliclazide:
+    source: https://www.medicines.org.uk/emc/product/1321/smpc
+    source_section: sections 4.1, 4.2 and 4.4; 30-120 mg MR; titrate by response; hypoglycaemia
+    review: pending
+    synthesis: dose-response parameters, histories, whitelist and timing attribution are provisional synthetic choices; source supports the stated clinical regimen, not every numeric parameter
     display: 格列齐特缓释片（磺脲类，口服）
     condition: 2 型糖尿病
     known_condition: T2D
@@ -68,7 +72,7 @@ drugs:
     attribution: exposure
     switch: true
     when_off: titrate               # A23 (restored 2026-10-07, p3-fixes a): below the top registered dose, a dose increase (SmPC 30-120 mg); at the top, add another class (ADA Standards 2025 9.18) (暂定). The `add` table (74e08913) gave gold switch below the top from a rule the item did not print: 0/240 board cells answered it
-    uptitrate_items: false          # A23: the pack's table keeps one dose-change class per drug; this drug's carries switch-or-add at the top (a below-top miss is gold uptitrate, not dealt)
+    uptitrate_items: true           # A23: the pack's table keeps one dose-change class per drug; this drug's carries switch-or-add at the top (a below-top miss is gold uptitrate, not dealt)
     titration_history: [2]          # A21/A23: increases on record before today in every class, each on a reading above target. Two in every class: a switch item climbs from the start rung 1 to the top (start_rungs [0, 1]) in two steps, so a [1, 2] deal left the switch class the only one always at 2 (SA-6 read the increase-row count, p3-fixes)
     early_items: false              # audit P6: A1C is rechecked about 3 months after a change (`followup_days`), so no `early` item
     followup_days: [84, 105]        # A1C about every 3 months after starting (ADA 2026 6.2; 自拟 spread)
@@ -82,6 +86,10 @@ drugs:
     background_deny: [饿, 心慌, 出汗, 冷汗, 手抖]
     bearing_streams: [HbA1c, fasting_glucose, CGM_TIR, ALT, AST, FIB4]
   atorvastatin:
+    source: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=a60cc18b-0631-4cf0-b021-9f52224ece65
+    source_section: sections 1, 2.2 and 5.1; dosing 10-80 mg; myopathy
+    review: pending
+    synthesis: dose-response parameters, histories, whitelist and timing attribution are provisional synthetic choices; source supports the stated clinical regimen, not every numeric parameter
     display: 阿托伐他汀（他汀类，口服）
     condition: 血脂异常
     known_condition: dyslipidemia
@@ -107,6 +115,13 @@ drugs:
     same_class: [atorvastatin, rosuvastatin, simvastatin, pravastatin, pitavastatin, lovastatin, fluvastatin]
     switch: true                    # add another agent (2026 ACC/AHA: ezetimibe); the item reads it as switch-or-add
     when_off: titrate               # 2026 ACC/AHA: goal not met below maximally tolerated statin -> increase intensity; at the top -> add ezetimibe (暂定)
+    off_also_accepts:               # C10 (physician review): an off-target LDL-C below the top rung and without a limiting record also accepts switch-or-add (ezetimibe at the current dose)
+      decision: switch
+      source: https://pmc.ncbi.nlm.nih.gov/articles/PMC10498001/
+      source_section: "2023 Chinese guideline for lipid management, Table 7 (moderate-intensity statin initiation, I-A; add a cholesterol absorption inhibitor when the LDL-C target is not reached, I-A) and Table 11 (atorvastatin 10-20 mg moderate intensity; poorer tolerance of high-dose statins in Chinese patients)"
+      additional_sources: [https://pmc.ncbi.nlm.nih.gov/articles/PMC4416140/]
+      review: pending
+      rule: both increasing the statin and adding a non-statin at the current dose are guideline-concordant when LDL-C misses the target below the top rung; the gold class stays uptitrate; a documented dose limit still excludes uptitrate
     ae_display: 肌肉酸痛、乏力   # p3-fixes b
     ae_symptoms: [双侧大腿肌肉酸痛, 两条大腿肌肉酸胀、没力气, 大腿和小腿肌肉酸痛、上楼费劲]
     predating_contexts: [连续两天爬山后, 搬家扛了一天箱子后, 第一次去健身房练腿后, 跑完半程马拉松后]
@@ -115,6 +130,10 @@ drugs:
     background_deny: [肌肉, 小腿, 腰部酸痛, 手臂酸, 腿软]
     bearing_streams: [LDL, triglycerides, ALT, AST, FIB4, HbA1c, fasting_glucose, CGM_TIR]   # A15: visible glycaemia (secondary dyslipidaemia) refuses the item
   enalapril:
+    source: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=39631f1f-5d19-43c1-b504-bf56d991ed97
+    source_section: Dosage and Administration, Hypertension; initial 5 mg, usual 10-40 mg; renal function and potassium monitoring
+    review: pending
+    synthesis: dose-response parameters, histories, whitelist and timing attribution are provisional synthetic choices; source supports the stated clinical regimen, not every numeric parameter
     display: 依那普利（ACEI，口服）
     condition: 高血压
     known_condition: hypertension
@@ -165,6 +184,10 @@ drugs:
     background_deny: [头晕, 晕, 眼前发黑, 喉咙, 嗓, 咳]
     bearing_streams: [systolic_bp, diastolic_bp]
   levothyroxine:
+    source: https://pmc.ncbi.nlm.nih.gov/articles/PMC4267409/
+    source_section: ATA 2014 recommendations 1b, 3b and 4b; TSH-guided replacement and reassessment
+    review: pending
+    synthesis: dose-response parameters, histories, whitelist and timing attribution are provisional synthetic choices; source supports the stated clinical regimen, not every numeric parameter
     display: 左甲状腺素钠（甲状腺激素，口服，早餐前空腹）
     condition: 甲状腺功能减退
     known_condition: hypothyroidism
@@ -189,6 +212,11 @@ drugs:
     ae_dose_decision: false         # ATA 2014 doses by TSH; a palpitation / tremor with TSH in range is not a reason to lower the dose (look for another cause), so a dose-related symptom lowers it only when TSH is suppressed (`over`)
     when_off: titrate               # ATA 2014: LT4 dose adjusted 12.5-25 ug up or down by TSH, TSH repeated in 4-6 weeks (暂定)
                                     # switch false: no drug to switch to (ATA 2014: LT3 / combination not for routine use)
+    when_off_at_top:
+      decision: check_adherence_or_adverse_effect
+      source: https://pmc.ncbi.nlm.nih.gov/articles/PMC4267409/
+      source_section: "ATA 2014 recommendations 3b-3c: much higher than expected requirements -> evaluate malabsorption and interfering medicines"
+      review: pending
     ae_display: 心悸、手抖   # p3-fixes b
     ae_symptoms: [心悸、手抖, 心慌、手发抖, 心跳快、手抖、睡不踏实]
     predating_contexts: [连喝两杯浓咖啡后, 熬夜赶工两天后, 喝了一大杯奶茶后, 吃了含伪麻黄碱的感冒药后]
@@ -203,8 +231,172 @@ drugs:
 #: hyperkalaemia is managed before a RASi is reduced), creatinine 5-15% higher once the ACEI has
 #: started (practice point 3.6.4: continue unless it rises by more than 30% within 4 weeks). Dealt
 #: to half of the cases of each drug listed (`drugs`).
+  amlodipine:
+    source: https://labeling.pfizer.com/ShowLabeling.aspx?id=562
+    source_section: sections 1.1, 2.1, 6.1 and 14.1; initial 5 mg, maximum 10 mg; 7-14
+      days between titration; dose-related edema
+    review: pending
+    synthesis: Response sizes, untreated range, synthetic course counts and adverse-effect
+      attribution remain provisional; label supports doses and effects, not their synthetic
+      incidence.
+    display: 氨氯地平（钙通道阻滞剂，口服）
+    condition: 高血压
+    known_condition: hypertension
+    axis: home_sbp
+    unit: mg/d
+    ladder:
+    - 2.5
+    - 5
+    - 10
+    effect:
+    - 6
+    - 9
+    - 12
+    model: additive
+    response: &id001
+    - 0.6
+    - 1.6
+    untreated: &id002
+    - 130
+    - 170
+    tau_truth_days: 7
+    tau_rule_days: 14
+    start_rungs:
+    - 1
+    pre_visits_max: 0
+    self_measured: true
+    attribution: exposure
+    switch: true
+    when_off: titrate
+    uptitrate_items: true
+    titration_history:
+    - 0
+    - 1
+    flat: true
+    min_reaches_target: false
+    same_class:
+    - amlodipine
+    - nifedipine
+    - felodipine
+    - lercanidipine
+    renal_labs: false
+    ae_display: 双侧踝部水肿
+    ae_symptoms:
+    - 傍晚脚踝发胀、鞋子变紧
+    - 两侧小腿下端按下去有个坑
+    - 下班后脚背肿、睡一觉消一些
+    predating_contexts: []
+    decision_facts:
+    - 脚踝发胀
+    - 水肿
+    - 脚背肿
+    allowed_dx: &id003
+    - 彼此独立的良性事件
+    - 多囊卵巢综合征
+    - 强直性脊柱炎
+    - 早期2型糖尿病
+    background_deny:
+    - 脚踝
+    - 小腿
+    - 水肿
+    - 脚背
+    bearing_streams: &id004
+    - systolic_bp
+    - diastolic_bp
+    preserve_requested_dose: true
+  losartan:
+    source: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=9949448f-c3b9-44ee-94ed-c1aca8c90f39
+    source_section: sections 1.1, 2.1, 5.2, 5.3 and 14.1; initial 50 mg, maximum 100
+      mg; effect within 3-6 weeks; symptomatic hypotension
+    review: pending
+    synthesis: Response sizes, untreated range, synthetic course counts and adverse-effect
+      attribution remain provisional; label supports doses and effects, not their synthetic
+      incidence.
+    display: 氯沙坦（ARB，口服）
+    condition: 高血压
+    known_condition: hypertension
+    axis: home_sbp
+    unit: mg/d
+    ladder:
+    - 25
+    - 50
+    - 100
+    effect:
+    - 6
+    - 10
+    - 12
+    model: additive
+    response: *id001
+    untreated: *id002
+    tau_truth_days: 7
+    tau_rule_days: 28
+    start_rungs:
+    - 1
+    pre_visits_max: 0
+    self_measured: true
+    attribution: exposure
+    switch: true
+    when_off: titrate
+    uptitrate_items: true
+    titration_history:
+    - 0
+    - 1
+    flat: true
+    min_reaches_target: false
+    same_class:
+    - enalapril
+    - lisinopril
+    - ramipril
+    - perindopril
+    - benazepril
+    - captopril
+    - fosinopril
+    - losartan
+    - valsartan
+    - irbesartan
+    - telmisartan
+    - olmesartan
+    - candesartan
+    renal_labs: true
+    ae_display: 体位性头晕（起身、站起时头晕、眼前发黑）
+    ae_symptoms:
+    - 起身时头晕、眼前发黑
+    - 蹲下站起来眼前发黑、要扶一下
+    - 早上起床时头晕、站一会儿才好
+    predating_contexts:
+    - 献血后
+    - 发烧拉肚子那两天
+    - context: 天热在外面晒了一下午后
+      fits:
+      - 起身时头晕、眼前发黑
+      - 蹲下站起来眼前发黑、要扶一下
+    - context: 空腹爬山时
+      fits:
+      - 起身时头晕、眼前发黑
+      - 蹲下站起来眼前发黑、要扶一下
+    decision_facts:
+    - 头晕
+    - 眼前发黑
+    - 黑朦
+    - 晕厥
+    - 干咳
+    - 咳嗽
+    allowed_dx: *id003
+    background_deny:
+    - 头晕
+    - 晕
+    - 眼前发黑
+    - 喉咙
+    - 嗓
+    - 咳
+    bearing_streams: *id004
+    preserve_requested_dose: true
+
 comorbidities:
   CKD:
+    source: https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf
+    source_section: practice points 3.6.1-3.6.4; highest tolerated RAS inhibition and monitoring
+    review: pending
     display: 慢性肾脏病
     drugs: [enalapril]
     egfr: [30, 59]                  # mL/min/1.73 m2, G3a-G3b
@@ -220,6 +412,10 @@ comorbidities:
 
 #: Gold-rule constants (design 3.2, K4; provisional).
 rule:
+  source: Authored synthetic clinic policy; clinical validation pending
+  review: pending
+  ours: true
+  source_section: synthetic clinic policy; adherence and attribution margins are not clinical diagnostic thresholds
   adherence_line: 0.80
   adherence_gray: [0.75, 0.85]      # a(T) in [lo, hi) is not emitted
   adherence_window_days: 90
@@ -239,96 +435,188 @@ rule:
 benign_complaints:
   "下楼踩空右脚踝扭到,局部酸痛":
     days: 10
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "晨起连打喷嚏、流清涕、鼻子痒":
     days: 7
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "落枕、颈部转动酸痛":
     days: 4
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "前臂晒了一下午后发红、碰到就刺痛":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "上颚被热汤烫到,吃东西时有点疼":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "小腿被蚊子叮了好几个包、发痒":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "这几天鼠标用得多,右手腕酸痛":
     days: 14
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "穿新鞋走了一天,足跟磨出水泡":
     days: 5
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "洗头后外耳道进水发闷":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "指甲边倒刺撕裂":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "左眼皮跳了好几天":
     days: 5
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "爬楼后膝盖前面隐隐作痛,平地走路不疼":
     days: 7
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "智齿那一侧牙龈肿痛":
     days: 6
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "游泳后眼睛发红":
     days: 2
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "右手食指被纸划了道口子":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "吃饭咬到舌头":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "下唇内侧一处口腔溃疡,吃辣的时候疼":
     days: 8
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "关门夹到手指,指甲下面青了一块":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "刮胡子刮破下巴":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "趾甲剪太短后嵌进肉里、一压就疼":
     days: 7
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "手部干燥脱皮":
     days: 5
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "耳后长了个小粉刺,碰到有点疼":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "被家里的猫轻轻抓了一下手背":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "骑车侧滑摔倒,膝盖擦破一块皮":
     days: 7
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "连着伏案几天,肩颈酸胀,拉伸一下能松些":
     days: 4
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "搬箱子后腰部酸痛,弯腰时更明显":
     days: 5
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "手腕表带处压出一圈红印":
     days: 1
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "盯屏幕一下午后眼睛干涩,滴眼药水能缓解":
     days: 2
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "早上照镜子发现眼白上有一小片发红,不痛不痒,视力正常":
     days: 10
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "屋里暖气干,擤鼻涕带点血丝":
     days: 7
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "喉咙有点干痒,说话多了想清嗓子":
     days: 7
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "打喷嚏时闪到后背,当时刺痛了一下,第二天好多了":
     days: 2
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "嘴唇干裂":
     days: 5
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "手肘外侧在过道墙上蹭红了":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "脚底被小石子硌到":
     days: 1
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "换了新洗衣液后两个手腕发痒":
     days: 5
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "剪完头发后脖子后面发痒":
     days: 4
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "整理资料时指尖被订书钉划到":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "排队站了一个多小时,小腿发胀,坐下歇一会就好了":
     days: 1
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "早上吃得太快,打嗝停不下来持续了半小时":
     days: 1
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "洗澡水太热,身上皮肤发红,调低水温后退了":
     days: 1
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "端热水杯时握到杯壁烫到手指,冷水冲了一下没起泡":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "上周户外晒过后背部开始脱皮":
     days: 5
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "修剪阳台花草时被枝条划伤小臂":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "大扫除拖地后两条手臂酸":
     days: 2
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
   "口罩戴了一整天,耳朵后面压得疼":
     days: 3
+    review: pending
+    source: synthetic event narrative; no clinical duration source verified
 
 #: Background factors that are conspicuous and do not act on the decision (w14-bg-p3). Each is dealt by a
 #: per-case hash at its real-world frequency (never by the item's decision) and is read by G3 only through
@@ -356,18 +644,31 @@ benign_complaints:
 confounders:
   other_drug:
     amlodipine:
+      source: https://labeling.pfizer.com/ShowLabeling.aspx?id=562
+      source_section: section 6.1, dose-related oedema at 2.5/5/10 mg
+      review: pending
       rate: [[0, 0.018], [5, 0.03], [10, 0.108]]    # peripheral oedema 1.8% / 3.0% / 10.8% at 2.5 / 5 / 10 mg vs 0.6% placebo (Norvasc label, dose-related; read through label reproductions)
       symptoms: [傍晚脚踝发胀、鞋子变紧, 两侧小腿下端按下去有个坑, 下班后脚背肿、睡一觉消一些]
     metformin:
+      source: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=4e5a19c6-6ac6-ffc0-e063-6394a90a9827
+      source_section: section 6.1; GI adverse reactions; combined event rate and wording are synthetic
+      review: pending
       rate: 0.15                                     # diarrhoea 10% and nausea/vomiting 7% on the extended-release label (vs 3% / 2% placebo)
       symptoms: [饭后肚子胀、大便不成形, 吃完饭就想去厕所、有点恶心, 一天拉两三次稀的]
     semaglutide: &glp1
+      source: https://www.accessdata.fda.gov/drugsatfda_docs/label/2025/209637s025lbl.pdf
+      source_section: section 6.1; GI adverse reactions; cross-drug extrapolation is provisional
+      review: pending
       rate: 0.25                                     # Ozempic label pooled placebo-controlled trials: nausea ~20% and diarrhoea ~9% at 1 mg
       symptoms: [打针后两三天一直恶心、没胃口, 吃一点就饱、饭后反酸想吐, 隔天拉稀、肚子隐隐胀]
     liraglutide: *glp1                               # GLP-1 receptor agonist class gastro-intestinal effects, by analogy with the semaglutide label
     dulaglutide: *glp1
     tirzepatide: *glp1
   intercurrent:
+    source: https://www.cdc.gov/common-cold/about/index.html
+    source_section: adults average 2-3 colds per year; symptom family
+    review: pending
+    synthesis: exact duration, visit share and authored wording are provisional
     window_days: 90
     episodes_per_year: 2.5
     visit_share: 0.14
@@ -377,4 +678,4 @@ confounders:
       - {symptom: "受凉后打喷嚏、流清涕、嗓子疼,没发烧", days: 6}
       - {symptom: "感冒后头重、没精神,吃了几天感冒药就好了", days: 8}
   background_symptom:
-    atorvastatin: {rate: 0.032, days: 3}
+    atorvastatin: {rate: 0.032, days: 3, source: "https://doi.org/10.1016/S0140-6736(22)01545-8", source_section: "CTT 2022 Lancet, muscle pain reporting and annual event rate; half-year scaling and duration are authored", review: pending}

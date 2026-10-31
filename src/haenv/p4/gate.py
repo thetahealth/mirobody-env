@@ -75,8 +75,15 @@ def visible_decides(g: dict, raw) -> list[tuple[str, str]]:
     bad = [("visible_class_differs", vc)] if vc != g.get("class") else []
     if g.get("diversity_version"):
         from haenv.p4.diversity_reader import significance_violations
+        from haenv.p4.diversity_reader import answer
+        from haenv.p4.gold import next_step
         from haenv.p4.features import _blk
         bad += [("visible_significance", why) for why in significance_violations(_blk(raw), g["class"], g.get("cause"))]
+        try:
+            if answer(_blk(raw))["next_step"] != next_step(g)[0]:
+                bad.append(("visible_next_differs", "visible next step differs from hidden policy"))
+        except ValueError as exc:
+            bad.append(("visible_next_differs", str(exc)))
     return bad
 
 

@@ -1,0 +1,157 @@
+# Diagnosis pack: patient language, reports and rotating surface wordings.
+entries:
+  m2.clinical.phrase_2: This segment has irregular RR intervals and no consistently shaped P waves before the QRS complexes
+  m2.clinical.phrase_3: This segment has regular RR intervals and consistently shaped P waves before each QRS complex; a short recording does not exclude intermittent episodes
+  m2.clinical.phrase_5: 'Contrast-enhanced CT: diffuse pancreatic enlargement with relatively homogeneous parenchymal enhancement, peripancreatic fat stranding and a small amount of peripancreatic fluid'
+  m2.clinical.phrase_6: This CT shows no pancreatic enlargement, peripancreatic fat stranding or fluid; a single early examination cannot exclude subsequent changes
+  m2.clinical.phrase_8: Both non-invasive assessments indicate a high probability of advanced fibrosis; further hepatology management is required
+  m2.clinical.phrase_9: Both non-invasive assessments fall within the low-risk range for advanced fibrosis; follow up in the clinical context
+  m2.confirm.biliary_us.negative: 'Fasting gallbladder ultrasound: no stones, wall thickening or surrounding fluid; sonographic Murphy sign negative. Persistent symptoms require reassessment for other causes.'
+  m2.confirm.biliary_us.positive: 'Fasting gallbladder ultrasound: mobile echogenic material within the lumen with posterior acoustic shadowing, wall thickening and focal probe tenderness. Interpret in the context of the current course.'
+  m2.confirm.cxr.negative: 'Frontal and lateral chest radiographs: no focal infiltrate or consolidation and no pleural effusion. Reassess if fever or breathlessness persists or symptoms worsen.'
+  m2.confirm.cxr.positive: 'Frontal and lateral chest radiographs: new focal airspace consolidation in the right lower lung with air bronchograms. With cough and fever, an infective infiltrate is considered; follow up to document resolution.'
+  m2.confirm.depression.negative: 'Clinical interview: sleep and energy fluctuate with daily stress. No low mood or loss of interest for most of the time over two consecutive weeks; major functions remain intact. Address sleep and life stress in stages and arrange follow-up.'
+  m2.confirm.depression.positive: 'Clinical interview: persistent low mood and reduced interest almost every day for at least the past two weeks, with changes in sleep, energy, attention and self-esteem, and marked impairment at work and home. No history of mania or hypomania was identified. Plan treatment and follow-up according to the duration and functional impact of this episode.'
+  m2.confirm.ecg.negative: 'A 10-second twelve-lead ECG recorded during symptoms shows sinus rhythm, regular P waves and regular RR intervals; atrial fibrillation was not recorded. This negative recording cannot exclude paroxysmal arrhythmia at other times.'
+  m2.confirm.psg.report: Standard polysomnography performed, with respiratory events reviewed by the sleep specialist; consider reassessment if negative but clinical suspicion remains high.
+  m2.distractors.phrase_0: registry/artifact_rates.yaml (haemolysis -> spuriously elevated potassium)
+  m2.distractors.phrase_1: registry/artifact_rates.yaml (non-fasting -> elevated TG)
+  m2.distractors.phrase_14: Upper respiratory infection during the past week
+  m2.distractors.phrase_15: Day 5 after a cold
+  m2.distractors.phrase_16: Fever and sore throat last week, now improved without treatment
+  m2.distractors.phrase_18: Coffee before blood collection; sampled sitting
+  m2.distractors.phrase_20: Two cups of coffee in the hour before blood collection
+  m2.distractors.phrase_22: Smoking within two hours before sampling
+  m2.distractors.phrase_24: Gums bled while brushing on the evening of sampling
+  m2.distractors.phrase_26: Recovering from an acute illness last month
+  m2.distractors.phrase_27: Two weeks after recovery from pneumonia
+  m2.distractors.phrase_28: Recheck during recovery after a recent hospital admission
+  m2.distractors.phrase_30: Little winter sunlight and inadequate vitamin D intake
+  m2.distractors.phrase_32: Long-term indoor work with little sun exposure
+  m2.distractors.phrase_40: Blood collected immediately after emergency fluid replacement
+  m2.distractors.phrase_45: Had breakfast before blood collection
+  m2.distractors.phrase_47: Had a sugary drink before blood collection
+  m2.distractors.phrase_6: Blood collected about 2 hours after a meal
+  m2.distractors.phrase_8: Patient reports having breakfast before blood collection
+  m2.lab.ldl_direct_method: At triglycerides ≥4.5 mmol/L, LDL-C is measured directly; the Friedewald calculation is not applicable.
+  m2.renal.acute_review: These early-morning urine specimens were tested in the same laboratory with the same method; albuminuria remained elevated on the last two measurements. Interview covering the sampling period identified no fever, urinary tract infection, strenuous exercise, volume loss or recent change in nephrotoxic medicines.
+  m2.renal.review_missing: Sampling methods and acute confounders have not yet been reviewed.
+  m2.result.graves_imaging: Thyroid scintigraphy shows diffusely increased uptake in both lobes; colour Doppler shows diffusely increased vascularity.
+  m2.surface.ankle.0: I missed a step going downstairs and twisted my right ankle. It aches there now
+  m2.surface.ankle.1: I twisted my right ankle on the stairs and it feels sore there
+  m2.surface.ankle.2: I missed my footing downstairs and my right ankle has been aching since I twisted it
+  m2.surface.ankle.3: I lost my footing going downstairs and twisted my right ankle. That spot feels sore
+  m2.surface.ankle_course.0: Missed a step downstairs; improved after ice and 2 days
+  m2.surface.ankle_course.1: Missed a step going downstairs; improved within two days after applying ice
+  m2.surface.ankle_course.2: Missed footing downstairs; some improvement 2 days after ice
+  m2.surface.ankle_course.3: Missed a stair; applied ice, with improvement after two days
+  m2.surface.bread_drink.0: Back then I often had bread for breakfast, sometimes with a sugary drink.
+  m2.surface.bread_drink.1: During that time I usually ate bread in the morning and sometimes had a sugary drink with it.
+  m2.surface.bread_drink.2: In those days breakfast was often bread, with a sugary drink now and then.
+  m2.surface.bread_drink.3: At the time I often ate bread for breakfast, and sometimes had a sweet drink too.
+  m2.surface.bread_milk.0: On workdays I usually have bread and milk for breakfast.
+  m2.surface.bread_milk.1: My weekday breakfast is generally bread with milk.
+  m2.surface.bread_milk.2: When I go to work, breakfast is mostly bread and milk.
+  m2.surface.bread_milk.3: I generally have milk and bread for breakfast on working days.
+  m2.surface.detergent.0: Both my wrists started itching after I changed laundry detergent
+  m2.surface.detergent.1: Since using a new laundry detergent, both wrists have been itchy
+  m2.surface.detergent.2: The itching on both wrists started after I switched detergents
+  m2.surface.detergent.3: I recently changed laundry detergent, and then both wrists began to itch
+  m2.surface.ear_water.0: Water got in my ear while washing my hair. It cleared up on its own the next day
+  m2.surface.ear_water.1: There was water in my ear after washing my hair, but it was better by itself the following day
+  m2.surface.ear_water.2: I accidentally got water in my ear washing my hair. It was fine the next day
+  m2.surface.ear_water.3: Water went into my ear as I washed my hair, then it settled by itself the day after
+  m2.surface.exercise_active.0: The training described above was two days before the blood draw. Muscle soreness resolved after stopping; repeat results from the same laboratory follow.
+  m2.surface.exercise_active.1: This training took place two days before blood collection. There was no further muscle soreness after stopping; the same laboratory's repeat results are below.
+  m2.surface.exercise_active.2: The reported training was two days before the draw. It was then paused and the muscle soreness subsided; repeat testing at the same laboratory is shown below.
+  m2.surface.exercise_active.3: The training was two days before sampling; muscle soreness disappeared after stopping. Repeat testing was at the same laboratory, as below.
+  m2.surface.exercise_inactive.0: Training started after the first blood draw, with no exercise before it. Brief gastrointestinal symptoms at that time have now improved. Repeat testing at the same laboratory follows; the original abnormality still needs clarification.
+  m2.surface.exercise_inactive.1: Training had not started at the first blood draw; the exercise described occurred later. Brief gastrointestinal symptoms before sampling subsequently resolved. Repeat testing at the same laboratory is below and cannot establish the cause of the initial abnormality.
+  m2.surface.exercise_inactive.2: Exercise occurred after the first blood draw and cannot explain the earlier result. Brief gastrointestinal symptoms before the first draw have resolved. Repeat results from the same laboratory follow; the cause remains incompletely defined.
+  m2.surface.exercise_inactive.3: There was no exercise before the first test; this training started afterwards. Gastrointestinal symptoms preceding that draw have resolved. Repeat results from the same laboratory are below; the earlier abnormality still requires investigation.
+  m2.surface.exercise_quote.0: I do not usually exercise much. This time I did strength training on consecutive days and my muscles were sore and tight the next day.
+  m2.surface.exercise_quote.1: I normally get little exercise. After several days of strength training, my muscles ached and felt tight the day after.
+  m2.surface.exercise_quote.2: I recently did strength training on consecutive days, which I do not usually do. My muscles were sore and tight the next day.
+  m2.surface.exercise_quote.3: I do not exercise much normally. This time I trained for strength on consecutive days and had sore, tight muscles the following day.
+  m2.surface.exercise_quote_recent.0: I recently started training with weights. My thighs, shoulders and back all ache afterwards.
+  m2.surface.exercise_quote_recent.1: I have just taken up weight training, and my thighs, shoulders and back feel sore after it.
+  m2.surface.exercise_quote_recent.2: I started using weights recently. Afterwards my thighs, shoulders and back ache.
+  m2.surface.exercise_quote_recent.3: I have only recently begun weight training, followed by soreness in my thighs, shoulders and back.
+  m2.surface.fasting_active.0: Had eaten before the first blood draw, but the report still used fasting reference ranges. Repeat sampling followed fasting instructions; results are below.
+  m2.surface.fasting_active.1: The original specimen was non-fasting, although fasting reference values appeared on the report. A subsequent sample was taken after fasting as instructed, as shown below.
+  m2.surface.fasting_active.2: Was not fasting for the first draw, but the original report still used fasting ranges. Results after repeat fasting sampling follow.
+  m2.surface.fasting_active.3: The first specimen was non-fasting; the original report retained fasting reference intervals. It was subsequently repeated fasting, with results below.
+  m2.surface.illness_quote.0: I had diarrhoea for a while then and was not eating much. It settled after rest and fluids.
+  m2.surface.illness_quote.1: I had a short bout of diarrhoea and ate little. The symptoms went away after resting and drinking more.
+  m2.surface.illness_quote.2: I had diarrhoea briefly at the time and did not eat much. Rest and fluids cleared the symptoms.
+  m2.surface.illness_quote.3: I had brief diarrhoea and was eating little then. There were no more symptoms after rest and fluids.
+  m2.surface.knee.0: The front of my knee aches a little after stairs, but walking on level ground does not hurt
+  m2.surface.knee.1: My knee aches at the front after climbing stairs. It does not hurt on the flat
+  m2.surface.knee.2: The front of my knee is a bit sore after stairs, with no pain walking on level ground
+  m2.surface.knee.3: After climbing stairs I have a dull ache at the front of my knee. Walking on the flat is painless
+  m2.surface.knee_context.0: Started after climbing stairs; no pain walking on level ground
+  m2.surface.knee_context.1: Discomfort began after stairs, without pain on level ground
+  m2.surface.knee_context.2: Onset after stair climbing; level walking does not hurt
+  m2.surface.knee_context.3: Discomfort followed stairs; no pain walking on the flat
+  m2.surface.mask.0: I wore a mask all day and the pressure made it sore behind my ears
+  m2.surface.mask.1: After wearing a mask for the day, it hurts where it presses behind my ears
+  m2.surface.mask.2: The mask pressed behind my ears all day and made them a bit sore
+  m2.surface.mask.3: It hurts behind my ears from the mask pressing there. I wore it all day
+  m2.surface.meal_inactive.0: The reported meal was after the repeat draw and cannot explain the earlier readings. The first specimen was registered during recovery from acute gastrointestinal symptoms; fasting repeat results after recovery are below.
+  m2.surface.meal_inactive.1: This food was eaten after repeat blood collection and has no temporal causal relation to the earlier readings. The first specimen was recorded during recovery from acute gastrointestinal symptoms. Fasting repeat sampling after recovery follows.
+  m2.surface.meal_inactive.2: The repeat sample had already been collected before the reported meal, so it cannot explain preceding results. The first draw was recorded during recovery from acute gastrointestinal symptoms; fasting resampling after recovery is below.
+  m2.surface.meal_inactive.3: The food described was after the repeat draw and cannot explain earlier readings. The initial specimen was noted to be during recovery from acute gastrointestinal symptoms. It has been repeated fasting after recovery; see below.
+  m2.surface.mosquito.0: I have several itchy bumps from mosquito bites on my lower leg
+  m2.surface.mosquito.1: Mosquitoes left a few bumps on my lower leg and they keep itching
+  m2.surface.mosquito.2: There are several mosquito bites on my lower leg, itchy just around them
+  m2.surface.mosquito.3: I got a few itchy bumps on my lower leg after mosquito bites
+  m2.surface.mouse.0: I have been using the mouse a lot these past few days and my right wrist aches
+  m2.surface.mouse.1: My right wrist feels sore after a lot of mouse use lately
+  m2.surface.mouse.2: I have been using the mouse often recently and my right wrist is a bit sore
+  m2.surface.mouse.3: After several days of heavy mouse use, my right wrist aches
+  m2.surface.mouse_context.0: Wrist strain after several consecutive days using a mouse
+  m2.surface.mouse_context.1: Wrist strain developed with several days of continuous mouse use
+  m2.surface.mouse_context.2: Several days using a mouse brought on wrist strain and discomfort
+  m2.surface.mouse_context.3: Wrist strain followed consecutive days of mouse use
+  m2.surface.pool_context.0: Discomfort from pool water irritation, relieved by artificial tears
+  m2.surface.pool_context.1: Irritation after contact with pool water, subsequently relieved with artificial tears
+  m2.surface.pool_context.2: Pool water irritated the eyes; artificial tears brought some relief
+  m2.surface.pool_context.3: Irritation followed pool water contact and eased after artificial tears
+  m2.surface.rhinitis.0: When I get up in the morning my nose itches, I keep sneezing and it runs clear
+  m2.surface.rhinitis.1: My nose is itchy when I wake, with repeated sneezing and clear discharge
+  m2.surface.rhinitis.2: First thing in the morning I keep sneezing, my nose runs clear and it feels itchy
+  m2.surface.rhinitis.3: My nose itches when I get up, and I sneeze constantly with a clear runny nose
+  m2.surface.scald.0: I burnt the roof of my mouth on hot soup. Eating hurts a little now
+  m2.surface.scald.1: Hot soup burnt the roof of my mouth; it is slightly painful when I eat
+  m2.surface.scald.2: I scalded the roof of my mouth with soup and it hurts a bit to eat
+  m2.surface.scald.3: The roof of my mouth got burnt drinking soup. It hurts when food touches it
+  m2.surface.shoe.0: I walked all day in new shoes and got a blister on my heel
+  m2.surface.shoe.1: A day of walking in new shoes rubbed a blister on my heel
+  m2.surface.shoe.2: After walking around in new shoes all day, my heel developed a blister
+  m2.surface.shoe.3: My heel has a friction blister. I spent that whole day walking in new shoes
+  m2.surface.sleep_context.0: Started after consecutive late nights working to a deadline; eased after rest
+  m2.surface.sleep_context.1: Had stayed up working several nights in a row; improved somewhat with rest afterwards
+  m2.surface.sleep_context.2: Onset after consecutive late nights finishing work, with relief after rest
+  m2.surface.sleep_context.3: Discomfort followed repeated late nights at work and improved after resting
+  m2.surface.sun.0: My forearms were in the sun all afternoon. They went red and sting when touched
+  m2.surface.sun.1: After an afternoon in the sun, my forearms became red and sting to touch
+  m2.surface.sun.2: My forearms went red after the afternoon sun, with stinging when touched
+  m2.surface.sun.3: My forearms spent all afternoon in the sun. The skin went red and stings with any touch
+  m2.surface.thyroid_repeat.0: The first blood draw was during recovery from illness, before any thyroid medication. Repeat testing after recovery used the same method; results are below.
+  m2.surface.thyroid_repeat.1: Initial sampling was during convalescence, with no thyroid medication at that time. Repeat results using the same method after recovery follow.
+  m2.surface.thyroid_repeat.2: The first specimen was collected during recovery from illness; thyroid medication had not been started. Testing was repeated after recovery with the same method, as below.
+  m2.surface.thyroid_repeat.3: Illness was resolving at the initial draw and thyroid medication had not yet begun. Repeat testing after recovery used the same method, as shown below.
+  m2.surface.toenail.0: I cut my toenail too short and it is digging into the skin. It hurts when pressed
+  m2.surface.toenail.1: Since I cut my toenail short, the edge digs into the skin and hurts with pressure
+  m2.surface.toenail.2: My toenail grew into the skin after I trimmed it too short. It is painful to press or touch
+  m2.surface.toenail.3: I clipped my toenail too short and it digs into the skin beside it. Pressing it hurts
+  m2.confirm.control.HD-UNI-08: "No unifying pathology: palpitations under investigation (sinus rhythm on the symptomatic ECG; atrial fibrillation not confirmed); reassess if they recur"
+  m2.confirm.control.HD-UNI-11: "No unifying pathology: right upper abdominal pain under investigation (fasting gallbladder ultrasound shows no stones or cholecystitis); reassess if it persists"
+  m2.confirm.control.HD-UNI-17: "No unifying pathology: cough and breathlessness under investigation (no persistent airflow obstruction on post-bronchodilator spirometry); reassess if they persist"
+  m2.confirm.control.HD-UNI-18: "No unifying pathology: sleep and mood complaints under investigation (the clinical interview does not meet criteria for a depressive episode); follow up and reassess"
+  m2.confirm.control.JD-OSA: "No unifying pathology: daytime sleepiness under investigation (a standard sleep study shows no sleep apnoea); reassess if it persists"
+  "无统一病理:心悸待查(症状发作时心电图为窦性心律,未证实房颤),症状反复需复评": "No unifying pathology: palpitations under investigation (sinus rhythm on the symptomatic ECG; atrial fibrillation not confirmed); reassess if they recur"
+  "无统一病理:右上腹痛待查(空腹胆囊超声未见结石或胆囊炎),症状持续需复评": "No unifying pathology: right upper abdominal pain under investigation (fasting gallbladder ultrasound shows no stones or cholecystitis); reassess if it persists"
+  "无统一病理:咳嗽气促待查(舒张后肺功能未见持续气流阻塞),症状持续需复评": "No unifying pathology: cough and breathlessness under investigation (no persistent airflow obstruction on post-bronchodilator spirometry); reassess if they persist"
+  "无统一病理:睡眠和情绪不适待查(临床访谈不满足抑郁发作),需随访复评": "No unifying pathology: sleep and mood complaints under investigation (the clinical interview does not meet criteria for a depressive episode); follow up and reassess"
+  "无统一病理:日间嗜睡待查(规范睡眠监测未见呼吸暂停),症状持续需复评": "No unifying pathology: daytime sleepiness under investigation (a standard sleep study shows no sleep apnoea); reassess if it persists"

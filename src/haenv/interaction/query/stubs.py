@@ -18,6 +18,8 @@ SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
 
+from haenv.i18n.text import text_of as _rt
+
 import json
 from types import SimpleNamespace
 
@@ -147,9 +149,10 @@ class ReaderStub(_StubBase):
                     for e in r["entry"]:
                         rows[e["id"]] = unshape(e)
             elif n == "get_protocol":
-                from haenv.world.protocols.library import catalog
+                from haenv.interaction.query.tools import protocol_documents
                 docs = [unshape(e) for e in r["entry"]]
-                block["protocol_library"] = "本院规程库" if docs == catalog() else docs
+                from haenv.i18n.text import text_of
+                block["protocol_library"] = text_of("protocol.library") if docs == protocol_documents() else docs
         root_sections = ({k for k in self._adapter.sections if k in payload_like.prediction_context}
                          if self._adapter is not None else set())
         for k, v in list(block.items()):
@@ -213,7 +216,7 @@ class BlindSystemScoreStub(ReaderStub):
             from haenv.world.protocols.scoring import trusted_assessment
             a = trusted_assessment(b, rec)
             return {"disposition": a["set"][0], "rule": a["rule"].split("_", 1)[0],
-                    "evidence": [], "reason": "采用系统自动评分的首次上传记录"}
+                    "evidence": [], "reason": _rt('runtime.interaction.query.stubs.answer.1')}
         return answer
 
 
@@ -238,6 +241,14 @@ class TextPolicyStub(_StubBase):
         self._payload = payload
 
     def step(self, messages, tools) -> Turn:
+        got = _results(messages)
+        if "get_notes" in tools and not any(n == "get_notes" for n, _, _ in got):
+            return Turn(tool_calls=[_call(self._turn, "get_notes")])
+        for n, args, result in got:
+            page = ((result or {}).get("truncated") or {}).get("earlier_page")
+            if n == "get_notes" and page and not any(
+                    n2 == n and a2 == {**args, **page} for n2, a2, _ in got):
+                return Turn(tool_calls=[_call(self._turn, n, **{**args, **page})])
         self.policy.gated_context = getattr(self, "gated_context", None)
         out = self.policy.solve(self._payload)
         try:
