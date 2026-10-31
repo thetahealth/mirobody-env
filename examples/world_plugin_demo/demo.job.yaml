@@ -9,6 +9,8 @@
 #
 # SYNTHETIC, for evaluation only, not medical advice.
 job_id: world-plugin-demo
+# The demo's own records and questions are written in Chinese, so it pins the batch language.
+language: zh
 task_type: early_warning
 multiround: false
 include_baseline: true

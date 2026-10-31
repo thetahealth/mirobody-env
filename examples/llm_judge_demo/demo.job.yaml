@@ -20,6 +20,8 @@
 # The two cases (JD-PCOS, JD-CUSH) have registered near-names in `registry/rivals.yaml`,
 # so the judge's precondition holds.
 job_id: llm-judge-demo
+# The demo's own records and questions are written in Chinese, so it pins the batch language.
+language: zh
 task_type: joint_dx
 multiround: false
 include_baseline: true            # --offline only runs the offline deterministic reference, free

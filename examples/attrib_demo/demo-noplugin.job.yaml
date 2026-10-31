@@ -10,6 +10,8 @@
 #
 # SYNTHETIC, for evaluation only, not medical advice.
 job_id: attrib-demo-local-noplugin
+# The demo's own records and questions are written in Chinese, so it pins the batch language.
+language: zh
 task_type: early_warning
 include_baseline: true            # --offline only runs the offline deterministic reference, free
 models: []
