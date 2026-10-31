@@ -13,7 +13,7 @@ type: software
 authors:
   - name: Theta Health
     website: https://github.com/thetahealth
-version: 1.4.0.dev0
+version: 1.4.0
 date-released: 2026-10-31
 license: MIT
 repository-code: https://github.com/thetahealth/mirobody-env

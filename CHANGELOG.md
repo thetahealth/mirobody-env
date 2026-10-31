@@ -7,12 +7,13 @@ per-criterion fingerprints identify which result columns remain comparable, and 
 fingerprint identifies the complete set of criteria. Combined scores also require matching
 aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
-## [Unreleased] - 1.4.0
+## [1.4.0] - 2026-10-31
 
 Major update: English records, revised questions in all four packs, and a new plan-quality
 rubric. The packs are regenerated and every answer is judged again, so 1.4 boards are not
-comparable with 1.3.x boards. No 1.4 board has been published yet; its numbers will be added
-at release. The 1.3.x boards stay reproducible at their recorded commits.
+comparable with 1.3.x boards. 1.4 ships without a board: the README board is the 1.3.1 board,
+measured on the Chinese 1.3 packs, and scores on 1.4 packs are not comparable with it. The 1.3.x
+boards stay reproducible at their recorded commits.
 
 ### Added
 

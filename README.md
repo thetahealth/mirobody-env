@@ -108,11 +108,9 @@ deepseek-v4-flash at positions 8 and 9, with the rest of the order unchanged.
 Intervals are 95% paired item-cluster bootstrap intervals (2,000 draws) that resample the same items
 for every model; rank intervals come from the same draws.
 
-> This board was measured on the Chinese 1.3 packs. `main` now carries the 1.4 preview: English
-> records by default and revised questions in all four packs
-> ([changelog](https://github.com/thetahealth/mirobody-env/blob/main/CHANGELOG.md)). The 1.4 boards
-> will replace this one; to reproduce it, use
-> [v1.3.2](https://github.com/thetahealth/mirobody-env/tree/v1.3.2).
+> This board was measured with 1.3.1 on the Chinese 1.3 packs. 1.4 (English records by default,
+> revised questions) does not include a board, and scores on 1.4 packs are not comparable to this
+> one; to reproduce it, use [v1.3.2](https://github.com/thetahealth/mirobody-env/tree/v1.3.2).
 
 ### 1.3.1 overall
 
@@ -404,7 +402,7 @@ All patients are synthetic. Nothing here is medical advice or suitable for clini
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.4.0.dev0}
+  version = {1.4.0}
 }
 ```
 
