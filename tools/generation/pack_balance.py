@@ -24,6 +24,9 @@ shared audit. Zero model calls; deterministic (no seed is read).
    pool is rebuilt; the removal is recorded in `_provenance.shortcut_balance`. A pool the reader
    does not refuse is untouched, so packs that passed SA-6 are byte-identical.
 
+`make_pack --balance-from` reuses another language's removals and gates the rebuilt pool
+without further filtering: rendered text-length surface features differ by language.
+
 SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
@@ -171,7 +174,7 @@ def _identifiability(rows, features, label, groups="spec", n_orders=6, n_seeds=5
     return float(np.mean([b for b, _ in out])), hits.tolist()
 
 
-def _reader_fails(A, rows, jobs) -> dict:
+def _reader_fails(A, rows, jobs, readings=None) -> dict:
     """{target: cc} of the gate targets the audit's SA-6 would refuse on these rows (exact gate rule)."""
     import haenv.world.validation.shared_audit as SA
     surface = tuple(f for f in A.surface if f not in A.decisive)
@@ -179,11 +182,24 @@ def _reader_fails(A, rows, jobs) -> dict:
     bad = {}
     for t in gt:
         r = SA.surface_classifier(rows, surface, label=t, strata=A.strata, n_perm=0, jobs=jobs)
+        if readings is not None:
+            readings[t] = r["cc"]
         if r["cc"] >= SA.SHORTCUT_CC:
             full = SA.surface_classifier(rows, surface, label=t, strata=A.strata, jobs=jobs)
+            if readings is not None:
+                readings[t] = full["cc"]
             if not full["pass"]:
                 bad[t] = full["cc"]
     return bad
+
+
+def shortcut_gate(A, configure_select, batch, job, ref, jobs=32) -> dict:
+    """Read SA-6 on this rendering without proposing or applying any removals."""
+    configure_select(A)
+    ctx, pool = _reader_inputs(A, batch, job, ref)
+    readings = {}
+    bad = _reader_fails(A, A.rows(pool, ctx), jobs, readings=readings)
+    return {"cc": readings, "refused_cc": bad, "pass": not bad}
 
 
 def shortcut_balance(A, configure_select, batch, job, ref, n_items: int, jobs: int = 32) -> dict | None:
@@ -267,6 +283,7 @@ def drop_cases(job_path, ids: set, record: dict) -> None:
     for k in ("eligible_pack_ids",):
         if k in prov:
             prov[k] = [x for x in prov[k] if x not in ids]
-    prov.setdefault("shortcut_balance", []).append({k: record[k] for k in ("target", "line", "method", "refused_cc", "rounds", "removed")
+    prov.setdefault("shortcut_balance", []).append({k: record[k] for k in ("target", "line", "method", "refused_cc", "rounds", "removed",
+                                                                        "balance_from", "balance_from_sha256")
                                                     if k in record})
     p.write_text(head + yaml.safe_dump(doc, allow_unicode=True, sort_keys=False, width=120), encoding="utf-8")

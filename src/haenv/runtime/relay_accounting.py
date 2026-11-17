@@ -131,9 +131,9 @@ class _BillingExpression:
                 raise ValueError("Missing positive input or output price")
             self.tiers.append(rates)
             return ("tier",)
-        if token == "len":
-            self.take("len")
-            return ("len",)
+        if token in ("len", "p"):
+            self.take(token)
+            return (token,)
         if token == "hour":
             self.take("hour")
             self.take("(")
@@ -165,7 +165,7 @@ class _BillingExpression:
             return all(_BillingExpression.condition(child) for child in node[1:])
         if op in {"<", ">", "<=", ">=", "==", "!="}:
             kinds = {child[0] for child in node[1:]}
-            return kinds <= {"len", "hour", "number"} and bool(kinds & {"len", "hour"})
+            return kinds <= {"len", "p", "hour", "number"} and bool(kinds & {"len", "p", "hour"})
         return False
 
     @staticmethod
@@ -376,9 +376,17 @@ def preflight_quota(job, cfg, solvers, n_cases: int, n_done: int, *, resp_path=N
         _host = str(_rdef.get("no_proxy_host") or "")
         if _host:
             _bypass_proxy(_host)
-        _prefix = str(_rdef.get("key_env_pool") or "RELAY_KEY_")
+        _prefix = _rdef.get("key_env_pool")
+        _balance_keys = _keys(_envf, str(_prefix)) if _prefix else []
+        if not _balance_keys:
+            # A deployment may deliberately select one key rather than a pool.
+            # Match the solver's single-key fallback, including an env-only key.
+            _name = str(_rdef.get("key_env") or "RELAY_API_KEY")
+            _key = _os.environ.get(_name) or next(
+                (value for name, value in _keys(_envf, _name) if name == _name), '')
+            _balance_keys = [(_name, _key)] if _key else []
         _left, _alive = 0.0, 0
-        for _nm, _k in _keys(_envf, _prefix):
+        for _nm, _k in _balance_keys:
             _s = _get(_qurl, _k, "/v1/dashboard/billing/subscription")
             _u = _get(_qurl, _k, "/dashboard/billing/usage")
             _hl, _tu = _s.get("hard_limit_usd"), _u.get("total_usage")

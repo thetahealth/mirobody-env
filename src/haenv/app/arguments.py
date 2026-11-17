@@ -101,6 +101,8 @@ def parser_for(maintenance: set[str], twin_ops: list[str]) -> argparse.ArgumentP
     ap.add_argument("--gen-workers", type=int, metavar="N", default=0,
                     help="number of concurrent question-generation workers (0 = use `config.synth.gen_workers`). "
                          "Deterministic generation runs on processes: 0 = job `gen_workers`, else min(16, cores); 1 = serial")
+    ap.add_argument("--build-cache", metavar="DIR",
+                    help="reuse identical deterministic P3 case builds from this run-local directory (default: off)")
     ap.add_argument("--regen", action="store_true",
                     help="ignore the question-generation LLM cache and force fresh model calls (default: hits cases/_llm_cache/)")
     ap.add_argument("--workers", type=int, default=0,

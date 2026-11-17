@@ -30,6 +30,7 @@ def test_relay_tariff_contract(row, monkeypatch):
     doc = metadata()
     model = row.get("model", "kimi-k3")
     doc["model"].update(model_name=model, billing_mode=row.get("mode", "tiered_expr"))
+    doc["model"].update(row.get("ratios", {}))
     if doc["model"]["billing_mode"] == "tiered_expr":
         doc["model"].update(billing_expr=row.get("expr"), completion_ratio=None, cache_ratio=None)
     if "null_field" in row:
@@ -97,6 +98,30 @@ def test_verified_relay_bound_uses_highest_group_and_cache_prices():
     assert p.input_rate == Decimal(".000018")
     assert p.output_rate == Decimal(".000030")
     assert p.upper_bound("q", 72000) > Decimal("2.16")
+
+
+@pytest.mark.parametrize("env_only", [False, True])
+def test_single_relay_key_balance_preflight_matches_solver_key(tmp_path, monkeypatch, env_only):
+    from types import SimpleNamespace
+    from haenv.runtime import relay_accounting as relay, solvers, quota
+    env_file = tmp_path/'env'
+    env_file.write_text('SELECTED_RELAY_KEY=single-key\nRELAY_KEY_1=unrelated-key\n')
+    spec = dict(key_env='SELECTED_RELAY_KEY', key_env_pool='', quota_url='https://relay.example')
+    monkeypatch.setitem(solvers.BACKENDS, 'relay', spec)
+    monkeypatch.delenv('SELECTED_RELAY_KEY', raising=False)
+    if env_only:
+        env_file.write_text('RELAY_KEY_1=unrelated-key\n')
+        monkeypatch.setenv('SELECTED_RELAY_KEY', 'single-key')
+    calls = []
+    monkeypatch.setattr(relay, '_measured_tokens_per_grid', lambda *a: {})
+    def get(base, key, path):
+        assert key == 'single-key'
+        calls.append(path)
+        return {'hard_limit_usd': 100} if path.endswith('subscription') else {'total_usage': 0}
+    monkeypatch.setattr(quota, '_get', get)
+    relay.preflight_quota(SimpleNamespace(), {'env_file': str(env_file),
+        'models': {'gemini': {'backend': 'relay'}}}, [('gemini', object())], 70, 0)
+    assert len(calls) == 2
 
 
 @pytest.mark.parametrize("key,value", [("quota_display_type", "CNY"), ("quota_per_unit", 0),

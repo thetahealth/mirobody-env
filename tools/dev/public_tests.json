@@ -124,5 +124,8 @@
   "tests/contracts/test_d_relations.py",
   "tests/contracts/test_ef_gold_determinism.py",
   "tests/contracts/test_g_skeleton.py",
-  "tests/contracts/test_h_label_rule.py"
+  "tests/contracts/test_h_label_rule.py",
+  "tests/world/generation/test_build_cache.py",
+  "tests/world/generation/test_pack_balance.py",
+  "tests/release/test_daily_publish.py"
 ]

@@ -22,6 +22,9 @@
     {"id": "non-tier-branch", "expr": "len > 2 ? tier(\"base\", p * .3 + c * 1.2) : 0", "error": "Unsupported relay billing expression"},
     {"id": "legacy-null-output", "mode": "ratio", "null_field": "completion_ratio", "error": "null completion_ratio"},
     {"id": "legacy-null-cache", "mode": "ratio", "null_field": "cache_ratio", "error": "null cache_ratio"},
-    {"id": "unknown-mode", "mode": "future_mode", "error": "Unsupported relay billing mode"}
+    {"id": "unknown-mode", "mode": "future_mode", "error": "Unsupported relay billing mode"},
+    {"id": "qwen3.7-flash", "model": "qwen3.7-flash", "mode": "tiered_expr", "expr": "p <= 32000 ? tier(\"Input<=32k\", p * 0.03 + c * 0.13 + cr * 0.006 + cc * 0.038) : p > 32000 && p <= 256000 ? tier(\"32k<Input<=256k\", p * 0.1 + c * 0.4 + cr * 0.02 + cc * 0.125) : p > 256000 && p <= 1000000 ? tier(\"256k<Input<=1m\", p * 0.2 + c * 0.8 + cr * 0.04 + cc * 0.25) : tier(\"Input<=32k\", p * 0.3 + c * 0.13 + cr * 0.06 + cc * 0.038)", "input": ".3", "output": ".8"},
+    {"id": "gemini-3.8-flash", "model": "gemini-3.8-flash", "mode": null, "ratios": {"model_ratio": 0.375, "completion_ratio": 5, "cache_ratio": 0.1}, "input": "0.375", "output": "1.875"},
+    {"id": "glm-5.3-flash", "model": "glm-5.3-flash", "mode": null, "ratios": {"model_ratio": 0.075, "completion_ratio": 3.333333333333, "cache_ratio": 0.2}, "input": "0.075", "output": "0.249999999999975"}
   ]
 }

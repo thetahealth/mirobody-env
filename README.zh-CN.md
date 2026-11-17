@@ -321,7 +321,7 @@ HAEnv 同时具备在 `T` 处截断的纵向病历、先于数据确定的金标
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.4.0}
+  version = {1.4.1.dev0}
 }
 ```
 

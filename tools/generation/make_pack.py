@@ -19,6 +19,10 @@ is extended to 100 without re-running the 50: run the 50-item pack job against t
 --from-batch <stamp>`); the 100-item job later resumes the same batch and runs only the cells not yet
 answered (a resumed run marks `case|solver` cells done and does not re-run them).
 
+For bilingual releases, `--balance-from <English make_pack.json>` inherits the reference's
+removals, then gates SA-6 on this rendering without further removal and checks published IDs.
+Text-length surface features differ by language, so independent balancing can select different items.
+
 SYNTHETIC data, evaluation only, not medical advice.
 """
 from __future__ import annotations
@@ -84,6 +88,7 @@ GEN_WORKERS = 0
 def build(job: pathlib.Path, root: pathlib.Path, env: dict, log: pathlib.Path) -> int:
     sets = [x for item in ["env_file=/dev/null"] + WORLD_SET for x in ("--set", item)]
     return _run([sys.executable, "-m", "haenv", "build", str(job), "--gen", "deterministic", "--fresh",
+                 *(["--build-cache", env["HAENV_BUILD_CACHE"]] if env.get("HAENV_BUILD_CACHE") else []),
                  *(["--gen-workers", str(GEN_WORKERS)] if GEN_WORKERS else []), *sets],
                 {**env, "HAENV_OUTPUT_ROOT": str(root)}, log)
 
@@ -101,10 +106,13 @@ def main(argv=None) -> int:
     ap.add_argument("--profile", action="store_true", help="the audit also computes its permutation p readings")
     ap.add_argument("--jobs", type=int, default=None, help="audit worker processes")
     ap.add_argument("--gen-workers", type=int, default=0, help="concurrent deterministic build workers")
+    ap.add_argument("--build-cache", nargs="?", const="auto", metavar="DIR",
+                    help="reuse deterministic P3 builds across previews/pool/publication (default directory: OUT/build-cache)")
     ap.add_argument("--rules-delivery", choices=("printed", "library"), default=None,
                     help="hospital rules: default library in the real world, printed in the short-history control")
     ap.add_argument("--publish-only", action="store_true", help="redo only the cut-and-build step of a passed run in --out")
     ap.add_argument("--paired-with", default=None, help="make_pack.json of the real arm: reuse its patients/plans and selected IDs")
+    ap.add_argument("--balance-from", default=None, help="reference make_pack.json: inherit removals, gate SA-6 and require identical published IDs")
     ap.add_argument("--paired-source", choices=("real", "control"), default="control",
                     help="paired plan source: real uses the original job, control uses its prepared control job")
     ap.add_argument("--paired-controls", action="store_true", help="select patients feasible on both real and three-switch-off worlds")
@@ -139,6 +147,9 @@ def main(argv=None) -> int:
         os.environ["HAENV_M2_BACKGROUND"] = a.background
     out = pathlib.Path(a.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
+    if a.build_cache:
+        os.environ["HAENV_BUILD_CACHE"] = str(out / "build-cache" if a.build_cache == "auto"
+                                              else pathlib.Path(a.build_cache).resolve())
     gen, job_id, needs_ref = PACKS[a.pack]
     # The labels are part of older make_pack records; resolve the CLI separately.
     from tools._bootstrap import command_path
@@ -149,6 +160,8 @@ def main(argv=None) -> int:
         [str(ROOT), str(ROOT / "plugins"), os.environ.get("PYTHONPATH", "")]).rstrip(os.pathsep)}
     if a.publish_only:
         rec = json.loads((out / "make_pack.json").read_text(encoding="utf-8"))
+        if a.balance_from and str(pathlib.Path(a.balance_from).resolve()) != rec.get("balance_from"):
+            raise ValueError("--publish-only requires the balance_from recorded by the original run")
         if "difficulty_r2" in rec:
             os.environ["HAENV_DIFFICULTY_R2"] = env["HAENV_DIFFICULTY_R2"] = rec["difficulty_r2"]
         if "history_dependency_rate" in rec:
@@ -171,6 +184,8 @@ def main(argv=None) -> int:
     rec = {"pack": a.pack, "n_items": a.n, "seed_sha256": PS.seed_sha256(seed), "steps": {},
            "gen_workers": GEN_WORKERS,
            **({"world_set": list(WORLD_SET)} if WORLD_SET else {})}
+    if a.balance_from:
+        rec["balance_from"] = str(pathlib.Path(a.balance_from).resolve())
     if a.history_dependency_rate is not None:
         rec["history_dependency_rate"] = a.history_dependency_rate
     if a.difficulty_r2:
@@ -244,6 +259,15 @@ def main(argv=None) -> int:
         if rc:
             return _done(out, rec, 1)
         batch = _batch(out, job_id)
+    if a.balance_from:
+        # Also bind the reference for P3 difficulty_r2, whose balance early return stays untouched.
+        import hashlib
+        try:
+            rec["balance_from_sha256"] = hashlib.sha256(pathlib.Path(rec["balance_from"]).read_bytes()).hexdigest()
+        except OSError as exc:
+            rec["steps"]["shortcut_balance"] = 1
+            rec["shortcut_balance_error"] = f"{type(exc).__name__}: {exc}"
+            return _done(out, rec, 1)
     batch = balance_step(a.pack, job, batch, ref, seed, a.n, out, env, rec, a.jobs)
     if batch is None:
         return _done(out, rec, 1)
@@ -281,6 +305,8 @@ def balance_step(pack, job, batch, ref, seed, n, out, env, rec, jobs):
         rec["selection_policy"] = "clinical quotas and patient hashes; shortcut filtering disabled"
         return batch
     os.environ.setdefault("HAENV_PACK_SEED", seed)
+    if rec.get("balance_from"):
+        return inherited_balance(pack, job, batch, ref, seed, n, out, env, rec, jobs)
     for attempt in range(3):
         A = importlib.import_module(PA.PACKS[pack]).audit(n_items=n, seed=seed)
         prov = (yaml.safe_load(job.read_text(encoding="utf-8")) or {}).get("_provenance") or {}
@@ -301,6 +327,89 @@ def balance_step(pack, job, batch, ref, seed, n, out, env, rec, jobs):
         rec["batch"] = str(batch)
     rec["steps"]["shortcut_balance"] = 1
     return None
+
+
+def inherited_balance(pack, job, batch, ref, seed, n, out, env, rec, jobs):
+    """Validate an independent reference before mutation, inherit once, then gate this language."""
+    import hashlib
+    import importlib
+    import yaml
+    from haenv.i18n import check
+    from tools.validation import pack_audit as PA
+    try:
+        source = pathlib.Path(rec["balance_from"]).resolve()
+        raw = source.read_bytes()
+        rec["balance_from_sha256"] = hashlib.sha256(raw).hexdigest()
+        reference = json.loads(raw)
+        for key in ("pack", "n_items", "seed_sha256", "world_set", "difficulty_r2"):
+            if reference.get(key) != rec.get(key):
+                raise ValueError(f"reference {key} differs from this run")
+        for step in ("gen", "build", "audit", "invariants", "pack_build"):
+            if reference["steps"].get(step) != 0:
+                raise ValueError(f"reference step {step} must be 0")
+        if "balance_from" in reference:
+            raise ValueError("reference itself has balance_from; inheritance chains are forbidden")
+        # Require persisted stamps: absent metadata must not guess a language.
+        def language(path):
+            return check(json.loads((pathlib.Path(path) / "batch.json").read_text(encoding="utf-8"))["language"])
+        if language(reference["batch"]) == language(batch):
+            raise ValueError("reference language equals this run's language")
+        removed = {cid for record in reference.get("shortcut_balance", []) for cid in record["removed"]}
+        # A job may plan more cases than its build admits (P2 plans 500, emits about 460), so the planned
+        # IDs and the admitted (emitted) IDs are compared separately, each before the reference balance.
+        document = yaml.safe_load(pathlib.Path(reference["job"]).read_text(encoding="utf-8"))
+        planned = {c["case_id"] for c in document["cases"]} | removed
+        if planned != {c["case_id"] for c in yaml.safe_load(pathlib.Path(job).read_text(encoding="utf-8"))["cases"]}:
+            raise ValueError("reference planned case-ID set differs from this job")
+        admitted = set(rows_by_id(pathlib.Path(reference["batch"]), "cases.jsonl")) | removed
+        if admitted != set(rows_by_id(batch, "cases.jsonl")):
+            raise ValueError("reference admitted case-ID set differs from this pre-balance pool")
+        res = {"method": "inherited reference removals; no further filtering", "removed": sorted(removed),
+               "balance_from": str(source), "balance_from_sha256": rec["balance_from_sha256"]}
+        if removed:
+            for j in [job] + ([pathlib.Path(rec["control_job"])] if rec.get("control_job") else []):
+                PB.drop_cases(j, removed, res)
+            rec.setdefault("shortcut_balance", []).append(res)
+            rc = build(job, out, env, out / "build-balance-inherited.log")
+            rec["steps"]["balance_rebuild_inherited"] = rc
+            if rc:
+                raise ValueError(f"inherited balance rebuild failed: exit {rc}")
+            batch = _batch(out, pathlib.Path(job).name.replace(".job.yaml", ""))
+            rec["batch"] = str(batch)
+        A = importlib.import_module(PA.PACKS[pack]).audit(n_items=n, seed=seed)
+        prov = (yaml.safe_load(job.read_text(encoding="utf-8")) or {}).get("_provenance") or {}
+        gate = PB.shortcut_gate(A, lambda A_: PA.configure_select(A_, prov, n, pack), batch, job, ref, jobs=jobs or 32)
+        rec["shortcut_balance_inherited"] = gate
+        if not gate["pass"]:
+            raise ValueError(f"SA-6 refused inherited pool in this language: {gate['refused_cc']}")
+    except Exception as exc:
+        rec["steps"]["shortcut_balance"] = 1
+        rec["shortcut_balance_error"] = f"{type(exc).__name__}: {exc}"
+        return None
+    rec["steps"]["shortcut_balance"] = 0
+    return batch
+
+
+def published_ids_reference(rec):
+    """Check actual published batches, also detecting a reference changed since inheritance."""
+    import hashlib
+    try:
+        raw = pathlib.Path(rec["balance_from"]).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != rec["balance_from_sha256"]:
+            raise ValueError("balance reference changed since inheritance")
+        reference = json.loads(raw)
+        equal = set(rows_by_id(pathlib.Path(rec["pack_batch"]), "cases.jsonl")) == set(
+            rows_by_id(pathlib.Path(reference["pack_batch"]), "cases.jsonl"))
+        if not equal:
+            raise ValueError("published case IDs differ from balance reference")
+    except Exception as exc:
+        rec["published_ids_equal_reference"] = False
+        rec["published_ids_reference_error"] = f"{type(exc).__name__}: {exc}"
+        rec["steps"]["published_ids_reference"] = 1
+        return 1
+    rec["published_ids_equal_reference"] = True
+    rec["steps"]["published_ids_reference"] = 0
+    return 0
 
 
 def paired_eligibility(pack, job_id, job, batch, out, env, rec):
@@ -477,6 +586,9 @@ def publish(pack: str, job_id: str, job: pathlib.Path, batch: pathlib.Path, out:
     rec["steps"]["pack_rows_identical"] = 0 if not diff else 1
     rec.update({"pack_job": str(pjob), "pack_batch": str(pb), "pack_rows_diff": diff})
     if diff:
+        return 1
+    if rec.get("balance_from") and published_ids_reference(rec):
+        _refuse_pack(pack, out, rec)
         return 1
     (pb / SA.marker_name(pack)).write_text(hashlib.sha256((batch / "cases.jsonl").read_bytes()).hexdigest() + "\n",
                                            encoding="utf-8")

@@ -7,6 +7,13 @@ per-criterion fingerprints identify which result columns remain comparable, and 
 fingerprint identifies the complete set of criteria. Combined scores also require matching
 aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
+## [Unreleased]
+
+- Add release tooling that validates public snapshots and prepares one daily update commit.
+- Add `make_pack --balance-from` to keep the same published case IDs across languages.
+- Add an optional cache for deterministic P3 builds; session-only environment values do not invalidate it.
+- Support prompt-token tier conditions in relay billing and check the selected single key before a run.
+
 ## [1.4.0] - 2026-10-31
 
 Major update: English records, revised questions in all four packs, and a new plan-quality

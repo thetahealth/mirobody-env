@@ -687,10 +687,13 @@ def _main(argv=None) -> int:
         except Exception as e:  # one failed case must not sink the batch
             return cs, None, e
 
-    if dispatch is None and _n_workers > 1:
+    from haenv.world.generation.build_cache import optional_cache
+    _case_cache = optional_cache(getattr(a, "build_cache", None) or os.environ.get("HAENV_BUILD_CACHE"), job, cfg,
+                                 int(syn.get("max_rounds", 6))) if dispatch is None else None
+    if dispatch is None and (_n_workers > 1 or _case_cache is not None):
         print(f"[haenv] generating on {min(_n_workers, len(job.cases))} processes (results collected in input order, byte-identical to serial)")
         _results = _bp.build_all(job.cases, lambda cs: build_case(
-            cs, max_rounds=int(syn.get("max_rounds", 6))), _n_workers)
+            cs, max_rounds=int(syn.get("max_rounds", 6))), _n_workers, cache=_case_cache)
     elif _n_workers > 1:
         from concurrent.futures import ThreadPoolExecutor
         import haenv.world.observations.events as _ev_warm
@@ -707,6 +710,9 @@ def _main(argv=None) -> int:
             _results = list(_ex.map(_one_case, job.cases))   # map preserves order
     else:
         _results = [_one_case(cs) for cs in job.cases]
+
+    if _case_cache is not None:
+        print(f"[haenv] build cache: {_case_cache.hits} hits, {_case_cache.misses} misses")
 
     for cs, _ra, _err in _results:
         if _err is not None:

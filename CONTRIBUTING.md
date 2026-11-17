@@ -33,7 +33,7 @@ The separate Pages workflow checks the demo in a browser and does not run during
 ### Tests
 
 Contracts live in `tests/<component>/`, mirroring `src/haenv/<component>/`;
-release and paper-script contracts live in `tests/release/` and `tests/paper/`.
+release contracts live in `tests/release/`.
 Add a regression row with a stable ID to the table beside its contract and
 parametrize the invariant over it. Component fixtures live beside contracts; only shared helpers stay at the test root.
 World artifacts use the frozen world identity and their audited inputs as cache

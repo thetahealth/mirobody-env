@@ -34,6 +34,11 @@ def _child_error(name: str, msg: str) -> Exception:
 def _build_one(i: int):
     import haenv.world.wq as wq
     cs = _CTX["cases"][i]
+    cache, key = _CTX.get("cache"), _CTX.get("keys", {}).get(i)
+    if cache is not None:
+        saved = cache.read(key, cs.case_id)
+        if saved is not None:
+            return (*saved, True)
     before = dict(wq._QINJ)
     try:
         ra, err = _CTX["build"](cs), None
@@ -41,23 +46,30 @@ def _build_one(i: int):
         ra, err = None, (type(e).__name__, str(e))
     # register_injection stores a fresh dict, so identity marks this case's registrations.
     inj = [(k, v) for k, v in wq._QINJ.items() if before.get(k) is not v]
-    return ra, err, inj
+    if cache is not None:
+        cache.write(key, (ra, err, inj))
+    return ra, err, inj, False
 
 
-def build_all(cases: list, build, workers: int) -> list[tuple]:
+def build_all(cases: list, build, workers: int, *, cache=None) -> list[tuple]:
     """`[(case, (raw, audit) | None, exception | None)]` in input order. `build(case)` runs in
     a forked child; the fork inherits the loaded job, plugins and registries."""
     import haenv.world.wq as wq
     if not cases:
         return []
     _CTX.update(cases=list(cases), build=build)
+    if cache is not None:
+        _CTX.update(cache=cache, keys={i: cache.key_for(cs) for i, cs in enumerate(cases)})
     try:
         with _mp.get_context("fork").Pool(processes=min(workers, len(cases))) as pool:
             out = list(pool.imap(_build_one, range(len(cases)), chunksize=1))
     finally:
         _CTX.clear()
     results = []
-    for cs, (ra, err, inj) in zip(cases, out):
+    for cs, (ra, err, inj, hit) in zip(cases, out):
+        if cache is not None:
+            cache.hits += int(hit)
+            cache.misses += int(not hit)
         for k, v in inj:
             wq.register_injection(k, v)
         results.append((cs, ra, None if err is None else _child_error(*err)))
