@@ -27,6 +27,8 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 GITHUB = "git@github.com:thetahealth/mirobody-env.git"
+#: The released public 1.4.0 commit, the pack-equivalence reference.
+BASELINE = "7a5b29b8743bcd839a90e33e9e0e5b06875e0544"
 ARTIFACTS = ("cases.jsonl", "payloads.jsonl", "audit.jsonl", "message_sources.jsonl")
 FINGERPRINT_PROBE = """
 import json
@@ -40,6 +42,24 @@ print(json.dumps({'segments': segments, 'criteria': criterion_fingerprints()}, s
 
 class Refused(RuntimeError):
     pass
+
+
+#: The public commit's identity comes from the operator's environment, so the shipped
+#: tooling names no individual.
+IDENTITY_VARS = ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL")
+
+
+def identity_env():
+    missing = [k for k in IDENTITY_VARS if not os.environ.get(k)]
+    if missing:
+        raise Refused("set the public commit identity: " + ", ".join(missing))
+    name, email = os.environ["GIT_AUTHOR_NAME"], os.environ["GIT_AUTHOR_EMAIL"]
+    assert (os.environ["GIT_COMMITTER_NAME"], os.environ["GIT_COMMITTER_EMAIL"]) == (name, email)
+    return {**os.environ, **{k: os.environ[k] for k in IDENTITY_VARS}}
+
+
+def is_ancestor(old, new):
+    return subprocess.run(["git", "merge-base", "--is-ancestor", old, new], cwd=ROOT).returncode == 0
 
 
 def run(cmd, *, cwd=None, env=None, log=None, input=None, timeout=7200):
@@ -495,9 +515,11 @@ def execute(a, work):
         "status": "checks pending", "source": source_sha, "tree": tree, "parent": parent,
         "message": message, "files": git("diff", "--name-status", parent, tree).splitlines()
     }, indent=2) + "\n")
-    baseline_sha = resolve(a.baseline)
-    if baseline_sha != parent:
-        raise Refused("pack baseline must equal fetched GitHub main")
+    # The pack-equivalence reference is the released 1.4.0 commit. It equals GitHub main only on
+    # the first publication; afterwards it must be an ancestor of it.
+    baseline_sha = resolve(BASELINE if a.baseline is None else a.baseline)
+    if baseline_sha != parent and not is_ancestor(baseline_sha, parent):
+        raise Refused("pack baseline is not the released commit or an ancestor of GitHub main")
     if not git("show", f"{baseline_sha}:pyproject.toml").count('version = "1.4.0"'):
         raise Refused("pack baseline must be the 1.4.0 release")
     archive(baseline_sha, work / "baseline")
@@ -528,16 +550,16 @@ def execute(a, work):
     gitlab_url = a.gitlab_url or git("remote", "get-url", "origin")
     fetch(gitlab_url, "refs/daily-publish/gitlab-main")
     gitlab_parent = resolve("refs/daily-publish/gitlab-main")
-    if already_published(gitlab_parent, subject):
-        raise Refused("GitLab main already has today's daily commit")
+    # GitLab main keeps the full source history: it fast-forwards to the source branch
+    # instead of receiving the public squash (which would delete internal material).
+    if not is_ancestor(gitlab_parent, source_sha):
+        raise Refused("GitLab main is not an ancestor of the source branch; fast-forward only")
     # Check both remote heads for dry runs too, before staging a reviewable commit.
     if remote_head(a.github_url) != parent or remote_head(gitlab_url) != gitlab_parent:
         raise Refused("a remote main advanced during checks; rerun before publishing")
-    commit = git("commit-tree", tree, "-p", parent, input=message)
-    gitlab_commit = commit if gitlab_parent == parent else git(
-        "commit-tree", tree, "-p", gitlab_parent, input=message)
+    commit = git("commit-tree", tree, "-p", parent, input=message, env=identity_env())
+    gitlab_commit = source_sha
     git("update-ref", f"refs/staged/daily-github/{today}", commit)
-    git("update-ref", f"refs/staged/daily-gitlab/{today}", gitlab_commit)
     plan = {"status": "dry run", "source": source_sha, "baseline": baseline_sha,
             "tree": tree, "parent": parent, "commit": commit, "message": message,
             "gitlab_parent": gitlab_parent, "gitlab_commit": gitlab_commit,
@@ -548,8 +570,11 @@ def execute(a, work):
                                if reuse_path else None),
             "inherited_failure": {key: value["inherited_failure"] for key, value in evidence.items()
                                   if value.get("inherited_failure")},
-            "push_commands": [shlex.join(push_command(a.github_url, commit)),
-                              shlex.join(push_command(gitlab_url, gitlab_commit))],
+            "github_identity": os.environ["GIT_AUTHOR_NAME"] + " <" + os.environ["GIT_AUTHOR_EMAIL"] + ">",
+            "gitlab_mode": "up to date" if gitlab_parent == source_sha else "fast-forward",
+            "push_commands": [shlex.join(push_command(a.github_url, commit))]
+                             + ([shlex.join(push_command(gitlab_url, gitlab_commit))]
+                                if gitlab_parent != source_sha else []),
             "checks": {"python": ["3.10", "3.12"], "languages": ["en", "zh"],
                        "tiers": ["release"] if getattr(a, "test_scope", "public") == "release" else ["unit", "world"], "pack_jobs": len(evidence), "pack_python": "3.12",
                        "fingerprints": "identical", "privacy": "passed", "readme": "version only"}}
@@ -561,6 +586,8 @@ def execute(a, work):
         plan["status"] = "pushing"
         receipt.write_text(json.dumps(plan, indent=2) + "\n")
         for label, url, sha in (("github", a.github_url, commit), ("gitlab", gitlab_url, gitlab_commit)):
+            if label == "gitlab" and gitlab_parent == source_sha:
+                continue
             run(push_command(url, sha), timeout=900)
             plan[label + "_pushed"] = sha
             receipt.write_text(json.dumps(plan, indent=2) + "\n")
@@ -575,7 +602,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--source", default="public/next")
     ap.add_argument("--github-main", help="expected last GitHub main ref (checked against remote)")
-    ap.add_argument("--baseline", default="7a5b29b8743bcd839a90e33e9e0e5b06875e0544", help="public 1.4.0 commit")
+    ap.add_argument("--baseline", help="public 1.4.0 commit (defaults to the released baseline)")
     ap.add_argument("--github-url", default=GITHUB)
     ap.add_argument("--gitlab-url", help="defaults to origin's URL")
     ap.add_argument("--scratch", type=Path, required=True)

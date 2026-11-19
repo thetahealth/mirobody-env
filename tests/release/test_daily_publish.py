@@ -66,7 +66,7 @@ def daily_repo(tmp_path, monkeypatch):
     D.git("add", ".")
     D.git("commit", "-qm", "release")
     baseline = D.resolve("HEAD")
-    gitlab = D.git("commit-tree", "HEAD^{tree}", input="Destination history\n")
+    gitlab = baseline  # GitLab main is an ancestor of the source branch.
     for name in ("README.md", "README.zh-CN.md", "pyproject.toml"):
         p = repo / name
         p.write_text(p.read_text().replace("1.4.0", "1.4.1.dev0"))
@@ -91,6 +91,8 @@ def daily_repo(tmp_path, monkeypatch):
     monkeypatch.setattr(D, "fingerprints", lambda *args: {"world": "unchanged"})
     monkeypatch.setattr(D, "audit_dependencies", lambda *args: calls.append(("audit dependencies",)))
     monkeypatch.setattr(D, "pack_identity", lambda *args: calls.append(("packs",)) or {"job@en": {"sha": "same"}})
+    for var in D.IDENTITY_VARS:
+        monkeypatch.setenv(var, "public@example.org" if var.endswith("EMAIL") else "Public Name")
     scratch = tmp_path / "scratch"
     scratch.mkdir()
     args = argparse.Namespace(source="HEAD", github_url="github", github_main=baseline, baseline=baseline,
@@ -110,9 +112,10 @@ def test_dry_run_builds_one_commit_per_parent_after_all_gates(daily_repo, monkey
     result = D.execute(args, work)
     assert result["status"] == "dry run"
     assert D.git("rev-parse", result["commit"] + "^@") == args.github_main
-    assert D.git("rev-parse", result["gitlab_commit"] + "^@") == result["gitlab_parent"]
-    for name in ("commit", "gitlab_commit"):
-        assert D.git("rev-parse", result[name] + "^{tree}") == result["tree"]
+    assert result["gitlab_commit"] == result["source"] and result["gitlab_mode"] == "fast-forward"
+    assert D.git("rev-parse", result["commit"] + "^{tree}") == result["tree"]
+    assert D.git("log", "-1", "--format=%an <%ae>|%cn <%ce>", result["commit"]) == \
+        "Public Name <public@example.org>|Public Name <public@example.org>"
     assert [("suite", "3.10"), ("suite", "3.12")] == [c for c in calls if c[0] == "suite"]
     assert len([c for c in calls if c[0] == "packs"]) == 1
     assert json.loads((work / "receipt.json").read_text()) == result
@@ -367,3 +370,50 @@ else:
     pid = int((evidence / "baseline" / "en" / "m2" / "started.json").read_text())
     with pytest.raises(ProcessLookupError):
         os.kill(pid, 0)
+
+
+def test_gitlab_main_off_the_source_history_is_refused_before_commit(daily_repo, monkeypatch):
+    repo, scratch, args, calls = daily_repo
+    work = scratch / "run"
+    work.mkdir()
+    stray = D.git("commit-tree", "HEAD^{tree}", input="Unrelated history\n")
+    def fetch(url, ref):
+        D.git("update-ref", ref, args.github_main if url == "github" else stray)
+    monkeypatch.setattr(D, "fetch", fetch)
+    with pytest.raises(D.Refused, match="fast-forward only"):
+        D.execute(args, work)
+    assert not (work / "receipt.json").exists()
+
+
+def test_missing_operator_identity_is_refused_before_commit(daily_repo, monkeypatch):
+    repo, scratch, args, calls = daily_repo
+    work = scratch / "run"
+    work.mkdir()
+    for var in D.IDENTITY_VARS:
+        monkeypatch.delenv(var, raising=False)
+    with pytest.raises(D.Refused, match="set the public commit identity"):
+        D.execute(args, work)
+    assert not (work / "receipt.json").exists()
+
+
+def test_later_daily_update_uses_the_released_commit_as_pack_baseline(daily_repo, monkeypatch):
+    """After the first daily commit, GitHub main is no longer 1.4.0; the reference is a fixed commit."""
+    repo, scratch, args, calls = daily_repo
+    work = scratch / "run"
+    work.mkdir()
+    args.baseline = None
+    monkeypatch.setattr(D, "BASELINE", args.github_main)
+    result = D.execute(args, work)
+    assert result["baseline"] == args.github_main
+
+
+def test_pack_baseline_off_the_head_history_is_refused(daily_repo, monkeypatch):
+    repo, scratch, args, calls = daily_repo
+    work = scratch / "run"
+    work.mkdir()
+    stray = D.git("commit-tree", "HEAD^{tree}", input="Unrelated release" + chr(10))
+    args.baseline = None
+    monkeypatch.setattr(D, "BASELINE", stray)
+    with pytest.raises(D.Refused, match="pack baseline"):
+        D.execute(args, work)
+    assert not (work / "receipt.json").exists()

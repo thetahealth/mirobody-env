@@ -13,6 +13,8 @@ aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 - Add `make_pack --balance-from` to keep the same published case IDs across languages.
 - Add an optional cache for deterministic P3 builds; session-only environment values do not invalidate it.
 - Support prompt-token tier conditions in relay billing and check the selected single key before a run.
+- Publish one squashed public commit per day, signed with the operator identity, and fast-forward the internal main instead of squashing it.
+- Retry a rate-limited relay billing-log read and bound a request by its tokens when the log stays unreadable.
 
 ## [1.4.0] - 2026-10-31
 
