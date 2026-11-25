@@ -65,8 +65,11 @@ INF_TARGET = {"inf_n7": (7, 9, None), "inf_n56": (5, 6, None), "inf_v3": (3, 4, 
               "inf_t35": (3, 4, "temp"), "inf_n14": (1, 4, False), "inf_n14m": (1, 4, False), "inf_n0": (0, 0, False)}
 
 
-def _points_vector(tier: str, stratum: str, rng: _Rng, beta_blocker: bool = False) -> dict:
+def _points_vector(tier: str, stratum: str, rng: _Rng, beta_blocker: bool = False, boundary: bool = False) -> dict:
     lo, hi, need3 = INF_TARGET[tier]
+    if boundary and tier in ('inf_n56', 'inf_n14', 'inf_n14m'):
+        # RCP NEWS2 Chart 1 / trigger table: authored coverage at 4 versus 5.
+        lo = hi = 5 if tier == 'inf_n56' else 4
     if hi == 0:
         return {"rr": 0, "spo2": 0, "hr": 0, "temp": 0, "sbp": 0}
     for _ in range(400):
@@ -139,12 +142,26 @@ WORLD_DRUG = {"bb": ("bisoprolol", 5.0), "bb2": ("metoprolol", 47.5), "insulin":
 BB_KINDS = ("bb", "bb2")
 
 
-def world_meds(plan: dict) -> list[dict]:
+def soc_constraints(plan: dict) -> dict:
+    """Class constraints imposed by the existing head-injury premises."""
+    spec = R.table()["tiers"][plan["tier"]]
+    if spec["rule"] == "R0a_head_anticoag":
+        return {"require_classes": ["oac"]}
+    if spec.get("context") == "head":
+        return {"forbid_classes": ["oac"]}
+    return {}
+
+
+def world_meds(plan: dict, *, patient_basics=None) -> list[dict]:
     """The medicines the item puts on the patient (`needs`, and the plan's beta-blocker) as the world's
     record holds them (`med_course.overlay_medicines`): taken from day 0 at the listed dose."""
     nd = needs(plan["tier"], plan["stratum"], bool(plan.get("beta_blocker")), plan.get("comorbid") or (),
                plan.get("dm_agent"))
     add = nd["add_conditions"]
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled() and plan.get("context_cid"):
+        from haenv.p2.planned import planned_conditions
+        add = planned_conditions(plan)
     out = []
     for c in add:
         for k in CONDITION_MEDS.get(c, ()) + (DM_AGENT[_dm_agent(plan)] if c == "T2D" else ()):
@@ -167,6 +184,31 @@ def world_meds(plan: dict) -> list[dict]:
             if med["drug"] == "furosemide":
                 med["dose_timeline"] = [{"ts": 0, "value": cfg["hf_diuretic_before_mg"]},
                                         {"ts": day, "value": cfg["hf_diuretic_current_mg"]}]
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        if "oac" in soc_constraints(plan).get("require_classes", ()):
+            from haenv.world.truth import soc
+            from haenv.world.history.history_dependency import old_day
+            pb = patient_basics or {}
+            cid = plan["context_cid"]
+            age = soc.age_years(cid, pb["age_range"])
+            # The existing head-injury premise requires a reconciled OAC, without
+            # inventing an AF diagnosis or assuming unmeasured renal function.
+            candidates = soc.table()["agents"]["oac"]["weights"]
+            for drug in candidates:
+                dose = soc._dose(drug, cid, age, pb)
+                if dose is not None:
+                    meds.append({"drug": drug, "indication": "", "source": "pack_constraint",
+                                 "dose_source": soc.table()["doses"][drug]["source"],
+                                 "dose_timeline": [{"ts": old_day("p2", cid, plan["context_T"]), "value": dose}]})
+                    break
+            else:
+                raise ValueError("required OAC has no verified dose")
+        for med in meds:
+            # The shared display reader owns prose. Latent courses and the drug
+            # truth snapshots must carry the same bytes in both languages.
+            med.pop("label", None)
+            med["record_overlay"] = True
     return meds
 
 
@@ -244,25 +286,68 @@ def _drug_of(line) -> str | None:
 
 def realize(case_id: str, T: int, plan: dict, patient: dict) -> dict:
     """The block and its rule-reader verdict; re-drawn until the planned rule fires."""
+    from haenv.p2.clinical_rules import assess_visible
+    from haenv.p2.gate import inert_weight_conflicts
     want = R.table()["tiers"][plan["tier"]]["rule"]
+    patient = plan.get("patient_truth", patient)
     last = None
     for attempt in range(MAX_ATTEMPTS):
         surface = {}
         blk = _draw(case_id, T, plan, patient, attempt, surface)
         a = R.assess(blk)
+        visible = assess_visible(blk)
+        if (a["rule"], a["set"]) != (visible["rule"], visible["set"]):
+            last = f"visible rule {visible['rule']} differs from {a['rule']}"
+            continue
+        weight_conflicts = inert_weight_conflicts(blk, plan["tier"])
+        if weight_conflicts:
+            last = weight_conflicts[0]
+            continue
         # An actionable single level-2 night cannot realize a watchful-waiting
         # scenario, even when its original first matching rule is unchanged.
         needs_history = plan["stratum"] != "trend" or R.assess(R.last_day_only(blk))["set"][0] not in a["set"]
+        if a["rule"] == "R11_hypo_level1" and a["readings"]["new_symptom"] and _r11_core(case_id, plan):
+            # Core R11 items gain documented AF and two watch alerts at finalization; a ticked new
+            # symptom would void the printed AF exemption there (`af_exemption`), so redraw.
+            last = "R9_af_alerts (new symptom with documented AF)"
+            continue
         if a["rule"] == want and R.floor_of(a["set"]) == R.table()["tiers"][plan["tier"]]["floor"] and needs_history:
+            if "event_truth" in surface:
+                # This object is also latent_premise.truth.events in a built case.
+                saved = plan.setdefault("event_truth", {})
+                saved.clear()
+                saved.update(surface["event_truth"])
             # The gold is fixed from structured patient state, before prose.
             ck, bg = surface["checklist"], surface["background"]
             blk["message"] = message(case_id, attempt, plan["tier"], plan["stratum"], plan["wording"],
                                      ck, B.says(case_id, bg), B.on(plan))
             from haenv.p2.context import render_message
             render_message(blk, case_id, plan, _Rng("p2-context-message", case_id))
-            return {"block": blk, "assess": a, "attempt": attempt}
+            if "event_truth" in plan:
+                from haenv.p2.statements import measured_message
+                plan['statement_contract'] = 1
+                blk["message"] = measured_message(blk, case_id)
+            return {"block": blk, "assess": a, "attempt": attempt,
+                    **({"baseline_constraints": surface["baseline_constraints"]} if "baseline_constraints" in surface else {})}
         last = a["rule"]
     raise Unrealizable(f"{case_id}: {plan['tier']} wants {want}, last draw fired {last}")
+
+
+def _r11_core(cid: str, plan: dict) -> bool:
+    from haenv.p2.reading import enabled as reading_enabled, core as reading_core
+    return reading_enabled(plan) and reading_core(cid, plan)
+
+
+def _hf_points(target, rng: _Rng) -> dict:
+    """A NEWS2 vector of a decompensating heart-failure check (no fever, no single 3) whose aggregate
+    lies in the tier's `news2_target` (RCP Chart 1 interiors, `BANDS`)."""
+    lo, hi = target
+    for _ in range(400):
+        p = {"rr": rng.pick([0, 0, 2]), "spo2": rng.pick([0, 1, 2]), "hr": rng.pick([0, 1, 2]),
+             "temp": 0, "sbp": rng.pick([0, 0, 1])}
+        if lo <= sum(p.values()) <= hi:
+            return p
+    raise Unrealizable(f"no heart-failure NEWS2 vector in {target}")
 
 
 def _mild_final(patient: dict, ck: dict) -> bool:
@@ -296,7 +381,28 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
         if diabetic and sc != "hypoglycaemia" and MEDS["metformin"] not in meds:
             meds.append(MEDS["metformin"])
     # ---- baselines
-    rhr0 = rng.unif(56, 72, 0) - (6 if bb else 0)
+    from haenv.world.truth import coupling_enabled
+    from haenv.world.truth import events as truth_events
+    event_truth = plan.get("event_truth")
+    coupled = event_truth is not None or coupling_enabled()
+    saved_patient = patient.get("vitals")
+    from haenv.p2.patient import value as patient_value
+    if coupled and event_truth is None:
+        # Direct renderer callers have no raw case. The ordinary build supplies the saved
+        # world-medication timeline via the event plan, including dose changes and stops.
+        from haenv.world.observations.events_streams import METRIC_BY_NAME
+        from haenv.i18n.text import Msg
+        medication = []
+        for line in meds:
+            key = _drug_of(line)
+            if isinstance(line, Msg) and line.kind == "tpl":
+                dose = float(line.slots["dose"])
+            else:
+                dose = next((dose for drug, dose in WORLD_DRUG.values() if drug == key), 0)
+            medication.append({"drug": key, "dose_timeline": [{"ts": 0, "value": dose}]})
+        event_truth = truth_events.make_plan(cid, baseline_temp=METRIC_BY_NAME["body_temp"].base,
+                                            medication={"concurrent": medication})
+    rhr0 = rng.unif(56, 72, 0) - (6 if bb and not coupled else 0)
     hrv0 = rng.unif(24, 55, 0)
     steps0 = rng.unif(3500, 9500, 0)
     sleep0 = rng.unif(6.4, 7.8, 1)
@@ -320,6 +426,8 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
         ck[R.DIZZY] = True                           # dizziness with the lows
     if tier == "hypo_l3":
         ck[R.HYPO_HELP] = True
+    for key in R.table()["tiers"][plan["tier"]].get("ticks") or ():
+        ck[key] = True                               # a tier's defining symptom (e.g. new dizziness with documented AF)
     if sc == "infection":
         ck[R.MILD] = True
     if sc == "af" and tier != "af_unstable" and u01("p2-palpitation", cid) < PALPITATION_SHARE:
@@ -327,7 +435,10 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
     bg = B.active(cid, plan, set(known), diabetic, _mild_final(patient, ck), diabetic and any(_drug_of(a) in HYPO_DRUGS for a in meds))   # the background factors of this item
     # ---- today's home check
     if sc == "infection":
-        pv = _points_vector(tier, stratum, rng, bool(bb))
+        from haenv.p2.reading import enabled as reading_enabled, core as reading_core
+        pv = _points_vector(tier, stratum, rng, bool(bb), reading_enabled(plan) and reading_core(cid, plan))
+    elif R.table()["tiers"][plan["tier"]].get("news2_target"):
+        pv = _hf_points(R.table()["tiers"][plan["tier"]]["news2_target"], rng)
     else:
         pv = {"rr": 0, "spo2": 0, "hr": 0, "temp": 0, "sbp": 0}
     check = {"temperature_c": _value("temp", pv["temp"], rng, stratum == "atypical"),
@@ -335,7 +446,9 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
              "respiratory_rate_per_min": _value("rr", pv["rr"], rng),
              "spo2_pct": _value("spo2", pv["spo2"], rng)}
     if sc == "af":
-        check["heart_rate_bpm"] = rng.unif(92, 104, 0) if bb else rng.unif(112, 128, 0)
+        check["heart_rate_bpm"] = rng.unif(92, 104, 0) if bb and not coupled else rng.unif(112, 128, 0)
+        if coupled:
+            check["heart_rate_bpm"] += truth_events.drug_vitals(event_truth, "resting_hr", T)
     if tier == "af_rvr":
         check["heart_rate_bpm"] = _value("hr", 3, rng)     # fast AF at rest, no beta-blocker (plan), no red flag
     if tier == "brady":
@@ -343,6 +456,43 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
     if tier == "hf_rest":
         check["respiratory_rate_per_min"] = rng.unif(22, 23, 0)
         check["spo2_pct"] = rng.unif(94, 95, 0)
+    if saved_patient:
+        # Zero-point/ordinary observations belong to this patient. Explicit
+        # scenario targets retain their original bands and are reported below.
+        for stream, field, points, targeted in (
+            ("body_temp", "temperature_c", pv['temp'], False),
+            ("heart_rate", "heart_rate_bpm", pv['hr'], sc == 'af' or tier == 'brady'),
+            ("spo2", "spo2_pct", pv['spo2'], tier == 'hf_rest')):
+            base = patient_value(saved_patient, stream, T)
+            if base is not None and not points and not targeted:
+                check[field] = round(base, 1 if stream == 'body_temp' else 0)
+    if coupled:
+        import copy
+        event_truth = copy.deepcopy(event_truth)
+        if sc == "infection":
+            # Replace the declared P2 episode only; retain the patient's other
+            # dated events. Its original course is saved in patient_truth.
+            original = saved_patient['events'] if saved_patient else event_truth
+            start = T - onset + 1
+            event_truth["fever"] = []
+            for e in original.get('fever', ()):
+                if e['end'] < start or e['start'] > T:
+                    event_truth['fever'].append(copy.deepcopy(e))
+                else:
+                    if e['start'] < start:
+                        event_truth['fever'].append({**copy.deepcopy(e), 'end': start - 1})
+                    if e['end'] > T:
+                        event_truth['fever'].append({**copy.deepcopy(e), 'start': T + 1})
+            row = copy.deepcopy(event_truth.get("fever_effect") or {})
+            # The home check is the p2 scenario's measured temperature. Its existing NEWS2
+            # bands remain the premise; use that same temperature to drive the wearable HR.
+            if (tier != "inf_n0" and row.get("body_temp") and row.get("applied", True)
+                    and row["body_temp"].get("applied", True)
+                    and check["temperature_c"] > event_truth["baseline_temp"]):
+                row["body_temp"]["level_c"] = check["temperature_c"]
+                event_truth["fever"].append({"start": T - onset + 1, "end": T, **row})
+        if surface is not None:
+            surface["event_truth"] = event_truth
     # ---- blood pressure log (two readings a day), today's last reading is the home check's
     bp = []
     bp_kind_today = {"htn_emerg": "severe", "htn_severe": "severe", "hf_htn_severe": "severe",
@@ -355,6 +505,9 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
             elif bp_kind_today in ("severe", "single3_high_sbp") and d >= T - 2:
                 kind = "raised"
             s, di = _bp_pair(rng, kind)
+            if saved_patient and kind in ('normal', 'htn_bg'):
+                s0, d0 = patient_value(saved_patient, 'systolic_bp', d), patient_value(saved_patient, 'diastolic_bp', d)
+                s, di = round(s0) if s0 is not None else s, round(d0) if d0 is not None else di
             bp.append({"day": d, "time": tm, "systolic_mmHg": s, "diastolic_mmHg": di})
     treated = any(_drug_of(m) in ANTIHTN for m in meds)
     for r in bp:
@@ -365,7 +518,7 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
     if tier == "htn_raised" and stratum == "trend":
         # one high reading this morning, re-measured this evening within the raised band
         today[0]["systolic_mmHg"], today[0]["diastolic_mmHg"] = rng.unif(184, 196, 0), rng.unif(100, 108, 0)
-    if sc == "infection" and pv["sbp"]:
+    if (sc == "infection" or R.table()["tiers"][plan["tier"]].get("news2_target")) and pv["sbp"]:
         today[-1]["systolic_mmHg"] = _value("sbp", pv["sbp"], rng)
         today[-1]["diastolic_mmHg"] = rng.unif(52, 62, 0)
     if tier == "htn_lowbp":
@@ -393,6 +546,9 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
     if tier not in ("hf_gain", "hf_rest") and T not in ws:
         ref = weights[-4]["kg"]
         weights[-1]["kg"] = round(ref + rng.unif(-0.6, 0.6, 1), 1)
+    from haenv.p2.reading import margin
+    if sc == "heart_failure" and tier in ("hf_gain", "hf_stable") and margin(cid, plan):
+        _hf_margin(weights, tier == "hf_gain", _Rng("p2-margin-hf", cid, T, attempt))
     # ---- CGM nightly minima (diabetic): night_of_day d = the night after day d
     cgm = []
     if diabetic:
@@ -416,6 +572,11 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
                         "minutes_below_3_9": (rng.unif(25, 90, 0) if d in lows else 0)})
     if "single_deep_night" in bg and cgm:
         B.edit_single_deep_night(cid, cgm)
+    from haenv.p2.reading import cgm_history
+    if cgm and cgm_history(cid, plan):
+        cgm[:0] = _cgm_older(T, tier, margin(cid, plan), _Rng("p2-margin-cgm", cid, T, attempt))
+        if tier == "hypo_l1" and margin(cid, plan):
+            _cgm_edge(cgm, T, _Rng("p2-margin-cgm-edge", cid, T, attempt))
     # ---- wearable dailies
     wd = []
     art = {"ben_exercise": "exercise", "ben_spo2": "strap"}.get(tier) or plan.get("artefact")
@@ -427,15 +588,28 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
         k = d - (T - onset)                                     # days since onset (infection, HF)
         rhr, hrv, steps, sleep = rhr0 + rng.unif(-2, 2, 0), hrv0 + rng.unif(-4, 4, 0), steps0 * (0.85 + 0.3 * rng.u()), sleep0 + rng.unif(-0.5, 0.5, 1)
         spo2n, skin = spo2n0 + rng.unif(-1, 1, 0), rng.unif(-0.2, 0.2, 1)
+        if saved_patient:
+            base_hr = patient_value(saved_patient, 'resting_hr', d)
+            base_spo2 = patient_value(saved_patient, 'spo2', d)
+            if base_hr is not None:
+                rhr = base_hr
+            if base_spo2 is not None:
+                spo2n += base_spo2 - spo2n0
         alerts, wmax, note = 0, None, None
         if sc == "infection" and k > 0 and tier != "inf_n0":
             sev = {"inf_n7": 1.0, "inf_n56": 0.8, "inf_v3": 0.6, "inf_s3": 0.6, "inf_t35": 0.6, "inf_n14": 0.4, "inf_n14m": 0.4}[tier] * k / onset
-            rhr += (3 if bb else 14) * sev
+            if not coupled:
+                rhr += (3 if bb else 14) * sev
             hrv -= 14 * sev
             steps *= max(0.15, 1 - 0.8 * sev)
             sleep -= 1.2 * sev
             spo2n -= 3 * sev
             skin += (0.2 if stratum == "atypical" else 1.1) * sev
+        if coupled:
+            if saved_patient and base_hr is not None:
+                rhr += truth_events.increment(event_truth, "resting_hr", d) - truth_events.increment(saved_patient['events'], "resting_hr", d)
+            else:
+                rhr += truth_events.increment(event_truth, "resting_hr", d) + truth_events.drug_vitals(event_truth, "resting_hr", d)
         if sc == "heart_failure" and tier != "hf_stable" and d > T - 3:
             rhr += 4 * (d - (T - 3))
             steps *= 0.7
@@ -443,7 +617,7 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
         if sc == "af" and d > T - 3:
             if not (tier == "af_stable" and d == T):
                 alerts = rng.pick([1, 2]) if d >= T - 1 else rng.pick([0, 1])
-            rhr += 6 if bb else 18
+            rhr += 6 if bb and not coupled else 18
             hrv += 15                                           # irregular RR intervals read as high HRV
         if sc == "hypoglycaemia" and cgm:
             low = next((r for r in cgm if r["night_of_day"] == d - 1 and r["minutes_below_3_9"]), None)
@@ -461,7 +635,7 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
         if "plain_fit_note" in bg and d == B.note_day(cid, T, WINDOW) and note is None and tier != "ben_spo2":
             note = B.pick(B.pool("neutral_notes") + B.strap_notes(plan), "p2-plain-note-k", cid, d)
         wd.append({"day": d, "resting_hr_bpm": int(round(rhr)), "hrv_ms": int(round(max(12, hrv))),
-                   "night_spo2_min_pct": int(round(min(98, spo2n))), "skin_temp_delta_c": round(skin, 1) + 0.0,
+                   "night_spo2_min_pct": int(round(min(100 if saved_patient else 98, spo2n))), "skin_temp_delta_c": round(skin, 1) + 0.0,
                    "steps": int(round(steps)), "sleep_h": round(max(2.5, sleep), 1),
                    "irregular_rhythm_alerts": alerts, "workout_max_hr_bpm": wmax, "fit_note": note,
                    **{k: None for k in nulls}})
@@ -489,7 +663,63 @@ def _draw(cid: str, T: int, plan: dict, patient: dict, attempt: int, surface: di
             "cgm_nightly": cgm, "device_record": [{"day": T, "source": L("record.source.device_care"), "entries": device_notes}],
             "data_note": "SYNTHETIC data, evaluation only"}
     from haenv.p2.context import decorate
-    return decorate(block, cid, plan, rng)
+    block = decorate(block, cid, plan, rng)
+    if saved_patient and surface is not None:
+        from haenv.p2.patient import constrain
+        surface['baseline_constraints'] = constrain(block, saved_patient,
+            'retained scenario target / clinical-context premise: ' + plan['tier'])
+    if "soc_oac" in plan and R.table()["tiers"][plan["tier"]].get("context") == "head":
+        from haenv.world.clinical.med_course import dose_at
+        active = next((m for m in plan["soc_oac"] if dose_at(m["dose_timeline"], T) > 0), None)
+        if active:
+            row = block["clinical_history_record"][0]
+            row.update(medication_name=L("drug." + active["drug"]),
+                       treatment_start_day=min(p["ts"] for p in active["dose_timeline"] if p["value"] > 0),
+                       treatment_end_day=None)
+    return block
+
+
+def _hf_margin(weights: list[dict], acting: bool, rng: _Rng) -> None:
+    """Draw an R8 trigger near the line or a quiet non-trigger series."""
+    from haenv.p2.reading import config
+    cfg = config()["margin"]
+    base = weights[-4]["kg"]
+    limit = R.table()["thresholds"]["hf_gain_kg_gt"]
+    if not acting:
+        for row in weights[-8:]:
+            row["kg"] = round(base + rng.unif(-limit / 4, limit / 4, dp=1), 1)
+        return
+    gain = rng.unif(*cfg["hf_gain_acting_kg"], dp=1)
+    for i, k in ((-3, 1), (-2, 2), (-1, 3)):
+        weights[i]["kg"] = round(base + gain * k / 3.0, 1)
+    weights[-1]["kg"] = round(base + gain, 1)
+    step = rng.unif(*cfg["hf_neighbour_offset_kg"], dp=1)
+    weights[-5]["kg"] = round(base + (gain - limit) + step, 1)
+
+
+def _cgm_older(T: int, tier: str, margin: bool, rng: _Rng) -> list[dict]:
+    """Nights before the printed 7-night window (shown, never read by R5/R11). In margin items of the
+    level-1 family, one or two level-2 nights sit at least two nights outside the window."""
+    from haenv.p2.reading import config
+    cfg = config()["margin"]
+    first, last = cfg["cgm_older_nights"]
+    nights = list(range(T - first, T - last + 1))
+    lows = {}
+    if tier == "hypo_l1" and margin:
+        lo, hi = cfg["cgm_older_level2_nights"]
+        pool = [d for d in nights if T - lo <= d <= T - hi]
+        for d in sorted(pool, key=lambda x: rng.u())[:rng.pick([1, 2])]:
+            lows[d] = rng.unif(*cfg["cgm_older_level2_mmol"], dp=1)
+    return [{"night_of_day": d, "min_mmol_L": lows.get(d, rng.unif(4.4, 6.2, 1)),
+             "minutes_below_3_9": rng.unif(25, 90, 0) if d in lows else 0} for d in nights]
+
+
+def _cgm_edge(cgm: list[dict], T: int, rng: _Rng) -> None:
+    """The deepest in-window level-1 night at 3.0 or 3.1 mmol/L (ADA: below 3.0 is level 2)."""
+    from haenv.p2.reading import config
+    window = [r for r in cgm if T - 7 <= r["night_of_day"] < T and 3.0 <= r["min_mmol_L"] < 3.9]
+    if window:
+        min(window, key=lambda r: r["min_mmol_L"])["min_mmol_L"] = rng.pick(config()["margin"]["cgm_level1_edge_mmol"])
 
 
 # ------------------------------------------------------------------------------ the message

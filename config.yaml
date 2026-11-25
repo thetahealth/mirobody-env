@@ -190,7 +190,12 @@ transport:
   connect_retries: 3
 verbose: 1              # 0=WARNING 1=INFO 2=DEBUG
 
+# Aggregate EMR parameter set, independent of synth.course_coupling.
+world:
+  emr_params: v14
+
 synth:
+  course_coupling: false  # one case truth shared by m2 observation channels
   max_rounds: 6         # GV-1 iterative generate-and-validate cap; not emitted if it never converges
   # llm = a model generates the disease course and daily events; deterministic = formulaic,
   # free and CI-safe. The default is deterministic so a fresh clone incurs no model charges;

@@ -1,0 +1,11 @@
+p3.causality.withdrawal.yes: 不适：{symptom}；第{onset}天首次出现。第{hold}天暂停用药。第{resume}天复诊时，同一不适在停药期间改善。
+p3.causality.withdrawal.no: 不适：{symptom}；第{onset}天首次出现。第{hold}天暂停用药。第{resume}天复诊时，同一不适在停药期间未改善。
+p3.causality.alternative.yes: 不适：{symptom}；第{onset}天首次出现。另一科室核查了伴发疾病和其他用药；记录的病程支持其他病因可解释同一不适。
+p3.causality.alternative.no: 不适：{symptom}；第{onset}天首次出现。另一科室核查了伴发疾病和其他用药；记录的病程排除其他病因可解释同一不适。
+p3.causality.alternative.unassessed: 不适：{symptom}；第{onset}天首次出现。该不适的其他可能病因尚未评估。
+p3.causality.rechallenge.yes: 不适：{symptom}；第{onset}天首次出现。第{resume}天恢复原剂量；本次随访记录恢复用药后有同一不适。停药期间的变化另有记录。
+p3.causality.rechallenge.no: 不适：{symptom}；第{onset}天首次出现。第{resume}天恢复原剂量；本次随访记录恢复用药后同一不适无变化。停药期间的变化另有记录。
+p3.causality.protocol: 对有记录的停药及恢复用药过程，以本规则替代固定起病天数或仅凭用药暴露的归因：结合症状相对于用药的起始时间、停药反应及另一处记录的其他病因核查判断。用药前已出现的症状不归因于本次用药。用药后出现、停药期间改善且排除其他病因时支持减量。停药期间未改善且有其他病因记录时，仍按控制情况作常规决策。任一观察缺失或证据不一致时，先核查因果关系。再次用药观察可提供支持，但非必要条件。不以固定天数确定归因。暂停服用及恢复同一处方剂量的过程中，沿用原药片规格及原剂量复核起算日期。评估依从性时，有记录的停药天数不计入评估期；停药期间不耗药，手头及期间所领药片顺延至恢复用药后。
+p3.causality.hold: 为核查症状而暂时停药
+p3.causality.drug_protocol: '{head} {rule}'
+p3.causality.supply_held: 领取原规格药片供计划恢复用药时使用，当前仍暂停服用。

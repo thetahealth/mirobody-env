@@ -48,7 +48,7 @@ import haenv.world.validation.pack_size as PS       # noqa: E402
 import haenv.world.validation.shared_audit as SA     # noqa: E402
 
 PACKS = {"p4": "haenv.p4.audit", "pack2": "haenv.pack2.audit", "m2": "haenv.m2.audit", "p3": "haenv.p3.audit",
-         "p2": "haenv.p2.audit"}
+         "p2": "haenv.p2.audit", "rl": "haenv.rl.audit"}
 
 
 def configure_select(A, provenance: dict, n_items: int, pack: str, exclude=()) -> None:

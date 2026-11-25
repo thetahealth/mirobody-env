@@ -17,6 +17,7 @@ import math
 import pathlib
 from collections.abc import Mapping
 from typing import Any
+from haenv.world.truth import params as _params
 from haenv import data_root as _dr   # resource root: source tree = repo root, wheel = haenv/_data
 
 #: The registry table, resolved through `haenv.regpath.registry_path` so it also works from an installed package.
@@ -32,7 +33,7 @@ class DossierError(ValueError):
     """The dossier itself is not fit for use (missing provenance, a cohort pointing at a disease that does not exist, etc.)."""
 
 
-@_overlay_cached("indicators.yaml")
+@_overlay_cached("indicators.yaml", "emr_refit_15.yaml", key=_params.variant)
 def dossiers() -> dict[str, dict[str, Any]]:
     """All dossiers, with structural validation only; value invariants are checked by the maintainers' tests."""
     import yaml
@@ -70,6 +71,18 @@ def dossiers() -> dict[str, dict[str, Any]]:
                 raise DossierError(
                     f"{name}/{coh}: median is null, so (mean, sd) is required; "
                     "give one of the two parameterizations")
+    for name in ("HbA1c", "fasting_glucose", "triglycerides", "LDL", "ALT", "AST"):
+        cohort = (ind.get(name, {}).get("cohorts") or {}).get("T2D")
+        if cohort is not None:
+            for key in ("median", "p_abnormal", "sigma_between", "sigma_ln"):
+                if key in cohort:
+                    cohort[key] = _params.emr(
+                        f"registry/indicators.yaml:indicators.{name}.cohorts.T2D.{key}", cohort[key])
+            if _params.variant() == "calibration15":
+                cohort["calibration"] = "calibration world14-split-v1"
+                cohort["source"] = f"registry/emr_refit_15.yaml: diabetes.{name} (aggregate refit)"
+                if "sigma_between_source" in cohort:
+                    cohort["sigma_between_source"] = cohort["source"]
     return ind
 
 
@@ -323,6 +336,10 @@ def sigma_of(name: str, cohort: str) -> float:
     return abs(math.log(float(hi) / float(med)) / z)
 
 
+#: Streams whose person baseline may take the published home-BP spread (B3, coupled world only).
+_HOME_BP = {"systolic_bp": "systolic", "diastolic_bp": "diastolic"}
+
+
 def sample_baseline(name: str, disease: str, comorbidities=(), case_id: str = "") -> float:
     """This case's baseline on `name`: a deterministic draw from the cohort's distribution.
 
@@ -343,6 +360,14 @@ def sample_baseline(name: str, disease: str, comorbidities=(), case_id: str = ""
         _m = of(name)["cohorts"][coh].get("median")
         if _m is None:
             raise
+        from haenv.world.truth import coupling_enabled
+        if coupling_enabled() and name in _HOME_BP:
+            # B3 (F4): a home-BP cohort registered without a spread takes the published between-person
+            # spread of a home mean (`biological_variation.yaml: home_bp`, IDHOCO); one draw per person,
+            # shared by systolic and diastolic (a modelling choice: one home-BP level per person).
+            from haenv.world.truth import variation as _variation
+            cv = _variation.home_bp_between_cv(_HOME_BP[name])
+            return float(_m) * math.exp(cv * _gauss(str(case_id), "indicator", "home_bp", coh))
         return float(_m)
     cap = (of(name)["cohorts"][coh]).get("cap")
     sev = severity().get(str(coh))
@@ -378,11 +403,21 @@ def _gauss(*path: str) -> float:
     return min(3.0, max(-3.0, z))
 
 
-@_overlay_cached("indicators.yaml")
+@_overlay_cached("indicators.yaml", "emr_refit_15.yaml", key=_params.variant)
 def severity() -> dict[str, dict[str, Any]]:
     """Shared-severity registry per cohort (cached; on the sampling hot path). Absent = never measured, not 0."""
     doc = _overlaid_yaml(_REG) or {}
-    return dict(doc.get("severity") or {})
+    spec = dict(doc.get("severity") or {})
+    if "T2D" in spec:
+        spec["T2D"]["between_patient_r"] = _params.emr(
+            "registry/indicators.yaml:severity.T2D.between_patient_r",
+            spec["T2D"]["between_patient_r"])
+        if _params.variant() == "calibration15":
+            spec["T2D"]["calibration"] = "calibration world14-split-v1"
+            spec["T2D"]["n_patients"] = _params.provenance(
+                "registry/indicators.yaml:severity.T2D.between_patient_r")["n_patients"]
+            spec["T2D"]["source"] = "registry/emr_refit_15.yaml: correlations.DM.HbA1c~FBG.pearson"
+    return spec
 
 
 def _loading_of(cohort: str) -> float | None:

@@ -346,15 +346,15 @@ def _frame(g) -> str:
     return g.get("frame") or "F0"
 
 
-def _cell_key(g, by_sex: bool):
-    return (_frame(g), g.get("sex")) if by_sex else (_frame(g),)
+def _cell_key(g, strata):
+    return (_frame(g), *(g.get(field) for field in strata))
 
 
-def _cell(g, by_sex: bool, loo: bool) -> list[dict]:
-    k = _cell_key(g, by_sex)
-    out = [x for x in GOLD.values() if _cell_key(x, by_sex) == k and not (loo and x["cid"] == g["cid"])]
-    if not out and by_sex:                         # an empty sex cell falls back to the frame
-        return _cell(g, False, loo)
+def _cell(g, strata, loo: bool) -> list[dict]:
+    k = _cell_key(g, strata)
+    out = [x for x in GOLD.values() if _cell_key(x, strata) == k and not (loo and x["cid"] == g["cid"])]
+    if not out and strata:
+        return _cell(g, (), loo)
     return out
 
 
@@ -362,8 +362,8 @@ def _ranked(cnt: _Counter) -> list:
     return [n for n, _ in sorted(cnt.items(), key=lambda kv: (-kv[1], str(kv[0])))]
 
 
-def prior_table(g, *, by_sex: bool = False, loo: bool = False) -> dict:
-    cell = _cell(g, by_sex, loo)
+def prior_table(g, *, by_sex: bool = False, loo: bool = False, strata=()) -> dict:
+    cell = _cell(g, ("sex",) if by_sex else strata, loo)
     names = _Counter(t["say"] for x in cell for t in x["threads"])
     comps = _Counter(t.get("component") for x in cell for t in x["threads"] if t.get("component"))
     tests = _Counter(t for x in cell for t in x["tests"])
@@ -391,9 +391,12 @@ class PriorStub(ConstStub):
         self.dx_k, self.tests_k, self.by_sex, self.loo, self.review = dx_k, tests_k, by_sex, loo, review
         self.frame_dx, self.frame_tests, self.frame_quant = frame_dx, frame_tests, frame_quant
 
+    def table(self, g):
+        return prior_table(g, by_sex=self.by_sex, loo=self.loo)
+
     def answer(self, g, listed, round_tag):
         d = super().answer(g, listed, round_tag)
-        tab = prior_table(g, by_sex=self.by_sex, loo=self.loo)
+        tab = self.table(g)
         if self.frame_dx:
             d["differential"] = [{"rank": k + 1, "diagnosis": n, "certainty": "probable",
                                   "supporting_evidence": g["ev"][:1], "ruled_out_by": None}
@@ -413,10 +416,26 @@ class PriorStub(ConstStub):
         return d
 
 
+class CellPriorStub(PriorStub):
+    """The r3 reviewer's leave-one-out prior over visible profile strata."""
+
+    def __init__(self, name, strata):
+        super().__init__(name, dx_k=6, loo=True, review="majority", frame_quant=True)
+        self.strata = strata
+
+    def table(self, g):
+        frame = super().table(g)
+        cell = prior_table(g, loo=True, strata=self.strata)
+        cell["quant"] = {**frame["quant"], **cell["quant"]}
+        if cell["warranted_share"] is None:
+            cell["warranted_share"] = frame["warranted_share"]
+        return cell
+
+
 def frame_gate_stubs():
     """Z-3 (ii)-(iv) of PREREG r2 A4: the reviewer's four frame-blind stubs, the leave-one-out frame
-    and frame x sex priors (gated), and the in-sample frame x sex prior (reported only)."""
-    return [
+    and profile-cell priors (gated), and the in-sample frame x sex prior (reported only)."""
+    frame = [
         ("G_frame_dx", lambda: PriorStub("G_frame_dx", frame_tests=False)),
         ("G_frame_tests", lambda: PriorStub("G_frame_tests", frame_dx=False)),
         ("G_frame_review", lambda: PriorStub("G_frame_review", frame_dx=False, frame_tests=False, review="above_mean")),
@@ -425,6 +444,14 @@ def frame_gate_stubs():
         ("G_framesex_loo", lambda: PriorStub("G_framesex_loo", by_sex=True, loo=True, review="majority", frame_quant=True)),
         ("G_framesex_in", lambda: PriorStub("G_framesex_in", by_sex=True, review="majority", frame_quant=True)),
     ]
+    cells = {
+        "X_fs_loo": ("sex",),
+        "X_fkc_loo": ("known_conditions",),
+        "X_fskc_loo": ("sex", "known_conditions"),
+        "X_fsa_loo": ("sex", "age_band"),
+    }
+    return frame + [(name, lambda name=name, strata=strata: CellPriorStub(name, strata))
+                    for name, strata in cells.items()]
 
 
 # ------------------------------------------------------------------ Z-4 buy-and-read pair (revision r2-3)

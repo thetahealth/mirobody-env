@@ -21,7 +21,8 @@ def table():
 def scale_of(block: dict) -> int:
     # A COPD label alone is insufficient; require the clinician's documented
     # diagnosis and scoring instruction, not the hidden plan or the gold.
-    for row in block.get("clinical_history_record") or ():
+    from haenv.p2.narrative import records
+    for row in records(block):
         if row.get("condition") == "hypercapnic_respiratory_failure":
             if row.get("blood_gas_confirmed") is True and row.get("target_spo2") == [88, 92] and row.get("clinical_scale") == 2:
                 return 2
@@ -55,6 +56,10 @@ def receipt(block: dict, scale: int, missing: str | None = None) -> dict:
             "missing_handling": L("news2.missing.zero" if missing else "news2.missing.none")}
 
 
+#: upper end of a plausible zero-point home reading where the NEWS2 zero band is open-ended
+PLAUSIBLE_NORMAL_MAX = {"spo2": 100, "sbp": 140}
+
+
 def _normal(field: str, block: dict):
     from haenv.p2 import rules as R
     k = next(k for k, f in FIELDS.items() if f == field)
@@ -66,6 +71,9 @@ def _normal(field: str, block: dict):
         oxy = bool(check.get("supplemental_oxygen", check.get("on_oxygen", False)))
         bands = cfg.get("on_oxygen", cfg.get("oxygen")) if oxy else cfg["room_air"]
     lo, hi, _ = next(b for b in bands if b[2] == 0)
+    # Open-ended zero bands (SpO2 96-999, systolic 111-219) are capped at a plausible home
+    # reading; the midpoint of the raw band printed SpO2 547% and systolic 165 mmHg.
+    hi = min(hi, PLAUSIBLE_NORMAL_MAX.get(k, hi))
     v = (max(0, lo) + hi) / 2
     return round(v, 1) if k == "temp" else int(v)
 
@@ -90,7 +98,9 @@ def trusted_assessment(block: dict, rec: dict) -> dict:
 def candidates(block: dict) -> tuple[bool, list[str]]:
     from haenv.p2 import rules as R
     gold = R.assess(block)["set"]
-    wrong_scale = scale_of(block) == 2
+    # A Scale-1 receipt is an eligible error only where it misleads the blind stub (as for a
+    # missing field below); on Scale 2 with the same disposition it is not an error kind.
+    wrong_scale = scale_of(block) == 2 and trusted_assessment(block, receipt(block, 1))["set"][0] not in gold
     missing = [f for f in FIELDS.values() if trusted_assessment(block, receipt(block, scale_of(block), f))["set"][0] not in gold]
     return wrong_scale, missing
 
@@ -103,6 +113,15 @@ def expected(block: dict, case_id: str) -> tuple[dict, str, dict]:
     if ms and uniform("system-score-missing", case_id) < rates["missing_zero"]["value"]:
         field = ms[int(uniform("system-score-field", case_id) * len(ms))]
         return receipt(block, scale_of(block), field), "missing_zero", {"wrong_scale": ws, "missing_zero": True}
+    if block.get('home_check_today', {}).get('observation_sets'):
+        from haenv.p2.reading import first_upload
+        first = first_upload(block)
+        rec = receipt(first, scale_of(first))
+        rec['input_day'] = block['today_day']
+        rec['input_time'] = block['home_check_today']['observation_sets'][0]['time']
+        # Correct at upload time; a later complete repeat can change the band.
+        # This is authored M5 coverage, not a higher clinical error rate.
+        return rec, 'correct', {"wrong_scale": ws, "missing_zero": bool(ms)}
     return receipt(block, scale_of(block)), "correct", {"wrong_scale": ws, "missing_zero": bool(ms)}
 
 

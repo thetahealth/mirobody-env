@@ -15,7 +15,10 @@ def twin(blk: dict, premise: str) -> dict | None:
     if premise == "interval":
         return None
     b = deepcopy(blk)
-    if premise == "control":
+    if premise.startswith("causal_"):
+        from haenv.p3.causality_generation import intervention
+        intervention(b, premise)
+    elif premise == "control":
         interactions._control(b, "on" if g3(blk).get("control") in ("off", "over") else "off")
     elif premise == "contraindication":
         from haenv.p3.history import acei_contraindicated

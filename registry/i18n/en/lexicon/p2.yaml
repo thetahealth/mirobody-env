@@ -1,4 +1,8 @@
 entries:
+  p2.say.measured.fever.0: My temperature reading is raised today.
+  p2.say.measured.fever.1: This temperature reading is high.
+  p2.say.measured.fever.2: I just checked my temperature and it is above normal.
+  p2.say.measured.oedema: My ankles are a little swollen today.
   p2.med.bb: Bisoprolol 5 mg once daily
   p2.med.bb2: Metoprolol modified-release 47.5 mg once daily
   p2.med.insulin: Insulin glargine by subcutaneous injection every evening
@@ -121,6 +125,10 @@ entries:
     in the record and a reliable current systolic pressure more than 40 mmHg below usual: immediate emergency
     assessment even if still above 90 mmHg and NEWS2 is low. Do not apply without a baseline or for nonspecific
     symptoms alone.'
+  p2.policy.home_baseline: For R3d, if no assessed usual pressure is documented, use the median of earlier
+    home readings taken on multiple days as the baseline.
+  p2.policy.hf_postdischarge: If R14 applies to a patient with documented heart failure whose diuretic was
+    reduced at discharge, a three-day gain of more than 1 kg and at most 2 kg also allows routine follow-up.
   p2.ctx.result.usual_pressure: Usual systolic pressure verified at clinic against home cuff readings;
     the value is recorded in this entry. See home measurements for the current blood pressure series.
   p2.ctx.test.pressure.0: Review of home and clinic blood pressure measurements
@@ -483,3 +491,7 @@ entries:
   p2.protocol.infection_risk.keyword.3: "Respiratory rate"
   p2.protocol.infection_risk.keyword.4: "Systolic blood pressure"
   p2.protocol.infection_risk.keyword.5: "Temperature"
+  p2.protocol.af_exemption.0: The watch rhythm alert rule R9 applies only if atrial fibrillation is not already ECG-documented in the record;
+  p2.protocol.af_exemption.1: if atrial fibrillation is already ECG-documented and today's intake checklist ticks neither dizziness nor a mild new symptom, assess the existing watch alerts under the other rules;
+  p2.protocol.af_exemption.2: if today's intake checklist ticks dizziness or a mild new symptom, the watch alerts still fall under R9, even with ECG-documented atrial fibrillation.
+  p2.ctx.result.chemo_last_cycle: Systemic anticancer treatment administered on the administration day in this record; follow-up per the oncology plan.

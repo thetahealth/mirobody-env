@@ -19,6 +19,20 @@ RENDER = (
 #: pack must be regenerated. A registry yaml belongs here when its strings reach the
 #: prompt without passing through `inputs/*.job.yaml`, which `job_yaml_sha256` covers.
 GENERATION = (
+    # M5 authored input coverage and presentation contract, not saved-answer scoring.
+    "registry/p2_reading.yaml",
+    "registry/p3_composition.yaml",
+    'haenv/world/truth/params.py', 'registry/emr_refit_15.yaml',
+    'haenv/world/truth/drugs.py',
+    'haenv/world/truth/soc.py', 'registry/standard_of_care.yaml',
+    'haenv/world/truth/regimens.py',
+    'haenv/world/truth/__init__.py', 'haenv/world/truth/registry.py',
+    'haenv/world/truth/derived.py', 'haenv/world/truth/plan.py',
+    'haenv/world/truth/dated.py', 'haenv/world/truth/channels.py', 'haenv/world/truth/renal.py',
+    'haenv/world/truth/events.py',
+    'haenv/world/truth/m2_results.py', 'registry/effects.yaml',
+    'haenv/world/truth/panels.py', 'haenv/world/truth/thyroid.py', 'registry/routine_panels.yaml',
+    'haenv/world/truth/variation.py', 'registry/biological_variation.yaml',
     'haenv/m2/premises.py', 'haenv/m2/surface.py', 'haenv/m2/evidence.py',
     'haenv/world/clinical/finding_identity.py',
     'registry/p2_complaint_pool.yaml', 'registry/p2_complaint_prior.yaml',
@@ -108,6 +122,7 @@ MANAGEMENT_JUDGING = (
     'haenv/scoring/management/adapters/p3.py', 'haenv/scoring/management/adapters/p4.py', 'haenv/scoring/management/adapters/m2.py',
 )
 JUDGING = (
+    "haenv/p3/causality.py",
     'haenv/m2/evidence.py', 'haenv/p3/policy.py',
     'registry/clinical_expansion.yaml', 'registry/p3_clinical_sources.yaml',
     # Readers and policy resolvers can change saved-answer judgments in every language.
@@ -234,8 +249,11 @@ JUDGING = (
     'haenv/p2/history.py',
     'haenv/p2/protocols.py',
     'haenv/p2/rules.py',
+    'haenv/p2/statement_contracts.py', 'registry/p2_statement_contracts.yaml',
     'haenv/p3/emr.py',
+    'haenv/p3/dose_read.py', 'registry/p3_dose_reconciliation.yaml',
     'haenv/p3/features.py',
+    'haenv/p3/measurements.py',
     'haenv/p3/gate.py',
     'haenv/p4/diversity_reader.py',
     'haenv/p4/features.py',
@@ -330,7 +348,22 @@ P4_JUDGING = (
     'haenv/contracts/hooks.py',
     'haenv/app/pack_hooks.py',
 )
+#: Red-line pack `rl` (feat/redline-16). A judging segment of its own, neither in `JUDGING` nor in
+#: `GENERATION`, so every existing job keeps `judging_sha16` and `world_sha`: `RL_JUDGING` is stamped on
+#: `rl` rows as `rl_judging_sha16` (`haenv/rl/judge.py:rl_judging_fingerprint`, which also mixes in the
+#: judge model spec). The rule registry is in it: the judge reads its rule card and pre-screen terms.
+RL_JUDGING = (
+    'haenv/app/packs.py',
+    "haenv/rl/judge.py", "haenv/rl/score.py", "registry/redline_rules.yaml",
+    'haenv/contracts/__init__.py',
+    'haenv/contracts/pack.py',
+    'haenv/contracts/hooks.py',
+    'haenv/app/pack_hooks.py',
+)
 P4_WORLD = (
+    "haenv/world/truth/dated.py", "haenv/world/generation/build_clinical.py",
+    "haenv/world/truth/plan.py", "haenv/world/truth/drugs.py",
+    "haenv/world/clinical/drug_effects.py", "haenv/world/clinical/med_course.py",
     'haenv/p4/textmatch.py',
     'haenv/world/validation/shared_audit.py', 'haenv/world/history/history_dependency.py', "haenv/p4/history.py", "registry/history_dependency.yaml",
     'haenv/world/labworld/__init__.py', 'haenv/world/labworld/truth.py', 'haenv/world/labworld/observe.py',
@@ -349,6 +382,8 @@ P4_WORLD = (
 #: of a pack-3 batch through the registered probe. It shares three lab-world modules with
 #: `P4_WORLD` (read, not changed, by pack 3).
 P3_JUDGING = (
+    "haenv/p3/measurements.py",
+    "haenv/p3/causality.py",
     'haenv/p3/policy.py', 'registry/p3_clinical_sources.yaml',
     'haenv/app/packs.py',
     "haenv/p3/score.py", "haenv/p3/plugin.py", "haenv/p3/hooks.py", "haenv/p3/gold.py",
@@ -375,6 +410,11 @@ PROTOCOL_WORLD = (
 )
 P4_WORLD = P4_WORLD + PROTOCOL_WORLD + ("haenv/p4/query.py",)
 P3_WORLD = PROTOCOL_WORLD + (
+    "haenv/p3/composition.py", "registry/p3_composition.yaml",
+    "haenv/p3/causality.py", "haenv/p3/causality_generation.py", "registry/p3_causality.yaml",
+    "registry/p3_dispensing.yaml",
+    "haenv/p3/dose_reconciliation.py", "haenv/p3/dose_read.py", "registry/p3_dose_reconciliation.yaml",
+    "registry/p3_measurements.yaml", "haenv/p3/measurements.py", "haenv/p3/measurement_world.py", "haenv/p3/measurement_render.py",
     'haenv/p3/interactions.py',
     'haenv/p3/necessity.py',
     'haenv/p3/textread.py',
@@ -396,6 +436,7 @@ P3_WORLD = PROTOCOL_WORLD + (
 #: `p2_world_sha16` and enters `world_sha` of a rebuilt pack-2 batch through the registered probe.
 #: The previous pack 2 (`PACK2_WORLD` / `PACK2_JUDGING`, board of the unreleased 2026-10-06 candidate) is unchanged.
 P2_JUDGING = (
+    'haenv/p2/statement_contracts.py', 'registry/p2_statement_contracts.yaml',
     'haenv/app/packs.py',
     "haenv/p2/score.py", "haenv/p2/plugin.py", "haenv/p2/hooks.py",
     'haenv/contracts/__init__.py',
@@ -404,8 +445,10 @@ P2_JUDGING = (
     'haenv/app/pack_hooks.py',
 )
 P2_WORLD = PROTOCOL_WORLD + (
+    "haenv/p2/reading.py", "haenv/p2/narrative.py", "registry/p2_reading.yaml",
+    "haenv/p2/patient.py", "haenv/p2/statements.py", "haenv/p2/statement_contracts.py", "registry/p2_statement_contracts.yaml",
     'haenv/world/validation/shared_audit.py', 'haenv/world/history/history_dependency.py', "haenv/p2/history.py", "registry/history_dependency.yaml",
-    "haenv/p2/rules.py", "haenv/p2/render.py", "haenv/p2/gate.py", "haenv/p2/hooks.py", "haenv/p2/background.py",
+    "haenv/p2/rules.py", "haenv/p2/render.py", "haenv/p2/planned.py", "haenv/p2/gate.py", "haenv/p2/hooks.py", "haenv/p2/background.py",
     "haenv/p2/context.py",
     "haenv/p2/clinical_rules.py", "registry/p2_history_triage.yaml",
     "haenv/p2/protocols.py",
@@ -885,6 +928,20 @@ JUDGING_SHA_MOVES: tuple[dict, ...] = (
 
 #: Registry yaml in neither segment, with the reason the judging segment cannot reach it.
 REGISTRY_YAML_OUT_OF_SCOPE: dict[str, str] = {
+    "registry/redline_rules.yaml": "rl pack: frozen under RL_JUDGING",
+    "registry/redline_questions.yaml": "rl pack generation data (question library); stamped via world_sha",
+    "registry/p3_measurements.yaml": "M3 source citations and authored observation coverage; only measurement_world reads this table. The gold reads the resulting samples through the separately pinned measurements module; P3_WORLD hashes this registry.",
+    "registry/p3_causality.yaml": "M4 source citation and authored coverage targets; generation consumes this table, while judging reads the resulting causal evidence with haenv/p3/causality.py. P3_WORLD hashes it.",
+    "registry/p3_dispensing.yaml":
+        "M1 dispensing synthesis targets and source citations, read only by "
+        "haenv/p3/realize.py during generation. Gold and saved-answer readers "
+        "consume the resulting dated records, not this table. P3_WORLD hashes "
+        "it; a direct judging consumer would require removing this exemption.",
+    "registry/counterfactual_premises.yaml": "Premise declarations of the counterfactual instrument "
+        "(`haenv/world/validation/counterfactual/`), which runs in report mode over built cases; no generation, "
+        "rendering or judging module imports it. When the 1.5 Phase D gate makes the realizer refuse candidates "
+        "by these declarations, this exemption has to come off and the file joins `GENERATION`.",
+    "registry/coherence_invariants.yaml": "Read-only coherence reports over saved batches; no generation, rendering or judging consumer imports this instrument or reads its thresholds.",
     "registry/pack2_triage_thresholds.yaml":
         "Pack-2 grading table G2 (provisional). Read only by `haenv/pack2/world.py`, which no "
         "`JUDGING` module imports; it is anchored by `PACK2_WORLD` instead, and its content is "
@@ -1034,6 +1091,11 @@ PROVENANCE_MODULES: dict[str, str] = {
 #: reason. An entry must not decide `overall` or any `absence.DENOM_FIELD` denominator;
 #: its crossing symbols are pinned in `ALLOW_SYMBOL_PIN`.
 JUDGING_IMPORT_ALLOW: dict[str, str] = {
+    "haenv/p3/composition.py": "P3_WORLD: tag records authored hidden-premise composition during generation; core_quotas allocates publication coverage without scoring answers. Exact imported bindings are pinned.",
+    "haenv/p3/dose_reconciliation.py":
+        "P3_WORLD: project renders source discrepancies from an already established dose course. "
+        "Only the source projector crosses into EMR generation/re-rendering; saved-source dose "
+        "extraction lives in the judging-covered dose_read module.",
     'haenv/m2/confirmation.py': 'GENERATION + M2 judging segment: the M2 plugin registers its emission gate '
                                 '(matched-negative controls carry the sourced under-investigation label) and its '
                                 'gold derivation, through which `wq.gold_of` returns that label as the diagnosis '
@@ -1346,9 +1408,14 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
  'haenv/p2/render.py': 'P2_WORLD: renders the stored triage scenario and observed records. Generation '
                        'changes require a new task-world stamp; the P2 row scorer and query result guard '
                        'remain in JUDGING.',
+ 'haenv/p2/patient.py': 'P2_WORLD: captures the pre-scenario patient measurements during generation. '
+                         'Only capture_enabled and snapshot cross the observation hook; saved-answer '
+                         'scoring consumes the fixed structured gold.',
  'haenv/p2/complaints.py': 'P2_WORLD: authors the visible complaint in the task world, not a grading '
                            'function. Exact bindings used to explain/read generated complaint records are '
                            'pinned.',
+ 'haenv/p2/reading.py': 'P2_WORLD: authors M5 observation and history placement and validates its emitted measurement cache; saved-answer scoring still uses the fixed gold. Exact generation/validation bindings are pinned.',
+ 'haenv/p2/narrative.py': 'P2_WORLD: extracts registered affirmative symptom sentences from the generated clinical record; no score or acceptance-set mapping is exempted. The production triage rules remain frozen.',
  'haenv/p2/context.py': 'P2_WORLD: constructs the triage context and encounter surface. It is an '
                         'input-generation module, not a source of score/overall or denominator decisions.',
  'haenv/p2/sources.py': 'P2_WORLD: supplies named clinical source records for the emitted triage payload. '
@@ -1358,6 +1425,7 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
                                             'generation checks. It is already a world source; changing a '
                                             'generation acceptance predicate invalidates the task world, not '
                                             'a saved-response score rule.',
+ 'haenv/p3/measurement_render.py': 'P3_WORLD: projects raw source samples without synthesis targets; the exact source_rows binding writes records during generation and never scores a saved answer.',
  'haenv/p3/render.py': 'P3_WORLD: writes the medication scenario and history text. Exact rendering/input '
                        'helpers are pinned; the P3 score and gold implementations remain judging sources.',
  'haenv/p3/history.py': 'P3_WORLD: creates and locates historical medication records within emitted cases. '
@@ -1408,7 +1476,7 @@ JUDGING_IMPORT_ALLOW: dict[str, str] = {
 
 #: Anchor version. Entries in `PENDING_ANCHOR` are only valid for this version;
 #: as soon as the anchor advances, this table must be emptied.
-PENDING_ANCHOR_REVISION = 118
+PENDING_ANCHOR_REVISION = 119
 
 #: Files added to `JUDGING` before the anchor was updated (allowed while re-anchoring
 #: is not); emptied once the anchor moves past `PENDING_ANCHOR_REVISION`.
@@ -1417,6 +1485,8 @@ PENDING_ANCHOR: dict[str, str] = {}
 #: Names each `JUDGING_IMPORT_ALLOW` module lets cross into the judging segment
 #: (`from .M import ...` binding names); must match exactly.
 ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
+    "haenv/p3/composition.py": frozenset(("tag",)),
+    "haenv/p3/dose_reconciliation.py": frozenset(("project",)),
     'haenv/m2/confirmation.py': frozenset(('confirmation_derivations', 'control_emission')),
     'haenv/m2/premises.py': frozenset(('emission',)),
     'haenv/__init__.py': frozenset(('_data_root', '_dr', '_kp', 'data_root')),
@@ -1435,11 +1505,15 @@ ALLOW_SYMBOL_PIN: dict[str, frozenset[str]] = {
     'haenv/p2/complaints.py': frozenset(('_install_complaints',)),
     'haenv/p2/context.py': frozenset(('facts', 'finalize')),
     'haenv/p2/render.py': frozenset(('BP_DAYS', 'RD', 'Unrealizable', 'WINDOW', 'realize', 'visible_medications')),
+    'haenv/p2/patient.py': frozenset(('capture_enabled', 'snapshot')),
+    'haenv/p2/reading.py': frozenset(('finalize_reading', 'first_upload', 'reading_config', 'reading_core', 'reading_enabled', 'repeat_conflicts')),
+    'haenv/p2/narrative.py': frozenset(('records', 'reported')),
     'haenv/p2/sources.py': frozenset(('_install_sources',)),
     'haenv/p3/history.py': frozenset(('limiting_record', 'limiting_inputs', 'acei_contraindicated')),
     'haenv/p3/interactions.py': frozenset(('receipt',)),
     'haenv/p3/necessity.py': frozenset(('failures',)),
     'haenv/p3/plan.py': frozenset(('target_upper',)),
+    'haenv/p3/measurement_render.py': frozenset(('source_rows',)),
     'haenv/p3/render.py': frozenset(('render_block',)),
     'haenv/p4/diversity.py': frozenset(('_diversity_table', 'table', 'verification_consistent')),
     'haenv/provenance/anchor.py': frozenset(('_fingerprint_of', '_jvint', '_wvint', 'frozen_packs', 'infra_files', 'judging_fingerprint', 'judging_fp_cached', 'judging_vintages', 'world_fingerprint')),

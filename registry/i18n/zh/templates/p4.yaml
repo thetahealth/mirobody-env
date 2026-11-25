@@ -31,3 +31,5 @@ p4.followup.case.acei_start_baseline_within: "ACEI 起用后肌酐较上次升�
 p4.followup.case.other_true_change: "其它真实变化，包括 ACEI 起用后较上次及起用前均值的升幅均超过 {n}"
 p4.followup.step: "{condition}：首选 {primary}（{label}）；接受 {accepted}。"
 p4.lab_label: "{analyte} {name}"
+p4.comparison_question: 请将第 {assessed} 天采血的待评估报告与第 {previous} 天采血的上次报告比较。
+p4.alcohol.onset_case_day: '饮酒量变化始于病程第 {day} 天，从本记录第 0 天起算。'

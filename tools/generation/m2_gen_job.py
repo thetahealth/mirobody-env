@@ -667,7 +667,10 @@ def emitted(pool_text: str, mode: str = "legacy") -> tuple[set[str], list[str], 
     its line from the nearest look-alike (the EA-2 check of `tools/validation/m2_item_audit.py`), so it is not
     selected. The third value: case_id -> the F2 reading on the built record (`core.f2_direction`:
     safety floor, own direction, hidden line linked), every F2 case. A case with a gold test no menu item makes purchasable is not emitted either
-    (`unbuyable_gold`); `GATE["unbuyable_gold"]` receives those cases and their tests."""
+    (`unbuyable_gold`); `GATE["unbuyable_gold"]` receives those cases and their tests. Nor is a case whose
+    day-T readable or purchasable values hit the C7 critical set while its gold, after `apply_critical`,
+    is not 🔴 (`critical_unflagged`, on the production full-menu purchase); `GATE["critical_unflagged"]`
+    receives those cases and the C7 reading."""
     from haenv.m2.core import critical_reading, f2_direction, is_m2_case
     with tempfile.TemporaryDirectory(prefix="m2-pool-") as td:
         job = pathlib.Path(td) / "m2-pool.job.yaml"
@@ -722,6 +725,9 @@ def emitted(pool_text: str, mode: str = "legacy") -> tuple[set[str], list[str], 
                 f2[b["case_id"]] = f2_direction(
                     _raw_of(b), c["raw"].get("disease"), int(c["latent"]["index_time_T"]), c["raw"].get("drug") or "",
                     c["latent"].get("ddx_spec_id") if m2.get("arm") == "positive" else None)
+        unflagged = critical_unflagged(pool_items(job, got[-1].parent, env), pj, GATE["critical"])
+        ok -= set(unflagged)
+        GATE["critical_unflagged"] = unflagged
         import haenv.m2.item_audit as IA
         ea2 = IA.check_ea2(IA.collect(got[-1].parent, job))["violations"]
         return ok, sorted({v[0] for v in ea2}), f2
@@ -745,6 +751,44 @@ def apply_critical(c: dict, crit: dict | None) -> bool:
     lat["ddx_red_flag"] = True
     lat["m2"]["critical"] = crit
     return True
+
+
+def pool_items(job: pathlib.Path, batch: pathlib.Path, env: dict) -> list[dict]:
+    """The built pool as the invariant gates read it (`invariants.load`), M2 purchases included: the same
+    scripted full-menu purchase through the production gated loop that `make_pack` dumps with the
+    invariant gates (`invariants_purchase.dump_parallel`), run here on the pool batch."""
+    import haenv.world.validation.invariants as INV
+    buy = batch.parent / "m2_purchases.pool.jsonl"
+    jobs = max(1, int(os.environ.get("HAENV_GEN_WORKERS") or 1))
+    r = subprocess.run([sys.executable, "-c", "import pathlib, sys\n"
+                        "from haenv.world.validation.invariants_purchase import dump_parallel\n"
+                        "dump_parallel(*map(pathlib.Path, sys.argv[1:4]), jobs=int(sys.argv[4]))",
+                        str(job), str(batch), str(buy), str(jobs)], cwd=ROOT, env=env, capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.stderr.write(r.stdout[-4000:] + r.stderr[-4000:])
+        raise SystemExit(f"[m2_gen_job] pool purchase failed (exit {r.returncode})")
+    return INV.load(batch, "m2", buy)
+
+
+def critical_unflagged(items: list[dict], pool: dict[str, dict], critical: dict[str, dict]) -> dict[str, list[str]]:
+    """Built cases (`invariants.load` items) that fail C7 after the build that follows: a readable or
+    purchasable value of the C7 critical set on days T-3..T (`invariants.critical_labs`, `invariants.CRITICAL`)
+    whose gold is not 🔴 once `apply_critical` has applied `critical` (the `core.critical_reading` values).
+    case_id -> the C7 violations. Such a case is not emitted: the generator raises urgency only through a
+    sourced rule (`core.CRITICAL_LOW`), and the rest of the C7 table has none."""
+    import haenv.world.validation.invariants as INV
+    out = {}
+    for it in items:
+        cid = it["case_id"]
+        if not INV.critical_labs(it):
+            continue
+        c = copy.deepcopy(pool.get(cid) or {"latent": {}})
+        if apply_critical(c, critical.get(cid)) and c["latent"]["ddx_urgency"] == "🔴":
+            continue
+        bad = INV.c7(it)
+        if bad:
+            out[cid] = bad
+    return out
 
 
 def _raw_of(b: dict):
@@ -928,6 +972,7 @@ def build(n: int = PS.DEFAULT_N, seed: str = PS.PUBLIC_SEED, pool_out: pathlib.P
             "pool": {"n": len(cases), "n_f1_f3": sum(1 for c in cases if prior[c["case_id"]]["frame"] != "F0"),
                      "refused_by_build": refused, "no_lay_sentences": unlay, "no_separating_clue": no_clue,
                      "unbuyable_gold": GATE.get("unbuyable_gold") or {},
+                     "critical_unflagged": GATE.get("critical_unflagged") or {},
                      "bridge_age_conflict": aged,
                      "no_f3_plan": no_f3, "no_f2_gold": no_f2,
                      "critical_triage": {k: v for k, v in sorted(critical.items()) if k in keep},

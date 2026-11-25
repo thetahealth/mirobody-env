@@ -81,6 +81,17 @@ thresholds:
   anticancer_recent_days: 42
   sepsis_sbp_drop_gt: 40
   ng253_medium: {hr: [91, 130], rr: [21, 24], sbp: [91, 100], temp_lt: 36.0}
+# The printed P2 wording of the documented-AF exemption from R9. It replaces, for P2 only, the
+# shared history clause (`history_dependency.yaml` packs.p2.protocol), whose "no new symptoms or
+# clinical changes" left the gold contestable when dizziness was ticked (2026-11-18 diagnosis).
+# `rules.assess` reads exactly these two checklist items (`rules.NEW_SYMPTOM_KEYS`).
+af_exemption:
+  protocol: [p2.protocol.af_exemption.0, p2.protocol.af_exemption.1, p2.protocol.af_exemption.2]
+  source: ESC_2024_AF
+  ours: true
+  review: pending
+  reason: ECG documentation confirms AF; an alert with a new symptom is no longer a stable known finding.
+    Restricting "new symptom" to the dizziness and mild-new-symptom ticks makes the clause field-literal.
 rules:
 - id: R0a_head_anticoag
   when: today's head injury and a dated prescription confirms current anticoagulant treatment
@@ -254,6 +265,50 @@ tiers:
     context: volume
     acts: false
     render_as: hf_stable
+  # 2026-11-18 conjunction tiers (diagnosis changes 0 and 2): two printed rules fire and the printed
+  # order or exception decides. Dated documented AF + two watch alerts + level-1 CGM lows + new
+  # dizziness: the AF exemption needs no new symptom, so R9 precedes R11.
+  af_known_hypo_symptom:
+    scenario: hypoglycaemia
+    render_as: hypo_l1
+    rule: R9_af_alerts
+    floor: within_24h
+    context: rhythm
+    acts: true
+    ticks: [dizziness]
+    add_conditions:
+    - atrial_fibrillation
+  # Documented HF with a >2 kg three-day gain and a decompensating check: NEWS2 5 (R2 precedes R8)
+  # versus NEWS2 4 (R8). RCP Chart 1 interiors, no fever, no single 3.
+  hf_gain_news5:
+    scenario: heart_failure
+    render_as: hf_gain
+    rule: R2_news2_medium
+    floor: ed_now
+    news2_target: [5, 5]
+  hf_gain_news4:
+    scenario: heart_failure
+    render_as: hf_gain
+    rule: R8_hf_gain
+    floor: within_24h
+    news2_target: [4, 4]
+  # Relative hypotension with an NG253 medium-risk heart rate in both roles: R3d precedes R10b.
+  infection_bp_drop_m:
+    scenario: infection
+    render_as: inf_n14
+    rule: R3d_relative_hypotension
+    floor: ed_now
+    context: pressure
+    acts: true
+    medium_hr: true
+  infection_bp_usual_m:
+    scenario: infection
+    render_as: inf_n14
+    rule: R10b_infection_medium_risk
+    floor: within_24h
+    context: pressure
+    acts: false
+    medium_hr: true
 strata:
   inf_n14m: [plain, masked, atypical]
   head_anticoag:
@@ -288,6 +343,16 @@ strata:
   infection_bp_usual:
   - plain
   af_known_hypo:
+  - plain
+  af_known_hypo_symptom:
+  - plain
+  hf_gain_news5:
+  - plain
+  hf_gain_news4:
+  - plain
+  infection_bp_drop_m:
+  - plain
+  infection_bp_usual_m:
   - plain
 rule_weights:
   ed_now:
@@ -489,6 +554,10 @@ clinical_context:
     current_sbp:
     - 102
     - 109
+    # NG253 community medium-risk heart rate inside the NEWS2 one-point band (91-110)
+    medium_hr:
+    - 91
+    - 104
     usual_sbp_drop:
     - 152
     - 158

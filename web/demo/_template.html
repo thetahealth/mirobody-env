@@ -218,17 +218,19 @@ details code{font-family:var(--mono);font-size:12px;background:var(--muted);padd
 .a3 > .h1{order:1} .a3 > .h2{order:2} .a3 > .h3{order:3} .a3 > .b1{order:4} .a3 > .b2{order:5} .a3 > .b3{order:6}
 .a3.readout{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
 .a3.readout table.bt{min-width:520px}
+.release-scores table.bt th:first-child{width:13em;text-align:left}
+.release-scores label{display:inline-block;margin-bottom:8px}
 @media(max-width:900px){.a3{grid-template-columns:minmax(0,1fr);gap:0}
   .a3.readout{grid-template-columns:minmax(0,1fr)}
   .a3 > .h1{order:1} .a3 > .b1{order:2} .a3 > .h2{order:3} .a3 > .b2{order:4} .a3 > .h3{order:5} .a3 > .b3{order:6}
   .a3 > .b1,.a3 > .b2{margin-bottom:22px}}
 @media(max-width:560px){
-  .a3.readout table.bt{min-width:0}
-  .a3.readout table.bt,.a3.readout table.bt tbody{display:block;width:100%}
-  .a3.readout table.bt tr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:6px}
-  .a3.readout table.bt th:first-child{display:none}
-  .a3.readout table.bt td{display:flex;align-items:center;justify-content:center}
-  .a3.readout table.bt td.mname{grid-column:1/-1;height:24px;justify-content:flex-start;overflow:visible}
+  :is(.a3.readout,.release-scores) table.bt{min-width:0}
+  :is(.a3.readout,.release-scores) table.bt,:is(.a3.readout,.release-scores) table.bt tbody{display:block;width:100%}
+  :is(.a3.readout,.release-scores) table.bt tr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:6px}
+  :is(.a3.readout,.release-scores) table.bt th:first-child{display:none}
+  :is(.a3.readout,.release-scores) table.bt td{display:flex;align-items:center;justify-content:center}
+  :is(.a3.readout,.release-scores) table.bt td.mname{grid-column:1/-1;height:24px;justify-content:flex-start;overflow:visible}
 }
 table.pm{border-collapse:separate;border-spacing:3px;font-size:10.5px;table-layout:fixed;width:100%}
 table.pm th{font-weight:500;color:var(--faint);font-size:11px;height:18px;padding:0;text-align:center}
@@ -259,7 +261,7 @@ table.bt td.upd{background:repeating-linear-gradient(45deg,var(--hatch) 0 2px,tr
 .fill{display:block;position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--fill)}
 .mp{margin-top:16px;padding:20px 22px}
 .mp .top{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between}
-.mp select{font:inherit;font-size:14px;font-weight:600;color:var(--foreground);background:var(--muted);border:1px solid transparent;border-radius:8px;padding:5px 10px;max-width:100%}
+:is(.mp,.release-scores) select{font:inherit;font-size:14px;font-weight:600;color:var(--foreground);background:var(--muted);border:1px solid transparent;border-radius:8px;padding:5px 10px;max-width:100%}
 .mps{margin-top:16px}
 .mps .sub{font-size:12px;color:var(--faint);margin:0 0 2px;max-width:none}
 .mpg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px 36px;margin-top:22px;padding-top:18px;border-top:1px solid var(--grid)}
@@ -307,7 +309,7 @@ table.cf td.ok{box-shadow:inset 0 0 0 1.5px var(--foreground)}
   .knob input[type=range]::-webkit-slider-thumb{width:40px;height:40px;margin-top:-19px}
   .seg button,.lang button,.ghost,.pill,.tab{min-height:40px}
   .tog{min-height:40px}
-  .mp select{min-height:40px}
+  :is(.mp,.release-scores) select{min-height:40px}
   details summary{min-height:40px;display:flex;align-items:center}
   table.bt{--rh:40px}
 }
@@ -365,6 +367,7 @@ footer p{margin:.6em 0 0}
 "use strict";
 const D = JSON.parse(document.getElementById("haenv-data").textContent);
 const BD = JSON.parse(document.getElementById("haenv-board").textContent);
+const CURRENT_BOARD = BD.current_readout;
 //: English display text for the sample items' Chinese strings (`translations.en.json`).
 const TR = (JSON.parse(document.getElementById("haenv-tr").textContent || "{}") || {}).entries || {};
 const G = globalThis.HaenvGen, K = D.kernel;
@@ -400,7 +403,13 @@ en: {
   heroKicker: "Health Agent Environment",
   heroH1: "Synthetic patients whose answer exists before their record does",
   heroLede: "HAEnv decides how each patient's story ends, then generates the record to match. <b>Every question comes with ground truth computed by code</b>, so a health agent can be graded on what it concludes from a long, messy record.",
-  chipPacks: (n, k) => n + " packs · " + k + " items each", chipModels: (m, r) => m + " models · " + r + " rounds",
+  releaseBoardPending: v => "The " + v + " leaderboard results are pending.",
+  releaseBoardDetails: (v, m, n) => v + " · " + m + " models · " + n + " items in each of five equally weighted packs · English · one answer per item",
+  releaseBoardCI: "95% paired bootstrap intervals",
+  releaseBoardDraft: "Draft leaderboard",
+  releaseBoardData: "Board data",
+  pk_rl: "Red-line vigilance",
+  chipPacks: (n, k) => n + " packs · " + k + " items each", chipModels: (m, r) => m + " models · " + r + (r === 1 ? " round" : " rounds"),
   chipSynthetic: "Synthetic data · evaluation only · not medical advice",
   ctaBuild: "Build a patient ↓", ctaQuick: "Quick start ↗",
   act: n => "Act " + n,
@@ -581,6 +590,12 @@ zh: {
   heroKicker: "Health Agent Environment",
   heroH1: "先定答案，再写病历",
   heroLede: "HAEnv 先定好每个病人的结局，再据此生成病历。<b>每道题的金标都由代码算出</b>，健康智能体读完一份又长又杂的病历后下的结论，可以直接对照金标打分。",
+  releaseBoardPending: v => v + " 榜单结果待发布。",
+  releaseBoardDetails: (v, m, n) => v + " · " + m + " 个模型 · 五包等权，每包 " + n + " 题 · 英文 · 每题一次作答",
+  releaseBoardCI: "95% 配对自助法区间",
+  releaseBoardDraft: "榜单草稿",
+  releaseBoardData: "榜单数据",
+  pk_rl: "红线识别",
   chipPacks: (n, k) => n + " 个题包 · 每包 " + k + " 题", chipModels: (m, r) => m + " 个模型 · " + r + " 轮",
   chipSynthetic: "合成数据 · 仅供评测 · 非医疗建议",
   ctaBuild: "造一个病人 ↓", ctaQuick: "快速开始 ↗",
@@ -1401,6 +1416,7 @@ const pkList = ks => ks.map(k => PACK_NUM[k]).join(LANG === "zh" ? "、" : ", ")
 function rowH(){ return (typeof matchMedia === "function" && (matchMedia("(max-width:900px)").matches || matchMedia("(pointer:coarse)").matches)) ? 40 : 30; }
 function selectModel(m){ CUR_MODEL = m; boardPaint(); insightPaint(); modelPanel(); }
 function sAct3(s){
+  if (CURRENT_BOARD) { releaseBoard(s, CURRENT_BOARD); return; }
   const p0 = BD.packs[finalPacks()[0]] || {};
   s.innerHTML = '<div class="wrap"><p class="actnum">' + esc(T("act", 3)) + "</p><h2>" + esc(T("a3H")) + '</h2><p class="sub">' + esc(T("a3Sub", ORDER.length, p0.n_cases, p0.n_rounds, BD.version, firstAnswerNote())) + "</p>"
     + '<div class="card"><div class="a3top" id="board0"></div><div class="a3" id="board"></div><p class="note" style="padding:0 18px 14px" id="n3"></p></div>'
@@ -1412,6 +1428,72 @@ function sAct3(s){
     + '<details><summary>' + esc(T("techSummary")) + '</summary><div class="body">' + ttech("tech3", (BD.source || {}).boot) + "</div></details></div>";
   boardPaint(); insightPaint(); modelPanel();
 }
+function overallPlot(top, rows, selected, label, onSelect, extra = () => []){
+  const RH = rowH(), HEAD = 24;
+  const fh = el("div"); top.appendChild(fh);
+  const compact = (top.clientWidth || 1000) < 620, OH = compact ? 56 : RH;
+  const F = fig(fh, HEAD + rows.length * OH + 6, T("colOverall"));
+  const lw = compact ? 12 : Math.min(260, Math.max(210, F.W * .26)), xs = rows.flatMap(r => r.ci95), lo = Math.floor(Math.min(...xs) * 10) / 10, hi = Math.ceil(Math.max(...xs) * 10) / 10;
+  const x = lin(lo === hi ? Math.max(0, lo - .1) : lo, lo === hi && hi === 0 ? .1 : hi, lw, F.W - 64);
+  ticks(x.inv(lw), x.inv(F.W - 64), F.narrow ? 4 : 7).forEach(v => { vline(F.svg, x(v), HEAD - 4, HEAD + rows.length * OH, "var(--grid)"); F.lab(x(v), HEAD - 12, v.toFixed(F.narrow ? 1 : 2), { anchor: "middle" }); });
+  rows.forEach((r, i) => { const y = HEAD + i * OH, ym = y + (compact ? 39 : OH / 2);
+    if (r.model === selected) S("rect", { x: 0, y: y + 1, width: F.W, height: OH - 2, rx: 5, fill: "var(--muted)" }, F.svg);
+    hline(F.svg, 0, F.W, y + OH, "var(--grid)", 1, .7);
+    F.lab(4, compact ? y + 11 : ym, label(r), { cls: r.model === selected ? "annb" : "ann" });
+    S("line", { x1: x(r.ci95[0]), x2: x(r.ci95[1]), y1: ym, y2: ym, stroke: "var(--accent)", "stroke-width": 2, "stroke-linecap": "round", opacity: .55 }, F.svg);
+    dot(F.svg, x(r.score), ym, "var(--accent)", 5);
+    F.lab(F.W - 3, ym, f3(r.score), {anchor:"end"});
+    const hit = S("rect", { x: 0, y, width: F.W, height: OH, fill: "transparent", "data-m": r.model }, F.svg);
+    hit.style.cursor = "pointer"; hit.addEventListener("click", () => onSelect(r.model));
+    hover(hit, r.model, [{ k: T("colOverall"), v: f3(r.score) },
+      { k: T("tipCI"), v: r.ci95.map(f3).join("–") }, ...extra(r)]);
+  });
+}
+
+function releaseBoard(section, readout){
+  const { version, status, packs } = readout;
+  const links = '<p class="note"><a class="pill" href="https://github.com/thetahealth/mirobody-env/blob/main/docs/boards/'
+    + esc(version) + '/k1.json">' + esc(T("releaseBoardData")) + '</a> '
+    + '<a class="pill" href="https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards">'
+    + esc(T("boardHistory")) + '</a></p>';
+  const heading = '<div class="wrap"><p class="actnum">' + esc(T("act", 3)) + '</p><h2>'
+    + esc(T("a3H")) + '</h2>';
+  if (status === "pending"){
+    section.innerHTML = heading + '<p class="sub">' + esc(T("releaseBoardPending", version)) + '</p>' + links + '</div>';
+    return;
+  }
+  const rows = Object.entries(readout.overall).map(([model, row]) => ({...row, model, ci95: row.ci}))
+    .sort((a, b) => a.rank - b.rank || b.score - a.score);
+  const packLabels = { ...PACK_NUM, p2: PACK_NUM.pack2, rl: "⑤" };
+  const packLabel = pack => T("pk_" + (pack === "p2" ? "pack2" : pack));
+  section.innerHTML = heading + '<p class="sub">'
+    + esc((status === "draft" ? T("releaseBoardDraft") + ' · ' : '')
+      + T("releaseBoardDetails", version, readout.model_count, readout.items_per_pack))
+    + '</p><div class="card"><div class="a3top" id="board0"></div>'
+    + '<div class="a3top release-scores"><div class="colhead">' + esc(T("colPacks")) + '</div>'
+    + '<label>' + esc(T("mpModel")) + ' <select id="mp-model">'
+    + rows.map(r => '<option>' + esc(r.model) + '</option>').join("")
+    + '</select></label><div id="release-pack-scores"></div></div></div>' + links + '</div>';
+  const chart = $("#board0", section), table = $("#release-pack-scores", section), chooser = $("#mp-model", section);
+  function paint(){
+    chart.innerHTML = '<div class="colhead">' + esc(T("colOverall")) + "<span>" + esc(T("releaseBoardCI")) + "</span></div>";
+    overallPlot(chart, rows, chooser.value, r => r.model, model => { chooser.value = model; paint(); });
+    const headers = packs.map(pack => '<th title="' + esc(packLabel(pack)) + '">' + packLabels[pack] + '</th>');
+    const body = rows.map(r => '<tr data-m="' + esc(r.model) + '"' + (r.model === chooser.value ? ' class="sel"' : '') + '>'
+      + '<td class="mname">' + esc(r.model) + '</td>' + packs.map(pack => {
+        const score = r.packs[pack], shade = Math.round(12 + 88 * score);
+        return '<td class="cell" data-k="' + pack + '" style="background:color-mix(in oklab, var(--seq-hi) '
+          + shade + '%, var(--card));color:' + (shade > 55 ? "var(--on-accent)" : "var(--foreground)") + '">'
+          + f3(score) + '</td>';
+      }).join("") + '</tr>').join("");
+    table.innerHTML = '<div class="tablewrap"><table class="bt"><tr><th>' + esc(T("mpModel"))
+      + '</th>' + headers.join("") + '</tr>' + body + '</table></div>';
+    $$("tr[data-m]", table).forEach(tr => tr.addEventListener("click", () => { chooser.value = tr.dataset.m; paint(); }));
+  }
+  chooser.addEventListener("change", paint);
+  paint();
+}
+
 function boardPaint(){
   const top = $("#board0"), host = $("#board"); if (!host || !top) return;
   top.innerHTML = ""; host.innerHTML = "";
@@ -1420,22 +1502,8 @@ function boardPaint(){
   const ov = BD.overall, fin = finalPacks(), pend = pendingPacks();
   // Row 1: the overall board, full width
   top.innerHTML = '<div class="colhead">' + esc(T("colOverall")) + (ov.status === "interim" ? '<i class="tagi">' + esc(T("interim", pkList(ov.packs))) + "</i>" : "") + "<span>" + esc(T("colOverallSub")) + "</span></div>";
-  const fh = el("div"); top.appendChild(fh);
-  const compact = (top.clientWidth || 1000) < 620, OH = compact ? 56 : RH;
-  const F = fig(fh, HEAD + ORDER.length * OH + 6, T("colOverall"));
-  const lw = compact ? 12 : Math.min(260, Math.max(210, F.W * .26)), xs = ov.board.flatMap(r => r.ci95), x = lin(Math.floor(Math.min(...xs) * 10) / 10, Math.ceil(Math.max(...xs) * 10) / 10, lw, F.W - 64);
-  ticks(x.inv(lw), x.inv(F.W - 64), F.narrow ? 4 : 7).forEach(v => { vline(F.svg, x(v), HEAD - 4, HEAD + ORDER.length * OH, "var(--grid)"); F.lab(x(v), HEAD - 12, v.toFixed(F.narrow ? 1 : 2), { anchor: "middle" }); });
-  ov.board.forEach((r, i) => { const y = HEAD + i * OH, ym = y + (compact ? 39 : OH / 2);
-    if (r.model === CUR_MODEL) S("rect", { x: 0, y: y + 1, width: F.W, height: OH - 2, rx: 5, fill: "var(--muted)" }, F.svg);
-    hline(F.svg, 0, F.W, y + OH, "var(--grid)", 1, .7);
-    F.lab(4, compact ? y + 11 : ym, RKT[r.model] + "  " + r.model, { cls: r.model === CUR_MODEL ? "annb" : "ann" });
-    S("line", { x1: x(r.ci95[0]), x2: x(r.ci95[1]), y1: ym, y2: ym, stroke: "var(--accent)", "stroke-width": 2, "stroke-linecap": "round", opacity: .55 }, F.svg);
-    dot(F.svg, x(r.score), ym, "var(--accent)", 5);
-    F.lab(F.W - 3, ym, f3(r.score), {anchor:"end"});
-    const hit = S("rect", { x: 0, y, width: F.W, height: OH, fill: "transparent", "data-m": r.model }, F.svg);
-    hit.style.cursor = "pointer"; hit.addEventListener("click", () => selectModel(r.model));
-    hover(hit, r.model, [{ k: T("tipOverall", pkList(ov.packs)), v: f3(r.score) }, { k: T("tipCI"), v: f3(r.ci95[0]) + "–" + f3(r.ci95[1]) }, { k: T("tipRank"), v: RKT[r.model] }].concat(typeof r.pass3 === "number" ? [{ k: "All-3", v: f3(r.pass3) }] : []));
-  });
+  overallPlot(top, ov.board, CUR_MODEL, r => RKT[r.model] + "  " + r.model, selectModel, r =>
+    [{ k: T("tipRank"), v: RKT[r.model] }].concat(typeof r.pass3 === "number" ? [{ k: "All-3", v: f3(r.pass3) }] : []));
   // Row 2: three panels on the same rows (the heat map names them), stacked on a narrow screen
   const PA = ov.pairs || { pairs: [], n_separable: 0 }, AP = ov.adjacent_pairs, nPairs = AP ? AP.length : ORDER.length * (ORDER.length - 1) / 2;
   host.innerHTML = '<div class="colhead h1">' + esc(T("colPacks")) + "<span>" + esc(T("colPacksSub")) + "</span></div>"
@@ -1665,8 +1733,8 @@ const selfcheck = G.selfCheck(D);
 function sHero(s){
   const p0 = BD.packs[finalPacks()[0]] || {};
   s.innerHTML = '<div class="wrap hero"><p class="kicker">' + esc(T("heroKicker")) + "</p><h1>" + esc(T("heroH1")) + '</h1><p class="lede">' + T("heroLede") + "</p>"
-    + '<div class="chips"><span class="chip"><span class="mono">pip install haenv</span></span><span class="chip">' + esc(T("chipPacks", PACK_KEYS.length, p0.n_cases))
-    + '</span><span class="chip">' + esc(T("chipModels", ORDER.length, p0.n_rounds)) + '</span><span class="chip">' + esc(T("chipSynthetic")) + "</span></div>"
+    + '<div class="chips"><span class="chip"><span class="mono">pip install haenv</span></span><span class="chip">' + esc(T("chipPacks", CURRENT_BOARD?.packs.length ?? PACK_KEYS.length, CURRENT_BOARD?.items_per_pack ?? p0.n_cases))
+    + '</span><span class="chip">' + esc(T("chipModels", CURRENT_BOARD?.model_count ?? ORDER.length, CURRENT_BOARD ? 1 : p0.n_rounds)) + '</span><span class="chip">' + esc(T("chipSynthetic")) + "</span></div>"
     + '<p class="cta-row"><a class="pill primary" data-cta="build-patient" href="#act1">' + esc(T("ctaBuild")) + '</a><a class="pill" data-cta="quickstart" href="https://github.com/thetahealth/mirobody-env#quick-start">' + esc(T("ctaQuick")) + "</a></p></div>";
 }
 const SECS = [{ id: "s0", draw: sHero }, { id: "act1", draw: sAct1, nav: "nav1" }, { id: "act2", draw: sAct2, nav: "nav2" }, { id: "act3", draw: sAct3, nav: "nav3" }];

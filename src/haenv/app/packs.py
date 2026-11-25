@@ -219,6 +219,9 @@ def apply_view(raw) -> dict | None:
     drop_pc = [k for k in V.drop_context if k in pc]
     drop_up = [k for k in V.drop_profile if k in up]
     keep = None if V.streams is None else set(V.streams) | ledger_streams(raw)
+    if keep is not None and V.panel_streams:
+        shown = (((getattr(raw, "latent_premise", None) or {}).get("routine_panels") or {}).get("visible") or ())
+        keep |= set(V.panel_streams) & set(shown)
     drop_ld = [] if keep is None else sorted(k for k in ld if k not in keep)
     raw.prediction_context = {k: v for k, v in pc.items() if k not in drop_pc}
     raw.user_profile = {k: v for k, v in up.items() if k not in drop_up}

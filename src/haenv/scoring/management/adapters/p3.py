@@ -15,7 +15,7 @@ def facts(snapshot, policy):
             c.add_key(f"/visible_facts/{section}")
     for i in range(len(snapshot["protocols"])):
         c.add_key(f"/protocols/{i}")
-    if f.get("plan", {}).get("history_active"):
+    if f.get("plan", {}).get("history_active") or f.get("plan", {}).get("signal_conflict") == "history_limit":
         events = f.get("adverse_event_record") or []
         if not events:
             raise ValueError("Active old intolerance has no saved event")

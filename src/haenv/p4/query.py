@@ -19,7 +19,8 @@ from haenv.interaction.query.adapter import KeyLookup
 from haenv.interaction.query.adapter import QueryAdapter
 from haenv.interaction.query.adapter import register
 
-_HEAD = ("encounter_type", "today_date", "today", "comparison_draw_day", "patient_quote", "analyte", "name", "unit", "reference_range")
+_HEAD = ("encounter_type", "today_date", "today", "comparison_draw_day", "comparison_previous_draw_day",
+         "patient_quote", "analyte", "name", "unit", "reference_range")
 
 
 def _method_source_side(block, reports):
@@ -73,6 +74,10 @@ class P4Adapter(QueryAdapter):
         if len(reports) != 1:
             raise ValueError("today's laboratory report is missing or ambiguous")
         out["values"] = {"comparison_draw" if "comparison_draw_day" in block else "today": reports[0]["value"]}
+        if "comparison_previous_draw_day" in block:
+            from haenv.p4.records import comparison_reports
+            previous, assessed = comparison_reports(block)
+            out["comparison_question"] = text_of("p4.comparison_question", previous=previous["day"], assessed=assessed["day"])
         remarks = [r["text"] for r in block.get("patient_remarks") or []
                    if int(r["draw_day"]) == draw_day]
         if remarks:
@@ -181,6 +186,7 @@ ADAPTER = register(P4Adapter(
     pack="p4", block="followup_p4", header_keys=_HEAD,
     not_patient_data=("text_source", "instruction", "today_date", "encounter_type", "rules_delivery",
                       "comparison_basis", "interpretation_rule", "previous_draw_day", "today", "comparison_draw_day",
+                      "comparison_previous_draw_day",
                       "analyte", "name", "unit", "reference_range"),
     fhir_types={"report": "Observation", "diet_record": "DocumentReference", "medication_record": "MedicationStatement",
                 "event_history_record": "DocumentReference", "laboratory_method_record": "DocumentReference", "specimen_procedure": "DocumentReference"},

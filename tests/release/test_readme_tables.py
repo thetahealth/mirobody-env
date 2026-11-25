@@ -81,7 +81,6 @@ def test_a_changed_snapshot_is_caught(data):
 
 # The archived 1.3.0 table keeps every reading from the demo's original board data.
 BOARD_HEADINGS = {"docs/DATA_CARD.md": ("overall", "by pack")}
-VERSION = r"\d+\.\d+\.\d+"
 NUM = r"-?[\d.]+"
 OVERALL_ROW = re.compile(rf"^\|\s*(\d+(?:–\d+)?)\s*\|\s*(\S+)\s*\|\s*({NUM})\s*\|\s*({NUM})–({NUM})\s*\|\s*$", re.M)
 PACK_ROW = re.compile(rf"^\|\s*(\S+)\s*\|((?:\s*{NUM} \({NUM}–{NUM}\)\s*\|){{4}})\s*$", re.M)
@@ -95,9 +94,9 @@ def board():
 
 
 def _section(text, name):
-    """The body under the heading `### <version> <name>`, up to the next heading."""
-    m = re.search(rf"^### {VERSION} {re.escape(name)}\s*$", text, re.M)
-    assert m, f"no `### <version> {name}` heading"
+    """The body under the 1.3.0 heading, up to the next heading."""
+    m = re.search(rf"^### 1\.3\.0 {re.escape(name)}\s*$", text, re.M)
+    assert m, f"no `### 1.3.0 {name}` heading"
     return text[m.end():].split("\n###", 1)[0].split("\n## ", 1)[0]
 
 

@@ -35,6 +35,24 @@ _INSTALLED: list[bool] = []
 _LOCK = threading.Lock()
 
 
+def _answer_example(text: str) -> str:
+    """Separate the nested trace ending from the M2 answer's root closing brace."""
+    start = text.find('\n{"differential":') + 1
+    if not start:
+        return text
+    decoder = json.JSONDecoder()
+    example, end = decoder.raw_decode(text, start)
+    trace = text.find('\n"trace":', end)
+    if trace == -1:
+        return text
+    value_start = trace + len('\n"trace":')
+    process, value_end = decoder.raw_decode(text, value_start)
+    evidence = example.pop("cited_evidence")
+    example["trace"] = process
+    example["cited_evidence"] = evidence
+    return text[:start] + json.dumps(example, ensure_ascii=False, indent=2) + text[value_end:]
+
+
 def m2_suffix(solver, payload) -> str:
     """Frame ask (`prediction_context.m2_frame`), F3 follow-up and the round-2 revision block;
     `""` for every v1.0.1 question and round."""
@@ -141,6 +159,9 @@ def install() -> None:
 
         def render_for(next_call, solver, payload):
             text, pid = next_call(solver, payload)
+            context = getattr(payload, "prediction_context", None) or {}
+            if getattr(_TL, "m2_case", False) or context.get("m2_frame"):
+                text = _answer_example(text)
             return text + m2_suffix(solver, payload), pid
 
         from haenv.app.pack_hooks import Stage

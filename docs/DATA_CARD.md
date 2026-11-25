@@ -189,6 +189,17 @@ deterministic batch of `ddx-workup`, for the cases it shares with it (the bridge
 the known conditions with their medication. In packs ③ and ④ a known comorbidity enters the world
 tables (drug tables, analyte baselines), so it can change the gold answer.
 
+## 1.6.0 board
+
+The [1.6.0 board](boards/1.6.0/k1.json) evaluates eight models in English with one answer
+per item. It uses 50 items each for diagnosis, triage, medication adjustment and lab-change
+attribution, and 50 matched red-line pairs. A red-line pair counts as correct when the risk is
+identified and appropriately escalated in the risk case and the matched control is left clean.
+The overall score is the mean of the five pack accuracies. The 95% paired bootstrap resamples
+items within each pack using the same draws for every model and keeps each red-line pair together.
+
+See [reproduction](REPRODUCE.md#recomputing-the-160-overall-board) for the aggregation procedure.
+
 ## Historical boards
 
 Earlier boards are kept as published. The 1.3.0 and 1.3.1 boards use the same four public-seed
@@ -196,6 +207,46 @@ N100 question sets and k3 aggregation; diagnosis scores were refreshed for 1.3.1
 answers were refreshed under the current environment and scored with the current scorer.
 Older boards differ in questions, world or scoring and are not directly comparable. The 1.x
 board on the two bridge tracks is in [1.x evaluation](#1x-evaluation-historical).
+
+### 1.3.1 overall
+
+The 1.3.1 board ranks 13 models on four Chinese packs with 100 items each and three
+answers per item. The overall score gives the four packs equal weight. Intervals
+are 95% paired item-cluster bootstrap intervals from 2,000 draws. The
+preregistered first-answer score swaps only minimax-m3 and deepseek-v4-flash.
+
+<p align="center">
+  <img src="figures/readme_board_131.png" alt="Overall scores and 95% intervals for thirteen models, ordered by score, with rank intervals at left" width="100%">
+</p>
+
+| Rank | Model | Overall (95% CI) | ① | ② | ③ | ④ | All-3 |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 1–2 | deepseek-v4.1-flash | 0.837 (0.813–0.861) | 0.655 | 0.932 | 0.928 | 0.833 | 0.823 |
+| 1–2 | gpt-6-sol | 0.832 (0.808–0.856) | 0.693 | 0.893 | 0.959 | 0.785 | 0.878 |
+| 3–5 | mimo-v2.6-flash | 0.793 (0.765–0.819) | 0.569 | 0.943 | 0.853 | 0.807 | 0.760 |
+| 3–5 | gemini-3.8-flash | 0.792 (0.768–0.816) | 0.591 | 0.950 | 0.882 | 0.744 | 0.867 |
+| 3–5 | qwen38-27b | 0.789 (0.763–0.815) | 0.617 | 0.930 | 0.885 | 0.722 | 0.765 |
+| 6–7 | gpt-6-luna | 0.719 (0.692–0.747) | 0.494 | 0.859 | 0.897 | 0.627 | 0.693 |
+| 6–7 | deepseek-v4-pro | 0.696 (0.666–0.724) | 0.533 | 0.933 | 0.689 | 0.629 | 0.668 |
+| 8–10 | minimax-m3 | 0.633 (0.602–0.663) | 0.440 | 0.870 | 0.608 | 0.616 | 0.525 |
+| 8–10 | deepseek-v4-flash | 0.632 (0.599–0.664) | 0.477 | 0.856 | 0.656 | 0.538 | 0.588 |
+| 8–10 | glm-5.3-flash | 0.628 (0.597–0.658) | 0.484 | 0.813 | 0.668 | 0.547 | 0.530 |
+| 11 | gemma-4-31b-it | 0.536 (0.506–0.567) | 0.382 | 0.767 | 0.514 | 0.482 | 0.580 |
+| 12 | qwen3.7-flash | 0.446 (0.414–0.476) | 0.380 | 0.599 | 0.271 | 0.533 | 0.327 |
+| 13 | qwen3-32b | 0.171 (0.150–0.192) | 0.069 | 0.307 | 0.058 | 0.249 | 0.073 |
+
+<sub>① Diagnosis · ② Triage · ③ Medication adjustment · ④ Lab-change attribution. All-3 is the share
+of items whose decision is correct in all three answers (equal-weight mean over the packs); it is a
+reliability profile, not the ranking metric. `G` is passing the hard gates, `D` a correct core
+decision, `Q` the plan quality (mean of two judgments by one LLM judge; intervals exclude judge
+noise). Overlapping rank intervals do not establish an order.</sub>
+
+<p align="center">
+  <img src="figures/readme_task_scores_131.png" alt="Scores for the four tasks and All-3, with thirteen models in overall board order" width="100%">
+</p>
+
+[Board data (JSON)](boards/1.3.1/k3.json) · [First-answer readout](boards/1.3.1/pk1.json) ·
+[Board notes](boards/1.3.1/findings.json) · [Recomputing this board](REPRODUCE.md#recomputing-the-131-overall-board)
 
 ### 1.3.0 overall
 

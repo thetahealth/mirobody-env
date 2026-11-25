@@ -76,6 +76,10 @@ def _sources():
 
 def _trials(args):
     raw, pack, manifest = args
+    if pack == "p2":
+        # A fresh process does not inherit the test fixture's P2 registration.
+        from haenv.p2 import plugin
+        plugin.register()
     import haenv.world.wq as wq
     from haenv.world.generation.opaque_ids import register_manifest_alias, stored_solver_id
     wq.register_injection(raw.case_id, manifest)

@@ -555,6 +555,11 @@ def register(job, cfg: dict, n_cases: int, n_emitted: int, cmd: str,
     from haenv.i18n.text import render_fingerprint, judge_fingerprints
     meta.setdefault('language', language)
     meta.setdefault('render_sha16', render_fingerprint(language))
+    # The hospital catalog the items were printed for: written with the cases, never by a later
+    # command, which may run under other switches (`haenv run` adopts it).
+    if _regen:
+        from haenv.world.protocols.library import edition as _protocol_edition
+        meta['protocol_edition'] = _protocol_edition()
     for field, stamps in judge_fingerprints(language).items():
         meta.setdefault(field, stamps)
     # haenv version at item-generation time: sticky, unlike `haenv_git_sha`

@@ -283,12 +283,18 @@ def subtype_weights(cls: str, drug_name: str, known=()) -> dict[str, float]:
     """
     from haenv.world.labworld.meds import drug as _drug
     from haenv.world.validation.difficulty_r2 import enabled
+    if enabled() and cls == "switch":
+        from haenv.p3.history import authored_coverage
+        coverage = authored_coverage()
+        if coverage and drug_name in coverage["switch_subtype_weights"]:
+            return dict(coverage["switch_subtype_weights"][drug_name])
     if enabled() and cls == "downtitrate" and drug_name != "levothyroxine":
         return {"ae_dose": 0.5, "off_ae": 0.5}
     if enabled() and cls == "maintain":
         if drug_name == "atorvastatin" or "CKD" in known:
             return dict(SUBTYPES["maintain"]) if has_early(drug_name, known) else {"on": 1.0}
-        return ({"early": 2 / 3, "on": 1 / 6, "on_low": 1 / 6} if has_early(drug_name, known)
+        return ({"early": 2 / 3, "on": 1 / 6, "on_low": 1 / 6}
+                if has_early(drug_name, known) and early_trial_fits(drug_name, known)
                 else {"on": 0.5, "on_low": 0.5})
     if enabled() and cls == "switch" and drug_name in ("atorvastatin", "enalapril", "gliclazide"):
         # The statin's registered response cannot reliably miss at its top
@@ -308,6 +314,11 @@ def subtype_weights(cls: str, drug_name: str, known=()) -> dict[str, float]:
     if cls == "check_adherence_or_adverse_effect" and drug_name == "levothyroxine" and enabled():
         from haenv.p3.plan import specification
         return dict(specification()["levothyroxine_absorption"]["subtype_weights"])
+    if cls == "check_adherence_or_adverse_effect" and enabled():
+        from haenv.p3.causality_generation import discordant_capable
+        if discordant_capable(drug_name, known) and conflicts():
+            # R3 (ours): a documented hold/resumption course whose observations disagree or are incomplete
+            return dict(conflicts()["unattributed_check"]["subtype_weights"])
     timing = drug(drug_name)["attribution"] == "timing"
     if cls == "downtitrate" and drug(drug_name).get("ae_dose_decision") is False:
         return {"over": 1.0}       # dosed by the axis; a symptom alone lowers nothing
@@ -325,6 +336,54 @@ def subtype_weights(cls: str, drug_name: str, known=()) -> dict[str, float]:
     if drug(drug_name)["when_off"] == "add" and cls in ("switch", "maintain"):
         return {"off" if cls == "switch" else "on": 1.0}
     return dict(SUBTYPES[cls])
+
+
+def conflicts() -> dict:
+    """R1-R3 authored signal-conflict coverage (registry/p3_composition.yaml `signal_conflicts`)."""
+    from haenv.resources.regpath import load_registry
+    return load_registry("p3_composition.yaml").get("signal_conflicts") or {}
+
+
+def early_trial_fits(drug_name: str, known=()) -> bool:
+    """R0: hold days are off the adherence clock. A documented trial inside an early review (the trial
+    layout puts its hold in the second quarter-to-half of the span since the last visit,
+    `causality_generation.layout`) leaves W - h treatment days over W + 1 - h window days for the
+    longest early review W; unless that can read at or above the top of the gray band, an early
+    review of a drug that carries trials never realizes (amlodipine: W = 7, h = 2, 5/6)."""
+    from haenv.p3.causality_generation import plan_fields
+    from haenv.world.labworld.meds import drug as _drug
+    from haenv.world.labworld.meds import rule
+    if not plan_fields(drug_name):
+        return True
+    W = int(float(rule()["early_max_frac"]) * float(_drug(drug_name, known)["tau_rule_days"]))
+    h = 3 * W // 4 - 2 * W // 4
+    return (W - h) / float(W + 1 - h) >= float(rule()["adherence_gray"][1])
+
+
+def signal_conflict(d: str, cls: str, sub: str, cid: str, known=()) -> str | None:
+    """R1 (ours): whether the item carries a second decision signal that the printed priority order
+    overrides (`signal_conflicts` in registry/p3_composition.yaml): `history_limit` (an archived
+    dose-specific limit at the current dose) on a low-coverage check, an early review or a current
+    dose-related adverse effect; `low_coverage` on a current dose-related adverse effect. Drawn per
+    patient, independently of everything the solver sees."""
+    from haenv.p3.history import authored_coverage
+    cfg, cov = conflicts(), authored_coverage()
+    if not cfg or not cov or known or d == "levothyroxine":
+        return None
+    hist = d in cov["historical_limit_drugs"]
+    share = cfg["history_limit"]["share"]
+    u = h01("p3-signal-conflict", cid)
+    if hist and cls == "check_adherence_or_adverse_effect" and sub == "adh_low":
+        return "history_limit" if u < float(share[cls]) else None
+    if hist and cls == "maintain" and sub == "early":
+        return "history_limit" if u < float(share["maintain_early"]) else None
+    if cls == "downtitrate" and sub == "off_ae":
+        a = float(share["downtitrate"]) if hist else 0.0
+        if u < a:
+            return "history_limit"
+        if u < a + float(cfg["low_coverage"]["share"]["downtitrate"]):
+            return "low_coverage"
+    return None
 
 
 def subtype(cls: str, drug_name: str, cid: str, known=()) -> str:
@@ -483,9 +542,18 @@ def _plan(c: str, d: str, cid: str, ok: list[str], H: int, upper: float, comorb:
     from haenv.world.validation.difficulty_r2 import enabled
     from haenv.p3.interactions import family
     intersection = family(d, c, sub) if enabled() else None
+    from haenv.p3.causality_generation import plan_fields
+    from haenv.p3.causality_generation import discordant_fields
     designated = intersection and h01("p3interaction", cid) < specification()["interactions"]["candidate_share"]
+    from haenv.p3.history import authored_coverage
+    mix = {"mechanism_mix_version": 1} if enabled() and authored_coverage() else {}
+    conflict = signal_conflict(d, c, sub, cid, known) if enabled() else None
     return {"version": PLAN_VERSION_BACKGROUND if bg else PLAN_VERSION, "class": c, "subtype": sub, "drug": d, "position": pos,
+            **mix,
+            **plan_fields(d),
             **({"interaction_family": intersection} if designated else {}),
+            **({"signal_conflict": conflict} if conflict else {}),
+            **(discordant_fields(d, sub, known) if enabled() else {}),
             **({"comorbidity": comorb} if comorb else {}),
             "decoys": {"dip": sub != "adh_low" and h01("p3dip", cid) < DIP_Q,
                        "predating": ((bg or sub not in AE_SUBTYPES) and bool(drug(d).get("predating_contexts"))

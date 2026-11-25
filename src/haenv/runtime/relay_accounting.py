@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 import fnmatch
+import hashlib
 import json
 import re
 import threading
@@ -273,9 +274,63 @@ def fetch_metadata(cfg: dict, solver) -> dict:
     return result
 
 
+#: How long one bill lookup keeps retrying failed (e.g. rate-limited) log reads.
+LOG_READ_DEADLINE_S = 150.0
+#: Minimum spacing of billing-log reads per key: the relay rate-limits this endpoint per
+#: key (a single reader every 4 s was refused after 12 reads, 2026-11-17).
+LOG_READ_MIN_INTERVAL_S = 6.0
+#: How long a lookup keeps re-reading the log while its bill row has not appeared yet.
+LOG_MISS_WINDOW_S = 45.0
+_LOG_SLOTS: dict = {}
+_LOG_SLOTS_LOCK = threading.Lock()
+
+
+def shared_log_read(slot_id, fetch):
+    """One billing-log read per gateway key at a time, shared by every thread of the process.
+
+    The relay answers bursts of parallel log reads with HTTP 429 (19 of 32 at 16-way
+    concurrency, 2026-11-17). A caller waits for the read in progress and reuses it only if
+    that read started after the caller asked, so a bill logged before the call is never missed.
+    """
+    with _LOG_SLOTS_LOCK:
+        slot = _LOG_SLOTS.setdefault(slot_id, {"lock": threading.Lock(), "started": None,
+                                               "rows": None})
+    asked = time.monotonic()
+    with slot["lock"]:
+        if slot["started"] is not None and slot["started"] >= asked:
+            return slot["rows"]
+        if slot.get("last") is not None:
+            wait = slot["last"] + LOG_READ_MIN_INTERVAL_S - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+        started = slot["last"] = time.monotonic()
+        rows = fetch()
+        slot["started"], slot["rows"] = started, rows
+        return rows
+
+
 class RelayBilling:
     def __init__(self, prices: RelayPrices, fetch_logs):
         self.prices, self.fetch_logs = prices, fetch_logs
+
+    def tariff_bound(self, response: dict) -> dict:
+        """Upper bound when the billing log stays unreadable: the response's token counts at
+        the highest published group rate, no cache discount, plus two quota units of rounding
+        (on 542 exact relay bills this bound was never below the bill)."""
+        usage = response.get("usage") if isinstance(response, dict) else None
+        if not isinstance(usage, dict):
+            raise ValueError("Relay log unreadable and the response has no token usage")
+        prompt, output = usage.get("prompt_tokens"), usage.get("completion_tokens")
+        if type(prompt) is not int or type(output) is not int or prompt < 0 or output < 0:
+            raise ValueError("Relay log unreadable and the response token usage is invalid")
+        p = self.prices
+        bound = prompt * p.input_rate + output * p.output_rate + 2 / p.quota_per_usd
+        return {"kind": "published_tariff_upper_bound", "actual_usd": None,
+                "basis": f"relay-top-tariff:{p.model}:in={p.input_rate}:out={p.output_rate}"
+                         f":per_usd={p.quota_per_usd}",
+                "model": p.model, "request_id": response.get("_gateway_request_id"),
+                "prompt_tokens": prompt, "output_tokens": output,
+                "upper_bound_usd": str(bound), "reason": "billing log unreadable (rate limited)"}
 
     @classmethod
     def for_solver(cls, prices, solver, cfg):
@@ -288,24 +343,47 @@ class RelayBilling:
         def logs():
             # The attempt's own key: a rotated key's bill is not in another key's log.
             from haenv.runtime.transport import proxy_for_solver
-            result = get_json(base, attempt_key(solver.api_key), "/api/log/token",
-                              proxy=proxy_for_solver(solver, cfg))
-            if result.get("success") is not True or not isinstance(result.get("data"), list):
-                raise ValueError("Relay log lookup did not succeed")
-            return result["data"]
+            key = attempt_key(solver.api_key)
+            proxy = proxy_for_solver(solver, cfg)
+            def fetch():
+                result = get_json(base, key, "/api/log/token", proxy=proxy)
+                if result.get("success") is not True or not isinstance(result.get("data"), list):
+                    raise ValueError("Relay log lookup did not succeed")
+                return result["data"]
+            return shared_log_read((base, hashlib.sha256(key.encode()).hexdigest()), fetch)
         return cls(prices, logs)
 
     def __call__(self, response: dict) -> dict:
         request_id = response.get("_gateway_request_id") if isinstance(response, dict) else None
         if not isinstance(request_id, str) or not request_id:
             raise ValueError("Response lacks the gateway request ID; cannot match its bill")
-        matches = []
-        for attempt in range(3):
-            matches = [r for r in self.fetch_logs() if r.get("request_id") == request_id]
-            if matches:
+        matches, misses = [], 0
+        deadline = time.monotonic() + LOG_READ_DEADLINE_S
+        missing_until = time.monotonic() + LOG_MISS_WINDOW_S
+        delay = 10.0
+        while True:
+            # Only free log reads retry; never a new completion.
+            try:
+                rows = self.fetch_logs()
+            except ValueError:
+                # The log endpoint rate-limits bursts (HTTP 429): back off until the deadline,
+                # then book the response's own token counts at the top published tariff.
+                if time.monotonic() + delay > deadline:
+                    return self.tariff_bound(response)
+                time.sleep(delay)
+                delay = min(delay * 2, 30.0)
+                continue
+            # A gateway may log a failed upstream try (type=5, no charge) and
+            # its eventual completed bill under the same gateway request ID.
+            matches = [r for r in rows
+                       if r.get("request_id") == request_id and r.get("type") == 2]
+            misses += 1
+            # The bill row is written when the gateway finishes billing, which can lag the
+            # answer by several seconds under load (8 of ~250 lookups missed a 3 s window,
+            # 2026-11-17); keep re-reading for LOG_MISS_WINDOW_S before giving up.
+            if matches or time.monotonic() >= missing_until:
                 break
-            if attempt < 2:
-                time.sleep(1)  # Only free log reads retry; never a new completion.
+            time.sleep(min(2.0, 0.5 * misses))
         if len(matches) != 1:
             raise ValueError("No unique billing log for this gateway request ID")
         row = matches[0]

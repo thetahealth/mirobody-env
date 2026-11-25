@@ -62,6 +62,8 @@ def observe_meds(raw, case_id: str, truth: dict, audit: dict) -> tuple[dict, dic
         adj[BLOCK] = {"plan": dict(plan), "unrealizable": str(e)}
         raw.adjudication = adj
         return truth, {**(audit or {}), "p3": {"unrealizable": str(e)[:500]}}
+    from haenv.p3.measurement_world import attach as attach_measurements
+    attach_measurements(item, str(case_id))
     item["other_medications"] = world_record(raw, item)
     pc = dict(raw.prediction_context or {})
     pc[BLOCK] = render_block(item)

@@ -310,7 +310,7 @@ def audit(browser, page_path: pathlib.Path, width: int, lang: str, scheme: str,
         c.checked = true; c.dispatchEvent(new Event('change', {bubbles: true})); }""")
     for key in ("pack2", "p3", "p4", "m2"):
         again(f"() => document.querySelector('#tabs .tab[data-p=\"{key}\"]').click()")
-    again("""() => { const s = document.querySelector('#mp-model'); s.value = s.options[s.options.length - 1].value;
+    again("""() => { const s = document.querySelector('#mp-model'); if (!s) return; s.value = s.options[s.options.length - 1].value;
         s.dispatchEvent(new Event('change', {bubbles: true}));
         document.querySelectorAll('details').forEach(d => d.open = true); }""")
     fails += [{"kind": "console", "detail": e[:200]} for e in errs]

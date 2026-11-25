@@ -17,7 +17,7 @@ SPEC.loader.exec_module(DL)
 def test_every_link_resolves():
     # Manuscript sources are not release documents; their generated supplement
     # is checked at its installed location under docs/.
-    files = [p for p in DL.markdown_files() if not p.startswith('paper/')]
+    files = DL.markdown_files()
     r = DL.scan(files=files)
     assert r["total"] > 50, f"only {r['total']} links scanned: the scan has lost its surface"
     assert r["broken"] == []

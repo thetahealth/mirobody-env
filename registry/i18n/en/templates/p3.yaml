@@ -28,3 +28,16 @@ p3.rule.absorption: Separate levothyroxine and calcium carbonate by about {hours
   dose and investigate other causes first. An isolated resolved symptom does not count as a current persistent symptom;
   gliclazide-related hypoglycaemia still requires review even if food has relieved it.
 p3.rule.top_check: "Clinic dose ceiling for {name}: if {axis} is still above target at the clinic's highest dose ({top} {unit}), do not increase the dose or change drugs; keep the dose and first check adherence, administration, malabsorption (such as gastrointestinal disease) and interacting medicines."
+
+p3.refill.source.clinic: Clinic pharmacy
+p3.refill.source.other: Other community pharmacy (dispensing confirmed)
+
+p3.dose.event_reference: 'Imported prescription field; actual dose-change history is in the encounter note for this date.'
+p3.dose.tablets: 'Patient instruction: {count} tablets daily, using the bottle identified in the reconciliation note.'
+p3.dose.strength: 'Bottle label: {value} {unit} per tablet.'
+p3.dose.record_status: 'Record {record}: under note {note}, record {current} supersedes record {superseded} for the current regimen.'
+p3.dose.service: 'Hospital medicines reconciliation service'
+p3.dose.note: 'Medicines reconciliation for {name}, verified with the patient, clinic and community pharmacy: record {current} supersedes record {superseded} for the current regimen. If the selected record is a prescription, use its daily dose; if it is the patient list, use its daily tablet count with the bottle strength in dispensing record {dispensing}. This corrects documentation; actual treatment and the dated dose-change history are unchanged.'
+p3.dose.list_reference: '{name}: regimen recorded in the patient list and reconciled source records.'
+p3.hist.rechallenge.same_tolerated: The patient tolerated the {dose} mg dose when it was restarted.
+p3.hist.hypoglycemia.tolerated_dose: After the reduction, the patient continued {dose} mg daily without recurrent hypoglycaemia. The reviewing clinician documented this as the maximum tolerated daily dose.

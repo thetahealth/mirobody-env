@@ -3,11 +3,12 @@ m2.scene.on_meds: 'The patient is currently taking {meds}'
 m2.scene.meds_only: '{meds}.'
 m2.scene.vitals: ', {name} {value} {unit}'
 m2.scene.what_quote: '"{quote}"{vitals}'
-m2.scene.f1: 'Today (day {day}) the patient presents with {what}. {meds}. Assess triage urgency (🔴 emergency care now / 🟠 within days / 🟡 within weeks / 🟢 routine follow-up), first-line investigations and differential diagnoses, and whether immediate clinician review is needed.'
+m2.scene.f1: 'Today (day {day}) the patient presents with {what}. {meds}. Assess triage urgency (🔴 emergency care now / 🟠 prompt assessment (same or next day when indicated) / 🟡 within weeks / 🟢 routine follow-up), first-line investigations and differential diagnoses, and whether immediate clinician review is needed.'
 m2.scene.f2: 'Today (day {day}) is a chronic disease review for {disease}; {meds}. Identify from the full medication record the medicine requiring assessment today, state the direction of dose adjustment (investigate first and defer adjustment / increase / maintain / reduce), and assess whether another disease is disrupting control of the underlying condition.'
 m2.scene.f3: 'Today (day {day}) follow-up results are available in `followup_result` (same laboratory, with the previous results). {meds}. For `followed_indicator`, assess whether the change exceeds biological and analytical variation (RCV), which clinical thread explains it, and what to do next.'
 m2.hist.prior_narrative: 'Previous outpatient follow-up history: {conditions}. The existing treatment was continued at that time; see the original records for relevant symptoms and investigations.'
 m2.confirm.spirometry: 'Quality-assured pre- and post-bronchodilator spirometry: post-bronchodilator FEV1/FVC={ratio:.2f}; three acceptable expiratory manoeuvres with adequate repeatability. Interpret alongside symptoms and exposure history.'
+m2.confirm.biliary_context: 'Recent fatty meals were accompanied by brief gastrointestinal upset. Temperature at the visit was 38.2°C, with right upper quadrant tenderness and no jaundice.'
 m2.result.elastography: 'Fasted {fasting_hours} hours; VCTE with {probe} probe, {valid}/{attempted} valid measurements, median liver stiffness {lsm} kPa, IQR/median {iqr:.2f}; MRE liver stiffness {mre_lsm} kPa, with adequate wave propagation and no significant artefact. Reassess these non-invasive readings in the clinical context; this examination alone cannot establish the cause or histological stage.'
 m2.result.aki: 'Serum creatinine {base} {unit} on days {day_7} and {day_2}, and {latest} {unit} on day {day}; 48-hour difference {delta:.2f} {unit}, ratio to 7 days earlier {ratio:.3f}'
 m2.result.renal_reading: 'Day {day}: serum creatinine {cr} {unit}, urine albumin/creatinine ratio {uacr} mg/g'
@@ -15,3 +16,46 @@ m2.result.ckd: '{readings}; records span 112 days; no eGFR provided'
 m2.result.fibrosis: 'Fasted {fasting} hours; VCTE with {probe} probe (skin to liver capsule {skin_mm} mm), {valid}/{attempts} valid measurements, median liver stiffness {lsm} kPa, IQR/median {iqr:.2f}; additional MRE to clarify fibrosis risk: {mre} kPa, with adequate wave propagation and no significant artefact; MRI-PDFF {pdff}%, {steatosis}. Report review found no confounding acute hepatitis, biliary obstruction or hepatic congestion; the patient reports no alcohol use, HBsAg and anti-HCV are negative, and interview identified no competing medication or secondary cause. Integrated hepatology opinion: {interpretation}; interpretation of the cause of steatosis requires the known metabolic risk factors. FIB-4 is only an initial screen and cannot establish the diagnosis alone. These are non-invasive probability estimates; no liver biopsy has been performed. They cannot establish histological F3/F4 or MASH and do not demonstrate short-term progression.'
 m2.scene.imported: '{prefix}{meds}{suffix}'
 m2.result.ckd_course: '{readings}; records span 112 days; no eGFR provided. {review}'
+
+# Frame-specific solver instructions. Action times follow the M2 urgency scale.
+runtime.m2.ask.acute_triage: |2-
+
+
+  In addition to the fields required above, add:
+    "urgency": "🔴|🟠|🟡|🟢"   (🔴 emergency department immediately · 🟠 prompt assessment (same or next day when indicated) · 🟡 within weeks · 🟢 routine follow-up)
+
+  Action classes for this question:
+    A0 — continue monitoring on the usual schedule.
+    A1 — improve data quality at the next measurement.
+    A2 — start low-risk self-management with routine follow-up.
+    A3 — arrange routine clinician assessment within weeks.
+    A4 — arrange expedited clinician assessment within days.
+    A5 — escalate immediately for emergency assessment.
+runtime.m2.ask.chronic_med_adjustment: |2-
+
+
+  In addition to the fields required above, add:
+    "treatment_plan": {{"target_drug": "generic drug name or registered English ID", "direction": "investigate_first|uptitrate|keep|downtitrate", "reason": "..."}}
+    Review all medication and records to identify the drug requiring assessment at this visit; identify it even if you maintain the dose.
+    (investigate_first = investigate the cause before changing medication; propose a direction for clinician review, without independently changing treatment. If a drug is on hold, check the hold record; do not independently restart it.)
+
+  Action classes for this question:
+    A0 — continue monitoring on the usual schedule.
+    A1 — improve data quality at the next measurement.
+    A2 — start low-risk self-management with routine follow-up.
+    A3 — arrange routine clinician assessment within weeks.
+    A4 — arrange expedited clinician assessment within days.
+    A5 — escalate immediately for emergency assessment.
+runtime.m2.ask.followup_interpretation: |2-
+
+
+  Review this and previous reports to judge whether the change exceeds biological and analytical variation (RCV). In addition to the fields required above, add:
+    "followup": {{"indicator": "...", "exceeds_rcv": true|false, "explained_by": "...", "next_step": "..."}}
+
+  Action classes for this question:
+    A0 — continue monitoring on the usual schedule.
+    A1 — improve data quality at the next measurement.
+    A2 — start low-risk self-management with routine follow-up.
+    A3 — arrange routine clinician assessment within weeks.
+    A4 — arrange expedited clinician assessment within days.
+    A5 — escalate immediately for emergency assessment.

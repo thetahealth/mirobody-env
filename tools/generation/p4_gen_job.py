@@ -448,7 +448,7 @@ def preview_key(text: str, environment=None) -> str:
     files = subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True).splitlines()
     digest = hashlib.sha256(text.encode())
     for name in files:
-        if name == 'tools/generation/p4_gen_job.py' or name.startswith(("tests/", "docs/", "paper/")) or not name.endswith((".py", ".yaml", ".yml", ".json", ".csv", ".toml")):
+        if name == 'tools/generation/p4_gen_job.py' or name.startswith(("tests/", "docs/")) or not name.endswith((".py", ".yaml", ".yml", ".json", ".csv", ".toml")):
             continue
         digest.update(name.encode() + b"\0" + (ROOT / name).read_bytes())
     ignored = {"HAENV_OUTPUT_ROOT", "HAENV_P4_SCRATCH", "HAENV_GEN_WORKERS", "HAENV_P4_PREVIEW_CACHE"}

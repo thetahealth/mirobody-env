@@ -66,6 +66,37 @@ def _clauses(text):
     return [text] if len(parts) == 1 and isinstance(text, Msg) else parts
 
 
+#: Generation switches the catalog text depends on, in `batch.json:protocol_edition` order.
+EDITION_KEYS = ("difficulty_r2", "course_coupling")
+_PINNED: list = [None]
+
+
+def edition() -> dict:
+    """The switches the hospital catalog is printed for.
+
+    A build prints it for its own generation configuration and records that edition in
+    `batch.json`; a run over a saved batch adopts the recorded edition (`pin_edition`), so
+    what the solver reads never depends on the switches of the answering process.
+    """
+    if _PINNED[0] is not None:
+        return dict(_PINNED[0])
+    from haenv.world.truth import coupling_enabled
+    from haenv.world.validation.difficulty_r2 import enabled
+    return {"difficulty_r2": bool(enabled()), "course_coupling": bool(coupling_enabled())}
+
+
+def pin_edition(record) -> None:
+    """Print the catalog of `record` (a batch's `protocol_edition`); None returns to the configuration."""
+    if record is not None:
+        if set(record) != set(EDITION_KEYS) or not all(isinstance(record[k], bool) for k in EDITION_KEYS):
+            raise ValueError(f"invalid protocol edition: {record!r}")
+        record = {k: record[k] for k in EDITION_KEYS}
+    if record != _PINNED[0]:
+        _PINNED[0] = record
+        import haenv.world.generation.world_plugins as world_plugins
+        world_plugins.clear_overlay_caches()
+
+
 @registry_cached("protocols.yaml", "pack2_triage_scenarios.yaml", "p3_meds.yaml", "p3_clinical_sources.yaml", "control_targets.yaml", "history_dependency.yaml", "difficulty_r2.yaml", "system_scoring.yaml")
 def catalog() -> list[dict]:
     from haenv.p2 import rules as R
@@ -75,9 +106,8 @@ def catalog() -> list[dict]:
     from haenv.p3.render import _dose
     from haenv.world.labworld.meds import drug, meds
     from haenv.world.history.history_dependency import table as history_table
-    from haenv.world.validation.difficulty_r2 import enabled
     from haenv.world.validation.difficulty_r2 import config as difficulty_config
-    cfg, triage = table(), R.table()
+    cfg, triage, ed = table(), R.table(), edition()
     docs = []
     for meta in cfg["triage"]:
         rules = [r for r in triage["rules"] if r["id"].split("_", 1)[0] in meta["rules"]]
@@ -117,11 +147,14 @@ def catalog() -> list[dict]:
                        rule=clinic_protocol({"drug": k})[0]) for k in keys]
         elif gen == "adverse":
             steps = [attribution_rule(drug(k)) for k in keys]
-            if enabled():
+            if ed["difficulty_r2"]:
                 cfg3 = difficulty_config("p3")
                 steps.append(cfg3["protocol"])
                 steps.append(cfg3["allergy_record"]["protocol"])
                 steps.append(L("protocol.p3.documented_course_only"))
+                from haenv.p3.history import authored_coverage
+                if ed["course_coupling"] and authored_coverage({"mechanism_mix_version": 1}):
+                    steps.append(L("p3.hist.limit.rule"))
         elif gen == "adherence":
             steps = _clauses(adherence_rule())
         elif gen == "levothyroxine":
@@ -132,7 +165,7 @@ def catalog() -> list[dict]:
             continue
         elif gen == "statin":
             steps = _clauses(history_table()["packs"]["p3"]["protocol"])
-            if enabled():
+            if ed["difficulty_r2"]:
                 steps.append(difficulty_config("p3")["archived_safety_panel"]["protocol"])
         elif gen == "renal":
             steps = _clauses(str(drug("enalapril", ("CKD",))["clinic_policy"]))
@@ -152,7 +185,8 @@ def catalog() -> list[dict]:
         docs.append(_doc(meta, meta["steps"], [_source(cite, src["url"])]))
     from haenv.world.protocols.followup import steps as followup_steps
     meta = cfg["followup"]
-    docs.append(_doc(meta, followup_steps(), [_source(meta["source"]["cite"], meta["source"]["url"])]))
+    docs.append(_doc(meta, followup_steps(verified_retest=ed["difficulty_r2"]),
+                     [_source(meta["source"]["cite"], meta["source"]["url"])]))
     ids = [d["protocol_id"] for d in docs]
     if len(set(ids)) != len(ids):
         raise ValueError("duplicate hospital protocol id")

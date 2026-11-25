@@ -33,6 +33,7 @@ import math
 from haenv.p3.gold import accepted
 from haenv.p3.gold import control_status
 from haenv.p3.gold import edge_margin_why
+from haenv.p3.gold import block_states
 from haenv.p3.gold import expected_states
 from haenv.p3.gold import g3
 from haenv.p3.plan import background_on
@@ -51,6 +52,8 @@ OFF = ("off", "top_off", "early", "adh_low", "absorption", "off_ae")
 BENIGN_WINDOW = 365    # taken from the ledger's complaints of the last year
 PREDATING_PERSISTS = 0.4   # share of predating decoys that never stopped (ours: a pre-existing symptom that persists)
 AE_MILD = 0.3          # share of adverse-effect entries a patient calls mild (the rest moderate)
+HOLD_PICKUP_SHARE = 0.75   # ours: share of hold courses whose next supply, falling due within half a supply of
+                           # resumption, is collected during the hold (carried forward); not a frequency estimate
 
 
 class Unrealizable(ValueError):
@@ -90,8 +93,12 @@ def _layout(case_id: str, plan: dict, T: int, j: int):
     tau = int(d["tau_rule_days"])
     timing = d["attribution"] == "timing"
     sub, pos = plan["subtype"], plan["position"]
-    if sub == "off_ae" or plan.get("interaction_family") == "course_control":
-        sub = "ae_dose"  # same exposure/onset distribution in active and resolved courses
+    from haenv.p3.causality_generation import applies as causal_trial
+    if causal_trial(plan) and sub in ("ae_dose", "off_ae"):
+        # Qualitative documented trials need no legacy numeric onset anchor.
+        sub = "on" if sub == "ae_dose" else "off"
+    elif not causal_trial(plan) and (sub == "off_ae" or plan.get("interaction_family") == "course_control"):
+        sub = "ae_dose"
     key = (case_id, j)
     xi = 0 if pos == "min" or (pos == "mid" and n == 2) else n - 1 if pos == "top" else 1 + int(_u("mid", *key) * (n - 2))
     if "tolerated_rung" in plan:
@@ -266,6 +273,85 @@ def _visits(case_id: str, lay: dict, T: int, sub: str, j: int) -> list[int]:
 
 
 def _refills(case_id: str, plan: dict, lay: dict, T: int, j: int):
+    """The dispensing record; with a documented hold (`causality_generation.layout`) it is drawn on
+    the treatment clock (`_held_refills`)."""
+    if lay.get("causality_trial_days"):
+        return _held_refills(case_id, plan, lay, T, j)
+    return _refills_clock(case_id, plan, lay, T, j)
+
+
+def _held_refills(case_id: str, plan: dict, lay: dict, T: int, j: int):
+    """R0: no tablets are used during a documented hold (the printed rule in `p3.causality.protocol`,
+    the gold `gold.printed_coverage(holds=...)`). The exposure pattern is drawn on the treatment clock
+    (`gold.treatment_day`: hold days removed) and mapped back to calendar days, so every pickup after
+    the hold comes later by its length. In `HOLD_PICKUP_SHARE` of courses the first pickup that falls
+    due within half a supply of the resumption is collected during the hold instead; its supply is
+    carried forward to the resumption and today's pill count keeps the same recent intake. The physical
+    exposure levels stay those of the calendar record (`meds.coverage_segments`, replayed from the saved
+    pickups); the dose line carries the zero exposure of the hold itself."""
+    from haenv.p3.gold import treatment_day
+    from haenv.world.labworld.meds import carry_in
+    (h, r), = [tuple(int(x) for x in lay["causality_trial_days"])]
+    holds = [(h, r)]
+
+    def c(x):
+        return treatment_day(int(x), holds)
+    inc_c = [c(x) for x in lay["inc"]]
+    rf = _refills_clock(case_id, plan, {**lay, "t0": c(lay["t0"]), "inc": inc_c}, c(T), j)
+    if rf is None:
+        return None
+    clock, hc, supply = list(rf["refills"]), c(h), int(rf["supply"])
+    cal = [x if x < hc else x + (r - h) for x in clock]
+    after = [i for i, x in enumerate(clock) if x >= hc]
+    if after and _u("hold-pickup", case_id) < HOLD_PICKUP_SHARE:
+        i = after[0]
+        if (clock[i] - hc < 0.5 * supply and clock[i] not in inc_c
+                and (i == 0 or hc - clock[i - 1] >= 0.5 * supply)):
+            day = h + int(_u("hold-pickup-day", case_id, j) * (r - h))
+            if day not in cal:
+                before = carry_in(clock, supply, inc_c)[-1]
+                clock[i], cal[i] = hc, day
+                rf["pill_count"] = int(rf["pill_count"]) + int(round(carry_in(clock, supply, inc_c)[-1] - before))
+    rf["refills"] = cal
+    return rf
+
+
+def _refills_clock(case_id: str, plan: dict, lay: dict, T: int, j: int):
+    """M1: prescribe a longitudinal exposure pattern before computing the gold.
+
+    Authored coverage targets and PQA sources: registry/p3_dispensing.yaml.
+    The unchanged ambiguity/state gates still decide clinical admissibility;
+    no reader outcome is consulted by generation or selection.
+    """
+    from haenv.world.truth import coupling_enabled
+    from haenv.world.validation.difficulty_r2 import enabled
+    if not coupling_enabled() or not enabled(plan):
+        return _legacy_refills(case_id, plan, lay, T, j)
+    from haenv.resources.regpath import load_registry
+    from haenv.world.labworld.meds import carry_in, rule
+    cfg = load_registry("p3_dispensing.yaml")["generation"]
+    longitudinal = T - int(lay["t0"]) >= int(rule()["adherence_window_days"])
+    # Use an existing dispensing size to obtain several rows in the window.
+    # Short courses retain their original, clinically supported exposure.
+    dealt = {**plan, "supply": cfg["supply_days"]} if longitudinal else plan
+    rf = _legacy_refills(case_id, dealt, lay, T, j)
+    if rf is None:
+        return None
+    if longitudinal:
+        low_window = plan["subtype"] in ("adh_low", "on_low") or plan.get("signal_conflict") == "low_coverage"
+        reversal = h01("m1-window-reversal", case_id) < cfg["recent_window_reversal_share"]
+        recent_high = low_window if reversal else not low_window
+        lo, hi = cfg["recent_intake_high" if recent_high else "recent_intake_low"]
+        rate = lo + (hi - lo) * _u("m1-recent-intake", case_id, j)
+        elapsed = T - rf["refills"][-1]
+        taken = round(rate * elapsed)
+        stock = rf["supply"] + carry_in(rf["refills"], rf["supply"], lay["inc"])[-1]
+        rf.update(a_last=taken / max(1, elapsed), pill_count=max(0, round(stock) - taken))
+    rf["dispensing_history"] = True
+    return rf
+
+
+def _legacy_refills(case_id: str, plan: dict, lay: dict, T: int, j: int):
     """Every pickup of the last 180 days (as a pharmacy printout lists them, A10) -- with the
     start-day dispensing when the drug started inside them, and the pickup before them when the
     first one comes after the start of the adherence window, so the printed record covers every day
@@ -275,7 +361,7 @@ def _refills(case_id: str, plan: dict, lay: dict, T: int, j: int):
     from haenv.world.labworld.meds import carry_in
     from haenv.world.labworld.meds import rule
     sub = plan["subtype"]
-    low = sub in ("adh_low", "on_low")
+    low = sub in ("adh_low", "on_low") or plan.get("signal_conflict") == "low_coverage"
     supply = int(plan["supply"])
     a_norm = round(0.88 + 0.10 * _u("an", case_id, j), 3)
     a_low = round(0.50 + 0.249 * _u("al", case_id, j), 3)
@@ -479,7 +565,8 @@ def _diary(case_id: str, plan: dict, lay: dict, T: int, j: int, ledger=None, sex
     out = []
     words = list(d["ae_symptoms"])
     word = words[int(_u("aew", case_id) * len(words))]          # the patient's own wording (A17)
-    if sub in ("ae_dose", "off_ae") or plan.get("interaction_family") == "course_control":
+    from haenv.p3.causality_generation import applies as causal_trial
+    if causal_trial(plan) or sub in ("ae_dose", "off_ae") or plan.get("interaction_family") == "course_control":
         out.append({"kind": "drug_symptom", "symptom": word, "onset": lay["onset"], "cause": "dose_related"})
     elif sub == "unattributed":
         out.append({"kind": "drug_symptom", "symptom": word, "onset": lay["onset"], "cause": "unattributed"})
@@ -533,15 +620,38 @@ def _k(case_id: str, k0: float, v: int, j: int, lo: float, hi: float) -> float:
     return round(_fold(k0 * (1.0 + K_SD * z("p3k", case_id, v, j)), lo, hi), k_digits(case_id))
 
 
-def _renal(case_id: str, visits: list[int], j: int) -> list[list]:
+def _renal(case_id: str, visits: list[int], j: int, sex: str | None = None) -> list[list]:
     """[day, creatinine umol/L, potassium mmol/L] at every visit: a stable normal patient level
     with visit-to-visit variation (creatinine CV about 5%, 自拟; potassium `K_SD`), potassium in
-    3.5-5.0 mmol/L at the laboratory's resolution (`k_digits`)."""
+    3.5-5.0 mmol/L at the laboratory's resolution (`k_digits`). With course coupling on the levels
+    and the variation are the sourced value model (`_renal_coupled`)."""
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        return _renal_coupled(case_id, visits, j, sex)
     from haenv.world.labworld import z
     cr0 = 55.0 + 40.0 * _u("cr0", case_id, j)
     k0 = 3.8 + 0.7 * _u("k0", case_id, j)
     return [[int(v), int(round(cr0 * (1.0 + 0.05 * z("p3cr", case_id, v, j)))),
              _k(case_id, k0, v, j, 3.5, 5.0)] for v in visits]
+
+
+def _renal_coupled(case_id: str, visits: list[int], j: int, sex: str | None) -> list[list]:
+    """The coupled renal panel (B3, `registry/biological_variation.yaml`): the person's creatinine and
+    potassium baselines (NHANES 2015-2016 centre by sex, EFLM CVG spread), drawn once per case rather than
+    per realization attempt, and per draw sqrt(CVI^2 + CVA^2) on the log scale. Potassium stays in the
+    item's normal 3.5-5.0 mmol/L (A12) and prints at the laboratory's resolution (`k_digits`)."""
+    from haenv.world.labworld import z
+    from haenv.world.truth import variation as V
+    cr0 = V.person_baseline(case_id, "creatinine", sex or "")
+    k0 = V.person_baseline(case_id, "potassium", sex or "")
+    cr_cv, k_cv = V.draw_cv("creatinine"), V.draw_cv("potassium")
+    return [[int(v), int(round(cr0 * math.exp(cr_cv * z("p3cr", case_id, v, j)))),
+             round(_fold(k0 * math.exp(k_cv * z("p3k", case_id, v, j)), 3.5, 5.0), k_digits(case_id))]
+            for v in visits]
+
+
+def _sex(raw) -> str:
+    return "M" if str((getattr(raw, "user_profile", None) or {}).get("sex")) == "M" else "F"
 
 
 def _age(raw, case_id: str) -> int:
@@ -586,11 +696,21 @@ def _renal_ckd(case_id: str, visits: list[int], start: int, cm: dict, j: int) ->
     from haenv.world.labworld.truth import egfr_ckd_epi
     k_lo, k_hi = (float(x) for x in comorbidity(cm["code"])["potassium"])
     k0 = k_lo + 0.1 + (k_hi - k_lo - 0.2) * _u("k0", case_id, j)
+    from haenv.world.truth import coupling_enabled
+    coupled = coupling_enabled()
+    if coupled:
+        from haenv.world.truth import variation as V
+        cr_cv, k_cv = V.draw_cv("creatinine"), V.draw_cv("potassium")
     out = []
     for v in visits:
         cr = float(cm["cr0"]) * (1.0 + (float(cm["rise"]) if int(v) > int(start) else 0.0))
-        cr = int(round(cr * (1.0 + 0.05 * z("p3cr", case_id, v, j))))
-        k = _k(case_id, k0, v, j, k_lo, k_hi)
+        if coupled:
+            # B3: the sourced per-draw variation on the log scale (the stage's level is the person's)
+            cr = int(round(cr * math.exp(cr_cv * z("p3cr", case_id, v, j))))
+            k = round(_fold(k0 * math.exp(k_cv * z("p3k", case_id, v, j)), k_lo, k_hi), k_digits(case_id))
+        else:
+            cr = int(round(cr * (1.0 + 0.05 * z("p3cr", case_id, v, j))))
+            k = _k(case_id, k0, v, j, k_lo, k_hi)
         out.append([int(v), cr, k, int(round(egfr_ckd_epi(cr, int(cm["age"]), str(cm["sex"]))))])
     return out
 
@@ -605,6 +725,10 @@ def _renewal_acted(ax_name: str, rec: dict, upper: float, lay: dict, early_days:
 
 
 def realize(raw, case_id: str, plan: dict) -> dict:
+    from haenv.world.truth import coupling_enabled
+    coupled_lt4 = plan['drug'] == 'levothyroxine' and coupling_enabled()
+    if coupled_lt4 and 'supported_course' in plan:
+        return _supported_course(raw, case_id, plan)
     from haenv.world.validation.difficulty_r2 import enabled
     if not enabled(plan) or plan["drug"] != "levothyroxine":
         return _realize_course(raw, case_id, plan)
@@ -701,6 +825,11 @@ def _realize_course(raw, case_id: str, plan: dict) -> dict:
         if lay is None:
             why["layout"] = why.get("layout", 0) + 1
             continue
+        from haenv.p3.causality_generation import layout as causal_layout
+        lay = causal_layout(plan, lay, T)
+        if lay is None:
+            why["causal_layout"] = why.get("causal_layout", 0) + 1
+            continue
         rf = _refills(case_id, plan, lay, T, j)
         if rf is None:
             why["refills"] = why.get("refills", 0) + 1
@@ -750,6 +879,13 @@ def _realize_course(raw, case_id: str, plan: dict) -> dict:
                    **({"comorbidity": cm_j} if cm else {}),
                    "params": {"r": round(r, 6), "y_u": round(y_u, 4), "y_T": round(y_T, 4), "zone": zone}}
             blk["record_key"] = str(case_id)
+            for key in ("signal_conflict", "history_near_miss"):
+                if plan.get(key):
+                    blk[key] = plan[key]
+            from haenv.p3.causality_generation import install as install_causality
+            install_causality(blk, plan, lay)
+            if rf.get("dispensing_history"):
+                blk["dispensing_history"] = True
             if plan.get("interaction_family"):
                 blk["interaction_family"] = plan["interaction_family"]
             if administration:
@@ -757,16 +893,20 @@ def _realize_course(raw, case_id: str, plan: dict) -> dict:
             if enabled(plan):
                 blk["documented_course_only"] = True
                 blk["course_documentation_key"] = str(case_id)
+                if "mechanism_mix_version" in plan:
+                    blk["mechanism_mix_version"] = plan["mechanism_mix_version"]
             if not all(u_lo <= float(r["printed"]) <= u_hi for r in recs if int(r["day"]) <= lay["t0"]):
                 why["start_printed"] = why.get("start_printed", 0) + 1
                 continue                # the visible readings up to the start are in the untreated range (A16: LT4 from TSH > 10, statin below 190 mg/dL; A19)
             misses = sum(1 for r in recs[:-1] if lay["t0"] < int(r["day"]) and int(r["day"]) not in lay["inc"]
+                         and int(r["day"]) not in lay.get("causality_trial_days", ())
                          and control_status(ax_name, float(r["printed"]), upper)[0] != "on")
             if misses > max(int(plan.get("n_extra", 0)), int(lay["extra"])):
                 why["silent_renewal"] = why.get("silent_renewal", 0) + 1
                 continue                # A17: the clinic follows the table at every earlier visit, but for the one renewal
             if any(float(r["printed"]) <= upper for r in recs
-                   if int(r["day"]) == lay["t0"] or (int(r["day"]) in lay["inc"] and not lay["always"])):
+                   if int(r["day"]) == lay["t0"] or (int(r["day"]) in lay["inc"] and not lay["always"]
+                       and int(r["day"]) not in lay.get("causality_trial_days", ()))):
                 why["increase_at_target"] = why.get("increase_at_target", 0) + 1
                 continue                # the start and every past increase were made on an off-target reading (A5, A9)
             if floor and any(float(r["printed"]) < floor for r in recs
@@ -774,16 +914,17 @@ def _realize_course(raw, case_id: str, plan: dict) -> dict:
                 why["increase_below_floor"] = why.get("increase_below_floor", 0) + 1
                 continue                # the clinic raised the dose only on readings at or above its floor
             if any(_renewal_acted(ax_name, r, upper, lay, early_days) for r in recs
-                   if lay["t0"] < int(r["day"]) < T and int(r["day"]) not in lay["inc"]):
+                   if lay["t0"] < int(r["day"]) < T and int(r["day"]) not in lay["inc"]
+                   and int(r["day"]) not in lay.get("causality_trial_days", ())):
                 why["renewal_reading"] = why.get("renewal_reading", 0) + 1
                 continue                # a renewal is never made on a reading the printed rules act on
             if plan.get("history_record"):
                 blk["adverse_event_record"] = [dict(plan["history_record"])]
             g = g3(blk)
-            if g["class"] != plan["class"] or set(g["states"]) != expected_states(sub):
+            if g["class"] != plan["class"] or set(g["states"]) != block_states(plan):
                 why["g3:" + str(g["reason"])[:40]] = why.get("g3:" + str(g["reason"])[:40], 0) + 1
                 continue
-            edge = contract16 and edge_margin_why(blk)
+            edge = contract16 and edge_margin_why(blk, g)
             if edge:
                 why["edge"] = why.get("edge", 0) + 1
                 continue                # no item sits on a rule line the clinic itself chose (w14-bg-p3)
@@ -796,7 +937,123 @@ def _realize_course(raw, case_id: str, plan: dict) -> dict:
                     why["interaction_control"] = why.get("interaction_control", 0) + 1
                     continue
             if d.get("renal_labs"):
-                blk["renal"] = _renal_ckd(case_id, visits, lay["t0"], cm, j) if cm else _renal(case_id, visits, j)
+                blk["renal"] = _renal_ckd(case_id, visits, lay["t0"], cm, j) if cm else _renal(case_id, visits, j, _sex(raw))
                 blk["k_digits"] = k_digits(case_id)
+            from haenv.world.truth import coupling_enabled
+            if plan['drug'] == 'levothyroxine' and coupling_enabled():
+                from haenv.p3.history import connect_course
+                connect_course(blk, r=r, y_u=y_u)
             return blk
     raise Unrealizable(f"no admissible realization: {why}")
+
+
+def _supported_course(raw, case_id, plan):
+    """Explicit complete LT4 source adapter; no population allocation.
+
+    Earlier clinical actions are checked separately from today's G3/N/I/V.
+    This increment supports only records within the existing P3 regimen;
+    missing initiation, adverse courses and unrepresented interruptions refuse.
+    """
+    from copy import deepcopy
+    from haenv.p3.history import connect_course, _lt4_archive_rows
+    from haenv.world.labworld.meds import drug, rule
+    from haenv.world.validation.difficulty_r2 import config, enabled
+    from haenv.resources.regpath import load_registry
+    from haenv.world.history.history_dependency import old_day
+    def refuse(reason):
+        raise Unrealizable('canonical LT4 ' + reason)
+    g = deepcopy(plan['supported_course'])
+    required = {'drug', 'axis', 'T', 'dose_line', 'visits', 'refills', 'a_before',
+                'a_last', 'supply', 'pill_count', 'diary', 'params', 'upper', 'subtype', 'class'}
+    if not required <= g.keys():
+        refuse('incomplete source fields: ' + ', '.join(sorted(required - g.keys())))
+    if not enabled(plan):
+        refuse('explicit supported courses require the R2 regimen')
+    if (g['drug'], g['axis'], g['T'], g['upper'], g['subtype'], g['class']) != (
+            'levothyroxine', 'TSH', int(raw.prediction_context['prediction_time_T']),
+            plan['upper'], plan['subtype'], plan['class']):
+        refuse('source does not match the planned patient review')
+    d = drug('levothyroxine')
+    line, recs, T = g['dose_line'], g['visits'], int(g['T'])
+    if not line or not recs:
+        refuse('missing genuine initiation')
+    days = [int(v['day']) for v in recs]
+    dose_days = [int(day) for day, _ in line]
+    if (days != sorted(set(days)) or dose_days != sorted(set(dose_days))
+            or days[-1] != T or days[0] != dose_days[0] or dose_days[-1] >= T
+            or not set(dose_days) <= set(days)):
+        refuse('missing genuine initiation or dated prescription visit')
+    if any(dose not in d['ladder'] for _, dose in line):
+        refuse('dose outside registered ladder')
+    if any(b-a != 25 for (_, a), (_, b) in zip(line, line[1:])):
+        refuse('unsupported prior dose change; existing regimen permits small increases')
+    inc = dose_days[1:]
+    lay = dict(t0=dose_days[0], inc=inc)
+    early = float(rule()['early_max_frac']) * float(d['tau_rule_days'])
+    if any(_renewal_acted('TSH', v, g['upper'], lay, early)
+           for v in recs[1:-1] if int(v['day']) not in inc):
+        refuse('earlier renewal requires clinical action')
+    if any(v['printed'] <= g['upper'] for v in recs if v['day'] in dose_days):
+        refuse('earlier start/increase lacks an off-target TSH')
+    lo, hi = d['untreated']
+    if not lo <= recs[0]['printed'] <= hi:
+        refuse('initiation TSH outside registered untreated range')
+    p = g['params']
+    if not (lo <= p['y_u'] <= hi and d['response'][0] <= p['r'] <= d['response'][1]):
+        refuse('response inputs outside registered ranges')
+    for a, b in zip(days, days[1:]):
+        lower, upper = (d['followup_days'] if a in dose_days else
+                        (d['tau_rule_days'], d['tau_rule_days'] + SETTLED_SPAN))
+        if not lower <= b-a <= upper:
+            refuse('follow-up outside existing registered interval')
+    # Preserve the real start's dated body-weight evidence and existing
+    # eligibility rule; never infer a replacement prescription from response.
+    cfg = config('p3')['replacement_start']
+    up = raw.user_profile or {}
+    known = set(up.get('known_conditions') or ())
+    basics = (raw.latent_premise or {}).get('patient_basics') or {}
+    known.update(basics.get('comorbidities') or ())
+    known.add(basics.get('disease'))
+    age = int(str(up.get('age_range') or '65-69').split('-')[0])
+    if age < cfg['age_below'] and not known.intersection(cfg['exclude']):
+        weights = [v for v in (raw.longitudinal_data or {}).get('weight', [])
+                   if int(v['ts']) <= dose_days[0]]
+        if not weights:
+            refuse('initiation requires dated weight evidence')
+        weight = max(weights, key=lambda v: int(v['ts']))['value']
+        step = cfg['microgram_step_max']
+        dose = step * math.floor(weight * cfg['dose_per_kg'] / step + .5)
+        if line[0][1] != dose:
+            refuse('initial replacement does not match recorded weight')
+    else:
+        # A current older/CV profile alone cannot prove eligibility years ago.
+        # Require an explicit contemporaneous initiation profile, not a guess.
+        refuse('historical low-start eligibility is not established by the current profile')
+    picks = g['refills']
+    if (not picks or picks != sorted(set(picks)) or picks[0] < dose_days[0]
+            or picks[-1] > T or not 0 <= g['a_before'] <= 1 or not 0 <= g['a_last'] <= 1):
+        refuse('invalid dated refill exposure')
+    # Today's pill count must encode the same final consumption rate.
+    from haenv.world.labworld.meds import carry_in
+    stock = float(g['supply']) + carry_in(picks, g['supply'], inc)[-1]
+    if g['pill_count'] != round(stock - g['a_last'] * (T-picks[-1])):
+        refuse('pill count/exposure mismatch')
+    archives = g.get('adverse_event_record') or []
+    lt4_rows = _lt4_archive_rows(g)
+    if not lt4_rows:
+        refuse('explicit supported course requires its LT4 archive evidence')
+    if any(row['day'] != old_day('p3', case_id, T) for row in lt4_rows):
+        refuse('archive outside the existing dated-history contract')
+    if plan.get('history_record') and plan['history_record'] not in archives:
+        refuse('archive evidence differs from the supplied source')
+    connect_course(g)
+    computed = g3(g)
+    if computed['class'] != plan['class'] or set(computed['states']) != expected_states(plan['subtype']):
+        refuse('current G3 or active states disagree')
+    if edge_margin_why(g, computed):
+        refuse('current response lies on a clinical rule boundary')
+    if g.get('interaction_family') or g.get('diary'):
+        refuse('symptom/interaction course validation remains unsupported')
+    g.update(g3=computed, accept=accepted(g, computed), start=dose_days[0],
+             s=dose_days[-1], record_key=str(case_id))
+    return g

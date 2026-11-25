@@ -25,7 +25,7 @@ SYNTHETIC data, evaluation only, not medical advice.
 from __future__ import annotations
 
 from haenv.i18n.runtime import runtime_text
-from haenv.i18n.text import text_of as _rt
+from haenv.i18n.text import L, render, text_of as _rt
 
 import hashlib
 import json
@@ -43,7 +43,7 @@ from haenv.interaction.query.tools import ToolSpec
 from haenv.interaction.query.tools import _obj
 from haenv.interaction.query.tools import call_tool
 
-from haenv.interaction.query.targets import target_id, canonical_target
+from haenv.interaction.query.targets import target_id
 
 PURCHASE = "order_test"
 
@@ -58,19 +58,34 @@ def _menu(gc: dict) -> dict:
             **({"unavailable": {target_id(k): runtime_text(v) for k, v in gc["unavailable_results"].items()}} if gc.get("unavailable_results") else {})}
 
 
-def _purchase_result(target: str, store: RecordStore, gc: dict) -> dict:
+def _order_addresses(menu: list[dict]) -> dict:
+    """Index the original menu so repeat orders keep the same identity and price."""
+    keys = {str(item["target"]): item for item in menu}
+    ids = {target_id(item["target"]): item for item in menu}
+    names = {}
+    ambiguous = set()
+    for key, item in keys.items():
+        for lang in ("en", "zh"):
+            name = render(L(key), lang)
+            if name in names and names[name] != item:
+                ambiguous.add(name)
+            names[name] = item
+    return {**{name: item for name, item in names.items() if name not in ambiguous}, **ids, **keys}
+
+
+def _purchase_result(receipt, store: RecordStore, gc: dict) -> dict:
     """What one purchase returned, read off the round `run_gated` just ran: the bought stream or
     test result (as `get_series` shows it), else unavailable, refused past the budget, or nothing."""
-    target = canonical_target(target, gc)
+    target = receipt.target
     shown = target_id(target)
-    if store.streams.get(target):
+    if receipt.truncated:
+        return {"target": shown, "ordered": False, "found": False, "result": _rt('runtime.interaction.query.gated._purchase_result.2'),
+                "remaining": round(float(gc.get("budget") or 0) - receipt.cost_after, 2)}
+    if receipt.revealed:
         return {"target": shown, "ordered": True, **store.get_series(target)}
     if target in (gc.get("unavailable_results") or {}):
         return {"target": shown, "ordered": True, "found": False,
                 "result": _rt('runtime.interaction.query.gated._purchase_result.1')}
-    if target in (gc.get("truncated_last_round") or ()):
-        return {"target": shown, "ordered": False, "found": False, "result": _rt('runtime.interaction.query.gated._purchase_result.2'),
-                "remaining": round(float(gc.get("budget") or 0) - float(gc.get("spent") or 0), 2)}
     return {"target": shown, "ordered": True, "found": False, "result": _rt('runtime.interaction.query.gated._purchase_result.3')}
 
 
@@ -129,12 +144,13 @@ def solve_gated_round(solver, payload):
             raise QueryLeak(v)
         st = solver._gq = {"msgs": [{"role": "user", "content": question}], "pid": pid,
                            "sha": hashlib.sha256(question.encode()).hexdigest(), "pending": [], "n_calls": 0,
+                           "order_addresses": _order_addresses(gc.get("menu") or []),
                            "trace": QueryTrace(system=runtime_text(QUERY_SYSTEM)), "answered": None, "t0": time.time()}
         st["trace"].messages = st["msgs"]
         solver._failed_turns = []
     tr: QueryTrace = st["trace"]
-    for p in st["pending"]:
-        res = _purchase_result(p["target"], store, gc)
+    for p, receipt in zip(st["pending"], gc.get("last_purchases", ()), strict=True):
+        res = _purchase_result(receipt, store, gc)
         bad = guard.check(res)
         if bad:
             raise QueryLeak(bad)
@@ -146,7 +162,8 @@ def solve_gated_round(solver, payload):
     if st["answered"] is not None:
         return _output(solver, payload, st, st["answered"], [], None)
     usages, finish = [], None
-    can_order = int(gc.get("round") or 1) < int(gc.get("max_rounds") or 1)
+    can_order = (int(gc.get("round") or 1) < int(gc.get("max_rounds") or 1)
+                 and gc["spent"] < gc["budget"])
     while True:
         final = tr.rounds_used >= q["max_rounds"] or st["n_calls"] >= q["max_calls"]
         specs = _specs(store, gc, can_order and not final)
@@ -200,9 +217,12 @@ def solve_gated_round(solver, payload):
                                       res.get("found") if isinstance(res, dict) else None, len(body), _n_rows(res)))
             st["msgs"].append({"role": "tool", "tool_call_id": cid, "name": str(c.get("name")), "content": res})
         if st["pending"]:
-            menu_kind = {str(i["target"]): str(i["kind"]) for i in gc.get("menu") or ()}
-            text = json.dumps({"queries": [{"kind": menu_kind.get(canonical_target(p["target"], gc), "test"), "target": canonical_target(p["target"], gc)}
-                                           for p in st["pending"]], "commit": False}, ensure_ascii=False)
+            queries = []
+            for p in st["pending"]:
+                item = st["order_addresses"].get(p["target"])
+                queries.append({"kind": str(item["kind"]), "target": str(item["target"])} if item else
+                               {"kind": "test", "target": p["target"]})
+            text = json.dumps({"queries": queries, "commit": False}, ensure_ascii=False)
             solver._last_query = ({**tr.as_dict(), "pack": "m2", "T": T, "limits": dict(q)}, store)
             return _output(solver, payload, st, text, usages, finish)
     solver._last_query = ({**tr.as_dict(), "pack": "m2", "T": T, "limits": dict(q)}, store)

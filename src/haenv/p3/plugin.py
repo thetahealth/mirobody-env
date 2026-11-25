@@ -76,7 +76,10 @@ def pack():
         # the decision reads the visit block (`prediction_context.meds_p3`); of the streams, the clinical
         # control axes (a drug's own bearing streams are already kept out by `plan`)
         view=PayloadView(streams=("weight", "systolic_bp", "diastolic_bp", "resting_hr", "HbA1c", "fasting_glucose",
-                                  "CGM_TIR", "LDL", "triglycerides", "ALT", "AST", "FIB4", "TSH")))
+                                  "CGM_TIR", "LDL", "triglycerides", "ALT", "AST", "FIB4", "TSH"),
+                         # routine panels of the coupled world (B3/F1), only where the panel layer shows them
+                         panel_streams=("creatinine", "potassium", "eGFR", "ALT", "AST", "LDL", "triglycerides",
+                                        "fasting_glucose", "HbA1c", "TSH", "FT4")))
 
 
 def register() -> list:

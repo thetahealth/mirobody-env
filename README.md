@@ -18,7 +18,7 @@
   <strong>English</strong> &middot; <a href="https://github.com/thetahealth/mirobody-env/blob/main/README.zh-CN.md">简体中文</a>
   &nbsp;|&nbsp;
   <a href="#how-it-works">How it works</a> &middot;
-  <a href="#the-four-packs">Packs</a> &middot;
+  <a href="#the-five-packs">Packs</a> &middot;
   <a href="#leaderboard">Results</a> &middot;
   <a href="#quick-start">Quick start</a> &middot;
   <a href="#evaluate-your-own-agent">Your agent</a> &middot;
@@ -71,7 +71,7 @@ repository. Each question asks for one clinical decision on a synthetic record t
 or years. To run an existing system against published health benchmarks such as ESL-Bench, use
 [mirobody-eval](https://github.com/thetahealth/mirobody-eval).
 
-### The four packs
+### The five packs
 
 | Pack | Decision at `T` | Answer |
 |---|---|---|
@@ -79,9 +79,9 @@ or years. To run an existing system against published health benchmarks such as 
 | ② Triage | where the patient should go now | `ed_now` · `within_24h` · `routine_followup` · `watchful_waiting` |
 | ③ Medication adjustment | what to do with the drug at this follow-up visit | `uptitrate` · `downtitrate` · `maintain` · `switch` · `check_adherence_or_adverse_effect` |
 | ④ Lab-change attribution | whether the change since the last result is real | `true_change` · `analytic_biological_noise` · `preanalytical` · `method_difference`, plus the size of a true change |
+| ⑤ Red-line vigilance | whether a safety risk warrants timely escalation | a reply that addresses the risk in one case and avoids raising it in a matched control |
 
-In every pack the decision is checked by code against the world's truth; in pack ① registered
-aliases match the listed diagnoses to the gold, with no model call.
+Packs ①–④ check decisions against the world's truth. Pack ⑤ checks both replies in each pair.
 
 - **Gold standard first.** Disease, drug response, adherence, true lab values and measurement noise
   are set before the course is rendered; each pack's gold is derived from them by code.
@@ -96,61 +96,43 @@ aliases match the listed diagnoses to the gold, with no model call.
 A pack is a pipeline, not a fixed file: one command builds a pack of any size from a seed and
 audits it, with no model call (see [Quick start](#quick-start) and the
 [data card](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#task-packs-and-their-generators)).
-Prompts and the free text of the records are in Chinese; field names, answer values and
-identifiers are in English.
+Prompts and record text are in English by default. Use `--lang zh` for Chinese.
 
 ## Leaderboard
 
-The 1.3.1 board ranks 13 models on the four packs, 100 items per pack (N100), with 3 answers per
-item. The main score averages the three answer scores `S = G·D·(1+Q)/2` of each item (k3) and gives
-the four packs equal weight; the preregistered first-answer score (pk1) only swaps minimax-m3 and
-deepseek-v4-flash at positions 8 and 9, with the rest of the order unchanged.
-Intervals are 95% paired item-cluster bootstrap intervals (2,000 draws) that resample the same items
-for every model; rank intervals come from the same draws.
+The 1.6.0 board evaluates eight models in English with one answer per item and 50 items
+per pack, counting each red-line pair as one item. The overall score gives all five packs
+equal weight. The 95% paired bootstrap intervals resample the same items for every model.
 
-> This board was measured with 1.3.1 on the Chinese 1.3 packs. 1.4 (English records by default,
-> revised questions) does not include a board, and scores on 1.4 packs are not comparable to this
-> one; to reproduce it, use [v1.3.2](https://github.com/thetahealth/mirobody-env/tree/v1.3.2).
+### 1.6.0 overall
 
-### 1.3.1 overall
-
-<!-- board-1.3.1:start -->
+<!-- board-1.6.0:start -->
 <p align="center">
-  <img src="docs/figures/readme_board_131.png" alt="Overall scores and 95% intervals for thirteen models, ordered by score, with rank intervals at left" width="100%">
+  <img src="docs/figures/readme_board_160.png" alt="Overall scores and paired 95% intervals for eight models" width="100%">
 </p>
 
-| Rank | Model | Overall (95% CI) | ① | ② | ③ | ④ | All-3 |
+| Rank | Model | Overall (95% CI) | ① | ② | ③ | ④ | ⑤ |
 |---:|---|---:|---:|---:|---:|---:|---:|
-| 1–2 | deepseek-v4.1-flash | 0.837 (0.813–0.861) | 0.655 | 0.932 | 0.928 | 0.833 | 0.823 |
-| 1–2 | gpt-6-sol | 0.832 (0.808–0.856) | 0.693 | 0.893 | 0.959 | 0.785 | 0.878 |
-| 3–5 | mimo-v2.6-flash | 0.793 (0.765–0.819) | 0.569 | 0.943 | 0.853 | 0.807 | 0.760 |
-| 3–5 | gemini-3.8-flash | 0.792 (0.768–0.816) | 0.591 | 0.950 | 0.882 | 0.744 | 0.867 |
-| 3–5 | qwen38-27b | 0.789 (0.763–0.815) | 0.617 | 0.930 | 0.885 | 0.722 | 0.765 |
-| 6–7 | gpt-6-luna | 0.719 (0.692–0.747) | 0.494 | 0.859 | 0.897 | 0.627 | 0.693 |
-| 6–7 | deepseek-v4-pro | 0.696 (0.666–0.724) | 0.533 | 0.933 | 0.689 | 0.629 | 0.668 |
-| 8–10 | minimax-m3 | 0.633 (0.602–0.663) | 0.440 | 0.870 | 0.608 | 0.616 | 0.525 |
-| 8–10 | deepseek-v4-flash | 0.632 (0.599–0.664) | 0.477 | 0.856 | 0.656 | 0.538 | 0.588 |
-| 8–10 | glm-5.3-flash | 0.628 (0.597–0.658) | 0.484 | 0.813 | 0.668 | 0.547 | 0.530 |
-| 11 | gemma-4-31b-it | 0.536 (0.506–0.567) | 0.382 | 0.767 | 0.514 | 0.482 | 0.580 |
-| 12 | qwen3.7-flash | 0.446 (0.414–0.476) | 0.380 | 0.599 | 0.271 | 0.533 | 0.327 |
-| 13 | qwen3-32b | 0.171 (0.150–0.192) | 0.069 | 0.307 | 0.058 | 0.249 | 0.073 |
-<!-- board-1.3.1:end -->
+| 1 | gpt-6.2-sol | 0.964 (0.940–0.984) | 0.840 | 1.000 | 1.000 | 0.980 | 1.000 |
+| 1 | kimi-k3.1-pro | 0.964 (0.940–0.984) | 0.940 | 1.000 | 0.960 | 1.000 | 0.920 |
+| 3 | claude-sonnet-5.5 | 0.936 (0.904–0.964) | 0.840 | 0.960 | 0.960 | 0.980 | 0.940 |
+| 4 | deepseek-v4.1-flash | 0.884 (0.848–0.916) | 0.880 | 1.000 | 0.980 | 0.980 | 0.580 |
+| 5 | deepseek-v4-pro | 0.868 (0.832–0.904) | 0.920 | 1.000 | 0.920 | 0.980 | 0.520 |
+| 6 | glm-5.3 | 0.852 (0.812–0.892) | 0.940 | 0.900 | 0.700 | 0.980 | 0.740 |
+| 7 | apodex-1.1 | 0.800 (0.752–0.848) | 0.880 | 0.840 | 0.720 | 0.900 | 0.660 |
+| 7 | minimax-m3.1-flash | 0.800 (0.756–0.844) | 0.800 | 0.980 | 0.820 | 0.940 | 0.460 |
 
-<sub>① Diagnosis · ② Triage · ③ Medication adjustment · ④ Lab-change attribution. All-3 is the share
-of items whose decision is correct in all three answers (equal-weight mean over the packs); it is a
-reliability profile, not the ranking metric. `G` is passing the hard gates, `D` a correct core
-decision, `Q` the plan quality (mean of two judgments by one LLM judge; intervals exclude judge
-noise). Overlapping rank intervals do not establish an order.</sub>
+<sub>① Diagnosis · ② Triage · ③ Medication adjustment · ④ Lab-change attribution · ⑤ Red-line vigilance. Scores are the share of correct decisions; a red-line pair counts only when both replies are correct. Overlapping intervals do not establish an order.</sub>
 
 <p align="center">
-  <img src="docs/figures/readme_task_scores_131.png" alt="Scores for the four tasks and All-3, with thirteen models in overall board order" width="100%">
+  <img src="docs/figures/readme_task_scores_160.png" alt="Pack accuracies for eight models" width="100%">
 </p>
+<!-- board-1.6.0:end -->
 
-The evaluated question sets ship as frozen pack files and regenerate byte for byte at the commits
-their batches record. [Interactive board](https://thetahealth.github.io/mirobody-env/#act3) ·
-[board data (JSON)](https://github.com/thetahealth/mirobody-env/blob/main/docs/boards/1.3.1/k3.json) ·
-[earlier boards](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
-[recomputing the board](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-131-overall-board)
+[Interactive board](https://thetahealth.github.io/mirobody-env/#act3) ·
+[Board data (JSON)](https://github.com/thetahealth/mirobody-env/blob/main/docs/boards/1.6.0/k1.json) ·
+[Earlier boards](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
+[Recomputing the board](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-160-overall-board)
 
 ## Quick start
 
@@ -191,7 +173,7 @@ would score new questions against old answers.
 uv run --with scikit-learn --with joblib python tools/generation/make_pack.py --pack p4 --n 50 --out packs/p4
 ```
 
-`--pack` is `m2` (①), `p2` (②), `p3` (③) or `p4` (④); `--n` sets the size and `--seed` (or
+`--pack` is `m2` (①), `p2` (②), `p3` (③), `p4` (④) or `rl` (⑤); `--n` sets the size and `--seed` (or
 `HAENV_PACK_SEED`) the seed. The same pack, size and seed give the same pack; a batch records only
 the seed's hash. The command exits 0 when the build and every audit gate pass, and `haenv run`
 refuses a pack's items without a passing audit. Example jobs, class shares and the audit are in the
@@ -247,7 +229,7 @@ accounting: [`docs/REPRODUCE.md`](https://github.com/thetahealth/mirobody-env/bl
 <details>
 <summary>What the agent sees, the hidden gold, and how two answers are judged (<code>EWX-01</code> from the quick start)</summary>
 
-The prompt is a fixed instruction block (in Chinese) followed by the record up to `T` as JSON.
+The prompt is a fixed instruction block followed by the record up to `T` as JSON.
 An excerpt, with most of the 20 streams elided:
 
 ```jsonc
@@ -358,7 +340,7 @@ plugin packages, each with a negative control. Guides:
 - **Pack ④ RCV baseline.** A reader using only the two printed values and the protocol RCV table
   reaches D around 0.5 on pack ④, so a pack ④ score near 0.5 demonstrates use of RCV alone.
 - **Rank uncertainty.** Only 6 of 12 adjacent paired score-difference intervals exclude zero on
-  the 1.3.1 board; overlapping intervals do not establish an order.
+  the historical 1.3.1 board; overlapping intervals do not establish an order.
 - **Clinical review.** The rules behind packs ② and ③ and several registry entries carry
   `review: pending`; the medical content as a whole has not been reviewed by a practising clinician.
 - **Single semantic judge.** One model (`gpt-6-luna`) scores `Q`, and the same vendor's models are
@@ -402,7 +384,7 @@ All patients are synthetic. Nothing here is medical advice or suitable for clini
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.4.1.dev0}
+  version = {1.6.0}
 }
 ```
 

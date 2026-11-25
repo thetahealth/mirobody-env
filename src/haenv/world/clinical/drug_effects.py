@@ -227,12 +227,12 @@ def floor_term(signal: str, base: float | None, effect: float) -> float:
     return max(effect, min(0.0, float(norm) - float(base)))
 
 
-def _kinetic_fraction(signal: str, day: int, drive) -> float:
+def _kinetic_fraction(signal: str, day: int, drive, *, hba1c_half_time: float | None = None) -> float:
     """Fraction of the full effect reached on `day` for daily drive `drive(d)`
     in [0, 1], via two first-order stages (`HALF_TIME_DAYS`); fasting glucose
     reads the first stage, HbA1c the second."""
     kg = 1.0 - 0.5 ** (1.0 / HALF_TIME_DAYS["glucose"])
-    ka = 1.0 - 0.5 ** (1.0 / HALF_TIME_DAYS["HbA1c"])
+    ka = 1.0 - 0.5 ** (1.0 / (HALF_TIME_DAYS["HbA1c"] if hba1c_half_time is None else hba1c_half_time))
     g = a = 0.0
     for d in range(1, int(day) + 1):
         g += kg * (drive(d) - g)

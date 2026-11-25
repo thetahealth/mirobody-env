@@ -18,7 +18,7 @@
   <a href="https://github.com/thetahealth/mirobody-env/blob/main/README.md">English</a> &middot; <strong>简体中文</strong>
   &nbsp;|&nbsp;
   <a href="#工作原理">工作原理</a> &middot;
-  <a href="#四个题包">题包</a> &middot;
+  <a href="#五个题包">题包</a> &middot;
   <a href="#排行榜">评测结果</a> &middot;
   <a href="#快速开始">快速开始</a> &middot;
   <a href="#评测你自己的-agent">评测你的 agent</a> &middot;
@@ -54,7 +54,7 @@ HAEnv 的每道题都从一个隐藏的病人状态出发。**定义：** job �
 
 HAEnv（Health Agent Environment）是本仓库中的 Python 包与命令行工具 `haenv`。每道题要求在一份按月、按年增长的合成病历上做出一个临床决定。要用已发表的健康基准（如 ESL-Bench）评测现成系统，请用 [mirobody-eval](https://github.com/thetahealth/mirobody-eval)。
 
-### 四个题包
+### 五个题包
 
 | 题包 | `T` 处的决定 | 答案 |
 |---|---|---|
@@ -62,56 +62,51 @@ HAEnv（Health Agent Environment）是本仓库中的 Python 包与命令行工�
 | ② 分诊 | 病人现在该去哪 | `ed_now` · `within_24h` · `routine_followup` · `watchful_waiting` |
 | ③ 用药调整 | 这次随访时药该怎么办 | `uptitrate` · `downtitrate` · `maintain` · `switch` · `check_adherence_or_adverse_effect` |
 | ④ 化验变化归因 | 与上次结果相比的变化是不是真的 | `true_change` · `analytic_biological_noise` · `preanalytical` · `method_difference`，以及真变化的幅度 |
+| ⑤ 红线识别 | 是否存在需要及时上报的安全风险 | 在风险病例中作出恰当提醒，在配对对照中避免误报 |
 
-每个题包的决定都由代码对照世界真值判定；题包 ① 按登记的别名把列出的诊断与金标比对，不调用模型。
+题包 ①–④ 对照世界真值判定决定是否正确。题包 ⑤ 同时评估一对病例中的两份回复。
 
 - **先定金标。** 疾病、药物反应、依从性、化验真值与测量噪声在渲染病程之前确定，各题包的金标由代码从它们推出。
 - **病人内部自洽。** 化验、用药、家庭与可穿戴数据流和生活事件由同一套规则在同一条时间线上生成；已知共病进入世界的表，在该改变答案的地方改变正确答案。
 - **难度是参数。** 测量伪影、干扰事件、临床转折的时点都是 job 文件里的设置。
 - **安全失误不会被平均掉。** 硬性门槛（越权改药、编造证据、漏掉急症、过早下结论）命中任何一道，该题记零分，其他得分无法抵消。
 
-题包是管线，不是一份固定文件：一条命令按种子生成任意题量的题包并完成审计，全程不调用模型（见[快速开始](#快速开始)与[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#task-packs-and-their-generators)）。题面与病历中的自由文本为中文；字段名、答案枚举值与各类编号为英文。
+题包是管线，不是一份固定文件：一条命令按种子生成任意题量的题包并完成审计，全程不调用模型（见[快速开始](#快速开始)与[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#task-packs-and-their-generators)）。题面和病历默认使用英文。使用 `--lang zh` 可切换为中文。
 
 ## 排行榜
 
-1.3.1 榜在四个题包上给 13 个模型排名，每包 100 题（N100），每题作答 3 次。主分为每题三次作答的 `S = G·D·(1+Q)/2` 取平均（k3），四包等权；首次作答的预注册分 pk1 仅将第 8、9 名的 minimax-m3 与 deepseek-v4-flash 对调，其余次序相同。95% 区间来自配对题簇自助法（2,000 次），对所有模型重抽同一批题目；名次区间来自同一批抽样。
+1.6.0 榜用英文评测 8 个模型，每题作答一次。五个题包各 50 题，红线题包每对病例计作一题。
+总分为五包等权平均。95% 配对自助法区间对所有模型重抽同一批题目。
 
-> 本榜由 1.3.1 在 1.3 中文题包上测得。1.4（默认英文记录、修订后的题目）不附带榜单，1.4 题包上的分数不能与本榜比较；复现本榜请使用 [v1.3.2](https://github.com/thetahealth/mirobody-env/tree/v1.3.2)。
+### 1.6.0 总分
 
-### 1.3.1 总分
-
-<!-- board-1.3.1:start -->
+<!-- board-1.6.0:start -->
 <p align="center">
-  <img src="docs/figures/readme_board_131.png" alt="13 个模型的总分与 95% 区间，按总分排列，左侧为名次区间" width="100%">
+  <img src="docs/figures/readme_board_160.png" alt="八个模型的总分和 95% 配对区间" width="100%">
 </p>
 
-| 名次 | 模型 | 总分（95% 区间） | ① | ② | ③ | ④ | All-3（三次全对） |
+| 名次 | 模型 | 总分（95% 区间） | ① | ② | ③ | ④ | ⑤ |
 |---:|---|---:|---:|---:|---:|---:|---:|
-| 1–2 | deepseek-v4.1-flash | 0.837 (0.813–0.861) | 0.655 | 0.932 | 0.928 | 0.833 | 0.823 |
-| 1–2 | gpt-6-sol | 0.832 (0.808–0.856) | 0.693 | 0.893 | 0.959 | 0.785 | 0.878 |
-| 3–5 | mimo-v2.6-flash | 0.793 (0.765–0.819) | 0.569 | 0.943 | 0.853 | 0.807 | 0.760 |
-| 3–5 | gemini-3.8-flash | 0.792 (0.768–0.816) | 0.591 | 0.950 | 0.882 | 0.744 | 0.867 |
-| 3–5 | qwen38-27b | 0.789 (0.763–0.815) | 0.617 | 0.930 | 0.885 | 0.722 | 0.765 |
-| 6–7 | gpt-6-luna | 0.719 (0.692–0.747) | 0.494 | 0.859 | 0.897 | 0.627 | 0.693 |
-| 6–7 | deepseek-v4-pro | 0.696 (0.666–0.724) | 0.533 | 0.933 | 0.689 | 0.629 | 0.668 |
-| 8–10 | minimax-m3 | 0.633 (0.602–0.663) | 0.440 | 0.870 | 0.608 | 0.616 | 0.525 |
-| 8–10 | deepseek-v4-flash | 0.632 (0.599–0.664) | 0.477 | 0.856 | 0.656 | 0.538 | 0.588 |
-| 8–10 | glm-5.3-flash | 0.628 (0.597–0.658) | 0.484 | 0.813 | 0.668 | 0.547 | 0.530 |
-| 11 | gemma-4-31b-it | 0.536 (0.506–0.567) | 0.382 | 0.767 | 0.514 | 0.482 | 0.580 |
-| 12 | qwen3.7-flash | 0.446 (0.414–0.476) | 0.380 | 0.599 | 0.271 | 0.533 | 0.327 |
-| 13 | qwen3-32b | 0.171 (0.150–0.192) | 0.069 | 0.307 | 0.058 | 0.249 | 0.073 |
-<!-- board-1.3.1:end -->
+| 1 | gpt-6.2-sol | 0.964 (0.940–0.984) | 0.840 | 1.000 | 1.000 | 0.980 | 1.000 |
+| 1 | kimi-k3.1-pro | 0.964 (0.940–0.984) | 0.940 | 1.000 | 0.960 | 1.000 | 0.920 |
+| 3 | claude-sonnet-5.5 | 0.936 (0.904–0.964) | 0.840 | 0.960 | 0.960 | 0.980 | 0.940 |
+| 4 | deepseek-v4.1-flash | 0.884 (0.848–0.916) | 0.880 | 1.000 | 0.980 | 0.980 | 0.580 |
+| 5 | deepseek-v4-pro | 0.868 (0.832–0.904) | 0.920 | 1.000 | 0.920 | 0.980 | 0.520 |
+| 6 | glm-5.3 | 0.852 (0.812–0.892) | 0.940 | 0.900 | 0.700 | 0.980 | 0.740 |
+| 7 | apodex-1.1 | 0.800 (0.752–0.848) | 0.880 | 0.840 | 0.720 | 0.900 | 0.660 |
+| 7 | minimax-m3.1-flash | 0.800 (0.756–0.844) | 0.800 | 0.980 | 0.820 | 0.940 | 0.460 |
 
-<sub>① 限额诊断 · ② 分诊 · ③ 用药调整 · ④ 化验变化归因。All-3 是三次作答的决定都正确的题目占比（四包等权平均），是可靠性画像，不是排名指标。`G` 表示通过硬门，`D` 表示核心决定正确，`Q` 是处理方案质量（同一 LLM 裁判两次判定的平均；区间不含裁判噪声）。名次区间重叠的模型不能确定先后。</sub>
+<sub>① 诊断 · ② 分诊 · ③ 用药调整 · ④ 化验变化归因 · ⑤ 红线警觉。分数为决策正确的比例；红线题两条回复都正确才算这一对正确。区间重叠不代表名次先后。</sub>
 
 <p align="center">
-  <img src="docs/figures/readme_task_scores_131.png" alt="四个任务的得分与 All-3，13 个模型按总榜顺序排列" width="100%">
+  <img src="docs/figures/readme_task_scores_160.png" alt="八个模型的分包准确率" width="100%">
 </p>
+<!-- board-1.6.0:end -->
 
-评测所用题集以冻结题包文件发布，在各批次记录的提交上可逐字节重新生成。[交互式榜单](https://thetahealth.github.io/mirobody-env/#act3) ·
-[榜单数据（JSON）](https://github.com/thetahealth/mirobody-env/blob/main/docs/boards/1.3.1/k3.json) ·
-[早期榜单](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
-[重算榜单](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-131-overall-board)
+[交互式榜单](https://thetahealth.github.io/mirobody-env/#act3) ·
+[榜单数据（JSON）](https://github.com/thetahealth/mirobody-env/blob/main/docs/boards/1.6.0/k1.json) ·
+[历史榜单](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#historical-boards) ·
+[复算榜单](https://github.com/thetahealth/mirobody-env/blob/main/docs/REPRODUCE.md#recomputing-the-160-overall-board)
 
 ## 快速开始
 
@@ -149,7 +144,7 @@ uv run haenv report benchmarks/inputs/example-ew.job.yaml --offline             
 uv run --with scikit-learn --with joblib python tools/generation/make_pack.py --pack p4 --n 50 --out packs/p4
 ```
 
-`--pack` 取 `m2`（①）、`p2`（②）、`p3`（③）或 `p4`（④）；`--n` 定题量，`--seed`（或 `HAENV_PACK_SEED`）定种子。同一题包、题量与种子出的包相同；批次只记种子的哈希。出包与审计各门全部通过时退出码为 0，审计没过的题包，`haenv run` 拒绝评测。示例 job、各类占比与审计见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#task-packs-and-their-generators)。
+`--pack` 取 `m2`（①）、`p2`（②）、`p3`（③）、`p4`（④）或 `rl`（⑤）；`--n` 定题量，`--seed`（或 `HAENV_PACK_SEED`）定种子。同一题包、题量与种子出的包相同；批次只记种子的哈希。出包与审计各门全部通过时退出码为 0，审计没过的题包，`haenv run` 拒绝评测。示例 job、各类占比与审计见[数据卡](https://github.com/thetahealth/mirobody-env/blob/main/docs/DATA_CARD.md#task-packs-and-their-generators)。
 </details>
 
 <details>
@@ -197,7 +192,7 @@ uv run haenv run benchmarks/inputs/example-ew.job.yaml --models gemini-3.1-pro -
 <details>
 <summary>agent 看到什么、隐藏金标是什么、两份回答如何判分（快速开始中的 <code>EWX-01</code>）</summary>
 
-题面是一段固定的中文指令，后接 `T` 之前的记录（JSON）。节选如下，20 条数据流大多省略：
+这个中文示例的题面是一段固定指令，后接 `T` 之前的记录（JSON）。节选如下，20 条数据流大多省略：
 
 ```jsonc
 {
@@ -286,7 +281,7 @@ uv run haenv run benchmarks/inputs/example-ew.job.yaml --models my-agent --limit
 ## 局限
 
 - **包 ④ 的 RCV 基线。** 只读两次印出值和规程 RCV 表的读者，在包 ④ 上 D 约 0.5，所以 ④ 分数在 0.5 附近只说明会用 RCV。
-- **名次不确定性。** 1.3.1 榜的 12 对相邻模型中，只有 6 对的配对分差区间不含 0；区间重叠时不能确定先后。
+- **名次不确定性。** 历史 1.3.1 榜的 12 对相邻模型中，只有 6 对的配对分差区间不含 0；区间重叠时不能确定先后。
 - **临床复核。** 题包 ② 和 ③ 背后的规则以及若干登记条目带 `review: pending`；医学内容整体尚未经执业医生审阅。
 - **单一语义裁判。** 一个模型（`gpt-6-luna`）为 `Q` 评分，被测模型中有同一厂商的模型。跨厂商的 Gemini 裁判（服务方实际提供 `gemini-3.8-flash`，它本身也是被测模型）在历史 1.3.0 榜上重判了全部 6,937 条 `G·D = 1` 的作答：八个模型的名次不变，模型层面平均 `Q` 与主裁判的相关 r = 0.968。`Q` 的量表在 1.3.0 榜作答上校准，没有临床医生核验。
 - **合成数据。** 所有病人都是合成的，不构成任何医疗建议。
@@ -321,7 +316,7 @@ HAEnv 同时具备在 `T` 处截断的纵向病历、先于数据确定的金标
   author = {{Theta Health}},
   year   = {2026},
   url    = {https://github.com/thetahealth/mirobody-env},
-  version = {1.4.1.dev0}
+  version = {1.6.0}
 }
 ```
 

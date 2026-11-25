@@ -13,6 +13,10 @@ up, the rule the README tables and the demo use.
 The PNG is trimmed to its drawn content plus a narrow even margin, so the README can show it at the
 full column width.
 
+`--board docs/boards/1.6.0/k1.json` draws the single-answer overall and per-pack figures.
+Add `--readmes` to refresh the score tables and their figure links in both READMEs.
+Use `--draft --out DIRECTORY` with an explicitly draft readout to preview both outside the repo.
+
 No model calls or scoring recomputation.
 """
 from __future__ import annotations
@@ -174,12 +178,136 @@ def draw(board: dict, output: Path, name: str = NAME, x0: float = X0, x1: float 
     crop_to_content(Image.open(buf).convert("RGB")).save(output / name, optimize=True)
 
 
+K1_PACKS = ("m2", "p2", "p3", "p4", "rl")
+K1_FIGURES = ("readme_board_160.png", "readme_task_scores_160.png")
+
+
+def k1_rows(readout, *, draft=False):
+    """Read the five-pack score format shared by the figures and the demo."""
+    if readout["status"] != ("draft" if draft else "final"):
+        raise ValueError("A completed readout is required; use --draft for draft data")
+    if (readout["aggregation"] != "k1" or readout["language"] != "en"
+            or tuple(readout["packs"]) != K1_PACKS or readout["items_per_pack"] != 50):
+        raise ValueError("Expected the five English packs with one answer per item")
+    rows = sorted(readout["overall"].items(), key=lambda entry: (entry[1]["rank"], -entry[1]["score"]))
+    if len(rows) != readout["model_count"] or not rows:
+        raise ValueError("Board row count does not match model_count")
+    for model, row in rows:
+        lower, upper = row["ci"]
+        if not 0 <= lower <= row["score"] <= upper <= 1:
+            raise ValueError(f"Invalid overall score or interval for {model}")
+        if set(row["packs"]) != set(K1_PACKS) or not all(0 <= v <= 1 for v in row["packs"].values()):
+            raise ValueError(f"Invalid pack scores for {model}")
+    return rows
+
+
+def k1_readme(readme: str, readout: dict, *, chinese: bool = False) -> str:
+    rows = k1_rows(readout)
+    alt = ("八个模型的总分和 95% 配对区间", "八个模型的分包准确率") if chinese else (
+        "Overall scores and paired 95% intervals for eight models", "Pack accuracies for eight models")
+    overall, per_pack = [
+        f'<p align="center">\n  <img src="docs/figures/{figure}" alt="{label}" width="100%">\n</p>'
+        for figure, label in zip(K1_FIGURES, alt)
+    ]
+    headers = ("名次", "模型", "总分（95% 区间）") if chinese else ("Rank", "Model", "Overall (95% CI)")
+    table = ["| " + " | ".join((*headers, "①", "②", "③", "④", "⑤")) + " |",
+             "|---:|---|---:|---:|---:|---:|---:|---:|"]
+    for model, row in rows:
+        lo, hi = map(half_up3, row["ci"])
+        values = [str(row["rank"]), model, f"{half_up3(row['score'])} ({lo}–{hi})"]
+        values.extend(half_up3(row["packs"][pack]) for pack in K1_PACKS)
+        table.append("| " + " | ".join(values) + " |")
+    start = f"<!-- board-{readout['version']}:start -->\n"
+    end = f"\n<!-- board-{readout['version']}:end -->"
+    before, block = readme.split(start, 1)
+    _, after = block.split(end, 1)
+    return before + start + "\n\n".join((overall, "\n".join(table), per_pack)) + end + after
+
+
+def draw_k1(readout, output, *, draft=False):
+    import math
+
+    import matplotlib
+    matplotlib.use("Agg")
+    from matplotlib import pyplot as plt
+    from PIL import Image
+    from tools.presentation.make_readme_task_scores import draw as draw_pack_scores
+
+    rows = k1_rows(readout, draft=draft)
+    left = max(0, math.floor(min(row["ci"][0] for _, row in rows) * 10 - .5) / 10)
+    title = "Draft · Overall scores" if draft else "Overall scores"
+    output.mkdir(parents=True, exist_ok=True)
+    with plt.rc_context({"font.family": "DejaVu Sans"}):
+        fig, ax = plt.subplots(figsize=(8.6, 4.25), dpi=200, facecolor=BG)
+        fig.subplots_adjust(left=.32, right=.90, top=.80, bottom=.13)
+        fig.text(.035, .94, title, fontsize=14.5, weight="bold", color=INK, va="center")
+        fig.text(.035, .88, "Equal-weight mean of five packs · 95% paired bootstrap intervals",
+                 fontsize=9.6, color=MUTED, va="center")
+        ax.set_facecolor(BG)
+        ax.set(xlim=(left, 1), ylim=(len(rows) - .5, -.5), yticks=[])
+        ticks = [i / 10 for i in range(round(left * 10), 11)]
+        ax.set_xticks(ticks, [f"{tick:.1f}" for tick in ticks])
+        ax.grid(axis="x", color=GRID, linewidth=1)
+        ax.tick_params(axis="x", length=0, pad=7, labelsize=9.6, labelcolor=FAINT)
+        ax.spines[["top", "right", "left"]].set_visible(False)
+        ax.spines["bottom"].set_color(AXIS)
+        ax.set_axisbelow(True)
+        for index, (model, row) in enumerate(rows):
+            lower, upper = row["ci"]
+            ax.plot([lower, upper], [index, index], color=BAR, lw=3.2, solid_capstyle="round")
+            ax.plot(row["score"], index, "o", ms=7.5, color=DOT, mec=BG, mew=1.2)
+            y = ax.transData.transform((left, index))[1] / fig.bbox.height
+            sep = ax.transData.transform((left, index + .5))[1] / fig.bbox.height
+            fig.text(.035, y, model, fontsize=10, color=INK, va="center")
+            fig.text(.925, y, half_up3(row["score"]), fontsize=9.6, color=MUTED, va="center")
+            fig.add_artist(matplotlib.lines.Line2D([.035, .965], [sep, sep], color=GRID, lw=1.1))
+        with io.BytesIO() as buffer:
+            fig.savefig(buffer, format="png", dpi=200, metadata={"Software": None})
+            buffer.seek(0)
+            crop_to_content(Image.open(buffer).convert("RGB")).save(output / K1_FIGURES[0], optimize=True)
+        plt.close(fig)
+    draw_pack_scores(readout, output, draft=draft)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--check", action="store_true", help="fail if the checked-in figure differs")
     parser.add_argument("--score", type=Path, help="draw this board_score.json readout instead of board.json")
     parser.add_argument("--name", help="output file name under docs/figures/ (required with --score)")
+    parser.add_argument("--board", type=Path, help="draw both figures from a five-pack k1 readout")
+    parser.add_argument("--out", type=Path, help="figure directory for --board")
+    parser.add_argument("--draft", action="store_true", help="label both previews Draft")
+    parser.add_argument("--readmes", action="store_true", help="update both READMEs from a final --board")
     args = parser.parse_args()
+    if args.board:
+        if args.score or args.name:
+            parser.error("--board cannot be combined with --score or --name")
+        output = (args.out or OUTPUT).resolve()
+        if args.draft and (args.out is None or output == ROOT or ROOT in output.parents):
+            parser.error("draft figures need --out outside the repository")
+        if args.readmes and (args.draft or output != OUTPUT):
+            parser.error("--readmes requires final figures in the repository figure directory")
+        readout = json.loads(args.board.read_text(encoding="utf-8"))
+        if args.check:
+            with tempfile.TemporaryDirectory(prefix="haenv-board-") as directory:
+                draw_k1(readout, Path(directory), draft=args.draft)
+                for filename in K1_FIGURES:
+                    if not (output / filename).is_file() or (output / filename).read_bytes() != (Path(directory) / filename).read_bytes():
+                        raise SystemExit(f"Stale figure output: {filename}; rerun this script")
+        else:
+            draw_k1(readout, output, draft=args.draft)
+        if args.readmes:
+            for filename, chinese in (("README.md", False), ("README.zh-CN.md", True)):
+                path = ROOT / filename
+                current = path.read_text(encoding="utf-8")
+                updated = k1_readme(current, readout, chinese=chinese)
+                if args.check and updated != current:
+                    raise SystemExit(f"Stale score table: {filename}; rerun this script")
+                if not args.check:
+                    path.write_text(updated, encoding="utf-8")
+        return 0
+    if args.out or args.draft or args.readmes:
+        parser.error("--out, --draft and --readmes require --board")
     if args.score:
         if not args.name or args.name == NAME:
             raise SystemExit("--score needs its own --name")

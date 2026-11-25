@@ -29,6 +29,22 @@ def method_bias_limit(an):
     return 2 * B / (1 - B)
 
 
+def can_carry_rcv(an, factor):
+    """Fixed source bounds must allow the source to carry at least half a paired RCV."""
+    if factor in ("platform_calibration", "reagent_lot"):
+        limit = method_bias_limit(an)
+        if limit is None:
+            return False
+        bias = math.log1p(limit)
+    elif factor and table()["rules"][factor]["class"] in ("preanalytical", "method_difference") and factor not in (
+            "jaffe_enzymatic_switch", "meat_meal"):
+        bias = max(map(abs, table()["rules"][factor]["effect_log"]))
+    else:
+        return True
+    from haenv.world.labworld import cv_total, rcv95
+    return 2 * bias >= rcv95(cv_total(an))
+
+
 def reference_calibration(an, cid):
     spec = table()["method_bias"]["analytes"].get(an)
     if spec is None:
@@ -79,9 +95,7 @@ def causes(an, cls, case=None):
     key = {"true_change": "true_causes", "preanalytical": "pre", "method_difference": "method"}[cls]
     options = list(table()["analytes"][an][key])
     active = table()["question_update_14"]["active_causes"][cls][an]
-    options = [c for c in options if c in active]
-    if method_bias_limit(an) is None:
-        options = [c for c in options if c not in ("platform_calibration", "reagent_lot")]
+    options = [c for c in options if c in active and can_carry_rcv(an, c)]
     if case is not None:
         raw = case.get("raw") or {}
         have = {raw.get("disease")} | set(raw.get("comorbidities") or ())
@@ -175,6 +189,26 @@ def verification_consistent(item):
     return bad
 
 
+def baseline_origin(raw, cid, an, plan):
+    """Receipt from the existing P4 parameter producer, never an observed value."""
+    from haenv.p4.realize import ckd_record
+    from haenv.world.truth import coupling_enabled
+    cfg = table()
+    ckd = ckd_record(raw, cid) if plan.get("comorbidity") == "CKD" else None
+    lo, hi = cfg["analytes"][an]["baseline"]
+    base = float(ckd["cr0"]) if an == "creatinine" and ckd else math.exp(math.log(lo) + h01("p4-diverse-base", cid, an) * math.log(hi / lo))
+    if an in ("potassium", "creatinine") and not ckd and coupling_enabled():
+        # B3 (F6): the person's level is the sourced baseline (NHANES centre by sex, EFLM CVG spread)
+        from haenv.world.truth import variation as V
+        base = V.person_baseline(cid, an, str((raw.user_profile or {}).get("sex") or ""))
+    return {"owner": "P4", "producer": "haenv.p4.diversity:baseline_origin",
+            "case_id": str(cid), "analyte": an, "parameter": base,
+            "provenance": ("p4 CKD-EPI set point" if ckd else
+                "biological_variation.yaml:person_baseline" if an in ("potassium", "creatinine") and coupling_enabled()
+                else "p4_diversity.yaml:analytes.baseline;p4-diverse-base"),
+            "comorbidity": ckd}
+
+
 def realize(raw, cid, plan, ctx):
     from haenv.world.labworld import analyte
     from haenv.world.labworld import cv_total
@@ -188,11 +222,13 @@ def realize(raw, cid, plan, ctx):
     from haenv.p4.realize import Unrealizable
     from haenv.p4.realize import ckd_record
     from haenv.p4.realize import _clock
-    from haenv.p4.realize import _drug
-    from haenv.p4.diversity_reader import read_class
+    from haenv.p4.realize import _drug, background_truth
+    from haenv.p4.diversity_reader import read_class, visible_significance
     cfg, an = table(), plan["analyte"]
     a = analyte(an)
     cls, sign, fac = plan["class"], int(plan["sign"]), plan.get("cause")
+    if not can_carry_rcv(an, fac):
+        raise Unrealizable("registered source cannot carry half the paired RCV")
     T = int(raw.prediction_context["prediction_time_T"]) - _day_range(cid, "p4-verification-review-lag", cfg["design"]["verification"]["review_lag_days"])
     cal = cfg["design"]["calendar"]
     remote = h01("p4-diverse-remote", cid) < float(cal["remote_share"])
@@ -214,13 +250,15 @@ def realize(raw, cid, plan, ctx):
     ckd = ckd_record(raw, cid) if plan.get("comorbidity") == "CKD" else None
     if fac and not renal_medication_ok(raw, fac, ckd):
         raise Unrealizable("recorded renal function does not permit the proposed medication course")
-    lo, hi = cfg["analytes"][an]["baseline"]
-    base = float(ckd["cr0"]) if an == "creatinine" and ckd else math.exp(math.log(lo) + h01("p4-diverse-base", cid, an) * math.log(hi / lo))
+    origin = baseline_origin(raw, cid, an, plan)
+    base = origin["parameter"]
+    from haenv.world.truth import coupling_enabled
     rule = cfg["rules"][fac] if fac else None
     if rule and sign not in rule.get("allowed_signs", (1, -1)):
         raise Unrealizable("course direction is not supported by the actual comparison interval")
-    if fac in cfg["medication_world"] and fac != "acei_start_or_stop" and cfg["medication_world"][fac]["drug"] in existing_medicines(raw):
+    if fac in cfg["medication_world"] and (fac != "acei_start_or_stop" or coupling_enabled()) and cfg["medication_world"][fac]["drug"] in existing_medicines(raw):
         raise Unrealizable("existing medication course cannot be replaced by a second synthetic course")
+    background = background_truth(raw, cid, an, base, ctx, origin=origin)
     response = 0.0
     if rule:
         lo, hi = map(float, rule["effect_log"])
@@ -233,16 +271,23 @@ def realize(raw, cid, plan, ctx):
     if fac == "meat_meal":
         from haenv.p4.realize import clinical_sources
         lo, hi = clinical_sources()["cooked_meat"]["increment_umol_L"]
-        response = math.log1p((lo + (hi - lo) * h01("p4-diverse-meat", cid)) / base)
+        reference = background(T if sign == int(rule["sign"]) else t0)
+        response = math.log1p((lo + (hi - lo) * h01("p4-diverse-meat", cid)) / reference)
     if fac == "jaffe_enzymatic_switch":
         from haenv.p4.realize import clinical_sources
         from haenv.p4.realize import paired_method_scatter
         comparison = clinical_sources()["method_comparison"]
-        delta = ((float(comparison["slope"]) - 1) * base +
-                 float(comparison["umol_L_per_mg_dL"]) * float(comparison["intercept_mg_dL"]) +
-                 paired_method_scatter(base) * z("p4-diverse-method-residual", cid))
-        signed = math.log1p(delta / base)
-        intrinsic, response = (1 if signed > 0 else -1), abs(signed)
+        for method_day in (t0, T):
+            reference = background(method_day)
+            delta = ((float(comparison["slope"]) - 1) * reference +
+                     float(comparison["umol_L_per_mg_dL"]) * float(comparison["intercept_mg_dL"]) +
+                     paired_method_scatter(reference) * z("p4-diverse-method-residual", cid))
+            signed = math.log1p(delta / reference)
+            intrinsic, response = (1 if signed > 0 else -1), abs(signed)
+            if method_day == (T if sign == intrinsic else t0):
+                break
+        else:
+            raise Unrealizable("shared background course conflicts with method comparison side")
     side = 1 if sign == intrinsic else 0
     event = T - _day_range(cid, "p4-diverse-clinical-event", rule["event_lead_days"]) if cls == "true_change" else t0 + max(1, gap // 3)
     if cls == "true_change" and event <= t0:
@@ -250,14 +295,14 @@ def realize(raw, cid, plan, ctx):
     standard = cv_total(an)
     records = []
     for day in days:
-        truth = base
+        truth = background(day)
         if cls == "true_change":
             if fac in cfg["medication_world"]:
                 prior_start = t0 - cfg["medication_world_design"]["prior_established_days"]
                 taking = day >= event if sign == intrinsic else prior_start <= day < event
-                truth = base * math.exp(intrinsic * response) if taking else base
+                truth *= math.exp(intrinsic * response) if taking else 1.0
             else:
-                truth = base * math.exp(sign * response) if day > event else base
+                truth *= math.exp(sign * response) if day > event else 1.0
         pert = []
         if cls in ("preanalytical", "method_difference") and day == (T if side else t0):
             pert = [{"factor": fac, "kind": "method" if cls == "method_difference" else "preanalytical",
@@ -277,9 +322,13 @@ def realize(raw, cid, plan, ctx):
     R = pair_rcv(an, r0, r1)
     g = g4(r0, r1, R, (1.3, 2.0), source_policy="clinical")
     if g["class"] != cls or g["dlog_obs"] * sign <= 0:
+        if coupling_enabled() and background(T) != background(t0):
+            raise Unrealizable("shared background course conflicts with planned source: " + g["reason"])
         raise Unrealizable("independent observations do not yield the planned single source")
     if cls == "analytic_biological_noise" and abs(g["dlog_obs"]) >= R:
         raise Unrealizable("unexplained observation outside RCV")
+    if cls != "analytic_biological_noise" and abs(math.log(r1["printed"] / r0["printed"])) < R:
+        raise Unrealizable("non-noise apparent change does not exceed paired RCV")
     if remote and cls != "true_change":
         prior = next(r for r in records if r["day"] == episode_day)
         alternative = g4(prior, r1, pair_rcv(an, prior, r1), (1.3, 2.0), source_policy="clinical")["class"]
@@ -294,6 +343,9 @@ def realize(raw, cid, plan, ctx):
             "acei": {}, "glp1_class": False, "dlog_weight": 0.0, "decoys": [], "decoy_substitutions": [],
             "gap_index": 0, "attempt": 0, "g4": g, "option_rank": 0,
             **({"comorbidity": ckd} if ckd else {})}
+    if coupling_enabled():
+        item["background_source"] = background.source
+        item["retired_decoys"] = sorted(cfg["question_update_14"]["retired_from_allocation"])
     if an == "creatinine":
         from haenv.p4.realize import _indication
         acei_day = event if fac == "acei_start_or_stop" else t0 - 100 - _day_range(cid, "p4-inactive-event-acei_start_or_stop", [0, 60])
@@ -303,6 +355,8 @@ def realize(raw, cid, plan, ctx):
                                   [{"day": acei_day, "action": "stop" if stopped else "start"}] +
                                   ([{"day": acei_day + cfg["medication_world_design"]["historical_course_days"], "action": "stop"}]
                                    if fac != "acei_start_or_stop" else [])}
+        if coupling_enabled() and cfg["medication_world"]["acei_start_or_stop"]["drug"] in existing_medicines(raw):
+            item["acei"] = {}  # the independent saved course owns this drug
     # Independent newly collected samples, not the original measurements with
     # the sampled perturbation subtracted. Acute clinical changes are checked
     # immediately; transient sampling conditions are checked after washout.
@@ -313,14 +367,14 @@ def realize(raw, cid, plan, ctx):
     delayed = fac in cfg["design"]["verification"]["washout_causes"] or ingested is not None
     for original in (r0, r1):
         day = original["day"] + (washout if delayed else 0)
-        truth = base
+        truth = background(day)
         if cls == "true_change":
             if fac in cfg["medication_world"]:
                 prior_start = t0 - cfg["medication_world_design"]["prior_established_days"]
                 taking = day >= event if sign == intrinsic else prior_start <= day < event
-                truth = base * math.exp(intrinsic * response) if taking else base
+                truth *= math.exp(intrinsic * response) if taking else 1.0
             else:
-                truth = base * math.exp(sign * response) if day > event else base
+                truth *= math.exp(sign * response) if day > event else 1.0
         hour, minute, second = map(int, original["time"].split(":"))
         check_time = "08:00:00" if delayed else f"{hour + 4:02d}:{minute:02d}:{second:02d}"
         verification_bias = 0.0
@@ -341,12 +395,15 @@ def realize(raw, cid, plan, ctx):
                                       "clean_followup": True}
     item["next_step"] = next_step(item)[0]
     block = render(item, raw, cid)
-    from haenv.p4.diversity_reader import significance_violations
-    violations = significance_violations(block, cls, fac)
+    violations = visible_significance(item, block)
     if violations:
         raise Unrealizable("; ".join(violations))
     if gold_block_consistent(item) or verification_consistent(item) or read_class(block)[0] != cls:
+        if coupling_enabled() and background(T) != background(t0):
+            raise Unrealizable("shared background course conflicts with visible source reconstruction")
         raise Unrealizable("visible records do not reconstruct the planned source")
+    from haenv.p4.realize import preserve_observed_aliases
+    preserve_observed_aliases(raw, item)
     return item
 
 
@@ -388,23 +445,47 @@ def render(item, raw, cid):
     reports = _draw_rows(item, raw, cid)
     by = {r["day"]: r for r in reports}
     block = {"analyte": an, "name": a["display"], "unit": a["unit"], "reference_range": reference_range(a, raw),
-             "today": int(item["review_day"]), "comparison_draw_day": T, "report": reports, "diet_record": [], "outpatient_record": [],
+             "today": int(item["review_day"]), "comparison_draw_day": T, "comparison_previous_draw_day": t0,
+             "report": reports, "diet_record": [], "outpatient_record": [],
              "medication_record": medication_rows({**item, "acei": {}}, raw, T), "laboratory_method_record": [],
              "specimen_procedure": [], "patient_remarks": [], "text_source": "template"}
+    # The old shared renderer reserves ACEI for the pack. A source-backed item
+    # instead retains a genuine independent ACEI prescription verbatim through
+    # the existing common medication renderer, without an invented regimen.
+    medication_source = (item.get("background_source") or {}).get("medication")
+    source_medicines = set()
+    if medication_source is not None:
+        from haenv.world.clinical import med_course as MC
+        from haenv.p4.plan import ACEI_DRUG
+        from haenv.world.truth.drugs import medicines
+        source_medicines = {m["drug"] for m in medicines(medication_source)}
+        acei_source = {**medication_source,
+            "primary": medication_source.get("primary") if (medication_source.get("primary") or {}).get("drug") == ACEI_DRUG else None,
+            "concurrent": [m for m in medication_source.get("concurrent") or [] if m["drug"] == ACEI_DRUG]}
+        block["medication_record"] += MC.record_rows(acei_source,
+            int(medication_source.get("history_lo", min(r["day"] for r in reports))), T, primary=True)
     def wording(kind, day):
         choices = cfg["question_update_14"]["wording"][kind]
         return L(choices[int(h01("p4-method-wording", cid, kind) * len(choices))])
     # Records describe the actual collection, assay and exposure. No cause IDs,
     # relevance roles or effect flags are rendered on the patient side.
+    from haenv.world.truth import plan_of
+    # Persist new retirement policies with the generated item. Older coupled
+    # records predate B5 and retired only thyroiditis; uncoupled records keep
+    # their original exposures regardless of today's build configuration.
+    retired_decoys = set(item.get("retired_decoys", ("thyroiditis",) if plan_of(raw) else ()))
     for key in cfg["analytes"][an]["pre"] + cfg["analytes"][an]["method"] + cfg["analytes"][an]["true_causes"]:
         if key in ("platform_calibration", "reagent_lot") and method_bias_limit(an) is None:
+            continue
+        if key in retired_decoys and key != fac:
             continue
         rule = cfg["rules"][key]
         active = key == fac
         if not renal_medication_ok(raw, key, item.get("comorbidity")):
             continue
-        if key in cfg["medication_world"] and key != "acei_start_or_stop" and cfg["medication_world"][key]["drug"] in existing_medicines(raw):
-            continue
+        if key in cfg["medication_world"] and cfg["medication_world"][key]["drug"] in (existing_medicines(raw) | source_medicines):
+            if key != "acei_start_or_stop" or medication_source is not None:
+                continue
         if rule.get("indication"):
             patient = (raw.latent_premise or {}).get("patient_basics") or {}
             if rule["indication"] not in {patient.get("disease")} | set(patient.get("comorbidities") or ()):
@@ -458,6 +539,8 @@ def render(item, raw, cid):
             more = direction == rule["sign"]
             if rule["section"] == "medication_record":
                 action = (L("p4.action.start_regular") if more else L("p4.action.stop_regular")) if key in ("thyroxine_adherence", "fibrate_adherence") else (L("p4.action.start") if more else L("p4.action.stopped_by_doctor"))
+            elif key == "alcohol_change":
+                action = L("p4.action.alcohol_increased" if more else "p4.action.alcohol_stopped")
             else:
                 action = L("p4.action.new_onset") if more else L("p4.action.recovered")
             row = {"day": day, "exposure": rule["exposure"], "course_action": action,
@@ -485,6 +568,8 @@ def render(item, raw, cid):
                     "text": support if active else L("p4.outpatient.course_ended")})
             elif key != "recent_exercise":
                 row.update(day=T, onset_day=day)
+                if key == "alcohol_change":
+                    row["onset_date"] = text("p4.alcohol.onset_case_day", day=day)
             if key == "recent_exercise":
                 row.update(day=side_day - 2 if active else side_day - 21, draw_day=side_day,
                            exercise=L("p4.exercise.unaccustomed_resistance"), exercise_duration_minutes=60,
@@ -561,6 +646,8 @@ def render(item, raw, cid):
 
 def _support(key, more):
     row = table()["narratives"][key]
+    if key == "alcohol_change":
+        return L(row["more" if more else "less"])
     return row["more" if more else "less"]
 
 
@@ -626,5 +713,7 @@ def register_medicines(raw):
     for drug, points in courses.items():
         spec = next(v for v in cfg["medication_world"].values() if v["drug"] == drug)
         wm["concurrent"] = [m for m in wm.get("concurrent") or [] if not (m.get("overlay") and m.get("drug") == drug)]
+        source_owned = "background_source" in ((getattr(raw, "adjudication", None) or {}).get("followup_p4") or {})
         wm.setdefault("concurrent", []).append({"drug": drug, "dose_timeline": sorted(points, key=lambda q: q["ts"]),
-            "dose_unit": spec["unit"], "source": "P4 dated medication record", "effect_scope": [block["analyte"]]})
+            "dose_unit": spec["unit"], "source": "P4 dated medication record", "effect_scope": [block["analyte"]],
+            **({"overlay": True, "record_overlay": True} if source_owned else {})})

@@ -365,7 +365,8 @@ def _pearson(xs, ys):
             / math.sqrt(sum((a - mx) ** 2 for a in xs) * sum((b - my) ** 2 for b in ys)))
 
 
-def test_severity_reproduces_the_measured_between_patient_correlation():
+@pytest.mark.parametrize("emr_params", ["v14", "calibration15"])
+def test_severity_reproduces_the_measured_between_patient_correlation(emr_params, monkeypatch):
     """Load bearing: the raw-scale r produced by emission must hit the
     measured anchor.
 
@@ -374,6 +375,9 @@ def test_severity_reproduces_the_measured_between_patient_correlation():
     docs/ETHICS.md §2 for how the real records enter). At n=4000, Pearson's SE is approximately
     (1-r^2)/sqrt(n) ~= 0.008.
     """
+    from haenv.app.settings import SET_ENV
+    import json
+    monkeypatch.setenv(SET_ENV, json.dumps([f"world.emr_params={emr_params}"]))
     spec = I.severity()["T2D"]
     a, b = spec["pair"]
     xs = [I.sample_baseline(a, "T2D", (), c) for c in _SEV_IDS]

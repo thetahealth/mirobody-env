@@ -167,6 +167,8 @@ def _point(raw, fid, value, T):
 
 
 def result(raw, fid, T):
+    if (getattr(raw, "latent_premise", None) or {}).get("truth"):
+        return None
     from haenv.m2.core import components
     ddx = (raw.adjudication or {}).get("ddx") or {}
     policy = registry()["glycaemic_course"]

@@ -122,6 +122,8 @@ def prepare(cases, prior):
             m2["arm"] = "positive" if present else "negative"
             m2["confirmation"] = {"version": rules()["version"], "profile": sid,
                 "present": present, "independent_spec": control_gold["ddx_spec_id"], "pair": pair}
+            if profile.get("shared_findings"):
+                m2["confirmation"]["shared_findings"] = list(profile["shared_findings"])
             for i, s in enumerate(c["raw"]["symptoms"]):
                 if i >= len(profiles[sid]["complaints"]):
                     continue  # retain an existing source's diagnostic history detail
@@ -149,11 +151,10 @@ def prepare(cases, prior):
     return [c for c in cases if c["latent"].get("ddx_join_gold") != "independent" or c["case_id"] in paired_controls]
 
 
-def _control_view(raw, p):
+def _with_ddx(raw, ddx):
     view = copy(raw)
     view.adjudication = dict(raw.adjudication)
     view.latent_premise = {**raw.latent_premise, "meta": dict(raw.latent_premise["meta"])}
-    ddx, _ = control_ddx(p, p["independent_spec"], int(raw.prediction_context["prediction_time_T"]))
     view.adjudication["ddx"] = ddx
     view.latent_premise["meta"]["ddx"] = deepcopy(ddx)
     return view
@@ -213,7 +214,14 @@ def install_results():
         decisive = result(raw, fid, T)
         # Common background and exclusion tests on both sides. The acquired
         # decisive assay is the only diagnostic-state-dependent result.
-        return decisive if decisive is not None else next_call(orig, _control_view(raw, p), target, T)
+        if decisive is not None:
+            return decisive
+        if fid in p.get("shared_findings", ()):
+            from haenv.world.generation.twins import m2_ddx_of_spec
+            ddx, _ = m2_ddx_of_spec(p["profile"], T)
+        else:
+            ddx, _ = control_ddx(p, p["independent_spec"], T)
+        return next_call(orig, _with_ddx(raw, ddx), target, T)
 
     from haenv.app.pack_hooks import Stage
     from haenv.app.pack_hooks import register_hook
@@ -228,7 +236,10 @@ def finalize(raw):
     if not notes:
         return
     if p:
-        notes[-1]["text"] = J("space", [notes[-1]["text"], rules()["profiles"][p["profile"]]["context"]])
+        context = rules()["profiles"][p["profile"]]["context"]
+        if isinstance(context, dict):
+            context = tpl(context["template"])
+        notes[-1]["text"] = J("space", [notes[-1]["text"], context])
     sid = p["profile"] if p else ddx["spec_id"]
     note = rules()["competition"]["notes"].get(sid)
     if note:

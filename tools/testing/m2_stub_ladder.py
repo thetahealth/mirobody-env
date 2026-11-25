@@ -118,8 +118,16 @@ def gold_bundle(cid, raw, T, sp, vp, quant):
                 w = 0
         q = {"truth": t, "wrong": w, "kind": quant.get("kind")}
     join = ddx.get("join_gold") or "unified"
-    sex = str(((getattr(raw, "user_profile", None) or {}).get("sex")) or "").upper()[:1] or None
-    return {"cid": cid, "sex": sex, "threads": th, "wrong_names": wrong, "distractor_name": dname,
+    profile = getattr(raw, "user_profile", None) or {}
+    sex = str(profile.get("sex") or "").upper()[:1] or None
+    conditions = tuple(sorted(str(item.get("name") if isinstance(item, dict) else item)
+                              for item in profile.get("known_conditions") or []))
+    try:
+        age_band = int(profile.get("age")) // 15
+    except (TypeError, ValueError, OverflowError):
+        age_band = None
+    return {"cid": cid, "sex": sex, "known_conditions": conditions, "age_band": age_band,
+            "threads": th, "wrong_names": wrong, "distractor_name": dname,
             "key_targets": key_targets,
             "decoy_for": decoy_for, "tests": tests, "test_wrong": test_wrong,
             "warranted": bool(adj.get("clinician_action_warranted")),
@@ -265,6 +273,7 @@ PROFILE_ONLY = ("Z2", "Z4", "Z5")
 def gates(rows: list[dict], *, boot=BOOT, score_kw=None) -> dict:
     from haenv.m2 import score
     from haenv.m2.score import CC_DIMS, REPORTED_CASE_DIMS, SCORED_CASE_DIMS, SCORED_DIMS
+    from haenv.world.clinical.med_course import DISPLAY
     kw = dict(score_kw or {})
     b = score.board(rows, **kw)
     # Old stored ladders predate the actual-purchase atom. Re-scoring their diagnosis
@@ -347,8 +356,8 @@ def gates(rows: list[dict], *, boot=BOOT, score_kw=None) -> dict:
             frame, gold_key, ok_key = class_fields[d]
             # Match the production balanced() population for each random solver.
             # A larger question universe may contain more than two gold classes.
-            # An item that accepts n directions is hit by a uniform random answer with p = n / k
-            # (`m2_med_accept_n`, F2_RULE); one accepted answer otherwise.
+            # Current F2 rows score the direction and the independently drawn drug jointly.
+            # The retained historical rows scored direction alone.
             exps = []
             for solver in rnd:
                 if b[solver].get(d) is None:
@@ -357,7 +366,10 @@ def gates(rows: list[dict], *, boot=BOOT, score_kw=None) -> dict:
                 for r in rows:
                     if (r.get("solver") == solver and r.get("m2_frame") == frame and r.get(gold_key) is not None
                             and r.get(ok_key) is not None):
-                        by.setdefault(r[gold_key], []).append(float(r.get("m2_med_accept_n") or 1) / k)
+                        probability = float(r.get("m2_med_accept_n") or 1) / k
+                        if frame == "F2" and "m2_drug_ok" in r:
+                            probability *= int(r.get("m2_drug_gold") in DISPLAY) / len(DISPLAY)
+                        by.setdefault(r[gold_key], []).append(probability)
                 m = len(by)
                 ba = math.fsum(math.fsum(v) / len(v) for v in by.values()) / m
                 exps.append((m * ba - 1) / (m - 1))

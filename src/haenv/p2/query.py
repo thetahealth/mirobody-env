@@ -60,7 +60,7 @@ class P2Adapter(QueryAdapter):
         return [KeyLookup(s, lambda _t, r, s=s: r.get("_from") == s) for s in secs] + self.history_lookups(vp) + self.protocol_lookups(store)
 
     def read_answer(self, sp) -> dict:
-        from haenv.p2.rules import assess
+        from haenv.p2.clinical_rules import assess_visible
         block = (getattr(sp, "prediction_context", None) or {})[self.block]
         if not block.get("triage_protocol") and not block.get("protocol_library"):
             raise ValueError("the procedure body has not been retrieved")
@@ -70,7 +70,7 @@ class P2Adapter(QueryAdapter):
             block["today_day"] = int(sp.prediction_context["prediction_time_T"])
         if "patient_statement" in block.get("intake_checklist", {}):
             block["message"] = block["intake_checklist"]["patient_statement"]
-        a = assess(block)
+        a = assess_visible(block)
         return {"disposition": a["set"][0], "rule": _rule_id(a["rule"]), "evidence": [],
                 "reason": text_of("runtime.p2.reader_reason")}
 

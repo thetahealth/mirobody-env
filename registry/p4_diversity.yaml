@@ -314,8 +314,8 @@ narratives:
     less: 外伤后持续局部肌痛、淤肿；恢复期症状逐渐改善。
   alcohol_change:
     source: alcohol
-    more: 连续数周饮酒增加或停止饮酒，非仅单次餐前饮酒。
-    less: 连续数周饮酒增加或停止饮酒，非仅单次餐前饮酒。
+    more: p4.alcohol.increased_history
+    less: p4.alcohol.stopped_history
   fibrate_adherence:
     source: fibrate
     more: 既往高甘油三酯处方随访；现已数周每日按处方服用。
@@ -455,9 +455,9 @@ question_update_14:
     cold_delayed_separation: Temperature-dependent patient-specific leakage not modelled.
     infusion_sampling: Contamination fraction and multi-analyte effects not modelled;
       retain only documented historical comparator, not current attributed cases.
-  small_method_changes: Sourced method or sampling effects need not exceed RCV. Independent
-    standardized checks and applicable patient-sample comparisons must still support
-    the source; true changes need a matching dated clinical course and directionally concordant independent checks. RCV is reported as statistical evidence, not a minimum causal response.
+  small_method_changes: The printed change must reach the paired RCV in each non-noise class.
+    Independent standardized checks and applicable patient-sample comparisons must support the named
+    interference. True changes need a matching dated clinical course and directionally concordant checks.
   ingested_interference_factors:
   - biotin_tsh
   wording:

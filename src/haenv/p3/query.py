@@ -49,7 +49,7 @@ class P3Adapter(QueryAdapter):
             return []
         if "lab_results" in store.block:
             sections = ["encounter_record", "lab_results", "prescription_record", "medication_review"]
-            if any(s.startswith("adh") for s in (g.get("g3") or {}).get("states") or []):
+            if (g.get("dose_reconciliation") or {}).get("current_record") == "L" or any(s.startswith("adh") for s in (g.get("g3") or {}).get("states") or []):
                 sections.append("dispensing_record")
             return [KeyLookup(s, lambda _t, r, s=s: r.get("_from") == s) for s in sections] + self.history_lookups(vp) + self.protocol_lookups(store)
         states = [str(s) for s in (g.get("g3") or {}).get("states") or ()]

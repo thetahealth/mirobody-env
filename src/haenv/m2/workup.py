@@ -82,9 +82,11 @@ def _derive_critical(w, field, value, deriv):
     if not value:
         crit = resolve_path(w, "W.latent_premise.meta._external.m2.critical")
         try:
-            if isinstance(crit, dict) and float(crit["today"]) < float(crit["limit"]):
+            today, limit = float(crit["today"]), float(crit["limit"])
+            inclusive = crit.get("comparison") == "le"
+            if today < limit or (inclusive and today == limit):
                 return True, deriv + ["W.latent_premise.meta._external.m2.critical",
-                                      "rule=critical value on day T (today < limit) -> True"]
+                                      "rule=critical reading meets the emergency threshold -> True"]
         except (KeyError, TypeError, ValueError):
             pass
     return value, deriv

@@ -219,3 +219,101 @@ drugs:
 upstream_gap:
   missing_from_kernel_pkpd: [liraglutide, dulaglutide]
   why_not_in_kernel: "`haenv_kernel/latent.py:DRUG_PKPD` is in the GENERATION segment; adding entries changes `world_sha` and requires regenerating cases."
+
+# Coupled-world analyte effects. The legacy table above remains the off-path input.
+analyte_sources:
+  HIRST_2012: {citation: 'Hirst et al. Diabetes Care 2012;35:446. PMID 22275444', read: abstract, status: verified}
+  HIRST_2013: {citation: 'Hirst et al. Diabetologia 2013;56:973. PMID 23494446', read: 'abstract and PMC3622755 full-text dose-response note', status: verified}
+  RIDDLE_2003: {citation: 'Riddle et al. Diabetes Care 2003;26:3080. PMID 14578243', read: abstract, status: verified}
+  NATHAN_2008_ADAG: {citation: 'Nathan et al. Diabetes Care 2008;31:1473. PMID 18540046', read: abstract, status: verified}
+  TAHARA_1995: {citation: 'Tahara and Shima. Diabetes Care 1995;18:440. PMID 7497851', read: 'carried from the existing truth kinetics registry', status: verified}
+  ATORVASTATIN_LABEL: {citation: 'DailyMed atorvastatin calcium, setid 604a011e-6c64-4895-8f6e-d28f119c4c22', read: 'sections 5.3, 6.1, 14; Table 8', status: verified}
+  STOMP_2013: {citation: 'Parker et al. Circulation 2013. PMID 23183941', read: abstract, status: verified}
+  SUN_2015: {citation: 'Sun et al. Clin Ther 2015;37:225. PMID 25554560', read: abstract, status: verified}
+  JFMPC_2024: {citation: 'J Family Med Prim Care 2024. PMID 38482303', read: abstract, status: verified}
+  LEVOTHYROXINE_LABEL: {citation: 'DailyMed levothyroxine, setid 0fa2e2f5-401b-45c1-b6a5-d02f6faf509d', read: 'Table 10', status: verified}
+  ATA_2014: {citation: 'Jonklaas J et al. Guidelines for the treatment of hypothyroidism (ATA task force on thyroid hormone replacement). Thyroid 2014;24:1670-751. PMC4267409', read: 'full text: recommendation 1a discussion (steady-state T4 and TSH generally achieved in 6 weeks; ~7 day half-life), 4a/4b (full replacement roughly 1.6 ug/kg body weight; TSH 4-6 weeks after any dosage change), 4c (36% of patients over 65 on LT4 had a subnormal TSH), 6e (self-reported nonadherence 22%)', status: verified}
+  TAYLOR_2014: {citation: 'Taylor PN et al. Falling threshold for treatment of borderline elevated thyrotropin levels. JAMA Intern Med 2014;174:32-9 (UK GPRD, ~52,000 new LT4 users 2001-2009), as reported by Spaulding SW, Clinical Thyroidology 2013;25:273-6', read: 'ATA Clinical Thyroidology summary (full text): after 6-12 months of treatment 2.7% had TSH < 0.1 mU/L, after 54-60 months 5.8%; TSH 0.1-0.5 mU/L 6.3% after 6-12 months and 10.2% after 54-60 months; median TSH at initiation 8.7 (2001) to 7.9 (2009) mU/L', status: verified}
+  SOMWARU_2009: {citation: 'Somwaru LL et al. High frequency of and factors associated with thyroid hormone over-replacement and under-replacement in men and women aged 65 and over. J Clin Endocrinol Metab 2009;94:1342-5. PMC2682480', read: 'full text (PMC): of 339 thyroid hormone users, 41% low TSH (< 0.45), 16% high TSH (> 4.5; 16.2% in Results), 43% euthyroid; TSH assay functional sensitivity 0.008 mU/L', status: verified}
+  NHANES_1720: {citation: 'CDC NCHS NHANES 2017-March 2020, P_TRIGLY, fasting subsample WTSAFPRP, LBDLDLSI', read: 'computed untreated LDL quantiles', status: verified}
+analyte_effects:
+  - drug: metformin
+    observable: HbA1c
+    kind: delta_additive
+    value_by_background: {monotherapy: -1.12, add_on_oral: -0.95, add_on_insulin: -0.60}
+    ci95_by_background: {monotherapy: [-1.32, -0.92], add_on_oral: [-1.13, -0.77], add_on_insulin: [-0.91, -0.30]}
+    kinetics: {half_time_days: 34.6, source: TAHARA_1995}
+    fbg_from_hba1c: {slope_mmol_per_pp: 1.594, source: NATHAN_2008_ADAG, derivation: true}
+    source: HIRST_2012
+  - drug: [gliclazide, glimepiride]
+    observable: HbA1c
+    kind: delta_additive
+    value_by_background: {monotherapy: -1.51, add_on_oral: -1.62, add_on_insulin: -0.46}
+    ci95_by_background: {monotherapy: [-1.78, -1.25], add_on_oral: [-2.24, -1.0], add_on_insulin: [-0.69, -0.24]}
+    kinetics: {half_time_days: 34.6, source: TAHARA_1995}
+    fbg_from_hba1c: {slope_mmol_per_pp: 1.594, source: NATHAN_2008_ADAG, derivation: true}
+    source: HIRST_2013
+  - drug: insulin_glargine
+    observable: [FBG, HbA1c]
+    kind: titrated_target
+    target: {FBG: 6.5, HbA1c: 6.96}
+    responder_share: {value: 0.60, note: 'about 60% reached HbA1c <= 7%'}
+    horizon_days: 168  # 24 weeks; linear approach is a modelling choice
+    source: RIDDLE_2003
+  - drug: atorvastatin
+    observable: LDL
+    kind: delta_log
+    pct_by_dose_mg: {10: -39, 20: -43, 40: -50, 80: -60}
+    kinetics: {half_time_days: 7, source: ATORVASTATIN_LABEL, derivation: 'maximum within four weeks interpreted as four half-times'}
+    source: ATORVASTATIN_LABEL
+  - drug: atorvastatin
+    observable: TG
+    kind: delta_log
+    pct_by_dose_mg: {10: -19, 20: -26, 40: -29, 80: -37}
+    kinetics: {half_time_days: 7, source: ATORVASTATIN_LABEL}
+    source: ATORVASTATIN_LABEL
+  - drug: atorvastatin
+    observable: CK
+    kind: delta_additive
+    value_by_dose_mg: {80: 20.8}
+    dose_policy: registered_only  # No magnitude is sourced for other doses.
+    source: STOMP_2013
+  - drug: atorvastatin
+    observable: ALT
+    applied: false  # Incidence only; no sourced elevation magnitude.
+    source: ATORVASTATIN_LABEL
+  - drug: liraglutide
+    observable: TG
+    kind: delta_additive
+    value_by_dose_mg: {1.8: -0.30}
+    ci95: [-0.49, -0.11]
+    source: SUN_2015
+  - drug: levothyroxine
+    observable: TSH
+    applied: false  # Joint thyroid-axis application belongs to the subsequent axis layer.
+    required_dose_ug: {weight_kg: 0.27, tsh0: 0.553, intercept: 21, source: JFMPC_2024}
+    t4_half_life_days: {euthyroid: [6, 7], hypothyroid: [9, 10], source: LEVOTHYROXINE_LABEL}
+    # B4 thyroid axis (`truth.thyroid`, coupled worlds only): the B2 term stays unapplied; the axis reads
+    # these fields. Full replacement by weight, tablet step, steady state after a change.
+    full_replacement_ug_per_kg: {value: 1.6, source: ATA_2014}
+    kinetics: {half_time_days: 7, source: ATA_2014, derivation: 'ATA 2014 1a: ~7 day half-life; steady state of T4 and TSH generally in 6 weeks (6 half-lives)'}
+    steady_state_days: {value: 42, source: ATA_2014}
+    # Established users at a stable dose: steady-state TSH bands and their shares. Over-replacement
+    # (below 0.1 and 0.1-0.5 mU/L) after 54-60 months of treatment (Taylor 2014); under-replacement above
+    # 4.5 mU/L (Somwaru 2009, the high-TSH share); the rest at the person's own set point. The bottom
+    # edge is the TSH assay's functional sensitivity (Somwaru 2009); the top edge 10 mU/L is the
+    # treatment threshold of ATA 2014 (persistent TSH above it is treated, i.e. re-titrated).
+    on_treatment_tsh:
+      suppressed: {band_miu_l: [0.008, 0.1], share: 0.058, source: [TAYLOR_2014, SOMWARU_2009]}
+      low: {band_miu_l: [0.1, 0.5], share: 0.102, source: TAYLOR_2014}
+      under: {band_miu_l: [4.5, 10.0], share: 0.162, source: [SOMWARU_2009, ATA_2014]}
+    nonadherence_share: {value: 0.22, source: ATA_2014}
+    source: [JFMPC_2024, LEVOTHYROXINE_LABEL, ATA_2014]
+untreated_base:
+  LDL:
+    CAD:
+      quantiles: {0.1: 1.85, 0.5: 3.17, 0.9: 4.16}
+      source: NHANES_1720
+    hypothyroidism:
+      quantiles: {0.1: 2.17, 0.5: 3.10, 0.9: 3.94}
+      source: NHANES_1720

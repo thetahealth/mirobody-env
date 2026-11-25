@@ -143,8 +143,17 @@ def test_only_gateway_billing_receipt_settles_not_fake_usage_cost(tmp_path):
     assert any(x.get("kind") == "relay_quota_receipt" for x in receipts)
 
 
+def test_gateway_error_then_completion_with_same_id_settles_unique_bill(tmp_path):
+    error = dict(logrow(), type=5, quota=0)
+    p, ledger, settings = make(tmp_path, [error, logrow()])
+    p.request('r1', 'q', settings, lambda _: response())
+    assert ledger.snapshot()['settled_usd'] == '0.221082'
+
+
 @pytest.mark.parametrize("change", ["wrong_id", "wrong_model", "duplicate", "missing_id"])
-def test_wrong_or_ambiguous_receipt_keeps_reservation_and_raw_answer(tmp_path, change):
+def test_wrong_or_ambiguous_receipt_keeps_reservation_and_raw_answer(tmp_path, change, monkeypatch):
+    import haenv.runtime.relay_accounting as relay
+    monkeypatch.setattr(relay, "LOG_MISS_WINDOW_S", 0.2)
     row = logrow(); resp = response(); logs = [row]
     if change == "wrong_id":row["request_id"] = "other"
     if change == "wrong_model":row["model_name"] = "other"
@@ -221,3 +230,94 @@ def test_receipt_cannot_be_rebound_to_a_changed_raw_completion(tmp_path):
     raw.write_text(json.dumps(saved))
     with pytest.raises(BudgetExceeded):
         p.request("r1", "q", settings, lambda _: pytest.fail("duplicate"))
+
+
+def test_rate_limited_log_reads_back_off_then_settle(monkeypatch):
+    import haenv.runtime.relay_accounting as relay
+    sleeps = []
+    monkeypatch.setattr(relay.time, "sleep", sleeps.append)
+    calls = iter([ValueError("429"), ValueError("429"), [logrow()]])
+    def fetch():
+        out = next(calls)
+        if isinstance(out, Exception):
+            raise out
+        return out
+    prices = RelayPrices.from_metadata(metadata(), "kimi-k3")
+    bill = RelayBilling(prices, fetch)(response())
+    assert bill["kind"] == "relay_quota_receipt" and sleeps == [10.0, 20.0]
+
+
+def test_concurrent_lookups_share_one_fresh_log_read():
+    import threading as th
+    import haenv.runtime.relay_accounting as relay
+    gate, reads = th.Event(), []
+    def fetch():
+        reads.append(1)
+        gate.wait(2)
+        return [logrow()]
+    out = []
+    workers = [th.Thread(target=lambda: out.append(relay.shared_log_read(("t", "k"), fetch)))
+               for _ in range(8)]
+    for w in workers:
+        w.start()
+    gate.set()
+    for w in workers:
+        w.join()
+    assert len(out) == 8 and len(reads) <= 2
+
+
+def test_bill_row_that_appears_late_still_settles(monkeypatch):
+    import haenv.runtime.relay_accounting as relay
+    monkeypatch.setattr(relay.time, "sleep", lambda s: None)
+    reads = iter([[], [], [], [], [logrow()]])
+    prices = RelayPrices.from_metadata(metadata(), "kimi-k3")
+    bill = RelayBilling(prices, lambda: next(reads))(response())
+    assert bill["kind"] == "relay_quota_receipt"
+
+
+def test_log_reads_of_one_key_are_spaced(monkeypatch):
+    import haenv.runtime.relay_accounting as relay
+    clock = [100.0]
+    monkeypatch.setattr(relay.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(relay.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s))
+    starts = []
+    def fetch():
+        starts.append(clock[0])
+        return []
+    for _ in range(3):
+        clock[0] += 0.1
+        relay.shared_log_read(("spaced", "k"), fetch)
+    assert all(b - a >= relay.LOG_READ_MIN_INTERVAL_S for a, b in zip(starts, starts[1:]))
+
+
+def test_unreadable_log_books_token_tariff_bound(tmp_path, monkeypatch):
+    import haenv.runtime.relay_accounting as relay
+    monkeypatch.setattr(relay, "LOG_READ_DEADLINE_S", 0.0)
+    monkeypatch.setattr(relay.time, "sleep", lambda s: None)
+    def refuse():
+        raise ValueError("429")
+    prices = RelayPrices.from_metadata(metadata(), "kimi-k3")
+    resp = dict(response(), usage={"prompt_tokens": 1000, "completion_tokens": 100})
+    bill = RelayBilling(prices, refuse)(resp)
+    assert bill["kind"] == "published_tariff_upper_bound" and bill["actual_usd"] is None
+    expected = 1000 * prices.input_rate + 100 * prices.output_rate + 2 / prices.quota_per_usd
+    assert Decimal(bill["upper_bound_usd"]) == expected
+    ledger = BudgetLedger(tmp_path / "budget.json", limit_usd="10")
+    paid = AccountedCompletion(prices, ledger, tmp_path / "receipts", backend="relay",
+                               cost_reader=RelayBilling(prices, refuse))
+    settings = {"backend": "relay", "model": "kimi-k3", "max_tokens": 72000}
+    assert paid.request("r1", "q", settings, lambda _: resp) == resp
+    row = ledger.snapshot()["requests"]["r1"]
+    assert row["status"] == "tariff_capped" and Decimal(row["reserved_usd"]) == expected
+    paid.cost_reader = lambda _: pytest.fail("replay queried billing")
+    assert paid.request("r1", "q", settings, lambda _: pytest.fail("duplicate generation")) == resp
+
+
+def test_unreadable_log_without_usage_stays_unknown(monkeypatch):
+    import haenv.runtime.relay_accounting as relay
+    monkeypatch.setattr(relay, "LOG_READ_DEADLINE_S", 0.0)
+    def refuse():
+        raise ValueError("429")
+    prices = RelayPrices.from_metadata(metadata(), "kimi-k3")
+    with pytest.raises(ValueError, match="no token usage"):
+        RelayBilling(prices, refuse)(response() | {"usage": None})

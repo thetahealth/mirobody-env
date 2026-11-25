@@ -88,21 +88,37 @@ def inputs(sp) -> dict:
     starts = [int(r["day"]) for r in past if _started(r["change"])]
     incs = [int(r["day"]) for r in past if _increased(r["change"])]
     y = _num(rows[-1]["reading"])
+    printed_y = y
+    pending = False
+    if b.get("control_measurements"):
+        from haenv.p3.measurements import reading
+        valid_y = reading(b["control_measurements"], d["axis"], last_change=s)
+        pending = valid_y is None
+        if valid_y is not None:
+            y = valid_y
     target = (slots(b["clinic_target"], "p3.target.clinic_drug") or slots(b["clinic_target"], "p3.target.clinic"))["target"]
     bounds = slots(target, "p3.target.upper") or slots(target, "p3.target.range")
     upper = float(bounds["up"])     # this patient's target (A12)
     status = "off" if y > upper else "on"
     if ax.get("over_below") is not None and y < float(ax["over_below"]):
         status = "over"
+    printed_status = "over" if ax.get("over_below") is not None and printed_y < float(ax["over_below"]) else "off" if printed_y > upper else "on"
     pick = [int(p["day"]) for p in b["refill_record"]]
     sup = int(_num(b["refill_record"][-1]["dispensed"]))
     left = _pill_left(b["pill_count_today"])
     from haenv.world.labworld.meds import carry_in
-    from haenv.p3.gold import printed_coverage
+    from haenv.p3.gold import printed_coverage, treatment_day
+    from haenv.p3.causality import visible_holds
     reset = [int(p["day"]) for p in b["refill_record"] if _new_strength(p["dispensed"])]
-    a_last = min(1.0, max(0.0, (sup + carry_in(pick, sup, reset)[-1] - left) / max(1, T - pick[-1])))
-    cov90 = printed_coverage(pick, sup, left, T, min(starts) if starts else min(int(r["day"]) for r in past), reset)[0]
-    late = any(q - p > 1.15 * sup for p, q in zip(pick, pick[1:]))
+    holds = visible_holds(b)        # documented hold days are off the treatment clock (printed rule)
+
+    def tc(x):
+        return treatment_day(int(x), holds)
+    a_last = min(1.0, max(0.0, (sup + carry_in([tc(p) for p in pick], sup, [tc(x) for x in reset])[-1] - left)
+                          / max(1, tc(T) - tc(pick[-1]))))
+    cov90 = printed_coverage(pick, sup, left, T, min(starts) if starts else min(int(r["day"]) for r in past), reset,
+                             holds)[0]
+    late = any(tc(q) - tc(p) > 1.15 * sup for p, q in zip(pick, pick[1:]))
     from haenv.p3.gold import documented_contexts
     doc = {canonical(x) for x in documented_contexts(d)}
     symptoms = {canonical(x) for x in d["ae_symptoms"]}
@@ -110,8 +126,11 @@ def inputs(sp) -> dict:
     sym = [e for e in b["symptom_diary"] if canonical(e["symptom"]) in symptoms
            and (k == "gliclazide" or not is_text(e.get("status"), "p3.status.resolved"))
            and _canon_opt(histories.get((canonical(e["symptom"]), int(e["onset_day"])), e.get("context"))) not in doc]
-    return {"drug": k, "position": pos, "dose": x, "ladder": L, "since_increase": T - s, "T": T,
+    from haenv.p3.causality import visible_evidence
+    causal = next((v for e in sym if (v := visible_evidence(b, e["symptom"], e["onset_day"])) is not None), None)
+    return {"causal_evidence": causal, "drug": k, "position": pos, "dose": x, "ladder": L, "since_increase": T - s, "T": T,
             "start": min(starts) if starts else None, "increases": incs, "status": status, "reading": y,
+            "printed_status": printed_status, "printed_reading": printed_y, "measurement_pending": pending,
             "coverage90": cov90, "late_refill": int(late), "pill_adherence": a_last,
             "drug_symptom": int(bool(sym)), "symptom_onset": (max(int(e["onset_day"]) for e in sym) if sym else None),
             "drug_symptom_any": int(any(canonical(e["symptom"]) in symptoms for e in b["symptom_diary"])),
@@ -165,7 +184,7 @@ def rule_reader(sp, unknown: tuple[str, ...] = (), generic_tau: float | None = N
     off, over = f["status"] == "off", f["status"] == "over"
     adh_low = "adherence" not in unknown and f["coverage90"] < float(rl["adherence_line"])
     tau = generic_tau if generic_tau is not None else f["tau"]
-    early = "tau" not in unknown and f["since_increase"] <= float(rl["early_max_frac"]) * tau
+    early = (f["drug"] == "levothyroxine" and f.get("measurement_pending")) or ("tau" not in unknown and f["since_increase"] <= float(rl["early_max_frac"]) * tau)
     exposure = f["attribution"] == "exposure" and "attribution" not in unknown
     ae = None
     if f["drug_symptom"]:
@@ -178,6 +197,12 @@ def rule_reader(sp, unknown: tuple[str, ...] = (), generic_tau: float | None = N
             anchor = max([d for d in [f["start"]] + f["increases"] if d is not None and d <= on], default=None)
             lo, hi = rl["ae_dose_window"]
             ae = "dose_related" if anchor is not None and lo <= on - anchor <= hi else "unattributed"
+    if f.get("causal_evidence") is not None and f["drug_symptom"]:
+        from haenv.p3.causality import assessment
+        ev = f["causal_evidence"]
+        ae = assessment(f["symptom_onset"], f["start"], ev.get("withdrawal"), ev.get("alternative"))
+        if ae in ("alternative", "predating"):
+            ae = None
     from haenv.p3.history import acei_contraindicated
     if acei_contraindicated(_blk(sp).get("adverse_event_record"), f["drug"]):
         return "switch"
@@ -220,6 +245,8 @@ def printed_rules(sp) -> dict:
     m = first("p3.rule.interval")
     if m:
         out["tau"], out["early_days"] = int(m["tau"]), int(m["half"])
+    if first("p3.causality.protocol") is not None:
+        out["causality"] = True
     timing, exposure = first("p3.rule.ae.timing"), first("p3.rule.ae.exposure")
     if timing or exposure:
         if timing:
@@ -255,7 +282,7 @@ def printed_rule_reader(sp) -> str:
     P = printed_rules(sp)
     off, over = f["status"] == "off", f["status"] == "over"
     adh_low = P.get("adherence_line") is not None and f["coverage90"] < P["adherence_line"]
-    early = "early_days" in P and f["since_increase"] <= P["early_days"]
+    early = (f["drug"] == "levothyroxine" and f.get("measurement_pending")) or ("early_days" in P and f["since_increase"] <= P["early_days"])
     ae = None
     if f["drug_symptom"]:
         on = f["symptom_onset"]
@@ -271,6 +298,12 @@ def printed_rule_reader(sp) -> str:
                 ae = "unattributed"
         else:
             ae = "dose_related"
+    if P.get("causality") and f.get("causal_evidence") is not None and f["drug_symptom"]:
+        from haenv.p3.causality import assessment
+        ev = f["causal_evidence"]
+        ae = assessment(f["symptom_onset"], f["start"], ev.get("withdrawal"), ev.get("alternative"))
+        if ae in ("alternative", "predating"):
+            ae = None
     from haenv.p3.history import acei_contraindicated
     if acei_contraindicated(_blk(sp).get("adverse_event_record"), f["drug"]):
         return "switch"

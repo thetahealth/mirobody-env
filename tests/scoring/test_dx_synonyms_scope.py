@@ -129,13 +129,24 @@ def test_pending_after_a_bare_no_counts_as_listed():
     ("HD-UNI-06", "胰腺导管腺癌（或胰腺神经内分泌肿瘤）导致内、外分泌功能不全"),
     ("JD-LADA", "糖尿病(空腹胰岛素极低提示自身免疫性糖尿病可能,需与T2DM鉴别)"),
     ("JD-LADA", "Autoimmune diabetes of adults"),
+    ("JD-LADA", "Latent autoimmune diabetes of adult type"),
+    ("JD-LADA", "Autoimmune insulin-deficient diabetes"),
+    ("JD-LADA", "New-onset autoimmune (GAD-positive, insulinopenic, ketosis-prone) diabetes mellitus"),
     # the drug-class wording of statin myopathy, gallstones, MASLD fibrosis without "伴"
     ("HD-UNI-19", "他汀类相关肌病"),
     ("HD-UNI-19", "他汀类药物相关肌病(阿托伐他汀,老年+合并用药背景下)"),
     ("HD-UNI-19", "他汀类相关肌肉症状(阿托伐他汀相关肌痛/肌病,SAMS)"),
     ("HD-UNI-11", "胆囊炎/胆结石"),
     ("HD-UNI-11", "胆结石伴胆囊炎"),
+    ("HD-UNI-11", "急性(结石性)胆囊炎"),
+    ("HD-UNI-11", "急性（结石性）胆囊炎"),
+    ("HD-UNI-11", "Acute calculous cholecystitis"),
     ("HD-UNI-13", "MASLD进展期纤维化（伴乏力、食欲减退）"),
+    ("HD-UNI-16", "Acute community-acquired lower respiratory tract infection (pneumonia, right/unspecified)"),
+    ("HD-UNI-16", "社区获得性下呼吸道感染（肺炎）"),
+    ("HD-UNI-10", "Chronic kidney disease (stage 3b, persistent A2 albuminuria)"),
+    ("HD-UNI-10", "Chronic kidney disease with persistent albuminuria (~G3a/A2)"),
+    ("HD-UNI-10", "慢性肾脏病（3b期）"),
     # the exclusions below leave the unipolar forms matched
     ("HD-UNI-18", "抑郁发作(中度)"),
     ("HD-UNI-18", "重性抑郁障碍,不排除双相障碍"),
@@ -171,6 +182,13 @@ def test_synonym_names_the_gold(sid, text):
     # gallstone pancreatitis is the rival acute pancreatitis
     ("HD-UNI-11", "胆结石性急性胰腺炎"),
     ("HD-UNI-11", "胆结石所致急性胰腺炎"),
+    ("HD-UNI-11", "不支持急性(结石性)胆囊炎"),
+    ("HD-UNI-11", "Acute calculous cholecystitis ruled out"),
+    ("HD-UNI-16", "Community-acquired lower respiratory tract infection"),
+    ("HD-UNI-16", "Community-acquired lower respiratory tract infection (no evidence of pneumonia)"),
+    ("HD-UNI-16", "Hospital-acquired lower respiratory tract infection (pneumonia)"),
+    ("HD-UNI-10", "Chronic kidney disease with stage 3 lung cancer"),
+    ("HD-UNI-10", "Diabetic kidney disease"),
 ])
 def test_synonym_does_not_reach_rivals_or_negations(sid, text):
     assert _listed(sid, text) == 0.0, (sid, text)
@@ -180,13 +198,19 @@ def test_synonym_does_not_reach_rivals_or_negations(sid, text):
 @pytest.mark.parametrize("sid,thread,text,want", [
     ("JD-CKM", "肾脏线", "非糖尿病病因的慢性肾脏病伴容量过负荷", True),
     ("JD-CKM", "肾脏线", "Chronic kidney disease, stage 3", True),
-    # diabetic nephropathy is carried by the glucose thread (`vocab_alias_excludes.yaml: 肾病`)
-    ("JD-CKM", "肾脏线", "2型糖尿病伴糖尿病肾病", False),
-    ("JD-CKM", "肾脏线", "Diabetic kidney disease", False),
+    ("JD-CKM", "肾脏线", "2型糖尿病伴糖尿病肾病", True),
+    ("JD-CKM", "肾脏线", "Diabetic kidney disease", True),
     # autoimmune diabetes is the LADA thread, not the type 2 glucose thread
     ("JD-CKM", "糖代谢线", "自身免疫性糖尿病可能", False),
+    ("JD-CKM", "糖代谢线", "Autoimmune (GAD-positive, insulinopenic) diabetes mellitus", False),
     ("JD-CKM", "糖代谢线", "2型糖尿病失控", True),
     ("HD-COM-62", "胰岛自身免疫线", "自身免疫性糖尿病可能,需与T2DM鉴别", True),
+    ("HD-COM-62", "胰岛自身免疫线", "New-onset autoimmune (GAD-positive, ketosis-prone) diabetes mellitus", True),
+    ("HD-COM-62", "胰岛自身免疫线", "Autoimmune insulin-deficient diabetes ruled out", False),
+    ("HD-COM-62", "胰岛自身免疫线", "GAD-positive test result", False),
+    ("HD-COM-62", "胰岛自身免疫线", "Non-autoimmune insulin-deficient diabetes", False),
+    ("HD-COM-62", "胰岛自身免疫线", "Non-autoimmune diabetes", False),
+    ("HD-COM-62", "胰岛自身免疫线", "No latent autoimmune diabetes", False),
     # "1型" is type 1 diabetes, not multiple endocrine neoplasia type 1
     ("HD-COM-20", "胰岛自身免疫线", "多发性内分泌腺瘤病1型 (MEN1)", False),
     ("HD-COM-20", "胰岛自身免疫线", "新发1型糖尿病", True),
@@ -206,6 +230,19 @@ def test_synonym_does_not_reach_rivals_or_negations(sid, text):
 ])
 def test_synonyms_on_registered_threads(sid, thread, text, want):
     assert alias_hit_asserted(text, thread_aliases(_thread(sid, thread))) is want, (sid, thread, text)
+
+
+@pytest.mark.parametrize("name,expected", [
+    ("Diabetic kidney disease", 2),
+    ("Diabetic nephropathy", 2),
+    ("糖尿病肾病", 2),
+    ("No diabetic nephropathy", None),
+    ("Acute kidney injury", None),
+])
+def test_dkd_names_the_renal_thread_of_ckd_with_diabetes(name, expected):
+    gold = {**_comorbid("JD-CKM"), "spec_id": "JD-CKM"}
+    result = run_judges(SINGLE, _diff("Type 2 diabetes mellitus", name), FakeVP(gold))
+    assert result["dx_listed_positions"] == [1, expected]
 
 
 def test_sleep_apnea_synonym_does_not_name_the_lupus_thread():
@@ -281,3 +318,40 @@ def test_synonyms_stay_on_the_judging_side():
     for sid, spec in overlay.condition_registry().items():
         leaked = syn & {str(a).lower() for a in spec.get("aliases") or ()}
         assert not leaked, (sid, leaked)
+
+
+@pytest.mark.parametrize("sid,lines", [
+    ("HD-UNI-15", ["pyelonephritis"]),
+    ("HD-COM-77", ["LADA", "primary aldosteronism"]),
+])
+def test_m2_scores_four_live_diagnoses(sid, lines):
+    gold = _unified(sid) if len(lines) == 1 else _comorbid(sid)
+    vp = FakeVP(gold)
+    vp.adjudication["m2_workup"] = {}
+    before = ["excluded", "candidate a", "candidate b", "candidate c"][:5 - len(lines)]
+    out = _diff(*before, *lines, ruled=("excluded",))
+    row = run_judges(SINGLE, out, vp)
+    assert row["dx_listed_cap"] == 4
+    assert max(row["dx_listed_positions"]) == 4
+    assert row["dx_listed"] == 1.0
+
+    too_late = _diff("another candidate", *before, *lines, ruled=("excluded",))
+    assert run_judges(SINGLE, too_late, vp)["dx_listed"] < 1.0
+
+
+@pytest.mark.parametrize("sid,diagnosis,credit", [
+    ("HD-UNI-13", "Metabolic dysfunction-associated steatotic liver disease (MASLD/MASH) with high probability of advanced (F3–F4) fibrosis", 1),
+    ("HD-UNI-13", "Chronic steatotic/metabolic liver disease (MASLD) with suspected advanced fibrosis", 1),
+    ("HD-UNI-13", "代谢功能障碍相关脂肪性肝病(MASLD), 非侵入性检查提示进展期纤维化可能", 1),
+    ("HD-UNI-13", "代谢相关脂肪性肝病，弹性成像提示进展期纤维化", 1),
+    ("HD-UNI-13", "代谢相关脂肪性肝病(MASLD)伴肝纤维化风险", 0),
+    ("HD-UNI-13", "MASLD，尚需排除进展期纤维化", 0),
+    ("HD-UNI-13", "MASLD without convincing evidence of advanced fibrosis", 0),
+    ("HD-UNI-13", "MASLD with simple steatosis", 0),
+    ("HD-UNI-19", "Statin (atorvastatin 80 mg)-associated muscle symptoms / drug-induced myopathy", 1),
+    ("HD-UNI-19", "Statin-induced myopathy", 1),
+    ("HD-UNI-19", "SAMS ruled out", 0),
+    ("HD-UNI-19", "Glucocorticoid-induced myopathy", 0),
+])
+def test_audited_diagnosis_equivalents(sid, diagnosis, credit):
+    assert _listed(sid, diagnosis) == credit

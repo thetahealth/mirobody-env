@@ -22,7 +22,8 @@ EN_TOKENS = ("uptitrate", "downtitrate", "maintain", "switch", "check_adherence_
              "dose_related", "unattributed", "predating", "decoy", "truth", "adherence_true", "subtype",
              "drug_symptom", "top_off", "adh_low", "ae_dose", "ae_min", "med_decision")
 EN_TOKENS += ("interaction_family", "control_adherence", "control_administration", "control_limit",
-              "control_headroom", "course_control", "symptom_timing", "on_low", "off_ae")
+              "control_headroom", "course_control", "symptom_timing", "on_low", "off_ae",
+              "signal_conflict", "history_near_miss", "causal_replay")
 ZH_TOKENS = ("剂量相关", "未归因", "诱饵", "真值", "金标", "依从真值", "过度治疗", "药效未到", "刚加量", "先查依从")
 
 
@@ -39,15 +40,42 @@ def _unrealizable(blk: dict) -> str | None:
     return None
 
 
+def rechallenge_dose_conflicts(rows):
+    from haenv.p3.textread import slots
+    from haenv.i18n.text import is_text
+    bad = []
+    key = "p3.hist.rechallenge.same_tolerated"
+    for row in rows:
+        note = row.get("rechallenge")
+        match = slots(note, key)
+        if match is None and not is_text(note, key):
+            continue
+        prescriptions = row.get("prescriptions") or ()
+        expected = prescriptions[1]["dose_mg"] if len(prescriptions) >= 2 else row.get("dose_mg")
+        if match is None or expected is None or float(match["dose"]) != float(expected):
+            bad.append("tolerated rechallenge does not specify the reintroduced dose")
+    return bad
+
 def _recompute(blk: dict, raw) -> list[str]:
     from haenv.p3.gold import gold_block_consistent
     from haenv.p3.render import render_block
+    from haenv.p3.textread import slots
+
     pc = (raw.get("prediction_context") if isinstance(raw, dict) else getattr(raw, "prediction_context", None)) or {}
-    bad = list(gold_block_consistent(blk))
+    archive = blk.get("adverse_event_record") or ()
+    bad = gold_block_consistent(blk) + rechallenge_dose_conflicts(archive)
+    if blk.get("drug") == "gliclazide" and blk.get("history_near_miss") == "different_dose":
+        record = archive[0] if archive else {}
+        note = slots(record.get("course"), "p3.hist.hypoglycemia.tolerated_dose")
+        doses = record.get("prescriptions") or ()
+        current = (blk.get("g3") or {}).get("dose")
+        if not (note and doses and current is not None
+                and float(note["dose"]) == float(doses[-1]["dose_mg"]) > float(current)):
+            bad.append("historical gliclazide near miss lacks a documented tolerated dose above the current dose")
     expected = render_block(blk)
     if blk.get("record_format") == "emr":
         from haenv.p3.emr import source_block
-        expected = source_block(expected, blk["current_medications"], blk["patient_quote"])
+        expected = source_block(expected, blk["current_medications"], blk["patient_quote"], reconciliation=blk)
     if isinstance(pc.get(BLOCK), dict) and expected != pc[BLOCK]:
         bad.append("visible block is not the rendering of the records")
     return bad
@@ -147,6 +175,17 @@ def visible_gold_premises(g: dict, raw) -> list[tuple[str, str]]:
             missing.append("coverage")
         line = [(int(r["day"]), prescription_dose(r["prescription"])) for r in b["visits"]
                 if int(r["day"]) < T and (r["day"] in [int(x[0]) for x in g["dose_line"]])]
+        if g.get("ae_causality"):
+            from haenv.p3.causality import visible_evidence
+            causal = g["ae_causality"]
+            observed_causal = visible_evidence(b, causal["symptom"], causal["onset"]) or {}
+            if all(k in observed_causal for k in ("hold", "resume")):
+                hold, resume = observed_causal['hold'], observed_causal['resume']
+                original = dose_at(line, hold - 1)
+                documented = dict(line)
+                documented.setdefault(hold, 0.)
+                documented.setdefault(resume, float(original))
+                line = sorted(documented.items())
         if line != [(int(d), float(v)) for d, v in g["dose_line"]]:
             missing.append("dose_history")
         if known_of(g) and not b.get("known_comorbidity"):
@@ -159,6 +198,15 @@ def visible_gold_premises(g: dict, raw) -> list[tuple[str, str]]:
             context = e.get("context") or (L("p3.context.no_trigger") if e.get("kind") == "drug_symptom" else "—")
             if canonical(record.get("status")) != canonical(e.get("status")) or canonical(histories.get(key)) != canonical(context):
                 missing.append("symptom_course_onset_context")
+        if g.get("ae_causality"):
+            from haenv.p3.causality import visible_evidence
+            causal = g["ae_causality"]
+            observed_causal = visible_evidence(b, causal["symptom"], causal["onset"]) or {}
+            if any(observed_causal.get(k) != causal.get(k) for k in ("withdrawal", "alternative", "rechallenge")):
+                missing.append("causal_observations")
+            if (g.get("class") == "check_adherence_or_adverse_effect" and "alternative" not in causal
+                    and "alternative" not in observed_causal):
+                missing.append("other_causes_not_yet_assessed")
         if g.get("administration_record") != b.get("administration_record"):
             missing.append("administration_timing")
         from haenv.p3.history import limiting_inputs

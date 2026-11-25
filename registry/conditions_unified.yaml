@@ -371,10 +371,11 @@ conditions:
     - acute cholecystitis
     join_gold: unified
     outcome_label: event_occurred
-    # Every presentation meets TG18/TG13 definite acute cholecystitis (RUQ tenderness + fever/CRP/WBC
-    # + ultrasound); management is admission and early cholecystectomy.
-    urgency: 🔴
-    red_flag: true
+    # NICE CG188 1.2.4: prompt surgical assessment for early cholecystectomy.
+    # The recorded RUQ findings establish the diagnosis, not circulatory instability.
+    # https://www.nice.org.uk/guidance/cg188/chapter/Recommendations
+    urgency: 🟠
+    red_flag: false
     clinician_warranted: true
     weight:
     - down
@@ -525,10 +526,11 @@ conditions:
     - pyelonephritis
     join_gold: unified
     outcome_label: event_occurred
-    # Every presentation has fever, chills and unilateral flank pain (EAU 3.6.1 pyelonephritis) with
-    # nausea and reduced intake; treatment starts the same day.
-    urgency: 🔴
-    red_flag: true
+    # NICE NG111 1.1.9–1.1.10: treat promptly; hospital referral depends on serious illness,
+    # dehydration, inability to take oral fluids or medicines, or elevated complication risk.
+    # https://www.nice.org.uk/guidance/ng111/chapter/recommendations
+    urgency: 🟠
+    red_flag: false
     clinician_warranted: true
     weight:
     - down

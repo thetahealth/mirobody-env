@@ -10,6 +10,71 @@ from haenv.p4.gate import plan_of
 BLOCK = "followup_p4"
 
 
+def source_world(g):
+    """Replay the actual legacy response, never estimate it from measurements."""
+    from haenv.p4.realize import _World, Unrealizable
+    from haenv.world.truth.dated import Source, SourceUnavailable
+    if "background_source" not in g:
+        return None
+    response = g.get("actual_response") or {}
+    if type(response.get("version")) is not int or response["version"] != 1 or "A" not in response:
+        raise Unrealizable("historical truth lacks original full-precision actual response")
+    try:
+        source = Source(g["background_source"])
+    except SourceUnavailable as exc:
+        raise Unrealizable(str(exc)) from exc
+    def at(day):
+        try:
+            return source(day)
+        except SourceUnavailable as exc:
+            raise Unrealizable(str(exc)) from exc
+    ac = g.get("acei") or {}
+    return _World(g["analyte"], 0., [], [], A=response["A"],
+                  events=ac.get("events") or (), initial_on=ac.get("initial_on", False), background=at)
+
+
+def _refuse(g, reason):
+    from haenv.p4.realize import Unrealizable
+    raise Unrealizable(reason) if "background_source" in g else ValueError(reason)
+
+
+def validate_source_records(raw, g):
+    from haenv.p4.realize import Unrealizable, preserve_observed_aliases
+    world = source_world(g)
+    if world is None:
+        return
+    for rec in g.get("records", []) + g.get("verification_records", []):
+        if world.truth(int(rec["day"])) != rec["truth"]:
+            raise Unrealizable(f"historical source/actual cause truth disagrees on day {rec['day']}")
+    preserve_observed_aliases(raw, g)
+
+
+def _source_guard(finalizer):
+    """Keep unavailable history local to the ordinary P4 unrealizable gate."""
+    from functools import wraps
+    @wraps(finalizer)
+    def guarded(raw, cid, plan):
+        from haenv.p4.realize import Unrealizable
+        g = raw.adjudication[BLOCK]
+        if "background_source" not in g or plan.get("version") == 2 or "class" not in g:
+            return finalizer(raw, cid, plan)
+        # A refused translation must not edit the original medication evidence.
+        candidate = deepcopy(raw)
+        try:
+            validate_source_records(candidate, candidate.adjudication[BLOCK])
+            result = finalizer(candidate, cid, plan)
+            validate_source_records(candidate, candidate.adjudication[BLOCK])
+        except Unrealizable as exc:
+            raw.adjudication[BLOCK] = {"plan": dict(plan), "unrealizable": str(exc)}
+            raw.prediction_context.pop(BLOCK, None)
+            return
+        raw.adjudication = candidate.adjudication
+        raw.prediction_context = candidate.prediction_context
+        raw.latent_premise = candidate.latent_premise
+        return result
+    return guarded
+
+
 def prepare(raw, cid, plan):
     from haenv.world.validation.difficulty_r2 import enabled
     from haenv.world.generation.build_clinical import _LAB_CTX
@@ -53,16 +118,19 @@ def supporting_report(g, r0, day, cid):
     from haenv.p4.gold import pair_rcv
     cfg = analyte(g["analyte"])
     today = next(r for r in g["records"] if int(r["day"]) == int(g["t1"]))
+    world = source_world(g)
+    truth = world.truth(int(day)) if world is not None else r0["truth"]
     for attempt in range(int(table()["packs"]["p4"]["support_attempts"]["value"])):
         e = cv_total(g["analyte"]) * z("history-support", cid, day, attempt)
-        rec = make_record(day, r0["time"], r0["truth"], e, [],
+        rec = make_record(day, r0["time"], truth, e, [],
                           int(cfg["ndigits"]), tuple(cfg["range"]))
         cls = g4(rec, today, pair_rcv(g["analyte"], rec, today), tuple(g["band"]), source_policy=g.get("source_policy"))["class"]
         if cls is not None:
             return rec
-    raise ValueError("no unambiguous historical supporting comparison")
+    _refuse(g, "no unambiguous historical supporting comparison")
 
 
+@_source_guard
 def finalize(raw, cid, plan):
     from haenv.world.validation.difficulty_r2 import enabled
     if enabled(plan):
@@ -103,6 +171,7 @@ def finalize(raw, cid, plan):
     dates = {int(x["day"]) for x in additions}
     g["records"] = sorted([x for x in g["records"] if int(x["day"]) not in dates] + additions, key=lambda x: int(x["day"]))
     g["comparison_basis"] = table()["packs"]["p4"]["comparison_basis"]
+    validate_source_records(raw, g)
     from haenv.p4.hooks import world_record
     world_record(raw, g)
     b = render_block(g, raw, cid)
@@ -113,11 +182,11 @@ def finalize(raw, cid, plan):
                                "source": table()["packs"]["p4"]["source"]}
     bad = gold_block_consistent(g)
     if bad:
-        raise ValueError("remote report changed gold: " + "; ".join(bad))
+        _refuse(g, "remote report changed gold: " + "; ".join(bad))
     if active:
         alternate = answer(twin(vars(raw), day))
         if alternate is None or alternate == g["class"]:
-            raise ValueError("remote source has no different, derivable deletion gold")
+            _refuse(g, "remote source has no different, derivable deletion gold")
 
 
 def answer(raw):
@@ -165,6 +234,7 @@ def report_day(analyte, cid, today, *, occupied=()):
     raise ValueError("no unoccupied report day in the registered source distribution")
 
 
+@_source_guard
 def finalize_r2(raw, cid, plan):
     if plan.get("version") == 2:
         from haenv.p4.diversity import finalize as diverse
@@ -203,6 +273,7 @@ def finalize_r2(raw, cid, plan):
         g["t0"] = day
     else:
         g["records"].append(supporting_report(g, r0, day, cid))
+    validate_source_records(raw, g)
     # An older source-bearing report precedes the sampled comparison in both
     # roles. On a stable case the last same-method report rules out that older
     # sampling/method episode; deleting it changes the comparison's source.
@@ -216,11 +287,12 @@ def finalize_r2(raw, cid, plan):
         lower = max([lower] + settled)
         support_day = day - 1
         if lower > support_day:
-            raise ValueError("no settled historical comparison interval")
+            _refuse(g, "no settled historical comparison interval")
         support = alternate_report(g, r0, support_day, cid, min_day=lower)
         g["records"].append(support)
     g["records"].sort(key=lambda r: int(r["day"]))
     g["comparison_basis"] = table()["packs"]["p4"]["comparison_basis"]
+    validate_source_records(raw, g)
     world_record(raw, g)
     raw.prediction_context[BLOCK] = render_block(g, raw, cid)
     register(g, "report", day, active, recent_lower=today - 182,
@@ -229,11 +301,11 @@ def finalize_r2(raw, cid, plan):
                                        "acts": False} for r in raw.prediction_context[BLOCK]["specimen_procedure"]]
     bad = gold_block_consistent(g)
     if bad:
-        raise ValueError("remote comparison changed gold: " + "; ".join(bad))
+        _refuse(g, "remote comparison changed gold: " + "; ".join(bad))
     if active:
         alternate = answer(twin(vars(raw), day))
         if alternate == g["class"] or (alternate is None and not baseline):
-            raise ValueError("remote report is not decisive under the registered deletion policy")
+            _refuse(g, "remote report is not decisive under the registered deletion policy")
 
 
 def alternate_report(g, r0, day, cid, *, min_day=None):
@@ -252,14 +324,16 @@ def alternate_report(g, r0, day, cid, *, min_day=None):
     from haenv.p4.render import meat_slot
     cfg = analyte(g["analyte"])
     today = next(r for r in g["records"] if int(r["day"]) == int(g["t1"]))
+    world = source_world(g)
     upper = int(day)
     lower = upper if min_day is None else int(min_day)
     available = [d for d in range(lower, upper + 1)
                  if not any(int(r["day"]) == d for r in g["records"])]
     if not available:
-        raise ValueError("no available historical report day")
+        _refuse(g, "no available historical report day")
     for attempt in range(int(table()["packs"]["p4"]["support_attempts"]["value"])):
         day = available[int(u01("history-alternate-date", cid, attempt) * len(available))]
+        truth = world.truth(int(day)) if world is not None else r0["truth"]
         fac = "meat_meal" if u01("history-alternate-source", cid, attempt) < 0.5 else "jaffe_enzymatic_switch"
         if fac == "jaffe_enzymatic_switch" and method_key(today) == "jaffe":
             # Identical Jaffe reports do not reveal a method switch. Do not
@@ -278,7 +352,7 @@ def alternate_report(g, r0, day, cid, *, min_day=None):
         e = cv_total(g["analyte"], "jaffe" if fac.startswith("jaffe") else None) * z("history-alternate-error", cid, attempt)
         if abs(e) > 3 * cv_total(g["analyte"], "jaffe" if fac.startswith("jaffe") else None):
             continue
-        rec = make_record(day, clock, r0["truth"], e, [p], int(cfg["ndigits"]), tuple(cfg["range"]))
+        rec = make_record(day, clock, truth, e, [p], int(cfg["ndigits"]), tuple(cfg["range"]))
         cls = g4(rec, today, pair_rcv(g["analyte"], rec, today), tuple(g["band"]), source_policy=g.get("source_policy"))["class"]
         if cls is not None and cls != g["class"]:
             return rec

@@ -200,6 +200,10 @@ def _openai_turn(resp: dict) -> Turn:
         native_calls.append({"id": cid, "type": "function",
                              "function": {"name": fn.get("name"), "arguments": args if isinstance(args, str)
                                           else json.dumps(args or {}, ensure_ascii=False)}})
+        # Gemini's OpenAI compatibility returns its opaque continuation token
+        # here. Return the exact provider field on the next tool-result turn.
+        if 'extra_content' in tc:
+            native_calls[-1]['extra_content'] = tc['extra_content']
     native = {}
     if native_calls:
         native["tool_calls"] = native_calls
@@ -314,11 +318,14 @@ class _HTTPChat:
                 fn = tc.get("function") or {}
                 slot["name"] += fn.get("name") or ""
                 slot["arguments"] += fn.get("arguments") or ""
+                if 'extra_content' in tc:
+                    slot['extra_content'] = tc['extra_content']
         self._last_reasoning_chars, self._last_reasoning_text = think_n, None
         message = {"content": "".join(txt)}
         if calls:
             message["tool_calls"] = [{"id": c["id"], "type": "function",
-                                      "function": {"name": c["name"], "arguments": c["arguments"]}}
+                                      "function": {"name": c["name"], "arguments": c["arguments"]},
+                                      **({'extra_content': c['extra_content']} if 'extra_content' in c else {})}
                                      for _i, c in sorted(calls.items())]
         if not defer_validation:
             self._validate_stream(message["content"], think_n, usage, fin)

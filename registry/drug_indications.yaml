@@ -89,6 +89,40 @@ pairs:
         obesity remains pending
       source_verified_on: '2026-10-22'
   T2D:
+    # Primary background agents drawn by standard_of_care.yaml. These restricted
+    # ladders reuse its existing dose rows, not the full labelled titration range.
+    glimepiride:
+      status: approved
+      dose_steps: [2.0]
+      sampling: standard_of_care
+      why: Sulfonylurea approved for adult T2D; dose reused from the existing SoC p2_existing row.
+      source: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=28eefc95-d92e-4555-b6c5-2933860b0610
+      source_section: sections 1 and 2.1; adult T2D indication, 2 mg once-daily starting option
+      source_verified_on: '2026-11-01'
+    insulin_glargine:
+      status: approved
+      dose_steps: [10.0]
+      sampling: standard_of_care
+      why: Basal insulin approved for diabetes including adult T2D; dose reused from the existing SoC p2_existing row.
+      source: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=ae27bb66-5dbe-4f01-a89e-f4fa7cb09c99
+      source_section: sections 1, 2.2 and 2.3; diabetes indication, once daily, adult T2D starting option 10 units
+      source_verified_on: '2026-11-01'
+    sitagliptin:
+      status: approved
+      dose_steps: [100.0]
+      sampling: standard_of_care
+      why: DPP-4 inhibitor approved for adult T2D; dose reused from the existing SoC D_ROWS row.
+      source: https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=f85a48d0-0407-4c50-b0fa-7673a160bf01
+      source_section: sections 1 and 2.1; adult T2D indication, recommended dose 100 mg once daily
+      source_verified_on: '2026-11-01'
+    dapagliflozin:
+      status: approved
+      dose_steps: [10.0]
+      sampling: standard_of_care
+      why: SGLT2 inhibitor approved for adult T2D; dose reused from the existing SoC p2_existing row.
+      source: https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=01f90c94-71cb-4a1f-81ff-8004b850529b
+      source_section: sections 1 and 2.2; T2D glycemic-control indication, once daily, 10 mg escalation option
+      source_verified_on: '2026-11-01'
     metformin:
       status: approved
       dose_steps:

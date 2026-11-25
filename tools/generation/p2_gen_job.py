@@ -144,7 +144,9 @@ def supply(seed: str, need: int) -> tuple[list[dict], dict]:
     atypical_need = sum(n for (t, cohort), n in quota_cells(need).items() if cohort == "atypical_eligible")
     from haenv.world.overlay import condition_registry
     n_specs = sum(s["urgency"] == "🟢" and not s.get("red_flag") for s in condition_registry().values())
-    for k in range(max(2, math.ceil(need / n_specs)), max(ROUNDS) + 1):
+    from haenv.p2.reading import config as reading_config, enabled as reading_enabled
+    limit = reading_config()["coverage"]["candidate_variant_limit"] if reading_enabled() else max(ROUNDS)
+    for k in range(max(2, math.ceil(need / n_specs)), limit + 1):
         cases = candidates(seed, k)
         ok = [c for c in cases if eligible(c)]
         n_aty = sum(atypical_eligible(c) for c in ok)
@@ -346,7 +348,9 @@ def world_case(case: dict, plan: dict) -> dict:
 
 
 def build(n: int, seed: str) -> tuple[str, dict]:
-    n_pool = math.ceil(PLAN_FACTOR * PS.pool_n(n))
+    from haenv.p2.reading import config as reading_config, enabled as reading_enabled
+    factor = reading_config()["coverage"]["candidate_pool_factor"] if reading_enabled() else PLAN_FACTOR
+    n_pool = math.ceil(factor * PS.pool_n(n))
     cases, st = supply(seed, n_pool)
     plans = make_plans(cases, n_pool)
     kept = [world_case(c, plans[c["case_id"]]) for c in cases if c["case_id"] in plans]

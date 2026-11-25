@@ -425,6 +425,12 @@ def acting_signals(drug: str) -> set[str]:
         out.add("creatinine")
     if d == "levothyroxine":
         out.add("TSH")
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        from haenv.world.truth.drugs import analyte_effects
+        from haenv.world.observations.findings_render import _PANEL_TO_TS
+        out |= {_PANEL_TO_TS.get(fid, fid) for (name, fid), row in analyte_effects().items()
+                if name == d and row.get("applied", True)}
     return out
 
 
@@ -664,7 +670,7 @@ def record_rows(world_medication: dict | None, lo: int, hi: int, skip=(), overla
     out = []
     for m in meds:
         drug = str(m.get("drug") or "")
-        if drug in skip or (m.get("overlay") and not overlay) or drug not in DISPLAY:
+        if drug in skip or (m.get("overlay") and not overlay and not m.get("record_overlay")) or drug not in DISPLAY:
             continue
         nm = name_of(drug) if name_of else DISPLAY[drug][0]
         unit_ = DISPLAY[drug][1]
@@ -698,7 +704,8 @@ def record_rows(world_medication: dict | None, lo: int, hi: int, skip=(), overla
 
 def concurrent_medicines(case_id: str, disease: str, comorbidities, primary_drug: str,
                          course_end: int, sex: str | None = None, age_range: str | None = None,
-                         overlay=(), history: dict | None = None) -> list[dict]:
+                         overlay=(), history: dict | None = None, constraints: dict | None = None,
+                         legacy_only: bool = False) -> list[dict]:
     """Concurrent medicines for the comorbidities the primary drug does not treat:
     `[{"drug", "indication", "dose_timeline"}]`. Reads only the premise's disease,
     comorbidities and primary drug; with `sex` and `age_range` (plugin-pack patients) a candidate on the
@@ -746,6 +753,34 @@ def concurrent_medicines(case_id: str, disease: str, comorbidities, primary_drug
                 continue
             out.append({"drug": drug, "indication": ind,
                         "dose_timeline": course(drug, lad)})
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled() and not legacy_only:
+        from haenv.world.truth import soc
+        context = {**(history or {}), "course_end": course_end,
+                   "history_lo": (history or {}).get("lo", 0),
+                   "dynamics": history is not None, **(constraints or {})}
+        blocked = set(context.get("forbidden_indications", ()))
+        forbidden = set(context.get("forbid_classes", ()))
+        decisive = set(context.get("decisive_medications", ()))
+        kept = []
+        for medicine in out:
+            if context.get("background_regimen") and medicine["drug"] not in decisive:
+                continue
+            if medicine["indication"] in blocked or soc.drug_classes(medicine["drug"]) & forbidden:
+                kept.append({"drug": "", "class": next(iter(sorted(soc.drug_classes(medicine["drug"]))), ""),
+                             "indication": medicine["indication"], "dose_timeline": [], "soc": True,
+                             "exclusion": "gold_indication" if medicine["indication"] in blocked else "forbidden_class",
+                             "dropped_drug": medicine["drug"], "source": "pack_constraint"})
+                continue
+            if (soc.table()["conditions"].get(medicine["indication"], {}).get("permanent_stop") == "none"):
+                medicine["dose_timeline"] = [q for q in medicine["dose_timeline"] if q["value"] > 0]
+            kept.append(medicine)
+        out = kept
+        age = soc.age_years(case_id, age_range) if age_range and "-" in age_range else None
+        # Without an age band (legacy helper callers) do not make new demographic assumptions.
+        if age is not None:
+            out += soc.assign(case_id, [*conds, *context.get("conditions", ())], age, sex,
+                              [{"drug": prim, "indication": str(disease or "")}] + out, context)
     return out
 
 
@@ -838,7 +873,8 @@ def overlay_medicines(plans: dict | None, patient_basics: dict | None = None) ->
             continue
         if pack == "p2":
             from haenv.p2.render import world_meds
-            meds = world_meds(plan)
+            from haenv.world.truth import coupling_enabled
+            meds = world_meds(plan, patient_basics=patient_basics) if coupling_enabled() else world_meds(plan)
         elif pack == "p3":
             from haenv.p3.plan import world_meds
             meds = world_meds(plan)
@@ -867,6 +903,11 @@ _DISPLAY = {
     "insulin_glargine": ("U", "nightly_sc"), "dapagliflozin": ("mg", "once_daily"),
     "furosemide": ("mg", "once_daily"), "bisoprolol": ("mg", "once_daily"),
     "metoprolol": ("mg", "once_daily"),
+    "aspirin": ("mg", "once_daily"), "clopidogrel": ("mg", "once_daily"),
+    "apixaban": ("mg", "twice_daily"), "dabigatran": ("mg", "twice_daily"),
+    "rivaroxaban": ("mg", "evening_meal"), "warfarin": ("mg", "inr_daily"),
+    "spironolactone": ("mg", "once_daily"), "sitagliptin": ("mg", "once_daily"),
+    "isosorbide_mononitrate": ("mg", "once_daily"),
 }
 #: name, unit and frequency per drug key, as `Msg` phrases
 DISPLAY = {k: (L(f"drug.{k}"), unit, L(f"freq.{freq}")) for k, (unit, freq) in _DISPLAY.items()}

@@ -134,8 +134,39 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
   check("pack1_marks_each_attributed_entry", real.length > 0 && lineDots.length === real.length, { real: real.length, drawn: lineDots.length });
 }
 
-/* Act 3: the numbers on the page are the board's */
+/* The historical example follows the Act 2 pack selector. */
 {
+  click($('#tabs .tab[data-p="p4"]'));
+  const tr=board.trajectory, samples=data.packs.p4.sample;
+  check("trajectory_matches_the_public_p4_sample", tr.case === samples.case_id && !$("#trajectory").hidden
+    && $$("#traj-chart rect").length === Object.values(tr.models).reduce((n,r)=>n+r.calls.length,0)
+    && $$("#traj-chart polygon").length === Object.values(tr.models).reduce((n,r)=>n+new Set(Object.values(r.first_seen)).size,0));
+  check("trajectory_outcome_and_unopened_evidence_are_visible", $("#traj-results").textContent.includes("specimen procedure")
+    && $("#traj-results .wrong").textContent.includes("True change") && $("#traj-results").textContent.includes("gpt-6-sol"));
+  click($('#tabs .tab[data-p="m2"]'));
+  check("trajectory_follows_pack_selection", $("#trajectory").hidden);
+}
+
+/* Act 3: the numbers on the page are the board's */
+if (board.current_readout){
+  const release = board.current_readout;
+  check("release_version_is_shown", $("#act3").textContent.includes(release.version));
+  if (release.status === "pending"){
+    check("pending_release_has_no_readings", !$("#board0") && !$("#act3 td[data-k]") && !$("#mp-model"));
+  } else {
+    const rows = Object.entries(release.overall).sort((a,b) => a[1].rank-b[1].rank || b[1].score-a[1].score);
+    const hits = $$("#board0 rect[data-m]");
+    check("release_overall_rows_follow_the_readout", hits.length === rows.length &&
+      hits.every((hit, i) => hit.dataset.m === rows[i][0]));
+    const cells = $$("#act3 td[data-k]");
+    check("release_heatmap_matches_the_readout", cells.length === rows.length * release.packs.length &&
+      cells.every(cell => cell.textContent === half3(release.overall[cell.parentElement.dataset.m].packs[cell.dataset.k])));
+    click(hits.at(-1));
+    check("release_model_selection_links_the_charts", $("#mp-model").value === rows.at(-1)[0] &&
+      $("#act3 tr.sel").dataset.m === rows.at(-1)[0]);
+    check("release_preview_is_marked", release.status !== "draft" || $("#act3").textContent.includes("Draft leaderboard"));
+  }
+} else {
   const ov = board.overall.board;
   const rows = $$("#act3 .fig .axlab.ann, #act3 .fig .axlab.annb").map(n => n.textContent).filter(t => /^\d+(–\d+)?\s/.test(t));
   const rk = r => r.rank_ci95[0] === r.rank_ci95[1] ? "" + r.rank_ci95[0] : r.rank_ci95[0] + "–" + r.rank_ci95[1];
@@ -174,15 +205,6 @@ check("no_text_in_svg", $$("svg text").length === 0, $$("svg text").length);
     click($('#board0 rect[data-m="' + linked + '"]'));
     check("board_selection_links_the_model_panel", $("#mp-model").value===linked && $$("#act3 tr.sel").every(tr=>tr.dataset.m===linked));
   }
-  click($('#tabs .tab[data-p="p4"]'));
-  const tr=board.trajectory, samples=data.packs.p4.sample;
-  check("trajectory_matches_the_public_p4_sample", tr.case === samples.case_id && !$("#trajectory").hidden
-    && $$("#traj-chart rect").length === Object.values(tr.models).reduce((n,r)=>n+r.calls.length,0)
-    && $$("#traj-chart polygon").length === Object.values(tr.models).reduce((n,r)=>n+new Set(Object.values(r.first_seen)).size,0));
-  check("trajectory_outcome_and_unopened_evidence_are_visible", $("#traj-results").textContent.includes("specimen procedure")
-    && $("#traj-results .wrong").textContent.includes("True change") && $("#traj-results").textContent.includes("gpt-6-sol"));
-  click($('#tabs .tab[data-p="m2"]'));
-  check("trajectory_follows_pack_selection", $("#trajectory").hidden);
   const p0 = $("#mpanel").innerHTML, sel = $("#mp-model"), other = sel.options[3].value;
   sel.value = other; fire(sel, "change");
   check("model_switch_repaints_the_panel", $("#mpanel").innerHTML !== p0 && $("#act3 tr.sel").dataset.m === other);

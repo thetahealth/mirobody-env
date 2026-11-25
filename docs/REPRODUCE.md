@@ -105,10 +105,33 @@ Unchanged criterion columns remain comparable when another criterion changes; co
 scores also require matching aggregation rules and task weights. Legacy results retain
 their `judging_sha16` and freeze revision; see [`DATA_CARD.md`](DATA_CARD.md).
 
+### Recomputing the 1.6.0 overall board
+
+Use the archived English answers and 1.6.0 scores for the same 50 items per pack, with
+one answer per item. For the red-line pack, score the risk and control answers together
+as one matched pair. Compute each model's mean correctness within each pack and average
+the five pack scores with equal weights. For the 95% percentile intervals, draw 50 units
+with replacement within each pack, using the same sampled units for all eight models.
+Use 10,000 draws with seed 20261124 and keep the two arms of each red-line pair together.
+
+To judge fresh red-line answers, set `backends.relay.url` in a YAML overlay loaded
+through `HAENV_CONFIG_OVERLAY`. Point it at an OpenAI-compatible chat completions endpoint
+that serves `deepseek-v4.1-flash`, and set `backends.relay.key_env` to the name of the
+environment variable holding your credential. The judge uses a temperature of 0, a
+4,000-token output cap and low reasoning effort. Without an endpoint, replies that
+require a judge are recorded with status `no_dispatch`.
+
+The [board readout](boards/1.6.0/k1.json) carries the aggregate scores. To refresh the figures and tables
+from the completed readout without calling a model:
+
+```bash
+uv run --with matplotlib python tools/presentation/make_readme_board.py --board docs/boards/1.6.0/k1.json --readmes
+```
+
 ### Recomputing the 1.3.1 overall board
 
 Given the archived thirteen-model answer tree and its per-answer Q JSONL file, recompute
-the current board without calling a model:
+the historical board without calling a model:
 
 ```bash
 uv run python tools/evaluation/board_score.py --tree . \
@@ -152,10 +175,11 @@ Re-score the released diagnosis answers and recompute the pooled results offline
 python tools/evaluation/reask_pooled.py --check
 ```
 
-Expected summary: `61 facts matched; 535 answers re-scored; 20 registered 1.4 matcher differences; 0 other D mismatches`.
-The released facts are computed from the stored outcomes. Re-scoring uses the current
-diagnosis judge, whose 1.4 answer-equivalence rules and judging names accept 20 stored answers that 1.3.1
-scored wrong; `matcher-drift-1.4.json` lists them, and any other difference fails the check.
+Expected summary: `61 facts matched; 535 answers re-scored; 21 registered 1.4 matcher differences; 0 other D mismatches`.
+The released facts are computed from the stored outcomes. The current diagnosis judge's
+registered answer-equivalence rules and judging names accept 21 stored answers that 1.3.1
+scored wrong. The historical `matcher-drift-1.4.json` table lists all current differences,
+including the advanced fibrosis answer now accepted by the 1.6 matcher.
 The [released data and conditions](../benchmarks/results/1.3.1/reask/README.md) include
 the stored answers, inclusion list and diagnosis gold. A new `haenv reask` run selects its
 own units; see the [re-asking guide](reask.md) for the input contract and arm definitions.
@@ -169,7 +193,7 @@ with the function-call tools and the stored traces, and validate the returned FH
 python tools/release/replay_http.py --work leaderboard-pool/ --workers 32 --out artifacts/replay-http-results.json
 ```
 
-Expected summary: `questions=400`, `responses=15600`, `calls=256609`, `identical=256609`,
+The published 1.3.1 run reported `questions=400`, `responses=15600`, `calls=256609`, `identical=256609`,
 `differing=0`, `stored_differing=0`, `pending_purchases_replayed=234`, `validation_failures=0`;
 `missing=[]`, `worker_errors=[]`. Purchases and refusals are included. The pool contains the
 stored leaderboard runs and is supplied separately from the source tree. Install the `serve`
@@ -181,7 +205,16 @@ An offline rehearsal uses the bundled stored-session subset, with no model calls
 python tools/release/replay_http.py --offline
 ```
 
-The subset checks one question, one response and 31 calls; it does not reproduce the full-pool counts.
+The subset checks one question, one response and 31 calls. Current native and HTTP outputs match
+on all 31 calls. Eight outputs differ from the archived responses. Stable bilingual purchase IDs
+changed the menu and seven purchase responses (`632f17a4c`). The LADA update also changed the
+fasting glucose and HbA1c purchase (`9571b70f7`), and the menu dropped a duplicate PSG option
+(`49bcecd05`).
+
+The offline check binds each historical difference to its call and both payload digests in
+[`http-replay-drift.json`](../benchmarks/results/1.3.1/http-replay-drift.json). It reports
+`stored_differing=8` and `registered_stored_differing=8`, and fails if a new difference appears
+or a registered one changes or disappears. The full-pool command checks stored differences strictly.
 
 ### Historical candidate board (2026-10-06)
 

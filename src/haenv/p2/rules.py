@@ -21,12 +21,14 @@ HTN_SYMPTOM = "severe_headache_or_visual_disturbance"
 DIZZY = "dizziness"
 HYPO_HELP = "needed_help_for_low_glucose_last_3_days"
 MILD = "mild_new_symptom"
+#: the checklist items whose tick voids the documented-AF exemption from R9 (printed in `af_exemption`)
+NEW_SYMPTOM_KEYS = (DIZZY, MILD)
 CHECKLIST = R0_KEYS + (HTN_SYMPTOM, DIZZY, HYPO_HELP, MILD)
 #: the item before the split (headache, blurred vision or dizziness in one); a saved block carrying it reads as R6 did then
 LEGACY_HTN_SYMPTOM = "severe_headache_blurred_vision_or_dizziness"
 
 
-def checklist_of(block: dict) -> dict:
+def _ticked_checklist_of(block: dict) -> dict:
     """Normalize the compact, complete symptom screen; absent evidence is never a negative."""
     ck = block.get("intake_checklist") or {}
     if LEGACY_HTN_SYMPTOM in ck and HTN_SYMPTOM not in ck:
@@ -40,6 +42,16 @@ def checklist_of(block: dict) -> dict:
     if not {HTN_SYMPTOM, DIZZY, HYPO_HELP, MILD} <= set(ck):
         raise ValueError("incomplete other symptom screen")
     return {**ck, **{k: k in ck["urgent_symptoms"] for k in R0_KEYS}}
+
+
+def checklist_of(block: dict) -> dict:
+    ck = _ticked_checklist_of(block)
+    if 'tick_note' not in ck:
+        return ck
+    from haenv.p2.narrative import reported
+    facts = reported(block)
+    return {**ck, **{k: bool(ck.get(k) or k in facts) for k in (*R0_KEYS, HTN_SYMPTOM, HYPO_HELP,
+                                                        "suspected_infection_today", "head_injury_today", "systemically_unwell_today")}}
 
 
 def table() -> dict:
@@ -108,7 +120,9 @@ def readings(block: dict) -> dict:
     ck = checklist_of(block)
     check = block["home_check_today"]
     from haenv.p2.history import scale2
-    scale = 2 if scale2(block.get("clinical_history_record")) else 1
+    from haenv.p2.narrative import records
+    prior_rows = records(block)
+    scale = 2 if scale2(prior_rows) else 1
     s, top = news2(check, ck, scale)
     parts = news2_parts(check, ck, scale)
     #: single-3 parameters read as R3a: respiratory rate in either 3-point band, heart rate >= 131, SBP <= 90;
@@ -131,12 +145,14 @@ def readings(block: dict) -> dict:
     known = set((block.get("background") or {}).get("known_conditions") or ())
     if block.get("clinical_history_record"):
         from haenv.p2.history import diagnosed
-        known |= diagnosed(block["clinical_history_record"])
+        known |= diagnosed(prior_rows)
     return {"news2": s, "news2_top": top, "single3_vital": vital3, "single3_spo2": parts["spo2"] == 3, "single3_low_hr": low_hr, "r0": [k for k in R0_KEYS if ck.get(k)], "htn_symptom": bool(ck.get(HTN_SYMPTOM)),
             "hypo_help": bool(ck.get(HYPO_HELP)), "mild": bool(ck.get(MILD)), "bp_severe_today": sev,
             "bp_raised_today": raised, "weight_gain_3d": None if gain is None else round(gain, 2),
             "heart_failure": "heart_failure" in known, **({"known_af": "atrial_fibrillation" in known} if block.get("clinical_history_record") or "atrial_fibrillation" in known else {}), "cgm_nights": len(cgm), "level2_nights": l2,
-            "level1_nights": l1, "alerts_3d": alerts}
+            "level1_nights": l1, "alerts_3d": alerts,
+            # The printed AF exemption holds only without a new symptom ticked today (`af_exemption`).
+            "new_symptom": any(bool(ck.get(k)) for k in NEW_SYMPTOM_KEYS)}
 
 
 def assess(block: dict) -> dict:
@@ -169,7 +185,7 @@ def assess(block: dict) -> dict:
         rid = "R7_htn_severe"
     elif r["heart_failure"] and r["weight_gain_3d"] is not None and r["weight_gain_3d"] > th["hf_gain_kg_gt"]:
         rid = "R8_hf_gain"
-    elif r["alerts_3d"] >= th["af_alerts_ge"] and not r.get("known_af"):
+    elif r["alerts_3d"] >= th["af_alerts_ge"] and not (r.get("known_af") and not r["new_symptom"]):
         rid = "R9_af_alerts"
     elif r["news2"] >= 1:
         rid = "R10_news2_low"

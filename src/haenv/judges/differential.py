@@ -33,6 +33,7 @@ _HEDGED_CERTAINTY = ("possible", "probable", "suspected", "likely")
 #: n+1 and 0.213 under n+0 (`blind_ceilings.dx_listed_ceiling`); n+1 is the most conservative cap
 #: that keeps one slot for a hedge. The n+0 reading is recorded as the profile atom `dx_listed_n0`.
 DX_LIST_CAP_MARGIN = 1
+M2_DX_LIST_CAP = 4  # The M2 question promises four non-excluded candidates.
 
 
 def judge_dx_unified(out, vp, ctx) -> dict:
@@ -41,7 +42,7 @@ def judge_dx_unified(out, vp, ctx) -> dict:
     `dx_listed` is the scored atom (see `_listed`).
     """
     res = {"dx_kind": "unified", **_rank_of(out, _names(vp))}
-    res.update(_listed(out, [_names(vp)]))
+    res.update(_listed(out, [_names(vp)], cap=_case_dx_cap(vp)))
     return res
 
 
@@ -65,7 +66,16 @@ def _threads_hit(blob: str, vp) -> tuple[int, int, str]:
     return sum(1 for s in sets if alias_hit_asserted(blob, s)), len(sets), basis
 
 
-def _listed(out, alias_sets) -> dict:
+def _case_dx_cap(vp) -> int | None:
+    adjudication = getattr(vp, "adjudication", None) or {}
+    # The verifier payload retains gold blocks, including the workup on bridge
+    # cases, but carries neither the question frame nor the latent plan.
+    if any(isinstance(adjudication.get(key), dict) for key in ("m2_frame", "m2_workup")):
+        return M2_DX_LIST_CAP
+    return None
+
+
+def _listed(out, alias_sets, *, cap=None) -> dict:
     """Atom "on the differential and not ruled out" (`dx_listed`).
 
     For each gold line (the diagnosis on a unified case, each thread on a comorbidity case),
@@ -94,7 +104,7 @@ def _listed(out, alias_sets) -> dict:
            for s in alias_sets]
     if not _hedged_ok and len(pos) > 1 and any(p is None for p in pos):
         pos = [None] * len(pos)
-    res = {"dx_listed_positions": pos, "dx_listed_cap": len(alias_sets) + DX_LIST_CAP_MARGIN,
+    res = {"dx_listed_positions": pos, "dx_listed_cap": len(alias_sets) + DX_LIST_CAP_MARGIN if cap is None else cap,
            "dx_n_live": len(live)}
     res["dx_listed"] = dx_listed_of(res)
     res["dx_listed_n0"] = dx_listed_n0_of(res)
@@ -115,7 +125,7 @@ def judge_dx_comorbidity(out, vp, ctx) -> dict:
            "dx_coverage": round(n / tot, 3) if tot else None,
            "dx_all_threads": bool(tot) and n >= tot,
            **{k: v for k, v in _rank_of(out, _names(vp)).items() if k != "dx_n_candidates"}}
-    res.update(_listed(out, _thread_sets(vp)[0]))
+    res.update(_listed(out, _thread_sets(vp)[0], cap=_case_dx_cap(vp)))
     return res
 
 

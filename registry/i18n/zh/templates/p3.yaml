@@ -57,3 +57,16 @@ p3.pill_count.pharmacy: '药师复核本次带来的余药为 {left} 天量；�
 p3.pill_count.home: '本次随访核对家中余药为 {left} 天量；对应第 {day} 天领取的 {sup} 天量。'
 p3.rule.absorption: '左甲状腺素与碳酸钙应间隔约 {hours} 小时；控制不佳且同服时，维持当前剂量，先核实服法并处理吸收干扰后复查，不立即加量。TSH 在目标内而症状仍持续时，维持剂量并先调查其他原因。已缓解的孤立症状不能当作当前持续症状；格列齐特相关低血糖发作即使已进食缓解仍须复评。'
 p3.rule.top_check: "本院{name}剂量上限：已用到本院最高剂量（{top} {unit}）而{axis}仍未达标时，不再加量也不换药，维持当前剂量，先核查服药依从性、服法、吸收障碍（如胃肠疾病）及合用药影响。"
+
+p3.refill.source.clinic: 本院药房
+p3.refill.source.other: 其他社区药房（已核实配药）
+
+p3.dose.event_reference: '导入的处方字段；实际剂量变更经过见同日病程记录。'
+p3.dose.tablets: '患者用药说明：每日 {count} 片，使用核对记录所指的药瓶。'
+p3.dose.strength: '药瓶标签：每片 {value} {unit}。'
+p3.dose.record_status: '记录 {record}：根据核对记录 {note}，当前用法以记录 {current} 替代记录 {superseded}。'
+p3.dose.service: '医院用药核对服务'
+p3.dose.note: '{name} 用药核对，已向患者、门诊及社区药房核实：当前用法以记录 {current} 替代记录 {superseded}。若采用处方记录，则按其每日剂量；若采用患者清单，则按其每日片数及发药记录 {dispensing} 的药瓶规格计算。本次仅更正文书，实际治疗及既往标注日期的剂量变更经过均不变。'
+p3.dose.list_reference: '{name}：用法见患者清单及经核对的来源记录。'
+p3.hist.rechallenge.same_tolerated: 恢复使用 {dose} mg 剂量后耐受。
+p3.hist.hypoglycemia.tolerated_dose: 减量后继续每日服用 {dose} mg，未再出现低血糖。复诊医生将该剂量记录为最大耐受日剂量。

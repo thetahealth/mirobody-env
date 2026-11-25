@@ -82,7 +82,8 @@ def _ck(ok: bool, detail: str = "") -> dict:
 def check_stream(row: dict, pts: list[dict], f, driver: str, T: int,
                  rev_day: int | None, event_density: dict,
                  insufficient_tier: bool = False,
-                 neutral_pts: list[dict] | None = None) -> dict:
+                 neutral_pts: list[dict] | None = None,
+                 event_truth: dict | None = None) -> dict:
     """All checks for one daily metric stream. Returns
     {item, kind, checks:{name:{ok,detail}}, ok}.
     """
@@ -104,8 +105,11 @@ def check_stream(row: dict, pts: list[dict], f, driver: str, T: int,
         checks["has_points"] = _ck(False, "empty series")
         return {"item": name, "kind": kind, "checks": checks, "ok": False}
 
+    from haenv.world.truth.events import stream_range
     bad = [f"{p['value']}@d{p['ts']}" for p in pts
-           if not (m.hard_range[0] <= p["value"] <= m.hard_range[1])]
+           if not (stream_range(event_truth, name, p["ts"], m.hard_range, m.tol)[0]
+                   <= p["value"] <=
+                   stream_range(event_truth, name, p["ts"], m.hard_range, m.tol)[1])]
     checks["values_in_physio_range"] = _ck(not bad, f"{list(m.hard_range)} · out of range {bad[:3]}")
 
     exp = (float(f.baseline_vitals[m.vital_key])
@@ -513,7 +517,8 @@ def verify_case(clean_raw, raw, cs, premise, manifest: dict, driver: str,
     for row in manifest["streams"]:
         items.append(check_stream(row, raw.longitudinal_data.get(row["name"], []),
                                  f, driver, T, rev_day, ed, insufficient_tier=_insuff,
-                                 neutral_pts=_view.get(row["name"])))
+                                 neutral_pts=_view.get(row["name"]),
+                                 event_truth=((raw.latent_premise or {}).get("truth") or {}).get("events")))
     seen_topics: set[str] = set()          # dedupe in order of appearance: the first
                                             # occurrence stands, later repeats fail
     for row in manifest["events"]:

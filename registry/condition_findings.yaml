@@ -176,16 +176,16 @@ condition_findings:
       role: confirmatory
       trajectory: stable
       n: 1
-      penetrance: 0.9
-      penetrance_source: "[expert_estimate] summary-level: Nieman LK et al, J Clin Endocrinol Metab, 2008, PMID 19107223 (Endocrine Society 库欣诊断指南: 24h UFC / 午夜唾液皮质醇为一线检查, UFC > 3-4 倍 ULN 高度提示, 唾液敏感切点 > 4 nmol/L; 指南原文未核对, 引自检索摘要)"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (evidence path member); registered estimate was 0.9: [expert_estimate] summary-level: Nieman LK et al, J Clin Endocrinol Metab, 2008, PMID 19107223 (Endocrine Society 库欣诊断指南: 24h UFC / 午夜唾液皮质醇为一线检查, UFC > 3-4 倍 ULN 高度提示, 唾液敏感切点 > 4 nmol/L; 指南原文未核对, 引自检索摘要)"
     - id: Cortisol_saliva_midnight
       direction: high
       magnitude: marked
       role: confirmatory
       trajectory: stable
       n: 1
-      penetrance: 0.9
-      penetrance_source: "[expert_estimate] summary-level: Nieman LK et al, J Clin Endocrinol Metab, 2008, PMID 19107223 (Endocrine Society 库欣诊断指南: 24h UFC / 午夜唾液皮质醇为一线检查, UFC > 3-4 倍 ULN 高度提示, 唾液敏感切点 > 4 nmol/L; 指南原文未核对, 引自检索摘要)"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (evidence path member); registered estimate was 0.9: [expert_estimate] summary-level: Nieman LK et al, J Clin Endocrinol Metab, 2008, PMID 19107223 (Endocrine Society 库欣诊断指南: 24h UFC / 午夜唾液皮质醇为一线检查, UFC > 3-4 倍 ULN 高度提示, 唾液敏感切点 > 4 nmol/L; 指南原文未核对, 引自检索摘要)"
     - id: PitAdrenalImaging
       direction: positive
       role: supportive
@@ -271,8 +271,8 @@ condition_findings:
       role: screening
       trajectory: progressive
       n: 2
-      penetrance: 0.81
-      penetrance_source: "[abstract] Balachandra S et al, Am J Surg, 2025, doi:10.1016/j.amjsurg.2025.116272, PMID 40022764(701 例手术 HPT: 高钙型 80.7%, 正常血钙型 19.3%; 摘要已读)"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (defining criterion: registered K1 criterion phpt, coherence_invariants.yaml, BILEZIKIAN_2022; registered rivals presuppose hypercalcaemia; normocalcaemic PHPT not modelled); registered estimate was 0.81: [abstract] Balachandra S et al, Am J Surg, 2025, doi:10.1016/j.amjsurg.2025.116272, PMID 40022764(701 例手术 HPT: 高钙型 80.7%, 正常血钙型 19.3%; 摘要已读)"
     - id: PTH
       direction: high
       magnitude: moderate
@@ -368,8 +368,8 @@ condition_findings:
       role: confirmatory
       trajectory: stable
       n: 1
-      penetrance: 0.98
-      penetrance_source: "[expert_estimate] summary-level: Stabler SP, N Engl J Med, 2013, PMID 23301732 (临床 B12 缺乏 > 98% 者血清 MMA 与总同型半胱氨酸显著升高; 引自检索摘要, 原文未核对)"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (line key signal); registered estimate was 0.98: [expert_estimate] summary-level: Stabler SP, N Engl J Med, 2013, PMID 23301732 (临床 B12 缺乏 > 98% 者血清 MMA 与总同型半胱氨酸显著升高; 引自检索摘要, 原文未核对)"
     - id: MMA_serum
       direction: high
       magnitude: marked
@@ -398,8 +398,8 @@ condition_findings:
       role: screening
       trajectory: stable
       n: 1
-      penetrance: 0.97
-      penetrance_source: "[expert_estimate] expert_estimate: ANA 为 2019 EULAR/ACR 分类标准的纳入门槛, Aringer M et al, Ann Rheum Dis, 2019, PMID 31383717(验证队列标准敏感性 96.1%); ANA 本身敏感性约 95-98% 为临床记忆值"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (rival discriminator); registered estimate was 0.97: [expert_estimate] expert_estimate: ANA 为 2019 EULAR/ACR 分类标准的纳入门槛, Aringer M et al, Ann Rheum Dis, 2019, PMID 31383717(验证队列标准敏感性 96.1%); ANA 本身敏感性约 95-98% 为临床记忆值"
     - id: AntiDsDNA
       direction: high
       magnitude: marked
@@ -456,8 +456,8 @@ condition_findings:
       role: screening
       trajectory: treatment_responsive
       n: 2
-      penetrance: 0.30
-      penetrance_source: "[expert_estimate] expert_estimate: 同上, HbA1c 越界比例略低于 FBG"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (rival discriminator); registered estimate was 0.3: [expert_estimate] expert_estimate: 同上, HbA1c 越界比例略低于 FBG"
     - id: TG
       direction: high
       magnitude: mild
@@ -524,16 +524,16 @@ condition_findings:
       role: screening
       trajectory: progressive
       n: 3
-      penetrance: 0.35
-      penetrance_source: "[expert_estimate] expert_estimate: CKM 综合征各期混合人群 HbA1c 越界约 30-40%, 无单篇直接数字"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (defining criterion); registered estimate was 0.35: [expert_estimate] expert_estimate: CKM 综合征各期混合人群 HbA1c 越界约 30-40%, 无单篇直接数字"
     - id: FBG
       direction: high
       magnitude: marked
       role: screening
       trajectory: progressive
       n: 3
-      penetrance: 0.40
-      penetrance_source: "[expert_estimate] expert_estimate: 同上"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (defining criterion); registered estimate was 0.4: [expert_estimate] expert_estimate: 同上"
     - id: Cr
       direction: high
       magnitude: moderate
@@ -554,8 +554,8 @@ condition_findings:
       role: supportive
       trajectory: stable
       n: 1
-      penetrance: 0.5
-      penetrance_source: "[expert_estimate] summary-level: KDIGO CKD 分期以 UACR >= 30 mg/g 为 A2 起点; 本病已声明 Cr high; 未核对原文"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (defining criterion); registered estimate was 0.5: [expert_estimate] summary-level: KDIGO CKD 分期以 UACR >= 30 mg/g 为 A2 起点; 本病已声明 Cr high; 未核对原文"
     - id: CKDPersistence
       direction: positive
       role: supportive
@@ -721,8 +721,8 @@ condition_findings:
       role: screening
       trajectory: progressive
       n: 2
-      penetrance: 0.35
-      penetrance_source: "[expert_estimate] expert_estimate: 成人乳糜泻初诊铁缺乏约 30-40%"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (rival discriminator); registered estimate was 0.35: [expert_estimate] expert_estimate: 成人乳糜泻初诊铁缺乏约 30-40%"
     - id: VitD25
       direction: low
       magnitude: moderate
@@ -801,8 +801,8 @@ condition_findings:
       role: screening
       trajectory: fluctuating
       n: 3
-      penetrance: 0.45
-      penetrance_source: "[expert_estimate] expert_estimate: 中轴型脊柱关节炎 CRP 升高约 40-50%, 无直接文献核对"
+      penetrance: 1.0
+      penetrance_source: "required by the gold line (rival discriminator); registered estimate was 0.45: [expert_estimate] expert_estimate: 中轴型脊柱关节炎 CRP 升高约 40-50%, 无直接文献核对"
     - id: ESR
       direction: high
       magnitude: moderate
@@ -905,8 +905,8 @@ condition_findings:
     source: registry/literature_evidence.yaml#HD-UNI-06
     review: pending
     findings:
-      - {id: FBG, direction: high, magnitude: moderate, role: screening, trajectory: progressive, n: 3, penetrance: 0.60, penetrance_source: "[expert_estimate] expert_estimate: 胰腺癌确诊时糖尿病/高血糖约 50-65%(临床记忆值), 无 PMID 核对; 此处病种为胰腺癌相关新发糖尿病, 取 0.60"}
-      - {id: HbA1c, direction: high, magnitude: mild, role: screening, trajectory: progressive, n: 2, penetrance: 0.45, penetrance_source: "[expert_estimate] expert_estimate: 同上, HbA1c 越界略低于 FBG"}
+      - {id: FBG, direction: high, magnitude: moderate, role: screening, trajectory: progressive, n: 3, penetrance: 1.0, penetrance_source: "required by the gold line (defining criterion); registered estimate was 0.6: [expert_estimate] expert_estimate: 胰腺癌确诊时糖尿病/高血糖约 50-65%(临床记忆值), 无 PMID 核对; 此处病种为胰腺癌相关新发糖尿病, 取 0.60"}
+      - {id: HbA1c, direction: high, magnitude: mild, role: screening, trajectory: progressive, n: 2, penetrance: 1.0, penetrance_source: "required by the gold line (defining criterion); registered estimate was 0.45: [expert_estimate] expert_estimate: 同上, HbA1c 越界略低于 FBG"}
       - {id: CA199, direction: high, magnitude: moderate, role: confirmatory, trajectory: progressive, n: 2}
       - {id: FecalElastase, direction: low, magnitude: moderate, role: confirmatory, trajectory: stable, n: 1}
       - {id: TSH, direction: normal, role: screening, trajectory: stable, n: 1}

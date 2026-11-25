@@ -53,6 +53,7 @@ def _labs(renal: dict, day: int, uacr: dict | None = None, k_nd: int = 1) -> dic
 
 
 def visit_rows(item: dict) -> list[dict]:
+    from haenv.p3.gold import switch_days
     from haenv.world.labworld.meds import axis
     from haenv.world.labworld.meds import drug
     from haenv.world.labworld.meds import rule
@@ -73,8 +74,16 @@ def visit_rows(item: dict) -> list[dict]:
     rows, cur, last = [], None, None
     for r in sorted(item["visits"], key=lambda x: int(x["day"])):
         day = int(r["day"])
+        # A visit excerpt may begin after therapy started, or omit a dated
+        # prescription change. Read that existing course before labelling
+        # today's row; no earlier dose still means a genuine new start.
+        prior = [(int(dd), dose) for dd, dose in line if int(dd) < day]
+        if prior:
+            last, cur = prior[-1]
         reading = T("p3.lab.result", value=_fmt(float(r['printed']), int(ax['ndigits'])), unit=ax['unit'])
 
+        if day == int(item["T"]) and item.get("control_measurements"):
+            reading = T("p3.lab.result", value=item["control_measurements"][-1]["value"], unit=ax["unit"])
         if day == int(item["T"]):
             rows.append({"day": day, "reading": reading, "prescription": L("p3.rx.pending"), "change": "—", **_labs(renal, day, uacr, k_nd)})
             continue
@@ -86,6 +95,10 @@ def visit_rows(item: dict) -> list[dict]:
             last = day
             new = on_day[day]
             change = L("p3.change.start") if cur is None else T("p3.change.increase", old=_dose(cur, d['unit']), new=_dose(new, d['unit']))   # A10: the record's own wording
+            if new == 0 and item.get("ae_causality"):
+                change = L("p3.causality.hold")
+            elif item.get("ae_causality") and day not in switch_days(line) and cur is not None:
+                change = L("p3.change.renew")
             cur = new
         else:
             # a renewal visit, inside the early window after the last change (`realize._layout`): the
@@ -130,6 +143,13 @@ def adherence_rule() -> str:
     return T("p3.rule.adherence", window=int(rl['adherence_window_days']), pct=pct)
 
 
+def causal_protocol_available(item: dict) -> bool:
+    """A clinic policy is available independently of the patient's episode."""
+    from haenv.world.truth import coupling_enabled
+    from haenv.world.validation.difficulty_r2 import enabled
+    return bool(item.get("ae_causality")) or (coupling_enabled() and enabled(item.get("plan")))
+
+
 def clinic_protocol(item: dict) -> list[str]:
     """The clinic's rules the gold reads and no guideline fixes the same way everywhere:
     the reassessment interval of the drug, the adverse-effect attribution rule (p3-fixes b), the
@@ -143,6 +163,8 @@ def clinic_protocol(item: dict) -> list[str]:
     tau = int(d["tau_rule_days"])
     half = int(float(rule()["early_max_frac"]) * tau)
     out = [T("p3.rule.interval", tau=tau, half=half), attribution_rule(d, bool(item.get("background"))), adherence_rule()]
+    if causal_protocol_available(item):
+        out.append(T("p3.causality.protocol"))
     if item.get("documented_course_only"):
         out.append(L("p3.rule.safety_course"))
     if item["drug"] == "levothyroxine":
@@ -164,6 +186,11 @@ def clinic_protocol(item: dict) -> list[str]:
         from haenv.world.validation.difficulty_r2 import config
         out.append(L("protocol.p3.documented_course_only"))
         out.append(config("p3")["allergy_record"]["protocol"])
+        from haenv.p3.history import authored_coverage
+        if authored_coverage(item):
+            out.append(L("p3.hist.limit.rule"))
+    if item.get("control_measurements"):
+        out.append(L("p3.measurement.rule." + item["axis"]))
     return out
 
 
@@ -195,6 +222,7 @@ def ckd_stage(item: dict) -> str:
 def render_block(item: dict) -> dict:
     from haenv.world.labworld.meds import axis
     from haenv.world.labworld.meds import drug
+    from haenv.p3.measurement_render import visible_rows
     sup = int(item.get("supply", 30))
     d = drug(item["drug"])
     ax = axis(item["axis"])
@@ -202,8 +230,8 @@ def render_block(item: dict) -> dict:
     tgt = T("p3.target.upper", axis=ax['display'], up=up, unit=ax['unit'])
     if ax.get("lower") is not None:
         tgt = T("p3.target.range", axis=ax['display'], lo=ax['lower'], up=up, unit=ax['unit'])
+    from haenv.p3.causality_generation import notes as causality_notes
     diary = sorted(item["diary"], key=lambda e: int(e["onset"]))
-    on_day = {int(x): v for x, v in sorted(item["dose_line"], key=lambda x: int(x[0]))[1:]}   # the increases
     cm = item.get("comorbidity")
     known = {}
     if cm:      # A24: the comorbidity the clinic knows, staged by a persistent eGFR (`ckd_stage`), and the nephrology medication
@@ -222,11 +250,12 @@ def render_block(item: dict) -> dict:
         # Source instructions cover newly registered medicines until the shared
         # hospital catalog includes their monographs. They never read the gold.
         **({"medication_instructions": clinic_protocol(item)}
-           if item["drug"] in ("amlodipine", "losartan", "levothyroxine") else {}),
+           if item["drug"] in ("amlodipine", "losartan", "levothyroxine") or item.get("control_measurements")
+           or causal_protocol_available(item) else {}),
+        **({"control_measurements": visible_rows(item)}
+           if item.get("control_measurements") else {}),
         "visits": visit_rows(item),
-        "refill_record": [{"day": int(p), "dispensed": T("p3.refill.dispensed", sup=sup, extra=(
-                               T("p3.refill.new_strength", dose=_dose(on_day[int(p)], d['unit'])) if int(p) in on_day else ""))}
-                          for p in item["refills"]],
+        "refill_record": refill_rows(item, d, sup),
         "pill_count_today": pill_count(item, sup),
         "symptom_diary": [{"symptom": e["symptom"], "onset_day": int(e["onset"]),
                            "severity": e["severity"],
@@ -235,7 +264,7 @@ def render_block(item: dict) -> dict:
         "encounter_record": [{"day": int(e["onset"]), "source": L("p3.source.consult"),
                               "symptom": e["symptom"], "onset_day": int(e["onset"]),
                               "history": e.get("context") or (L("p3.context.no_trigger") if e.get("kind") == "drug_symptom" else "—")}
-                             for e in diary],
+                             for e in diary] + causality_notes(item),
         **({"administration_record": item["administration_record"]} if item.get("administration_record") else {}),
         "today": int(item["T"]), "note": NOTE, "text_source": TEXT_SOURCE,
     }
@@ -245,8 +274,12 @@ def render_block(item: dict) -> dict:
 
 def home_pressure_rows(item):
     """One observed seven-day aggregate per visit, never a daily sampling stream."""
-    return [{"ts": int(r["day"]), "value": float(r["printed"]),
-             "aggregation": L("p3.agg.home_sbp_7d")} for r in item["visits"]]
+    rows = [{"ts": int(r["day"]), "value": float(r["printed"]),
+             "aggregation": L("p3.agg.home_sbp_7d")} for r in item["visits"]
+            if not item.get("control_measurements") or int(r["day"]) != int(item["T"])]
+    rows.extend({"ts": int(r["day"]), "value": r["value"], "sequence": r["sequence"],
+                 "aggregation": L("p3.measurement.bp.sample")} for r in item.get("control_measurements") or ())
+    return rows
 
 
 def course_documented(item, entry):
@@ -254,7 +287,31 @@ def course_documented(item, entry):
     return True
 
 
+def refill_rows(item, d, supply):
+    from haenv.p3.plan import h01
+    from haenv.p3.gold import switch_days
+    changes = switch_days(item["dose_line"])
+    on_day = {int(day): dose for day, dose in item["dose_line"] if int(day) in changes}
+    key = item.get("record_key") or str(item["dose_line"])
+    other = int(h01("m1-pharmacy", key) * len(item["refills"]))
+    rows = []
+    for i, day in enumerate(item["refills"]):
+        extra = (T("p3.refill.new_strength", dose=_dose(on_day[int(day)], d["unit"]))
+                 if int(day) in on_day else "")
+        causal = item.get("ae_causality")
+        row = {"day": int(day), "dispensed": T("p3.refill.dispensed", sup=supply, extra=extra)}
+        if causal and causal["hold"] <= int(day) < causal["resume"]:
+            row["note"] = T("p3.causality.supply_held")
+        if item.get("dispensing_history"):
+            row["source"] = T("p3.refill.source.other" if i == other else "p3.refill.source.clinic")
+        rows.append(row)
+    return rows
+
+
 def pill_count(item, supply):
+    if item.get("dispensing_history"):
+        # Count only: dispensing dates and supplies remain in their source rows.
+        return T("p3.pill_count.legacy", left=int(item["pill_count"]))
     from haenv.p3.plan import h01
     from haenv.p3.plan import specification
     keys = specification()["surface"]["pill_count_templates"]

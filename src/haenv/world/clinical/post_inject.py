@@ -152,7 +152,13 @@ def _rates() -> dict:
     """Parameters from `artifact_rates.yaml:post_injectors`; missing means rate 0."""
     from haenv.resources.regpath import load_registry
     doc = load_registry("artifact_rates.yaml") or {}
-    return (doc.get("post_injectors") or {})
+    cfg = doc.get("post_injectors") or {}
+    from haenv.world.truth.params import emr
+    if "carried_forward" in cfg:
+        cfg["carried_forward"]["rate"] = emr(
+            "registry/artifact_rates.yaml:post_injectors.carried_forward.rate",
+            cfg["carried_forward"]["rate"])
+    return cfg
 
 
 def apply_post_injection(raw, *, case_id: str, clean_weight=None) -> list[str]:

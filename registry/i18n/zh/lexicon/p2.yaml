@@ -1,4 +1,8 @@
 entries:
+  p2.say.measured.fever.0: 今天量体温有升高。
+  p2.say.measured.fever.1: 这次量到的体温偏高。
+  p2.say.measured.fever.2: 刚量过体温，比正常体温高。
+  p2.say.measured.oedema: 今天脚踝有些肿。
   p2.med.bb: 比索洛尔 5 mg 每日一次
   p2.med.bb2: 美托洛尔缓释片 47.5 mg 每日一次
   p2.med.insulin: 甘精胰岛素 每晚皮下注射
@@ -96,6 +100,8 @@ entries:
   p2.ctx.result.hf_diuretic_reduced: 心衰出院后容量复评，原利尿剂按医嘱减量，继续每日晨重记录。
   p2.ctx.test.med_reconciliation: 用药核对
   p2.policy.relative_hypotension: R3d 今天疑似感染，病历有已核实的平时收缩压，本次可靠收缩压比平时下降超过 40 mmHg，即使仍高于 90 mmHg 且 NEWS2 不高 → 立即急诊；没有基线或仅有非特异不适不能套用本条。
+  p2.policy.home_baseline: 在 R3d 中，若无已评估的平时收缩压，取今天之前多天家庭血压读数的中位数作为基线。
+  p2.policy.hf_postdischarge: 已确诊心衰、出院时利尿剂减量的患者若符合 R14，且三天体重增加超过 1 kg、至多 2 kg，也可选择常规复诊。
   p2.ctx.result.usual_pressure: 门诊结合居家袖带记录核实平时收缩压，数值见本条记录；本次连续血压另见家庭测量。
   p2.ctx.test.pressure.0: 家庭血压与门诊测量复核
   p2.ctx.test.pressure.1: 血压随访记录
@@ -174,3 +180,7 @@ entries:
   p2.protocol.infection_risk.keyword.3: "呼吸频率"
   p2.protocol.infection_risk.keyword.4: "收缩压"
   p2.protocol.infection_risk.keyword.5: "体温"
+  p2.protocol.af_exemption.0: 手表节律提示条款 R9 仅用于病历里尚无心电图记录房颤者；
+  p2.protocol.af_exemption.1: 已有心电图记录房颤、且今天问诊清单既未勾选头晕也未勾选轻微新症状者，原有手表提示按其余规则评估；
+  p2.protocol.af_exemption.2: 今天问诊清单勾选了头晕或轻微新症状者，即使已有心电图记录房颤，手表提示仍按 R9 处理。
+  p2.ctx.result.chemo_last_cycle: 已实际给予系统抗癌治疗，给药日见本条记录；之后按肿瘤科计划随访。

@@ -167,6 +167,9 @@ class ModelSpec(_Section):
     sampling: dict | None = _f("answer")
     stream: bool = _f("route", False)
     retries: int | None = _f("route")
+    #: Explicit opt-in for a relay's Google OpenAI-compatible endpoint. Tool-call
+    #: extra_content (including thought signatures) must round-trip unchanged.
+    google_openai_compat: bool = _f("route", False)
     fallback_routes: list[RouteSpec] = _f("route", [])
     price: PriceSpec | None = _f("route")
     vendor: str | None = _f("provenance")
@@ -307,12 +310,18 @@ class SynthSection(_Section):
     #: task-pack worlds: background medicines start, stop and change dose at real rates (`true`) or keep the
     #: course-only up-titration (`false`, the world as before); a bool, since YAML reads on/off as one
     med_dynamics: bool = _f("generation", True)
+    course_coupling: bool = _f("generation", False)
 
 
 class WorldSection(_Section):
     """Optional canonical world controls; unset fields use the legacy synth defaults."""
     history: Literal["long", "short"] | None = _f("generation")
     med_dynamics: bool | None = _f("generation")
+    course_coupling: bool | None = _f("generation")
+    emr_params: Literal["v14", "calibration15"] = _f("generation", "v14")
+    #: routine laboratory panels of the coupled world (`haenv/world/truth/panels.py`); unset = on when
+    #: `course_coupling` is on, never drawn when it is off
+    routine_panels: bool | None = _f("generation")
 
 
 class QuerySection(_Section):

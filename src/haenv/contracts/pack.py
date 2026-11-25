@@ -17,8 +17,11 @@ class PayloadView:
     evidence-ledger value is read from (`gate_tables.LEDGER_VALUE_STREAMS`) is always kept, so a
     shown value stays traceable. `drop_context` / `drop_profile`: keys removed from
     `prediction_context` / `user_profile`. `applies`: raw -> bool, the cases of the pack the view
-    covers (None: all of them)."""
+    covers (None: all of them). `panel_streams`: routine-panel analytes of the coupled world (`truth.panels`)
+    also kept, but only where the panel layer marked them shown (`latent_premise.routine_panels.visible`),
+    so a world built without panels is trimmed exactly as before."""
     streams: tuple | None = None
+    panel_streams: tuple = ()
     drop_context: tuple = WEIGHT_FORECAST_CONTEXT
     drop_profile: tuple = WEIGHT_FORECAST_PROFILE
     applies: Callable | None = None

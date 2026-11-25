@@ -79,7 +79,10 @@ def pack():
         # the reading is interpreted off the follow-up block (`prediction_context.followup_p4`); of the streams,
         # weight (muscle mass, `features.factor_flags`), blood pressure, glycaemia and exercise load
         view=PayloadView(streams=("weight", "systolic_bp", "diastolic_bp", "HbA1c", "fasting_glucose",
-                                  "steps", "exercise_mets", "activity_index")))
+                                  "steps", "exercise_mets", "activity_index"),
+                         # routine panels of the coupled world (B3/F1), only where the panel layer shows them
+                         panel_streams=("creatinine", "potassium", "eGFR", "ALT", "AST", "LDL", "triglycerides",
+                                        "fasting_glucose", "HbA1c", "TSH", "FT4")))
 
 
 def register() -> list:

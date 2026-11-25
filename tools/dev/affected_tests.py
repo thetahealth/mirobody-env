@@ -15,7 +15,9 @@ sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 # Each test directory has one owner; the most specific source prefix wins.
 COMPONENTS = {
     "app": ("src/haenv/app", "src/haenv/cli.py", "src/haenv/job.py"),
+    "calibration": ("tools/calibration",),
     "contracts": ("src/haenv/contracts",),
+    "evaluation": ("tools/evaluation",),
     "guards": (),
     "i18n_en": ("registry/i18n/en",),
     "interaction": ("src/haenv/interaction",),
@@ -27,6 +29,7 @@ COMPONENTS = {
     "p3": ("src/haenv/p3", "tools/generation/p3_gen_job.py"),
     "p4": ("src/haenv/p4", "tools/generation/p4_gen_job.py"),
     "pack2": ("src/haenv/pack2",),
+    "rl": ("src/haenv/rl", "tools/generation/rl_gen_job.py"),
     "paper": ("paper",),
     "provenance": ("src/haenv/provenance",),
     "release": ("tools/release", "tools/presentation/make_readme_task_scores.py",

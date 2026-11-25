@@ -2444,3 +2444,36 @@ entries:
   手表节律提示条款仅用于病历里尚无心电图记录房颤者；已有心电图记录且无新症状或病情变化者，原有手表提示按其余规则评估。: The watch rhythm alert rule applies only if atrial fibrillation
     is not already ECG-documented in the record; if atrial fibrillation is already ECG-documented and there are no
     new symptoms or clinical changes, assess existing watch alerts under the other rules.
+  drug.aspirin: aspirin
+  drug.clopidogrel: clopidogrel
+  drug.apixaban: apixaban
+  drug.dabigatran: dabigatran etexilate
+  drug.rivaroxaban: rivaroxaban
+  drug.warfarin: warfarin
+  drug.spironolactone: spironolactone
+  drug.sitagliptin: sitagliptin
+  drug.isosorbide_mononitrate: isosorbide mononitrate
+  freq.twice_daily: twice daily
+  freq.evening_meal: once daily with the evening meal
+  freq.inr_daily: once daily; dose individualized by INR
+  m2.disease.CAD: coronary artery disease
+  m2.disease.CKD: chronic kidney disease
+  m2.disease.hypothyroidism: hypothyroidism
+  m2.disease.heart_failure: heart failure
+  m2.disease.atrial_fibrillation: atrial fibrillation
+  soc.oac: oral anticoagulation
+  soc.no_oac.bleeding_history: 'No oral anticoagulant: history of bleeding'
+  soc.no_oac.physician_bleeding_risk: 'No oral anticoagulant: clinician-assessed bleeding risk'
+  soc.no_oac.patient_refusal: Patient declined oral anticoagulation
+  soc.acute.ppi: proton pump inhibitor
+  soc.acute.nsaid_rx: prescription nonsteroidal anti-inflammatory drug
+  soc.acute.antibiotic: antibiotic
+  soc.recent_use: Used within the last 30 days; dose and duration not recorded
+  drug.zhenju_jiangya: Zhenju Jiangya tablet (Chinese patent medicine)
+  drug.qiangli_dingxuan: Qiangli Dingxuan tablet (Chinese patent medicine)
+  drug.qingnao_jiangya: Qingnao Jiangya tablet (Chinese patent medicine)
+  drug.niuhuang_jiangya: Niuhuang Jiangya pill (Chinese patent medicine)
+  soc.tcm.dose.zhenju_jiangya: Oral, 1 tablet per dose, 3 times daily or as directed
+  soc.tcm.dose.qiangli_dingxuan: Oral, 4–6 tablets per dose, 3 times daily
+  soc.tcm.dose.qingnao_jiangya: Sugar-coated tablet (core 0.30 g), oral, 4–6 tablets per dose, 3 times daily
+  soc.tcm.dose.niuhuang_jiangya: Large honey pill (1.6 g each), oral, 1–2 pills per dose, 1 time daily

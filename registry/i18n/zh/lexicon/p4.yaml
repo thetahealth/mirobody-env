@@ -1,5 +1,12 @@
 # Pack 4 (lab-change follow-up) record phrases (zh).
 entries:
+  p4.protocol.comparison_pair: 比较题目指明的待评估采血报告和上次采血报告，核对项目、单位和标本。今天是回顾日期。标准化复核用于核实所标注的采血结果。若题目未同时标明两日，取待评估采血前最近一次已完成且可比的常规报告作为上次报告。更早的报告用于回顾病程和核对治疗前基线。
+  p4.action.alcohol_increased: 饮酒量增加
+  p4.action.alcohol_stopped: 停止饮酒
+  p4.alcohol.increased_history: 饮酒量增加并持续数周。
+  p4.alcohol.stopped_history: 已停止饮酒并持续戒酒数周。
+  p4.followup.case.assessed_draw_verified: 待评估采血受准备、摄入、采集或检测方法干扰，且已有该次采血的清洁标准化复核记录
+  p4.followup.case.assessed_draw_unverified: 待评估采血受准备、摄入、采集或检测方法干扰，仍需清洁标准化复核
   p4.fasting.unrecorded: "未登记"
   p4.lab.outpatient: "门诊检验科"
   p4.platform.routine: "常规平台"
@@ -417,7 +424,7 @@ entries:
   p4.contract.preanalytical: preanalytical：检测前的患者准备、摄入、采样条件、运送与标本处理改变可比性；短暂运动或时段差也属本任务的采样条件。摄入物造成体外测定干扰时，与method_difference均可接受。
   p4.contract.method_difference: method_difference：方法、平台、试剂批次的系统差别，或经验证的分析反应干扰；需要该项目、日期和方法适用的证据。仅出现方法名称或换平台通知不能确定来源。
   p4.contract.sources: 类别依据：CLSI EP07第3版Scope（外源/内源化学干扰）、CLSI EP09 Scope（患者标本方法比对）、EFLM-COLABIOCLI静脉采血建议Patient preparation、Fraser 2012 Reference change values（PMID 21958344）；摄入物干扰另参FDA生物素安全通告及AACC 2020建议（doi:10.1093/jalm/jfz010）。类别重叠与短暂采样条件归类是本任务约定，待临床复核。
-  p4.contract.next: 下一步必须作答。repeat_standardized包括适当洗脱后新采血复查，或改用经核实不受影响的方法解读；no_action表示无需为这次历史差异额外处置，常规随访继续。摄入物干扰仅影响上次读数、本次为标准读数时，按上次失真处理，可选no_action；影响本次读数时，暴露已结束且已有后续清洁结果可选no_action，仍在暴露须核实。
+  p4.contract.next: 下一步必须作答。repeat_standardized包括适当洗脱后新采血复查，或改用经核实不受影响的方法解读；no_action表示无需为这次历史差异额外处置，常规随访继续。摄入物干扰仅影响上次读数、待评估读数符合标准时，可选no_action。准备、摄入、采集或方法干扰影响待评估采血时，若已有该次采血的清洁标准化复核，no_action和repeat_standardized均可；仍待复核时选repeat_standardized。
   p4.notice.commutable_comparison.2: 患者标本在两套检测条件下同期测定；比对数值仅用于所列日期和平台、批号。
   p4.notice.commutable_comparison.3: 本次登记患者样本的并行检测结果；先核实适用项目与启用时间，再解释报告差别。
   p4.notice.commutable_comparison.4: 比对使用可交换的患者标本；所列差值对应文件中的方法及试剂批号，不外推至其它批次。

@@ -4,11 +4,12 @@ m2.scene.on_meds: "患者目前在用 {meds}"
 m2.scene.meds_only: "{meds}。"
 m2.scene.vitals: ",{name} {value} {unit}"
 m2.scene.what_quote: "「{quote}」{vitals}"
-m2.scene.f1: "今天(第 {day} 天)患者因{what}来诊。{meds}。请判断分诊紧急度(🔴 立即急诊 / 🟠 数日内 / 🟡 数周内 / 🟢 常规随访)、首选检查、鉴别诊断,以及是否需要立即请临床医生复核。"
+m2.scene.f1: "今天(第 {day} 天)患者因{what}来诊。{meds}。请判断分诊紧急度(🔴 立即急诊 / 🟠 尽快评估（需要时当天或次日） / 🟡 数周内 / 🟢 常规随访)、首选检查、鉴别诊断,以及是否需要立即请临床医生复核。"
 m2.scene.f2: "今天(第 {day} 天)是{disease}的慢病复诊,{meds}。请从完整用药记录中识别本次需要评估处置的药物,给出该药的调药方向(先查因暂不调 / 加量 / 维持 / 减量),并判断是否有其他疾病在扰乱基础病的控制。"
 m2.scene.f3: "今天(第 {day} 天)一次随访复查到来,结果见 `followup_result`(同一实验室,附上次结果)。{meds}。请就 `followed_indicator` 指出的指标,判断这两次结果的变化是否超出生物学与分析变异(RCV),是哪条线解释了这一变化,以及下一步怎么做。"
 m2.hist.prior_narrative: "既往门诊随访病史：{conditions}。当时继续原方案，相关症状与检查见原始记录。"
 m2.confirm.spirometry: "按质量要求完成支气管舒张前后肺功能，舒张后FEV1/FVC={ratio:.2f}；三次可接受呼气，重复性合格。需结合症状及暴露史解释。"
+m2.confirm.biliary_context: "近来饮食偏油，曾伴短期肠胃不适；就诊时体温38.2°C，右上腹有压痛，未见黄疸。"
 m2.result.elastography: "空腹{fasting_hours}小时,VCTE采用{probe}探头,有效测量{valid}/{attempted}次,肝硬度中位数{lsm} kPa,IQR/中位数{iqr:.2f};MRE肝硬度{mre_lsm} kPa,波传播充分且无明显伪影。无创读数需结合临床复评,不能单凭本检查确定病因或组织学分期。"
 m2.result.aki: 第{day_7}天及第{day_2}天血清肌酐{base} {unit},第{day}天{latest} {unit};48小时差值{delta:.2f} {unit},与7天前比值{ratio:.3f}
 m2.result.renal_reading: 第{day}天血清肌酐{cr} {unit},尿白蛋白/肌酐比值{uacr} mg/g
@@ -22,3 +23,46 @@ m2.panel.without_unit: "{name} {value}{reference}{flag}"
 m2.qualifier.threshold: "{name} {value:g} >= {minimum:g}"
 
 m2.result.ckd_course: "{readings};记录跨度112天,未提供eGFR。{review}"
+
+# Frame-specific solver instructions. Action times follow the M2 urgency scale.
+runtime.m2.ask.acute_triage: |2-
+
+
+  除上面要求的字段外,另加一个字段:
+    "urgency": "🔴|🟠|🟡|🟢"   (🔴 立即急诊 · 🟠 尽快评估（需要时当天或次日） · 🟡 数周内 · 🟢 常规随访)
+
+  本题处置类别：
+    A0 — 按原计划继续监测。
+    A1 — 在下次测量时改进数据质量。
+    A2 — 开始低风险自我管理，按常规随访。
+    A3 — 数周内安排常规临床评估。
+    A4 — 数日内安排加急临床评估。
+    A5 — 立即升级至急诊评估。
+runtime.m2.ask.chronic_med_adjustment: |2-
+
+
+  除上面要求的字段外,另加一个字段:
+    "treatment_plan": {{"target_drug": "药物通用名或登记英文 ID", "direction": "investigate_first|uptitrate|keep|downtitrate", "reason": "..."}}
+    从全部用药及记录中自行识别本次评估处置的一种药物;维持也须识别该药。
+    (investigate_first = 先查因、暂不调药;给出供医生复核的方向,不自主改药。已暂停的药应核对暂停记录,不据此自行恢复。)
+
+  本题处置类别：
+    A0 — 按原计划继续监测。
+    A1 — 在下次测量时改进数据质量。
+    A2 — 开始低风险自我管理，按常规随访。
+    A3 — 数周内安排常规临床评估。
+    A4 — 数日内安排加急临床评估。
+    A5 — 立即升级至急诊评估。
+runtime.m2.ask.followup_interpretation: |2-
+
+
+  查阅本次复查及历次报告,判断变化是否超出生物学与分析变异(RCV)。除上面要求的字段外,另加一个字段:
+    "followup": {{"indicator": "...", "exceeds_rcv": true|false, "explained_by": "...", "next_step": "..."}}
+
+  本题处置类别：
+    A0 — 按原计划继续监测。
+    A1 — 在下次测量时改进数据质量。
+    A2 — 开始低风险自我管理，按常规随访。
+    A3 — 数周内安排常规临床评估。
+    A4 — 数日内安排加急临床评估。
+    A5 — 立即升级至急诊评估。

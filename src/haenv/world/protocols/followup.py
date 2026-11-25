@@ -10,7 +10,7 @@ def _example(cls, cause=None, *, previous=100, today=120, prior=False, baseline=
     return {"class": cls, "cause": cause, "t0": 0, "t1": 1, "records": rows}
 
 
-def steps():
+def steps(*, verified_retest=False):
     from haenv.p4.gold import ACEI_RISE_MAX_PCT
     from haenv.p4.gold import next_step
     from haenv.i18n.text import L, T
@@ -18,7 +18,8 @@ def steps():
     cases = [
         (L("p4.followup.case.noise"), _example("analytic_biological_noise")),
         (L("p4.followup.case.distortion_previous"), _example("preanalytical", prior=True)),
-        (L("p4.followup.case.distortion_today"), _example("method_difference")),
+        (L("p4.followup.case.assessed_draw_unverified" if verified_retest else "p4.followup.case.distortion_today"),
+         _example("method_difference")),
         (L("p4.followup.case.acei_stop_fall"), _example("true_change", "acei_start_or_stop", today=90)),
         (T("p4.followup.case.acei_start_within", n=n), _example("true_change", "acei_start_or_stop")),
         (T("p4.followup.case.acei_start_baseline_within", n=n),
@@ -31,6 +32,10 @@ def steps():
         blk.update(factor="biotin_tsh", review_day=3,
                    ingested_exposure={"end_day": 2 if ended else None, "clean_followup": True})
         cases.append((L("p4.followup.case.ingested_ended" if ended else "p4.followup.case.ingested_ongoing"), blk))
+    if verified_retest:
+        checked = _example("method_difference")
+        checked["verification_records"] = [{"day": 2, "verification_for_day": 1}]
+        cases.append((L("p4.followup.case.assessed_draw_verified"), checked))
     return [T("p4.followup.step", condition=condition, primary=primary, label=L(f"p4.followup.next.{primary}"),
               accepted=" / ".join(accepted))
             for condition, blk in cases for primary, accepted in [next_step(blk)]]

@@ -15,6 +15,7 @@ def _base_document():
 
 def document():
     doc = deepcopy(_base_document())
+    doc["steps"][0] = L(doc["steps"][0])
     from haenv.p4.diversity import table
     from haenv.world.labworld import analyte
     from haenv.world.labworld import cv_total

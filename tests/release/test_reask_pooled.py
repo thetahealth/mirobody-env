@@ -23,7 +23,8 @@ def test_released_reask_recomputation_and_diagnosis_scores(capsys):
     # table registers it, and the table is what --write-drift would write today.
     table = json.loads((pooled.DATA / pooled.DRIFT).read_text())['rows']
     assert table == pooled.matcher_drift()
-    assert {r['concept'] for r in table} <= {'aki_volume_depletion', 'ckd_progression', 'judging_synonyms',
+    assert {r['concept'] for r in table} <= {'aki_volume_depletion', 'ckd_progression', 'metabolic_advanced_fibrosis',
+                                         'judging_synonyms',
                                          'judging_aliases_en', 'english_variants'}
     assert all(r.get('name') for r in table if r['change'] == '1.4 judging names')
     assert all((r['stored_D'], r['current_D']) == (0, 1) for r in table)
@@ -100,5 +101,19 @@ def test_http_replay_offline_checks_stored_results(tmp_path):
     assert main(['--offline', '--workers', '1', '--out', str(output)]) == 0
     result = json.loads(output.read_text())
     assert (result['questions'], result['responses'], result['calls'], result['identical']) == (1, 1, 31, 31)
-    assert result['stored_differing'] == result['differing'] == result['validation_failures'] == 0
+    assert result['stored_differing'] == result['registered_stored_differing'] == 8
+    assert result['unregistered_stored_differences'] == result['stale_stored_differences'] == []
+    assert result['differing'] == result['validation_failures'] == 0
     assert result['missing'] == result['worker_errors'] == []
+
+
+def test_http_replay_rejects_unregistered_changed_and_stale_drift():
+    from tools.release.replay_http import check_stored_drift
+
+    observed = {'index': 2, 'call_sha256': 'call', 'stored_sha256': 'stored', 'current_sha256': 'current'}
+    registered = {**observed, 'changes': ['632f17a4c']}
+    assert check_stored_drift([], [observed]) == (0, [observed], [])
+    assert check_stored_drift([registered], []) == (0, [], [2])
+    for key in ('call_sha256', 'stored_sha256', 'current_sha256'):
+        changed = {**observed, key: 'changed'}
+        assert check_stored_drift([registered], [changed]) == (0, [changed], [2])

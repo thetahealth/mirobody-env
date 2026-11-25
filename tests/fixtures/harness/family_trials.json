@@ -311,14 +311,14 @@
     "id": "p2-23",
     "pack": "p2",
     "index": 23,
-    "kind": "p2-measurement",
+    "kind": "null-swap-conditions",
     "case_id": "PT-2a2396bdf3c4f46e7d54"
   },
   {
     "id": "p2-24",
     "pack": "p2",
     "index": 24,
-    "kind": "null-swap-conditions",
+    "kind": "p2-measurement",
     "case_id": "PT-2a2396bdf3c4f46e7d54"
   },
   {
@@ -479,13 +479,6 @@
     "id": "p2-47",
     "pack": "p2",
     "index": 47,
-    "kind": "p2-measurement",
-    "case_id": "PT-2a2396bdf3c4f46e7d54"
-  },
-  {
-    "id": "p2-48",
-    "pack": "p2",
-    "index": 48,
     "kind": "p2-measurement",
     "case_id": "PT-2a2396bdf3c4f46e7d54"
   }

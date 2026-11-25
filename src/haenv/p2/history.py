@@ -22,7 +22,10 @@ def prepare(raw, cid, plan):
 def finalize(raw, cid, plan):
     from haenv.world.validation.difficulty_r2 import enabled
     if enabled(plan):
-        return finalize_r2(raw, cid, plan)
+        finalize_r2(raw, cid, plan)
+        from haenv.p2.reading import finalize as finalize_reading
+        finalize_reading(raw, cid, plan)
+        return
     from haenv.p2 import rules as R
     b, g = raw.prediction_context[BLOCK], raw.adjudication[BLOCK]
     T = int(b["today_day"])
@@ -39,11 +42,12 @@ def finalize(raw, cid, plan):
                        ("p2.hist.result.hf_normal" if hf else "p2.hist.result.sinus_pac")),
            "conclusion": L("hist.recorded" if active else "hist.not_recorded")}
     b["clinical_history_record"] = [row]
-    b["triage_protocol"] = table()["packs"]["p2"]["protocol"]
+    from haenv.p2.clinical_rules import af_protocol
+    b["triage_protocol"] = af_protocol()
     if active and hf:
         b["background"]["known_conditions"] = [x for x in b["background"]["known_conditions"] if x != "heart_failure"]
         raw.user_profile["known_conditions"] = [x for x in raw.user_profile["known_conditions"] if x != "heart_failure"]
-    if active and af:
+    if active and af and not R.readings(b)["new_symptom"]:
         for x in b["wearable_daily"][-2:]:
             x["irregular_rhythm_alerts"] = 1
         # A documented known diagnosis need not be repeated on today's problem list.
@@ -95,6 +99,10 @@ def finalize_r2(raw, cid, plan):
     hf = g["rule"] in ("R7a_htn_severe_hf", "R8_hf_gain") or "heart_failure" in b["background"]["known_conditions"]
     role = uniform("history-role", cid) < rate("p2", plan)
     family = "heart_failure" if hf else "atrial_fibrillation"
+    from haenv.p2.reading import enabled as reading_enabled, core as reading_core
+    if reading_enabled(plan) and reading_core(cid, plan) and g['rule'] == 'R11_hypo_level1':
+        family = 'atrial_fibrillation'
+        role = True
     if not hf and g["rule"] in ("R2_news2_medium", "R10_news2_low", "R10b_infection_medium_risk", "R13_news2_zero_symptom", "R14_nothing"):
         choices = R.table()["clinical_context"]["native_history_families"]["weights"]
         if plan.get("history_family"):
@@ -150,8 +158,11 @@ def finalize_r2(raw, cid, plan):
         row.update(test=L("p2.hist.test.ecg12"), result=L("p2.hist.result.sinus_pac_no_af"))
         if role and g["rule"] != "R9_af_alerts":
             row.update(result=L("p2.hist.result.af_controlled"), conclusion=L("hist.recorded"))
-            for x in b["wearable_daily"][-2:]:
-                x["irregular_rhythm_alerts"] = 1
+            # The printed exemption covers watch alerts only without a new symptom ticked today
+            # (`af_exemption`); with one, the documented AF stays and no alert pair is added.
+            if not R.readings(b)["new_symptom"]:
+                for x in b["wearable_daily"][-2:]:
+                    x["irregular_rhythm_alerts"] = 1
             pb = raw.latent_premise.get("patient_basics") or {}
             pb["comorbidities"] = list(dict.fromkeys([*pb.get("comorbidities", ()), family]))
     # The same clinical source-title pool serves acted and inert notes across
@@ -161,7 +172,9 @@ def finalize_r2(raw, cid, plan):
     row["test"] = titles[int(uniform("p2-context-title", cid) * len(titles))]
     b["clinical_history_record"] = [row]
     apply_history_positions(raw, cid, cfg["history_positions"])
-    b["triage_protocol"] = table()["packs"]["p2"]["protocol"] + cfg["protocol"]
+    from haenv.i18n.text import J
+    from haenv.p2.clinical_rules import af_protocol
+    b["triage_protocol"] = J("lines", [af_protocol(), cfg["protocol"]])
     a = R.assess(b)
     if a["rule"] != g["rule"] or R.floor_of(a["set"]) != g["floor"]:
         raise ValueError(f"historical evidence changed the planned triage scenario: {g['rule']} -> {a['rule']}")

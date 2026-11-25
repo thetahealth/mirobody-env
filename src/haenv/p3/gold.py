@@ -31,13 +31,40 @@ def expected_states(sub: str):
     return None if s is None else set(s)
 
 
+def block_states(x: dict):
+    """The active states a realized block (or its plan) must show: its subtype's, with the coverage
+    state added on an R1 low-coverage conflict (`plan.signal_conflict`)."""
+    s = expected_states(str(x.get("subtype")))
+    if s is not None and x.get("signal_conflict") == "low_coverage":
+        s |= {"adh_low"}
+    return s
+
+
 def dose_at(line, day: int) -> float:
     return [v for d, v in sorted(line, key=lambda x: int(x[0])) if int(d) <= int(day)][-1]
 
 
+def prescribed_line(line):
+    """Permanent prescribed doses; a temporary hold restores the same tablets.
+
+    The physical exposure line retains both events. Restoring the unchanged
+    prescription neither increases its strength nor discards existing stock.
+    """
+    out, held = [], None
+    for d, value in sorted(line, key=lambda x: int(x[0])):
+        if float(value) == 0 and out:
+            held = out[-1][1]
+        elif held is not None and float(value) == float(held):
+            held = None
+        else:
+            out.append((int(d), value))
+            held = None
+    return out
+
+
 def last_increase(line, day: int) -> int:
     """Day of the last increase on or before `day`; the start day when there was none."""
-    pts = sorted(((int(d), float(v)) for d, v in line), key=lambda x: x[0])
+    pts = [(int(d), float(v)) for d, v in prescribed_line(line)]
     s = pts[0][0]
     for (d0, v0), (d1, v1) in zip(pts, pts[1:]):
         if d1 <= day and v1 > v0:
@@ -56,7 +83,7 @@ def last_change(line, day: int) -> int:
 
 def switch_days(dose_line) -> set[int]:
     """The days of a dose change: the new strength is dispensed at the visit (the old stock set aside)."""
-    pts = sorted(int(d) for d, _ in dose_line)
+    pts = [int(d) for d, _ in prescribed_line(dose_line)]
     return set(pts[1:])
 
 
@@ -70,23 +97,72 @@ def adherence_of(blk: dict) -> float:
 def printed_readings(blk: dict) -> tuple[float, float]:
     start = min(int(d) for d, _ in blk["dose_line"])
     return printed_coverage(blk["refills"], int(blk.get("supply", 30)), int(blk["pill_count"]), int(blk["T"]), start,
-                            switch_days(blk["dose_line"]))
+                            switch_days(blk["dose_line"]), hold_spans(blk["dose_line"]))
+
+
+def hold_spans(line) -> list[tuple[int, int]]:
+    """Documented temporary holds on the exposure line: (first held day, day the same dose resumed).
+
+    A hold is a zero-dose event followed by a later non-zero dose (`prescribed_line` restores the
+    same prescription). Only the hold/resumption course of an M4 causality trial writes one."""
+    pts = sorted(((int(d), float(v)) for d, v in line), key=lambda x: x[0])
+    out = []
+    for i, (d, v) in enumerate(pts):
+        if v == 0 and i > 0 and pts[i - 1][1] != 0:
+            resume = next((dd for dd, vv in pts[i + 1:] if vv != 0), None)
+            if resume is not None and resume > d:
+                out.append((d, resume))
+    return out
+
+
+def treatment_day(day: int, holds=()) -> int:
+    """The day on the treatment clock: the calendar days of a documented hold are removed, and a day
+    inside a hold maps to the resumption (no tablets are used during a hold)."""
+    shift = 0
+    for h, r in sorted((int(a), int(b)) for a, b in holds):
+        if int(day) >= r:
+            shift += r - h
+        elif int(day) >= h:
+            return h - shift
+    return int(day) - shift
+
+
+def held_days_in_window(blk: dict) -> tuple[int, int]:
+    """(days on treatment, days on a documented hold) inside the adherence window of `blk`."""
+    from haenv.world.labworld.meds import rule
+    T = int(blk["T"])
+    start = min(int(d) for d, _ in blk["dose_line"])
+    lo = max(T - int(rule()["adherence_window_days"]) + 1, start)
+    holds = hold_spans(blk["dose_line"])
+    held = sum(1 for d in range(lo, T + 1) if any(h <= d < r for h, r in holds))
+    return T + 1 - lo - held, held
 
 
 def printed_coverage(pickups: list[int], supply: int, left: int, T: int, start: int,
-                     reset=()) -> tuple[float, float]:
+                     reset=(), holds=()) -> tuple[float, float]:
     """The adherence a reader computes from the printed record alone over the last
     `adherence_window_days` (from the start when the drug started inside them): (per interval, the
     share of days covered with an early refill's surplus carried forward; by day, a covered day while
     stock remains). Both take the days since the last pickup from today's pill count and count a day
     on the drug before the first printed pickup as uncovered. `reset`: the new-strength pickups, where
-    the old strength's stock is set aside."""
-    from haenv.world.labworld.meds import carry_in
+    the old strength's stock is set aside. `holds`: documented temporary holds (first held day,
+    resumption day); their days are excluded from the window (neither covered nor missed) and no
+    stock is used during them, so stock on hand or collected during a hold is carried forward to the
+    resumption (the printed rule in `p3.causality.protocol`)."""
     from haenv.world.labworld.meds import rule
-    pick = [int(x) for x in pickups]
     lo = max(int(T) - int(rule()["adherence_window_days"]) + 1, int(start))
+    if holds:
+        def c(x):
+            return treatment_day(int(x), holds)
+        return _coverage([c(x) for x in pickups], supply, left, c(T), c(lo), {c(x) for x in reset})
+    return _coverage([int(x) for x in pickups], supply, left, int(T), lo, {int(x) for x in reset})
+
+
+def _coverage(pick: list[int], supply: int, left: int, T: int, lo: int, reset: set) -> tuple[float, float]:
+    """`printed_coverage` on one clock; two pickups on one treatment day (collected during a hold)
+    both add their supply."""
+    from haenv.world.labworld.meds import carry_in
     n = int(T) + 1 - lo
-    reset = {int(x) for x in reset}
     cin = carry_in(pick, supply, reset)
     taken = float(supply) + cin[-1] - float(left)
     a_last = min(1.0, max(0.0, taken / max(1, int(T) - pick[-1])))
@@ -102,7 +178,7 @@ def printed_coverage(pickups: list[int], supply: int, left: int, T: int, start: 
     stock, day = 0, 0
     for d in range(min(pick[0], lo), pick[-1]):
         if d in pick:
-            stock = int(supply) + (0 if d in reset else stock)
+            stock = int(supply) * pick.count(d) + (0 if d in reset else stock)
         if stock > 0:
             stock -= 1
             day += d >= lo
@@ -110,13 +186,22 @@ def printed_coverage(pickups: list[int], supply: int, left: int, T: int, start: 
     return seg / n, day / n
 
 
+def coverage_readings(blk: dict) -> list[float]:
+    readings = list(printed_readings(blk))
+    on, held = held_days_in_window(blk)
+    if held:
+        # A reader who counts the documented hold days as covered instead of excluding them: the
+        # item is emitted only when that reading lands on the same side, outside the gray band.
+        readings += [(v * on + held) / (on + held) for v in readings]
+    return readings
+
+
 def printed_adherence_why(blk: dict, a: float) -> str:
-    """Why the printed record does not settle the side of the adherence line (empty when it does): a
-    reading of it (per interval or by day) on the other side of the line from a(T), or inside the gray band."""
+    """Why a printed coverage reading disagrees with the gold side of the line."""
     from haenv.world.labworld.meds import rule
     rl = rule()
     line, (lo, hi) = float(rl["adherence_line"]), rl["adherence_gray"]
-    for v in printed_readings(blk):
+    for v in coverage_readings(blk):
         if (v < line) != (a < line) or lo <= v < hi:
             return f"printed coverage {v:.3f} does not give a(T) = {a:.3f}'s side of {line}"
     return ""
@@ -234,7 +319,7 @@ def confounder_why(blk: dict, e: dict, d: dict) -> str:
     return "" if is_text(e.get("status"), want.key) else f"{cause} entry {sym!r} is {e.get('status')}, its course says {want}"
 
 
-def edge_margin_why(blk: dict) -> str:
+def edge_margin_why(blk: dict, g: dict | None = None) -> str:
     """Why an item sits on a rule line the clinic itself chose (empty when it does not): a patient-reported
     onset within `rule.edge_margin_onset_days` of 3 / 28 / 56 days after the last increase or of the start
     gray band. Such lines carry no clinical boundary, so an item is not placed on them. (The interval lines
@@ -242,8 +327,13 @@ def edge_margin_why(blk: dict) -> str:
     from haenv.world.labworld.meds import drug
     from haenv.world.labworld.meds import rule
     rl = rule()
-    mo, md = int(rl["edge_margin_onset_days"]), int(rl["edge_margin_date_days"])
+    mo = int(rl["edge_margin_onset_days"])
     d = drug(blk["drug"], known_of(blk))
+    from haenv.world.validation.difficulty_r2 import enabled
+    if enabled(blk.get("plan")) or blk.get("mechanism_mix_version"):
+        why = adherence_margin_why(blk, g if g is not None else g3(blk))
+        if why:
+            return why
     line = blk["dose_line"]
     start = int(min(int(x) for x, _ in line))
     for e in blk["diary"]:
@@ -254,6 +344,9 @@ def edge_margin_why(blk: dict) -> str:
         if (is_text(e.get("status"), "p3.status.resolved")
                 and blk["drug"] not in specification()["symptom_course"]["recurrent_event_drugs"]):
             continue
+        from haenv.p3.causality import hidden_cause
+        if hidden_cause(e, blk) is not None:
+            continue
         on = int(e["onset"])
         if abs(on - start) < int(rl["start_gray_days"]) + mo:
             return f"symptom onset {on} within {mo} days of the start gray band"
@@ -263,6 +356,21 @@ def edge_margin_why(blk: dict) -> str:
                                 (int(rl["ae_unattributed_min"]), on - last_change(line, on))):
                 if abs(delta - int(edge)) < mo:
                     return f"symptom onset {delta} days after the dose change within {mo} days of the {edge}-day line"
+    return ""
+
+
+def adherence_margin_why(blk, result):
+    """Keep every printed reading clear of the gray band when adherence can affect G3."""
+    if (result.get("control") != "off" or result.get("ae") or "absorption" in result["states"]
+            or "contraindication" in result["decisive"]):
+        return ""
+    from haenv.world.labworld.meds import rule
+    rl = rule()
+    margin = rl["edge_margin_adherence"]
+    lo, hi = rl["adherence_gray"]
+    for reading in coverage_readings(blk):
+        if round(lo - margin, 12) < reading < round(hi + margin, 12):
+            return f"printed coverage {reading:.3f} lies within {margin:g} of the adherence gray band"
     return ""
 
 
@@ -321,7 +429,8 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
     if why:
         out["reason"] = why
         return out
-    rec_T = next(r for r in blk["visits"] if int(r["day"]) == T)
+    from haenv.p3.measurements import effective_record
+    rec_T = effective_record(blk)
     upper = blk.get("upper")
     status, why = control_status(d["axis"], rec_T["truth"], upper)
     if status is None:
@@ -335,12 +444,13 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
     if status == "off" and early_as is not None:
         early = early_as                # `accepted`: the neighbouring reading of the clinic's own interval line
     elif status == "off":               # "just stepped up" is read only off target (G3, A5)
-        if since <= float(rl["early_max_frac"]) * tau:
+        if (d["axis"] == "TSH" and rec_T.get("measurement_pending")) or since <= float(rl["early_max_frac"]) * tau:
             early = True
         elif since < tau:
             out["reason"] = f"T - s = {since} in the gray band ({rl['early_max_frac']} tau, tau)"
             return out
     ae = None
+    causal_alternative = False
     start = int(min(int(dd) for dd, _ in line))
     for e in blk["diary"]:
         if e.get("kind") == "confounder":
@@ -356,7 +466,11 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
         if (is_text(e.get("status"), "p3.status.resolved")
                 and blk["drug"] not in specification()["symptom_course"]["recurrent_event_drugs"]):
             continue
-        seen = ae_cause(e, line, start, d["attribution"])
+        from haenv.p3.causality import hidden_cause
+        seen = hidden_cause(e, blk)
+        if seen is None:
+            seen = ae_cause(e, line, start, d["attribution"])
+        causal_alternative |= seen == "alternative"
         if seen is None:
             out["reason"] = f"symptom onset {e['onset']} in the gray band of its timing"
             return out
@@ -379,6 +493,13 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
     symptom_facts = ["symptom_onset"]
     if blk["drug"] not in specification()["symptom_course"]["recurrent_event_drugs"]:
         symptom_facts.append("symptom_course")
+    if blk.get("ae_causality"):
+        symptom_facts = ["causal_onset", "causal_withdrawal", "causal_alternative"]
+        if ae == "unattributed":
+            # Discordant observations remain uncertain when either is removed.
+            # Symptom persistence and onset, rather than those observations,
+            # are independently necessary to this review decision.
+            symptom_facts = ["causal_onset", "symptom_course"]
     # Safety signals take precedence even when coverage is low. This priority
     # is a clinical rule, not a subtype or interaction-designation lookup.
     from haenv.p3.history import acei_contraindicated
@@ -431,6 +552,8 @@ def g3(blk: dict, early_as: bool | None = None) -> dict:
     if c == "switch" and not d.get("switch", True):
         out["reason"] = f"{blk['drug']} has no drug to switch to (not emitted)"
         return out
+    if causal_alternative and c == "maintain":
+        decisive += ["causal_withdrawal", "causal_alternative"]
     out["class"] = c
     out["decisive"] = sorted(decisive)
     out.update(dose=x, at_min=at_min, at_max=at_max, since_increase=since, a_T=round(a, 4),
@@ -451,11 +574,11 @@ def gold_block_consistent(blk: dict) -> list[str]:
     g = g3(blk)
     if g["class"] != blk.get("class"):
         bad.append(f"G3 recomputed {g['class']} ({g['reason']}) != gold {blk.get('class')}")
-    want = expected_states(str(blk.get("subtype")))
+    want = block_states(blk)
     if want is not None and set(g["states"]) != want:
         bad.append(f"active states {g['states']} != subtype {blk.get('subtype')} {sorted(want)}")
     if int((blk.get("plan") or {}).get("version") or 0) >= 16:
-        why = edge_margin_why(blk)
+        why = edge_margin_why(blk, g)
         if why:
             bad.append(why)
         if blk.get("accept") != accepted(blk, g):

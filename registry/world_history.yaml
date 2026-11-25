@@ -186,6 +186,7 @@ record_phrasing:
       back: 反应缓解后恢复
       stop: 不良反应，停用
   indication_names:
+    atrial_fibrillation: 房颤
     hypertension: 高血压
     dyslipidemia: 血脂异常
     T2D: 2 型糖尿病

@@ -69,18 +69,34 @@ def visible_decides(g: dict, raw) -> list[tuple[str, str]]:
     several do, a ratio between the two bands) is refused."""
     from haenv.p4.features import _blk
     from haenv.p4.features import visible_class
+    if g.get("diversity_version"):
+        pc = raw.get("prediction_context", {}) if isinstance(raw, dict) else raw.prediction_context
+        dates = (pc.get("followup_p4") or {})
+        if (dates.get("comparison_previous_draw_day"), dates.get("comparison_draw_day")) != (g["t0"], g["t1"]):
+            return [("visible_comparison_pair", "named report dates differ from the assessed pair")]
     if not _blk(raw):
         return []
     vc, _ = visible_class(raw)
     bad = [("visible_class_differs", vc)] if vc != g.get("class") else []
     if g.get("diversity_version"):
-        from haenv.p4.diversity_reader import significance_violations
+        from haenv.p4.diversity_reader import visible_significance
         from haenv.p4.diversity_reader import answer
         from haenv.p4.gold import next_step
-        from haenv.p4.features import _blk
-        bad += [("visible_significance", why) for why in significance_violations(_blk(raw), g["class"], g.get("cause"))]
+        from haenv.p4.textmatch import is_text, same_field
+        from haenv.i18n import LANGUAGES
+        from haenv.i18n.text import T, render
+        block = _blk(raw)
+        bad += [("visible_significance", why) for why in visible_significance(g, block)]
+        alcohol = _diversity_table()["rules"]["alcohol_change"]["exposure"]
+        for row in block.get("outpatient_record") or ():
+            if not is_text(row.get("exposure"), alcohol):
+                continue
+            day, printed = row.get("onset_day"), row.get("onset_date")
+            date = T("p4.alcohol.onset_case_day", day=day)
+            if day is None or not (same_field(printed, date) or any(printed == render(date, lang) for lang in LANGUAGES)):
+                bad.append(("alcohol_onset_date", "alcohol history must show its onset relative to case day zero"))
         try:
-            if answer(_blk(raw))["next_step"] != next_step(g)[0]:
+            if answer(block)["next_step"] != next_step(g)[0]:
                 bad.append(("visible_next_differs", "visible next step differs from hidden policy"))
         except ValueError as exc:
             bad.append(("visible_next_differs", str(exc)))

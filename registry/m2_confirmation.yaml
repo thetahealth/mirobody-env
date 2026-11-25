@@ -30,6 +30,7 @@ profiles:
     context: 心悸时恰逢睡眠不足并饮用浓茶；症状出现时就诊，尚未做心电图，不能仅按诱因判断心律。
   HD-UNI-11:
     finding: BiliaryUltrasound
+    shared_findings: [CRP, WBC]
     test: 胆囊及胆道超声
     control_label: m2.confirm.control.HD-UNI-11
     control_label_reason: "Negative targeted test with an ongoing presentation: cause undetermined, reassess; per the profile criterion."
@@ -39,9 +40,9 @@ profiles:
     complaints:
       - ["吃完饭后右上腹痛了一阵", "饭后觉得右边上腹不舒服,疼了一会儿"]
       - ["右上腹的痛持续了好几个小时", "肚子右上方疼了几小时,中间轻重有变化"]
-      - ["右上腹发胀,按着有些不舒服", "右侧上腹胀痛,自己按过觉得更明显"]
+      - ["有点发热,碰到右上边肚子更疼", "觉得发热,一碰右上腹疼得更明显"]
       - ["觉得恶心,不太想吃东西", "胃里有点翻腾,饭量也少了"]
-    context: 近来饮食偏油，曾伴短期肠胃不适；没有持续高热或黄疸，仍需根据病程和影像判断。
+    context: {template: m2.confirm.biliary_context}
   HD-UNI-17:
     finding: PostBDObstruction
     test: 支气管舒张后肺功能

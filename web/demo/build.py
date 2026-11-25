@@ -19,10 +19,10 @@ SYNTHETIC data, evaluation use only, not medical advice.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import pathlib
-import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 TPL = HERE / "_template.html"
@@ -33,6 +33,7 @@ GEN = HERE / "gen.mjs"
 OUT = HERE / "index.html"
 #: The board shown in the third act (`export_board.py`, from the board readout).
 BOARD = HERE / "board.json"
+READOUT = HERE.parent.parent / "docs/boards/1.6.0/k1.json"
 #: English display text for the case's Chinese strings (`translate_en.py`); optional.
 TR = HERE / "translations.en.json"
 
@@ -42,9 +43,14 @@ BANNER = ("<!-- Generated file — do not hand-edit (生成物,勿手改). Edit 
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = sys.argv[1:] if argv is None else argv
-    out = pathlib.Path(args[args.index("--out") + 1]) if "--out" in args else OUT
-    for p in (TPL, DATA, GEN, BOARD):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--out", type=pathlib.Path, default=OUT)
+    parser.add_argument("--draft-readout", type=pathlib.Path)
+    args = parser.parse_args(argv)
+    out = args.out
+    if args.draft_readout and HERE.parent.parent in out.resolve().parents:
+        parser.error("draft previews need --out outside the repository")
+    for p in (TPL, DATA, GEN, BOARD, READOUT):
         if not p.is_file():
             print(f"missing {p.relative_to(HERE.parent.parent)}")
             return 2
@@ -66,7 +72,15 @@ def main(argv: list[str] | None = None) -> int:
     tr = TR.read_text(encoding="utf-8") if TR.is_file() else "{}"
     json.loads(tr)
     board = BOARD.read_text(encoding="utf-8")
-    json.loads(board)
+    board_data = json.loads(board)
+    readout = json.loads((args.draft_readout or READOUT).read_text(encoding="utf-8"))
+    allowed = {"draft"} if args.draft_readout else {"pending", "final"}
+    if readout["status"] not in allowed:
+        parser.error("expected a draft preview or a pending or final release readout")
+    if readout["status"] == "pending" and readout["overall"]:
+        parser.error("a pending board must not contain scores")
+    board_data["current_readout"] = readout
+    board = json.dumps(board_data, ensure_ascii=False, indent=1)
     html = (BANNER + tpl.replace("__GEN__", gen)
             .replace("__TR__", tr.replace("</", "<\\/"))
             .replace("__BOARD__", board.replace("</", "<\\/"))

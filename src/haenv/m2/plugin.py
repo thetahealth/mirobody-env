@@ -45,6 +45,8 @@ def _urgency_of(said) -> str | None:
     words = {"red": "🔴", "orange": "🟠", "yellow": "🟡", "green": "🟢",
              "immediate": "🔴", "emergency": "🔴", "days": "🟠", "weeks": "🟡", "routine": "🟢"}
     low = s.lower()
+    if low in ("same day", "same-day assessment", "next day", "next-day assessment", "within 24 hours", "当天", "次日"):
+        return "🟠"
     for w, t in words.items():
         if w in low:
             return t

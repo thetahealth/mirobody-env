@@ -29,6 +29,9 @@ def decorate(block, cid, plan, rng):
     row = dict(day=day, source=source, test=L(titles[int(uniform("p2-context-title", cid) * len(titles))]))
     acts = spec["acts"]
     check, screen = block["home_check_today"], block["intake_checklist"]
+    from haenv.p2.reading import margin, config as reading_config
+    edge = margin(cid, plan) and family in ("chemo", "pressure")
+    edge_cfg = reading_config()["margin"] if edge else None
     if family == "head":
         # A low-energy head contact has no other head-injury risk factor.
         screen.update(head_injury_today=True, mild_new_symptom=True,
@@ -41,10 +44,19 @@ def decorate(block, cid, plan, rng):
     elif family == "chemo":
         screen.update(systemically_unwell_today=True, mild_new_symptom=True)
         check["temperature_c"] = rng.unif(*cfg["chemo_temp_c"])
-        row.update(condition="cancer", conclusion=L("hist.recorded"), treatment_class="systemic_anticancer",
-                   treatment_given_day=day if acts else T - rng.unif(*cfg["chemo_recovered_age_days"], dp=0),
-                   treatment_administered=True, course_ongoing=acts,
-                   result=L("p2.ctx.result.chemo_ongoing" if acts else "p2.ctx.result.chemo_ended"))
+        if edge:
+            # Near the printed six-week (42-day) window, both roles: the same note wording and an
+            # undecided next cycle; only the dated administration decides (`p2_reading.yaml` margin).
+            given = T - rng.unif(*edge_cfg["chemo_days_acting" if acts else "chemo_days_inert"], dp=0)
+            day = row["day"] = given
+            row.update(condition="cancer", conclusion=L("hist.recorded"), treatment_class="systemic_anticancer",
+                       treatment_given_day=given, treatment_administered=True,
+                       result=L("p2.ctx.result.chemo_last_cycle"))
+        else:
+            row.update(condition="cancer", conclusion=L("hist.recorded"), treatment_class="systemic_anticancer",
+                       treatment_given_day=day if acts else T - rng.unif(*cfg["chemo_recovered_age_days"], dp=0),
+                       treatment_administered=True, course_ongoing=acts,
+                       result=L("p2.ctx.result.chemo_ongoing" if acts else "p2.ctx.result.chemo_ended"))
     elif family == "oxygen":
         row.update(condition="hypercapnic_respiratory_failure", conclusion=L("hist.recorded" if acts else "hist.not_recorded"),
                    blood_gas_confirmed=acts, clinical_scale=2 if acts else 1,
@@ -68,6 +80,9 @@ def decorate(block, cid, plan, rng):
         screen.update(suspected_infection_today=True, mild_new_symptom=True)
         usual = rng.unif(*values["usual_sbp_drop" if acts else "usual_sbp_unchanged"], dp=0)
         current = rng.unif(*values["current_sbp"], dp=0)
+        if edge:
+            # Near the sourced NG253 line (more than 40 mmHg below usual): 41-44 acts, 36-40 does not.
+            usual = current + rng.unif(*edge_cfg["sbp_drop_acting" if acts else "sbp_drop_inert"], dp=0)
         row.update(baseline_assessed=True, usual_systolic_bp_mmHg=usual,
                    result=L("p2.ctx.result.usual_pressure"))
         # Repeated resting cuff observations show the trajectory independently
@@ -76,7 +91,20 @@ def decorate(block, cid, plan, rng):
             progress = max(0, r["day"] - (T - 3)) / 3
             r.update(systolic_mmHg=round(usual + (current - usual) * progress),
                      diastolic_mmHg=68)
-        check.update(systolic_bp_mmHg=current, **values["quiet_check"])
+        # A coupled patient's other vitals were already measured before this
+        # decorator. The pressure premise changes pressure, not temperature,
+        # oxygen saturation or pulse. The ordinary assessment gate may refuse
+        # an incompatible patient instead of resetting those readings.
+        quiet = dict(values["quiet_check"])
+        if plan.get('patient_truth'):
+            vitals = plan['patient_truth']['vitals']['centres']
+            for stream, field in [('body_temp', 'temperature_c'), ('heart_rate', 'heart_rate_bpm'), ('spo2', 'spo2_pct')]:
+                if stream in vitals:
+                    quiet.pop(field, None)
+        check.update(systolic_bp_mmHg=current, **quiet)
+        if spec.get("medium_hr"):
+            # An NG253 medium-risk heart rate (one NEWS2 point) in both roles: R3d precedes R10b.
+            check["heart_rate_bpm"] = rng.unif(*values["medium_hr"], dp=0)
     elif family == "volume":
         row.update(condition="heart_failure", conclusion=L("hist.recorded"),
                    result=L("p2.ctx.result.hf_documented"))
@@ -103,10 +131,34 @@ def render_message(block, cid, plan, rng):
     return block
 
 
-def facts(block):
+def usual_pressure(block, rows, *, home_baseline=False):
+    T = int(block["today_day"])
+    assessed = [r["usual_systolic_bp_mmHg"] for r in rows
+                if r.get("baseline_assessed") is True and r.get("day", T + 1) < T
+                and isinstance(r.get("usual_systolic_bp_mmHg"), (int, float))]
+    if assessed:
+        return min(assessed)
+    if home_baseline:
+        from statistics import median
+        prior = [r for r in block.get("home_bp_log") or () if int(r["day"]) < T]
+        if len({r["day"] for r in prior}) >= 2:
+            return median(r["systolic_mmHg"] for r in prior)
+    return None
+
+
+def relative_hypotension(block, rows, *, home_baseline=False):
+    if R.checklist_of(block).get("suspected_infection_today") is not True:
+        return False
+    usual = usual_pressure(block, rows, home_baseline=home_baseline)
+    return (usual is not None and usual - block["home_check_today"]["systolic_bp_mmHg"]
+            > R.table()["thresholds"]["sepsis_sbp_drop_gt"])
+
+
+def facts(block, *, home_baseline=False):
     """Only patient-visible dates, medicines and assessments may trigger an exception."""
     T = int(block["today_day"])
-    rows = block.get("clinical_history_record") or ()
+    from haenv.p2.narrative import records
+    rows = records(block)
     current_anticoag = any(r.get("medication_class") == "anticoagulant"
                           and r.get("treatment_start_day", T + 1) <= T
                           and (r.get("treatment_end_day") is None or T <= r["treatment_end_day"])
@@ -127,17 +179,12 @@ def facts(block):
         any(medium[key][0] <= home[field] <= medium[key][1] for key, field in (
             ("hr", "heart_rate_bpm"), ("rr", "respiratory_rate_per_min"), ("sbp", "systolic_bp_mmHg")))
         or home["temperature_c"] < medium["temp_lt"])
-    usual = [r["usual_systolic_bp_mmHg"] for r in rows
-             if r.get("baseline_assessed") is True and r.get("day", T + 1) < T
-             and isinstance(r.get("usual_systolic_bp_mmHg"), (int, float))]
     return dict(infection_medium_risk=infection_medium,
                 head_anticoag=bool(ck.get("head_injury_today") and current_anticoag
                                  and ck.get("current_prescriptions_reconciled") is True
                                  and ck.get("following_current_prescriptions") is True),
                 chemo_unwell=bool(ck.get("systemically_unwell_today") and ck[R.MILD] and recent_chemo),
-                relative_hypotension=bool(ck.get("suspected_infection_today") is True and usual
-                    and min(usual) - block["home_check_today"]["systolic_bp_mmHg"]
-                    > R.table()["thresholds"]["sepsis_sbp_drop_gt"]),
+                relative_hypotension=relative_hypotension(block, rows, home_baseline=home_baseline),
                 stable_rate=baseline_rate and ck.get("rate_medication_changed_recently") is False
                 and not (ck.get(R.DIZZY) or any(ck[k] for k in R.R0_KEYS)))
 
@@ -152,7 +199,10 @@ def finalize(raw, cid, plan):
     b, g = raw.prediction_context["triage_p2"], raw.adjudication["triage_p2"]
     align_weight_ledger_source(raw)
     apply_history_positions(raw, cid, config("p2")["history_positions"])
-    b["triage_protocol"] = table()["packs"]["p2"]["protocol"] + config("p2")["protocol"]
+    from haenv.i18n.text import J
+    from haenv.p2.clinical_rules import af_protocol
+    b["triage_protocol"] = J("lines", [af_protocol(), config("p2")["protocol"],
+                                        L("p2.policy.home_baseline"), L("p2.policy.hf_postdischarge")])
     a = R.assess(b)
     if a["rule"] != g["rule"] or R.floor_of(a["set"]) != g["floor"]:
         raise ValueError("clinical history placement changed planned P2 decision")

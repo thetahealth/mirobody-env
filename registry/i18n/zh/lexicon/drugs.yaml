@@ -24,3 +24,36 @@ entries:
   freq.once_nightly: 每晚一次
   freq.before_breakfast: 每日早餐前
   freq.nightly_sc: 每晚皮下注射
+  drug.aspirin: 阿司匹林
+  drug.clopidogrel: 氯吡格雷
+  drug.apixaban: 阿哌沙班
+  drug.dabigatran: 达比加群酯
+  drug.rivaroxaban: 利伐沙班
+  drug.warfarin: 华法林
+  drug.spironolactone: 螺内酯
+  drug.sitagliptin: 西格列汀
+  drug.isosorbide_mononitrate: 单硝酸异山梨酯
+  freq.twice_daily: 每日两次
+  freq.evening_meal: 每日一次，随晚餐服用
+  freq.inr_daily: 每日一次，剂量按INR个体化调整
+  m2.disease.CAD: 冠心病
+  m2.disease.CKD: 慢性肾脏病
+  m2.disease.hypothyroidism: 甲状腺功能减退
+  m2.disease.heart_failure: 心力衰竭
+  m2.disease.atrial_fibrillation: 房颤
+  soc.oac: 口服抗凝治疗
+  soc.no_oac.bleeding_history: 既往出血史，未使用口服抗凝药
+  soc.no_oac.physician_bleeding_risk: 医生评估出血风险，未使用口服抗凝药
+  soc.no_oac.patient_refusal: 患者拒绝口服抗凝治疗
+  soc.acute.ppi: 质子泵抑制剂
+  soc.acute.nsaid_rx: 处方非甾体抗炎药
+  soc.acute.antibiotic: 抗菌药
+  soc.recent_use: 近30天内曾使用，未记录剂量和疗程
+  drug.zhenju_jiangya: 珍菊降压片
+  drug.qiangli_dingxuan: 强力定眩片
+  drug.qingnao_jiangya: 清脑降压片
+  drug.niuhuang_jiangya: 牛黄降压丸
+  soc.tcm.dose.zhenju_jiangya: 口服，一次1片，一日3次或遵医嘱
+  soc.tcm.dose.qiangli_dingxuan: 口服，一次4～6片，一日3次
+  soc.tcm.dose.qingnao_jiangya: 糖衣片（片心重0.30g），口服，一次4～6片，一日3次
+  soc.tcm.dose.niuhuang_jiangya: 大蜜丸（每丸重1.6g），口服，一次1～2丸，一日1次

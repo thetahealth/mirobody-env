@@ -15,10 +15,6 @@ from haenv.interaction.query.adapter import adapter_for, load_pack_adapters
 from haenv.interaction.query.tools import RecordStore, ToolSpec, call_tool
 
 
-class _Captured(Exception):
-    """Stop the gated runner at the next solver delivery without making a model call."""
-
-
 class ToolSession:
     """A record store and private purchase state; calls are serialized per session."""
 
@@ -29,13 +25,15 @@ class ToolSession:
         self.payload, self.raw = payload, raw
         self.max_points, self.max_calls, self.n_calls = max_points, max_calls, 0
         self.purchase_rounds, self.budget = purchase_rounds, budget
-        self.groups: list[list[str]] = []
+        self.groups: list[list[dict]] = []
         self.gc = None
         self.gated = isinstance(payload.prediction_context.get('m2_frame'), dict)
         if self.gated:
             if raw is None:
                 raise ValueError('An M2 session needs cases.jsonl as well as payloads.jsonl')
             self._refresh()
+            from haenv.interaction.query.gated import _order_addresses
+            self._addresses = _order_addresses(self.gc['menu'])
         else:
             self.store = RecordStore(payload, payload.prediction_context['prediction_time_T'],
                                      adapter_for(payload), max_points=max_points)
@@ -59,24 +57,23 @@ class ToolSession:
             def solve(self, payload):
                 self.payload = payload
                 n = int(self.gated_context['round']) - 1
-                if n >= len(outer.groups):
-                    raise _Captured
-                kinds = {i['target']: i['kind'] for i in self.gated_context['menu']}
-                return SimpleNamespace(_raw_text=json.dumps({'queries': [
-                    {'target': t, 'kind': kinds.get(t, 'test')} for t in outer.groups[n]]}))
+                self.delivered = n >= len(outer.groups)
+                if self.delivered:
+                    # Stop at the first delivery after the purchase prefix.
+                    return SimpleNamespace(_raw_text='{"differential":[{}]}')
+                return SimpleNamespace(_raw_text=json.dumps({'queries': outer.groups[n]}))
 
         solver = Solver()
         T = int(self.payload.prediction_context['prediction_time_T'])
         rounds = self.purchase_rounds or MAX_ROUNDS
-        try:
-            _, trace = run_gated(self.raw, T, solver,
-                                budget=DEFAULT_BUDGET if self.budget is None else self.budget,
-                                max_rounds=rounds, trace=Recorder())
-        except _Captured:
+        _, trace = run_gated(self.raw, T, solver,
+                            budget=DEFAULT_BUDGET if self.budget is None else self.budget,
+                            max_rounds=rounds, trace=Recorder())
+        if trace.leak:
+            raise ValueError('The gated record failed the existing leakage guard')
+        if solver.delivered:
             payload, gc = solver.payload, dict(solver.gated_context)
         else:
-            if trace.leak:
-                raise ValueError('The gated record failed the existing leakage guard')
             # Exhaustion can stop the runner before its next delivery. Recover the
             # same revealed records from its own result events, never from gold.
             import copy
@@ -96,6 +93,7 @@ class ToolSession:
         self.store = RecordStore(payload, T, ADAPTER, max_points=self.max_points)
         self._gated_specs = _specs(self.store, self.gc,
                                    int(gc['round']) < int(gc['max_rounds']))
+        return [call for call in trace.calls if call.round == len(self.groups)]
 
     def specs(self):
         if not self.gated:
@@ -109,14 +107,32 @@ class ToolSession:
 
     def order_tests(self, targets):
         """Execute one purchase round in order, including refusals, using run_gated."""
+        from haenv.interaction.gated import ToolCall
         from haenv.interaction.query.gated import _purchase_result
-        if not self.gated:
-            raise ValueError('This question has no purchase menu')
-        if int(self.gc['round']) >= int(self.gc['max_rounds']):
-            return [{'error': 'Purchase rounds exhausted'} for _ in targets]
-        self.groups.append(list(targets))
-        self._refresh()
-        return [_purchase_result(t, self.store, self.gc) for t in targets]
+        with self.lock:
+            if not self.gated:
+                raise ValueError('This question has no purchase menu')
+            if not targets:
+                return []
+            round_no = int(self.gc['round'])
+            if round_no >= int(self.gc['max_rounds']):
+                return [{'error': 'Purchase rounds exhausted'} for _ in targets]
+            queries = []
+            for target in targets:
+                item = self._addresses.get(target)
+                queries.append({'kind': str(item['kind']), 'target': str(item['target'])} if item else
+                               {'kind': 'test', 'target': target})
+            if self.gc['spent'] >= self.gc['budget']:
+                receipts = [ToolCall(round_no, q['kind'], q['target'], self.gc['spent'],
+                                     revealed=False, grounded=None, truncated=True) for q in queries]
+            else:
+                self.groups.append(queries)
+                try:
+                    receipts = self._refresh()
+                except Exception:
+                    self.groups.pop()
+                    raise
+            return [_purchase_result(receipt, self.store, self.gc) for receipt in receipts]
 
     def order_test(self, target):
         # The gated query loop only schedules string targets. Other values reach

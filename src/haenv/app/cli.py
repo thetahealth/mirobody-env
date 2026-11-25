@@ -577,6 +577,13 @@ def _main(argv=None) -> int:
         from haenv.app.artifacts.store import digest_of
         meta = json.loads((job.results_dir / "batch.json").read_text(encoding="utf-8")) \
             if (job.results_dir / "batch.json").is_file() else {}
+        # The solver reads the hospital catalog the cases were generated for, not one chosen by
+        # this process's switches (`library.edition`).
+        from haenv.world.protocols.library import pin_edition
+        pin_edition(meta.get("protocol_edition"))
+        print(f"[haenv] hospital catalog edition: {meta['protocol_edition']} (recorded with the cases)"
+              if meta.get("protocol_edition") else
+              "[haenv] batch records no catalog edition (older batch): the catalog follows this run's switches")
         # Cases the emission gate stopped are read back from `batch.json` (`blocked_kinds`,
         # `per_case_kinds_blocked`); `premise_ok` / `leak_ok` stay unset because the leak probe
         # never ran on them.

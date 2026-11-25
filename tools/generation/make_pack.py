@@ -8,7 +8,7 @@ seed is passed to the child steps through the environment and is never written: 
 batch record only its sha256. Outputs under <dir>: `<job_id>.job.yaml` (the pool), `results/...` (the
 built pool batch), `audit/` (`audit.json`, `pack.json`), `pack/<job_id>.job.yaml` (the job cut to the N
 published items) with its own build under `pack/results/...` (rows checked byte-identical to the audited
-pool rows, audit marker written), `make_pack.json` (N, seed hash, paths, exit codes). After the audit the whole-pool invariant gates run on
+pool rows, management snapshots checked as the Q pipeline reads them, audit marker written), `make_pack.json` (N, seed hash, paths, exit codes). After the audit the whole-pool invariant gates run on
 the pool and the published items (`invariants/`); a fail-closed gate with a violation (`haenv/world/validation/invariants.py:
 FAIL_CLOSED`) stops the run before anything is published. Exit 0 when every step passed.
 
@@ -60,7 +60,9 @@ PACKS = {"m2": ('tools/generation/m2_gen_job.py', "m2-pack1", True),
          "p3": ('tools/generation/p3_gen_job.py', "p3-meds", False),
          "p4": ('tools/generation/p4_gen_job.py', "p4-followup", False),
          # pack 2 rebuilt (world 1.4): wearable-trend triage, acceptable sets, expected cost
-         "p2": ('tools/generation/p2_gen_job.py', "p2-triage", False)}
+         "p2": ('tools/generation/p2_gen_job.py', "p2-triage", False),
+         # red-line vigilance pairs: the redline arm, its control arm by --paired-controls / --paired-with
+         "rl": ('tools/generation/rl_gen_job.py', "rl-pairs", False)}
 WORKUP = 'benchmarks/inputs/ddx-workup.job.yaml'
 STEP_SECONDS: dict[str, float] = {}
 
@@ -122,6 +124,12 @@ def main(argv=None) -> int:
                     help="years of record before day 0 (default: config.synth.world_history); short = the course only")
     ap.add_argument("--med-dynamics", choices=("on", "off"), default=None,
                     help="background medicines start/stop/change dose (default: config.synth.med_dynamics)")
+    ap.add_argument("--course-coupling", choices=("on", "off"), default=None,
+                    help="shared m2 observation truth (default: config.synth.course_coupling)")
+    ap.add_argument("--routine-panels", choices=("on", "off"), default=None,
+                    help="routine laboratory panels of the coupled world (default: on with --course-coupling on)")
+    ap.add_argument("--emr-params", choices=("v14", "calibration15"), default=None,
+                    help="aggregate EMR parameters (default: config.world.emr_params, v14)")
     ap.add_argument("--history-dependency-rate", type=float, default=None, help="share within clinically eligible history cases; 0 preserves the previous generator")
     ap.add_argument("--difficulty-r2", choices=("on", "off"), default=None,
                     help="clinically matched historical evidence and inactive look-alikes")
@@ -139,6 +147,9 @@ def main(argv=None) -> int:
         os.environ["HAENV_HISTORY_DEPENDENCY_RATE"] = str(a.history_dependency_rate)
     seed = PS.cli_seed(a.seed)
     WORLD_SET[:] = ([f"world.history={a.world_history}"] if a.world_history else []) + \
+        ([f"world.emr_params={a.emr_params}"] if a.emr_params else []) + \
+        ([f"world.course_coupling={'true' if a.course_coupling == 'on' else 'false'}"] if a.course_coupling else []) + \
+        ([f"world.routine_panels={'true' if a.routine_panels == 'on' else 'false'}"] if a.routine_panels else []) + \
         ([f"world.med_dynamics={'true' if a.med_dynamics == 'on' else 'false'}"] if a.med_dynamics else []) + \
         ([f"background={'true' if a.background == 'on' else 'false'}"] if a.background else []) + \
         ([f"synth.rules_delivery={a.rules_delivery}"] if a.rules_delivery else [])
@@ -229,6 +240,11 @@ def main(argv=None) -> int:
                 c["latent"]["m2"]["background"] = a.background != "off"
                 from haenv.m2.core import scene_text
                 c["latent"]["m2"]["scene"] = scene_text(c["latent"]["m2"]["frame"], c["raw"], c["latent"], c["case_id"])
+            if a.pack == "rl" and c["latent"].get("rl"):
+                c["latent"]["rl"]["variant"] = "control" if a.paired_source == "control" else "redline"
+        if a.pack == "rl":
+            # the other arm's pool batch: the audit reads both arms (SA-5/SA-6, pair gates G4/G5)
+            document["_provenance"]["rl_partner_batch"] = str(paired["batch"])
         ids = [json.loads(line)["case_id"] for line in pathlib.Path(paired["pack_batch"], "cases.jsonl").read_text().splitlines()]
         if a.pack == "m2":
             document["_provenance"]["pack_ids"] = ids
@@ -430,10 +446,13 @@ def paired_eligibility(pack, job_id, job, batch, out, env, rec):
         if pack == "m2" and c["latent"].get("m2"):
             c["latent"]["m2"]["background"] = False
             c["latent"]["m2"].pop("f2", None)
+        if pack == "rl" and c["latent"].get("rl"):
+            c["latent"]["rl"]["variant"] = "control"
     dest = out / "paired-control.job.yaml"
     dest.write_text(yaml.safe_dump(control, allow_unicode=True, sort_keys=False, width=120), encoding="utf-8")
     from haenv.app.settings import SET_ENV
-    switches = ["background=false", "world.history=short", "world.med_dynamics=false"]
+    # rl: the control arm lives on the same world (same switches); only its latent arm differs
+    switches = list(WORLD_SET) if pack == "rl" else ["background=false", "world.history=short", "world.med_dynamics=false"]
     previous = list(WORLD_SET)
     WORLD_SET[:] = switches
     try:
@@ -464,6 +483,8 @@ def paired_eligibility(pack, job_id, job, batch, out, env, rec):
         control["_provenance"]["pack_ids"] = picked
     for d in (document, control):
         d["_provenance"]["eligible_pack_ids"] = ids
+    if pack == "rl":
+        document["_provenance"]["rl_partner_batch"] = str(other)
     job.write_text(yaml.safe_dump(document, allow_unicode=True, sort_keys=False, width=120), encoding="utf-8")
     dest.write_text(yaml.safe_dump(control, allow_unicode=True, sort_keys=False, width=120), encoding="utf-8")
     rec["control_job"], rec["paired_control_batch"] = str(dest), str(other)
@@ -563,6 +584,37 @@ def _refuse_pack(pack: str, out: pathlib.Path, rec: dict) -> None:
         rec["steps"].pop(key, None)
 
 
+def snapshot_mismatches(batch: pathlib.Path) -> list[str]:
+    """`case_id: reason` for every saved case whose management snapshot the Q pipeline would refuse
+    (`haenv/scoring/management/pipeline.py:_batch_inputs`): a receipt that does not verify, or visible
+    facts (M2: observations up to T) that differ from the saved question. Cases of other packs are skipped."""
+    from haenv.scoring.management.pipeline import BLOCKS, read_jsonl
+    from haenv.scoring.management.rubric import load_policy, verify_snapshot
+    policy, bad = load_policy(), []
+    for record in read_jsonl(pathlib.Path(batch) / "cases.jsonl"):
+        case, cid = record["case"], record["case_id"]
+        pc, adj = case.get("prediction_context") or {}, case.get("adjudication") or {}
+        blocks = [block for block in BLOCKS if block in pc]
+        m2 = not blocks and ("m2_frame" in pc or "m2_workup" in adj)
+        if not blocks and not m2:
+            continue
+        snap = adj.get("open_management")
+        try:
+            verify_snapshot(snap, policy)
+        except ValueError as exc:
+            bad.append(f"{cid}: {exc}")
+            continue
+        if snap["visible_facts"] != (pc if m2 else pc[blocks[0]]):
+            bad.append(f"{cid}: visible facts differ from the saved question")
+        elif m2:
+            T = pc["prediction_time_T"]
+            for stream, rows in snap["decision_facts"].get("world_observations", {}).items():
+                if rows != [r for r in case["longitudinal_data"].get(stream, []) if int(r.get("ts", T + 1)) <= T]:
+                    bad.append(f"{cid}: M2 observation snapshot differs from the case")
+                    break
+    return bad
+
+
 def publish(pack: str, job_id: str, job: pathlib.Path, batch: pathlib.Path, out: pathlib.Path, env: dict,
             rec: dict) -> int:
     """Cut the job to the published items, build it as its own batch, check its rows byte-identical to
@@ -586,6 +638,13 @@ def publish(pack: str, job_id: str, job: pathlib.Path, batch: pathlib.Path, out:
     rec["steps"]["pack_rows_identical"] = 0 if not diff else 1
     rec.update({"pack_job": str(pjob), "pack_batch": str(pb), "pack_rows_diff": diff})
     if diff:
+        return 1
+    bad = snapshot_mismatches(pb)
+    rec["steps"]["management_snapshot"] = 1 if bad else 0
+    rec["management_snapshot_mismatches"] = bad[:5]
+    if bad:
+        print(f"[make_pack] {len(bad)} published case(s) whose management snapshot the Q pipeline refuses: {bad[:5]}",
+              file=sys.stderr)
         return 1
     if rec.get("balance_from") and published_ids_reference(rec):
         _refuse_pack(pack, out, rec)
@@ -623,6 +682,8 @@ def _done(out: pathlib.Path, rec: dict, rc: int) -> int:
     for warning in rec["seed"]["warnings"]:
         print(f"WARNING [make_pack] {warning}", flush=True)
     rec["step_seconds"] = dict(STEP_SECONDS)
+    from haenv.world.truth.params import variant
+    rec["emr_params"] = variant()
     (out / "make_pack.json").write_text(json.dumps(rec, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(json.dumps(rec, ensure_ascii=False))
     return rc

@@ -69,6 +69,11 @@ def atoms(answer: dict, gold: dict) -> dict:
     if not isinstance(gold, dict) or not gold.get("set"):
         return out
     acc = list(gold["set"])
+    if (gold.get("tier") == "copd_target" and gold.get("rule") == "R14_nothing"
+            and acc == ["watchful_waiting"]):
+        # Scale 2 can be at target with NEWS2 zero while mild, nonurgent
+        # complaints in the history reasonably lead to routine follow-up.
+        acc = ["routine_followup", "watchful_waiting"]
     said = parse_disposition(a.get("disposition"))
     cost, us, os_ = item_cost(acc, said)
     rs = str(a.get("rule") or "").strip().upper()

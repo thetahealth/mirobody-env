@@ -32,8 +32,9 @@ the required qualifier; a disease or qualifier left open (to watch for, under as
 to be ruled out, or queried) is not named. It also accepts registered judging names of
 the gold that are not kernel aliases: sourced synonyms (`threads.yaml: judging_synonyms`),
 the reviewed English name of each Chinese gold name (`judging_aliases_en.yaml`) and its
-spelling variants.
-Under it, 20 stored answers that 1.3.1 scored wrong are correct.
+spelling variants. The current matcher also recognizes the Chinese advanced fibrosis
+assessment in `JD-122v8`.
+Under it, 21 stored answers that 1.3.1 scored wrong are correct.
 The table lists each one with its stored and current D and the diagnosis concept or
 judging name that changed it; `--check` fails on any other difference and on a listed answer that no longer
 differs. `--write-drift` regenerates the table. The released facts use the stored D. Error

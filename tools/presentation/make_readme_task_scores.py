@@ -14,7 +14,9 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from tools._bootstrap import bootstrap
 ROOT = bootstrap(__file__)
-from tools.presentation.make_readme_board import BG, INK, MUTED, FAINT, crop_to_content, half_up3
+from tools.presentation.make_readme_board import (
+    BG, INK, MUTED, K1_FIGURES, K1_PACKS, crop_to_content, half_up3, k1_rows,
+)
 
 SOURCE = ROOT / "docs/boards/1.3.1/k3.json"
 NAME = "readme_task_scores_131.png"
@@ -45,7 +47,7 @@ def contrast_text(rgba):
     return "#ffffff" if luminance(rgba) < .182 else "#050505"
 
 
-def draw(readout, output):
+def draw(readout, output, *, draft=False):
     import io
     import matplotlib
     matplotlib.use("Agg")
@@ -56,37 +58,50 @@ def draw(readout, output):
     from matplotlib.text import Text
     from PIL import Image
 
-    rows = prepare(readout)
+    single_answer = readout["aggregation"] == "k1"
+    headers = ["Diagnosis", "Triage", "Medication\nadjustment", "Lab-change\nattribution"]
+    if single_answer:
+        rows = [(model, [row["packs"][pack] for pack in K1_PACKS])
+                for model, row in k1_rows(readout, draft=draft)]
+        headers.append("Red-line\nvigilance")
+        title = "Draft · Scores by pack" if draft else "Scores by pack"
+        subtitle = f'{readout["version"]} · {readout["items_per_pack"]} items per pack'
+        name = K1_FIGURES[1]
+        columns = [.265, .405, .545, .685, .825]
+        width, height = .135, 4.6
+    else:
+        rows = prepare(readout)
+        headers.append("All-3")
+        title = "Scores by task"
+        subtitle = f"1.3.1 board · {len(rows)} models in board order · mean score over three answers per item"
+        name = NAME
+        columns = [.225, .369, .513, .657, .821]
+        width, height = .139, 6.35
     with matplotlib.rc_context({"font.family": "DejaVu Sans", "text.color": INK}):
-        fig = Figure(figsize=(8.6, 6.35), dpi=200, facecolor=BG)
+        fig = Figure(figsize=(8.6, height), dpi=200, facecolor=BG)
         FigureCanvasAgg(fig)
-        fig.text(.035, .945, "Scores by task", fontsize=14.5, weight="bold", va="center")
-        fig.text(.035, .900, f"1.3.1 board · {len(rows)} models in board order · "
-                 "mean score over three answers per item", fontsize=9.6, color=MUTED, va="center")
+        fig.text(.035, .945, title, fontsize=14.5, weight="bold", va="center")
+        fig.text(.035, .900, subtitle, fontsize=9.6, color=MUTED, va="center")
         blue = LinearSegmentedColormap.from_list("readme_blue", ["#f0f5fb", "#96b8dc", "#3975b5", "#194c80"])
         grey = LinearSegmentedColormap.from_list("readme_grey", ["#f1f1ef", "#3f4246"])
-        # Cells start right after the longest model name and end where the overall board's labels end.
-        x = [.225, .369, .513, .657, .821]
-        width = .139
-        top, bottom = .775, .165
+        top, bottom = .775, (.065 if single_answer else .165)
         step = (top - bottom) / len(rows)
-        headers = ["Diagnosis", "Triage", "Medication\nadjustment", "Lab-change\nattribution", "All-3"]
         fig.text(.035, .82, "Model", fontsize=10, color=MUTED, va="center")
-        for col, header in zip(x, headers):
+        for col, header in zip(columns, headers):
             fig.text(col + width / 2, .82, header, fontsize=10, color=MUTED, ha="center", va="center")
         names = []
         for i, (model, values) in enumerate(rows):
             y = top - (i + .5) * step
             names.append(fig.text(.035, y, model, fontsize=10, va="center"))
             for j, value in enumerate(values):
-                colour = (grey if j == 4 else blue)(value)
-                fig.add_artist(Rectangle((x[j], y - step * .46), width, step * .92,
+                colour = (grey if not single_answer and j == 4 else blue)(value)
+                fig.add_artist(Rectangle((columns[j], y - step * .46), width, step * .92,
                                          transform=fig.transFigure, facecolor=colour, edgecolor="none"))
-                fig.text(x[j] + width / 2, y, half_up3(value), fontsize=10.7,
+                fig.text(columns[j] + width / 2, y, half_up3(value), fontsize=10.7,
                          ha="center", va="center", color=contrast_text(colour))
         fig.canvas.draw()
         renderer = fig.canvas.get_renderer()
-        if max(name.get_window_extent(renderer).x1 for name in names) > (x[0] - .01) * fig.bbox.width:
+        if max(name.get_window_extent(renderer).x1 for name in names) > (columns[0] - .01) * fig.bbox.width:
             raise ValueError("A model name runs into the first column")
         for text in fig.findobj(Text):
             if not text.get_visible() or not text.get_text():
@@ -98,7 +113,7 @@ def draw(readout, output):
         fig.savefig(buffer, format="png", dpi=200, metadata={"Software": None})
         buffer.seek(0)
         Path(output).mkdir(parents=True, exist_ok=True)
-        crop_to_content(Image.open(buffer).convert("RGB")).save(Path(output) / NAME, optimize=True)
+        crop_to_content(Image.open(buffer).convert("RGB")).save(Path(output) / name, optimize=True)
     return fig
 
 

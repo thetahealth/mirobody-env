@@ -1,5 +1,11 @@
 # Native English additions for the medication review pack.
 entries:
+  p3.hist.edema.symptom: Bilateral ankle swelling after the recorded dose increase
+  p3.hist.cause.none_edema: No cardiac, renal, hepatic or other cause for the ankle swelling was identified
+  p3.hist.cause.dependent_edema: Prolonged standing was documented as a separate cause for the ankle swelling
+  p3.hist.edema.improved: Swelling improved after returning to the earlier dose; no current swelling on that dose
+  p3.hist.edema.unchanged: Swelling persisted after returning to the earlier dose; no current swelling on that dose
+  p3.hist.limit.rule: 'Historical tolerated-dose review: compare the archived prescriptions with the reconciled current dose. For losartan, use the same documented renal and potassium limit-and-recovery criteria as for enalapril. For amlodipine, higher-dose bilateral ankle swelling with other causes excluded and improvement after returning to a tolerated dose establishes a dose-specific limit. If control is off target at that tolerated dose, consider another agent rather than repeat the higher dose that caused those findings. A different current dose, a supported alternative cause or a tolerated re-exposure does not establish that limit. Current adverse effects, low coverage and an early review retain their ordinary priority.'
   本院他汀复评：既往同药更高剂量出现肌痛且 CK 超过正常上限 10 倍、无继发原因并经停药消退，不再恢复该剂量；目前已证实耐受的低剂量未达标时维持最大耐受剂量并加用非他汀药。症状有明确其他原因或再激发耐受良好者不据此限制加量。: 'Clinic
     statin review policy: if a higher dose of the same statin previously caused muscle pain with CK above 10 times
     the upper limit of normal, with no secondary cause and resolution after withdrawal, do not resume that dose.
@@ -16,6 +22,7 @@ entries:
     changes identified
   p3.hist.cause.none_statin: No exercise, hypothyroidism or other precipitant identified
   p3.hist.cause.hiking: Recent long-distance hiking; muscle symptoms resolved with rest
+  p3.hist.cause.nsaid_renal: Ibuprofen had been started for back pain 4 days earlier and had already been stopped by this visit
   p3.hist.event.assisted: Consciousness and responsiveness were impaired; unable to eat unaided. Family gave sugar
     and emergency personnel administered glucose
   p3.hist.event.self_treated: Ate without assistance; no change in consciousness or help from others
@@ -48,3 +55,11 @@ entries:
     if the target remains unmet. After severe hypoglycaemia requiring assistance with gliclazide, do not increase
     the dose further; review the regimen and consider a medicine with a lower hypoglycaemia risk. Check the original
     laboratory results, prescriptions and event timeline; old symptoms alone cannot establish a dose limitation.
+
+  p3.measurement.bp.test: Individual home systolic blood pressure
+  p3.measurement.bp.sample: Seated home cuff reading; sequences 1 and 2 are in the morning before medication, 3 and 4 in the evening; duplicate readings are 1 minute apart.
+  p3.measurement.lipid.sample: Lipid specimen; assay method, fasting status, triglycerides and the replaced specimen identifier are recorded in the fields.
+  p3.measurement.tsh.sample: TSH specimen; assess steady state against the dated prescription changes.
+  p3.measurement.rule.home_sbp: 'Home BP review: ideally 7 consecutive days, with 2 morning and 2 evening readings daily; at least 4 days. Discard every reading from day 1 and compare the arithmetic mean of the remaining readings with the patient target. Do not substitute the last individual reading for this mean.'
+  p3.measurement.rule.LDL: 'Lipid review: non-fasting status alone does not invalidate LDL. Do not use a Friedewald estimate when triglycerides reach 4.5 mmol/L. Use the valid repeat or direct assay explicitly replacing the original specimen.'
+  p3.measurement.rule.TSH: 'TSH review: assess the TSH target after steady state, 6 weeks after starting or changing levothyroxine. For raised TSH before then, retain the dose and repeat the measurement. Retain safety observations; do not escalate early solely for raised TSH before steady state.'

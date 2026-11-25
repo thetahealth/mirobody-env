@@ -64,7 +64,10 @@ def _control(g, status):
         upper = min(upper, float(drug(g["drug"], known_of(g)).get("titrate_on_target_min") or upper))
     value = upper * math.exp((1.5 if status == "off" else -1.5) * band(g["axis"]))
     row = next(r for r in g["visits"] if int(r["day"]) == int(g["T"]))
-    row.update(truth=value, printed=round(value, int(a["ndigits"])))
+    printed = round(value, int(a["ndigits"]))
+    from haenv.p3.measurement_world import replace_control
+    replace_control(g, value, printed)
+    row.update(truth=value, printed=printed)
 
 
 def _coverage(b):
@@ -123,6 +126,13 @@ def _symptom_onset(b):
         e.update(onset=start - 30, cause="predating")
 
 
+def base_causal_state(g):
+    from haenv.p3.causality import assessment
+    r = g['ae_causality']
+    return assessment(r['onset'], min(int(day) for day, _ in g['dose_line']),
+                      r.get('withdrawal'), r.get('alternative'))
+
+
 def ablations(g):
     """Two named factors, with one inactive/alternative record per factor."""
     from haenv.p3.gold import dose_at
@@ -130,6 +140,13 @@ def ablations(g):
     if not name:
         return {}
     a, b = deepcopy(g), deepcopy(g)
+    if (g.get("ae_causality") and base_causal_state(g) != "unattributed"
+            and name in ("symptom_timing", "course_control")):
+        from haenv.p3.causality_generation import intervention
+        first = "causal_onset" if g["ae_causality"]["withdrawal"] else "causal_alternative"
+        intervention(a, first)
+        intervention(b, "causal_withdrawal")
+        return {first: a, "causal_withdrawal": b}
     if name in ("control_adherence", "control_administration", "control_limit", "control_headroom"):
         _control(a, "on")
         if name == "control_adherence":

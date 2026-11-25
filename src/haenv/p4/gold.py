@@ -181,7 +181,8 @@ def next_step(blk: dict) -> tuple[str, tuple[str, ...]]:
 
     * noise: no action, a standardized repeat accepted;
     * pre-analytical / method source on the previous draw: today's reading is the standard one, so no
-      action (a repeat accepted); on today's draw: a standardized repeat;
+      action (a repeat accepted); on the assessed draw: a standardized repeat, with no action
+      also accepted if the standardized check has already been completed;
     * ingested assay interference on today's draw: the registered exposure policy
       (`answer_contract.ingested_interference_next`); interference only on the previous draw takes
       the previous-draw branch above, whether or not intake continues (registered `scope`);
@@ -193,6 +194,8 @@ def next_step(blk: dict) -> tuple[str, tuple[str, ...]]:
       for CKD, KDIGO 2024 PP 3.6.2/3.6.4 and NICE NG203 1.6.15/1.6.21/1.6.22), not a universal
       CKD interval. Beyond 30% acted on, a repeat also accepted when the rise over the mean of the
       pre-treatment readings is within 30%;
+    * TSH falls into or stays in the reference range after regular levothyroxine:
+      attend to the response or maintain with routine monitoring;
     * any other true change: acted on."""
     cls = blk["class"]
     if cls == "analytic_biological_noise":
@@ -200,15 +203,21 @@ def next_step(blk: dict) -> tuple[str, tuple[str, ...]]:
     recs = {int(r["day"]): r for r in blk.get("records") or ()}
     r0, r1 = recs[int(blk["t0"])], recs[int(blk["t1"])]
     if cls in ("preanalytical", "method_difference"):
+        checked = any(int(r["verification_for_day"]) == int(blk["t1"])
+                      and int(blk["t1"]) <= int(r["day"]) <= int(blk.get("review_day", r["day"]))
+                      for r in blk.get("verification_records") or ())
         ended = exposure_ended(blk) if ingested_interference(blk.get("factor", blk.get("cause"))) else None
         policies = contract_table()["ingested_interference_next"]
         today_only = policies["scope"]["applies_when"] == "current_draw_affected"
         if ended is not None and (acting(r1) or not today_only):
             policy = policies["ended" if ended else "ongoing"]
-            return policy["primary"], tuple(policy["accept"])
+            accepted = tuple(policy["accept"])
+            return policy["primary"], (*accepted, "no_action") if checked and "no_action" not in accepted else accepted
         if acting(r0) and not acting(r1):
             return "no_action", ("no_action", "repeat_standardized")
-        return "repeat_standardized", ("repeat_standardized",)
+        return "repeat_standardized", ("repeat_standardized", "no_action") if checked else ("repeat_standardized",)
+    if expected_thyroxine_response(blk, r0, r1):
+        return "act_on_change", ("act_on_change", "no_action")
     if blk.get("cause") == "acei_start_or_stop":
         obs = 100.0 * (float(r1["printed"]) / float(r0["printed"]) - 1.0)
         if obs < 0:
@@ -218,6 +227,16 @@ def next_step(blk: dict) -> tuple[str, tuple[str, ...]]:
         if pretreatment_rise_pct(blk, recs) <= ACEI_RISE_MAX_PCT:
             return "act_on_change", ("act_on_change", "repeat_standardized")
     return "act_on_change", ("act_on_change",)
+
+
+def expected_thyroxine_response(blk: dict, previous: dict, assessed: dict) -> bool:
+    """An in-range TSH fall after restored intake (NICE NG145 1.4.1–1.4.4)."""
+    if blk.get("class") != "true_change" or blk.get("analyte") != "tsh" or blk.get("cause") != "thyroxine_adherence":
+        return False
+    from haenv.world.labworld import analyte
+    low, high = map(float, analyte("tsh")["reference"].split("–"))
+    today = float(assessed["printed"])
+    return low <= today <= high and today < float(previous["printed"])
 
 
 def pretreatment_rise_pct(blk: dict, recs: dict) -> float:

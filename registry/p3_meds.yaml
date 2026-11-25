@@ -418,6 +418,7 @@ rule:
   source_section: synthetic clinic policy; adherence and attribution margins are not clinical diagnostic thresholds
   adherence_line: 0.80
   adherence_gray: [0.75, 0.85]      # a(T) in [lo, hi) is not emitted
+  edge_margin_adherence: 0.03       # minimum clearance outside either gray-band edge when adherence can decide
   adherence_window_days: 90
   ae_dose_window: [3, 28]           # timing attribution: onset days after the last increase (or start)
   ae_unattributed_min: 56           # timing attribution: onset at least this long after the last change

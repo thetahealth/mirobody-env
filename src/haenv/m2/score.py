@@ -114,8 +114,8 @@ def _bought(targets) -> set[str]:
 
 
 def _listed(raw: dict, alias_sets) -> dict:
-    from haenv.judges.differential import _listed as _prod_listed
-    return _prod_listed(SimpleNamespace(_raw=raw or {}), alias_sets)
+    from haenv.judges.differential import M2_DX_LIST_CAP, _listed as _prod_listed
+    return _prod_listed(SimpleNamespace(_raw=raw or {}), alias_sets, cap=M2_DX_LIST_CAP)
 
 
 def _top1(raw: dict) -> str:

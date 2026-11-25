@@ -9,12 +9,32 @@ aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
 ## [Unreleased]
 
-- Add release tooling that validates public snapshots and prepares one daily update commit.
-- Add `make_pack --balance-from` to keep the same published case IDs across languages.
-- Add an optional cache for deterministic P3 builds; session-only environment values do not invalidate it.
-- Support prompt-token tier conditions in relay billing and check the selected single key before a run.
-- Publish one squashed public commit per day, signed with the operator identity, and fast-forward the internal main instead of squashing it.
-- Retry a rate-limited relay billing-log read and bound a request by its tokens when the log stays unreadable.
+## [1.6.0]
+
+### Added
+
+- Add the red-line vigilance pack, with paired risk and control cases.
+- Add an English board with one answer per item, five equally weighted packs and 95% paired
+  bootstrap intervals.
+- Add `make_pack --balance-from` to preserve published case IDs across languages and an optional
+  cache for deterministic medication-pack builds.
+- Add public snapshot validation and daily update tooling.
+- Support prompt-token billing tiers and preflight checks for a selected relay key.
+
+### Changed
+
+- Generate more coherent longitudinal records across the four existing packs. Expand the
+  evidence agents must find in the histories for triage and medication adjustment.
+- The 1.6.0 board uses different items and scoring from the 1.3.x and 1.4 releases, so scores
+  cannot be compared directly.
+
+### Fixed
+
+- Clarify the diagnosis answer format and matching, add missing medication history, anchor
+  lab-case history to the case timeline, and refine red-line judging for timely escalation and
+  false alarms.
+- Retry rate-limited billing-log reads and cap the charge estimate from token counts when the
+  log remains unavailable.
 
 ## [1.4.0] - 2026-10-31
 

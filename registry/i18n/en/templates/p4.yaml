@@ -1,0 +1,2 @@
+p4.comparison_question: Compare the assessed report drawn on day {assessed} with the previous report drawn on day {previous}.
+p4.alcohol.onset_case_day: 'Alcohol intake changed on case day {day}, counted from day 0 of the record.'

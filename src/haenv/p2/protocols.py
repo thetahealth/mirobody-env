@@ -49,12 +49,24 @@ def install():
 
     @registry_cached("protocols.yaml", "pack2_triage_scenarios.yaml", "p2_history_triage.yaml",
                      "p3_meds.yaml", "p3_clinical_sources.yaml", "control_targets.yaml", "history_dependency.yaml",
-                     "difficulty_r2.yaml", "system_scoring.yaml")
+                     "difficulty_r2.yaml", "system_scoring.yaml", "p2_reading.yaml")
     def p2_catalog():
         with scope():
             docs = original_catalog.__wrapped__()
             from haenv.i18n.text import J
             scoring = {m["protocol_id"]: m for m in table()["triage"] if m.get("scoring")}
+            # P2 prints its own field-literal AF exemption in place of the shared history clauses
+            # (`clinical_rules.af_clauses`); other packs keep the shared catalog text.
+            from haenv.i18n.identity import source
+            from haenv.p2.clinical_rules import af_clauses
+            from haenv.world.history.history_dependency import table as history_table
+            shared = [source(x) for x in library._clauses(history_table()["packs"]["p2"]["protocol"])]
+            history = {m["protocol_id"] for m in table()["triage"] if m.get("history")}
+            for doc in docs:
+                if doc["protocol_id"] in history:
+                    steps = [source(x) for x in doc["steps"]]
+                    at = next(i for i in range(len(steps)) if steps[i:i + len(shared)] == shared)
+                    doc["steps"] = doc["steps"][:at] + af_clauses() + doc["steps"][at + len(shared):]
             for doc in docs:
                 if doc["protocol_id"] in scoring:
                     meta = scoring[doc["protocol_id"]]
@@ -66,7 +78,21 @@ def install():
 
     @wraps(original_catalog)
     def catalog():
-        return p2_catalog() if _ACTIVE.get() else original_catalog()
+        if not _ACTIVE.get():
+            return original_catalog()
+        docs = p2_catalog()
+        from haenv.p2.reading import enabled as reading_enabled, config as reading_config
+        if library.edition()["difficulty_r2"]:
+            from haenv.i18n.text import J, L
+            docs = deepcopy(docs)
+            meta = {m["protocol_id"]: m for m in table()["triage"]}
+            clauses = {R.rule_of("R3d_relative_hypotension")["printed"]: L("p2.policy.home_baseline"),
+                       R.rule_of("R8_hf_gain")["printed"]: L("p2.policy.hf_postdischarge")}
+            for doc in docs:
+                doc["steps"] = [J("lines", [step, clauses[step]]) if step in clauses else step for step in doc["steps"]]
+                if reading_enabled() and meta.get(doc["protocol_id"], {}).get("scoring"):
+                    doc['steps'][-1] = J('lines', [doc['steps'][-1], L(reading_config()['protocol'])])
+        return docs
 
     catalog._p2_scoped = True
     library.table, library.catalog = table, catalog

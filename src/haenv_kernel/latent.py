@@ -30,6 +30,28 @@ log = logging.getLogger("harness.latent")
 # plausible range, max physiological change per week). Synthesized observations must fall
 # inside it.
 _WEIGHT = {"unit": "kg", "range": [40.0, 250.0], "max_weekly_delta": 1.5}   # weight is shared across metabolic diseases
+
+
+def event_weight_delta(raw, start, end):
+    """Amount explained by saved HF truth between two readings, including recovery.
+
+    Generation stores these sourced rows only with course coupling enabled. The
+    kernel reads that snapshot, without a host dependency or a query-time switch.
+    Overlapping complaints describe one fluid course, as in the generator.
+    """
+    events = (((getattr(raw, "latent_premise", None) or {}).get("truth") or {})
+              .get("events") or {})
+    rows = [e for e in events.get("hf", ()) if e.get("source") and e.get("applied", True)]
+
+    def gain(day):
+        return max((e["gain_kg"] * min(1.0, max(0.0,
+                    (day - e["start"] + e["onset_days_before_episode"])
+                    / e["onset_days_before_episode"]))
+                    for e in rows if day <= e["end"]), default=0.0)
+
+    return abs(gain(end) - gain(start))
+
+
 _DISEASE_SIGNAL_DOMAIN_BASE: dict[str, dict[str, dict]] = {
     "obesity": {
         "weight": _WEIGHT,

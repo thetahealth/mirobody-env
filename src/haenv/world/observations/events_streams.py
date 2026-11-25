@@ -266,6 +266,16 @@ def plan_streams(f: Facts, event_density: dict, driver: str,
     return plans, skipped
 
 
+def baseline_temperature(f: Facts, plans=()) -> float:
+    """Person temperature before event effects, even when their kit has no thermometer."""
+    for plan in plans:
+        if plan.spec.name == "body_temp":
+            return plan.base_eff
+    m = METRIC_BY_NAME["body_temp"]
+    base = f.baseline_vitals.get(m.vital_key)
+    return round(float(base) if base is not None else _adj_full(m.name, m.base, f), m.ndigits)
+
+
 #: AR(1) day-scale coefficient. ACF(k) = phi^k, so phi^7 < 0.35 requires
 #: phi < 0.862; 0.80 gives ACF(1)=0.80, ACF(7)=0.21.
 _AR_PHI = 0.80

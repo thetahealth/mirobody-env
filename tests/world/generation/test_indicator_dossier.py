@@ -282,21 +282,30 @@ def test_dossier_is_the_only_source_of_the_baseline():
     assert "_indicators.sample_case(" in src, "build.py 没有走档案取基线"
 
 
-def test_calibration_provenance_is_a_structured_field_not_prose():
+@pytest.mark.parametrize("emr_params", ["v14", "calibration15"])
+def test_calibration_provenance_is_a_structured_field_not_prose(emr_params, monkeypatch):
     """The calibration marker is a structured field, not a substring of the `source` prose.
 
     Selecting the scan surface by a substring of the source text breaks as soon as the
     sources are reworded. A locator in prose is the fastest kind to rot.
     """
-    marked = [f"{n}/{coh}" for n, d in D.items()
+    import json
+    from haenv.app.settings import SET_ENV
+    monkeypatch.setenv(SET_ENV, json.dumps([f"world.emr_params={emr_params}"]))
+    dossiers = I.dossiers()
+    marker = "real_emr_671_diabetes" if emr_params == "v14" else "calibration world14-split-v1"
+    marked = [f"{n}/{coh}" for n, d in dossiers.items()
               for coh, c in (d.get("cohorts") or {}).items()
-              if c.get("calibration") == "real_emr_671_diabetes"]
+              if c.get("calibration") == marker]
     assert len(marked) >= 3, f"带校准标记的队列只有 {len(marked)} 个:{marked}"
     # The other side: the marker agrees with the source; a marker with no source is a fake one
     for key in marked:
         n, coh = key.split("/")
-        src = str(D[n]["cohorts"][coh].get("source") or "")
-        assert "重算" in src or "calibrate_from_real_emr" in src, f"{key} 标了校准但出处对不上"
+        src = str(dossiers[n]["cohorts"][coh].get("source") or "")
+        if emr_params == "v14":
+            assert "重算" in src or "calibrate_from_real_emr" in src, f"{key} 标了校准但出处对不上"
+        else:
+            assert "registry/emr_refit_15.yaml" in src
 
 
 def test_recomputed_rates_are_recorded_with_the_gap():

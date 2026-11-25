@@ -1,5 +1,11 @@
 # Pack 3 medication record phrases; registry phrases keep their original IDs.
 entries:
+  p3.hist.edema.symptom: 所记加量后出现双侧踝部水肿
+  p3.hist.cause.none_edema: 未发现心脏、肾脏、肝脏或其他导致踝部水肿的原因
+  p3.hist.cause.dependent_edema: 记录支持久站是踝部水肿的独立原因
+  p3.hist.edema.improved: 退回原剂量后水肿改善；目前该剂量下无水肿
+  p3.hist.edema.unchanged: 退回原剂量后水肿未变；目前该剂量下无水肿
+  p3.hist.limit.rule: 既往耐受剂量复核：对照档案处方与核对后的当前剂量。氯沙坦采用与依那普利相同的、有原始记录支持的肾功能及血钾剂量限制与恢复标准。氨氯地平在较高剂量出现双侧踝部水肿、排除其他原因且退回耐受剂量后改善者，构成针对该剂量的限制。该耐受剂量下仍未达标时，考虑其他药物，不再次使用曾引起上述反应的较高剂量。当前剂量不同、有明确其他原因或再次用药耐受者，不据此认定该限制。本次不良反应、覆盖不足及尚未到复评时间仍保留原有处理优先顺序。
   p3.rule.safety_course: 调药前同时核对当前控制指标、实际服药、症状起病与现状及既往耐受剂量。有需要处理的不良反应或控制指标过低时，先处理用药安全，不能因服药不足而继续原方案。已缓解的孤立症状不能视为当前持续不良反应；格列齐特低血糖发作即使缓解仍须复评。
   p3.reading.not_due: 未到复查时间
   p3.reading.not_measured: 未测
@@ -38,6 +44,7 @@ entries:
   p3.hist.cause.none_renal: 未见脱水、NSAID、补钾或其他并用药变动
   p3.hist.cause.none_statin: 未见运动、甲减或其他诱因
   p3.hist.cause.hiking: 近期长途徒步，休息后肌肉症状消失
+  p3.hist.cause.nsaid_renal: 4 天前因腰痛开始服用布洛芬，本次就诊时已停用
   p3.hist.symptom.sweat_tremor: 出汗、手抖
   p3.hist.symptom.dizzy_sweat: 突然头晕、冒汗
   p3.hist.event.assisted: 当时意识与反应受影响，无法自行进食；家属喂糖，急救人员给予葡萄糖
@@ -241,3 +248,11 @@ entries:
   p3.menu.administration_record: 用药核对中记录的实际服用时刻
   p3.menu.medication_instructions: 处方随附的用药与复评说明
   p3.med.calcium: 碳酸钙补充剂，每日服用
+
+  p3.measurement.bp.test: 家庭收缩压单次测量
+  p3.measurement.bp.sample: 坐位家庭袖带测量；序号 1、2 为晨间服药前，3、4 为晚间；同次两遍间隔 1 分钟。
+  p3.measurement.lipid.sample: 血脂标本；检测方法、空腹状态、甘油三酯和替代的标本编号见各字段。
+  p3.measurement.tsh.sample: TSH 标本；结合处方变更日期判断是否达到稳态。
+  p3.measurement.rule.home_sbp: 家庭血压复评：理想连续 7 天，每天晨间测 2 遍、晚间测 2 遍；至少 4 天。丢弃第 1 天的全部读数，计算余下读数的算术均值后与本人的目标比较，不用最后一条单次读数代替均值。
+  p3.measurement.rule.LDL: 血脂复评：非空腹本身不使 LDL 无效；甘油三酯达到 4.5 mmol/L 时不使用 Friedewald 计算值。使用明确替代原标本的有效复测或直接测定结果。
+  p3.measurement.rule.TSH: TSH 复评：开始或改变左甲状腺素剂量后 6 周达到稳态，再据 TSH 目标加量；此前高 TSH 先维持剂量并复测。保留安全性观察，不仅凭未达稳态的高 TSH 提前加量。

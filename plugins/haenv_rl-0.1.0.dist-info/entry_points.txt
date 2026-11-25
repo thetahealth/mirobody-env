@@ -1,0 +1,5 @@
+[haenv.rl]
+rl = haenv.rl.plugin:judges
+
+[haenv.pack_readouts]
+rl = haenv.rl.readout:pack

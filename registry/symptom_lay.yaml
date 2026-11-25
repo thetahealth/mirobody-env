@@ -1511,6 +1511,24 @@ phrases:
     lay:
     - 有点发热,碰到右上边肚子更疼
     - 觉得发热,一碰右上腹疼得更明显
+  有点发热,碰到右上边肚子更疼:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles/HD-UNI-11
+      ours: true
+      reason: Existing lay wording used directly by the matched biliary presentation.
+    lay:
+    - 有点发热,碰到右上边肚子更疼
+    - 觉得发热,一碰右上腹疼得更明显
+  觉得发热,一碰右上腹疼得更明显:
+    review: pending
+    source:
+      registry: registry/m2_confirmation.yaml#profiles/HD-UNI-11
+      ours: true
+      reason: Existing lay wording used directly by the matched biliary presentation.
+    lay:
+    - 有点发热,碰到右上边肚子更疼
+    - 觉得发热,一碰右上腹疼得更明显
   觉得恶心,不太想吃东西:
     review: pending
     lay:

@@ -65,7 +65,11 @@ def observe_followup(raw, case_id: str, truth: dict, audit: dict) -> tuple[dict,
         return truth, audit
     adj = raw.adjudication if isinstance(raw.adjudication, dict) else {}
     try:
-        item = realize(raw, str(case_id), plan, B._LAB_CTX.get(str(case_id)))
+        ctx = B._LAB_CTX.get(str(case_id))
+        from haenv.world.truth import coupling_enabled
+        if coupling_enabled():
+            ctx = {**(ctx or {}), "course_truth": truth}
+        item = realize(raw, str(case_id), plan, ctx)
     except Unrealizable as e:
         adj["followup_p4"] = {"plan": dict(plan), "unrealizable": str(e)}
         raw.adjudication = adj

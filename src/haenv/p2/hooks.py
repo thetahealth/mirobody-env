@@ -116,6 +116,16 @@ def observe_triage(raw, case_id: str, truth: dict, audit: dict) -> tuple[dict, d
                "weight_kg": _weight_before(raw, T - WINDOW), "weight_series": wpts,
                "new_symptom_recent": bool(symptom_recent(getattr(raw, "evidence_ledger", None), T)),
                "medications": visible_medications((raw.latent_premise or {}).get(WORLD_MEDICATION_KEY), T)}
+    from haenv.p2.patient import snapshot, capture_enabled
+    if capture_enabled(raw, plan):
+        # Capture before copying P2 measurements over world streams. The saved
+        # patient owns the baseline on every later render, even with coupling off.
+        import copy
+        if "patient_truth" not in plan:
+            plan["patient_truth"] = {**copy.deepcopy(patient), "vitals": snapshot(raw, T)}
+        patient = copy.deepcopy(plan["patient_truth"])
+        if "event_truth" not in plan and patient['vitals']['events']:
+            plan["event_truth"] = copy.deepcopy(patient['vitals']['events'])
     try:
         item = realize(str(case_id), T, plan, patient)
     except Unrealizable as e:
@@ -160,6 +170,8 @@ def observe_triage(raw, case_id: str, truth: dict, audit: dict) -> tuple[dict, d
                   "borderline": len(a["set"]) > 1, "readings": a["readings"], "attempt": item["attempt"],
                   "rule_source": R.rule_of(a["rule"]).get("source"),
                   "table_sha16": R.table_sha16(), "p2_world_sha16": p2_world_fingerprint()}
+    if "baseline_constraints" in item:
+        adj[BLOCK]["baseline_constraints"] = item["baseline_constraints"]
     raw.adjudication = adj
     return truth, {**(audit or {}), "p2": {"rule": a["rule"], "attempt": item["attempt"]}}
 

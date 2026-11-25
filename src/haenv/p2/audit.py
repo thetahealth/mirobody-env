@@ -1,7 +1,9 @@
 """Rebuilt pack 2's declaration for the shared batch audit (`haenv/world/validation/shared_audit.py`, `tools/validation/pack_audit.py`).
 
 Composition (SA-3): the published N follow the rule quotas (`planned_cells`), per tier the
-first emitted items by the seeded sha256("p2pick", id). Class for SA-4/5/6 = the floor (least
+seeded sha256("p2pick", id) orders patients. Coupled M5 library packs additionally stratify
+receipt kinds within the original clinical eligibility populations and allocate 70% core.
+Class for SA-4/5/6 = the floor (least
 urgent acceptable disposition). Content-free variables (SA-5/SA-6): age, sex, index time, ledger size,
 ledger characters, wording, beta-blocker. Pack gates (design §6, zero calls):
 
@@ -56,6 +58,9 @@ def _floor_tiers(n_items: int) -> dict:
     the table's `rule_weights`, a rule's count in equal shares over the tiers built to fire it."""
     tab = R.table()
     weights = tab["rule_weights"]
+    from haenv.p2.reading import config as reading_config, enabled as reading_enabled
+    if reading_enabled():
+        weights = reading_config()['coverage']['rule_weights']
     out = {}
     for floor, k in PS.apportion(n_items, tab["disposition_prior"]["weights"]).items():
         out[floor] = {}
@@ -84,7 +89,7 @@ def quota_cells(n_items: int) -> dict:
     return out
 
 
-def assemble(items: list[dict], n_items: int, seed: str) -> list[dict]:
+def _clinical_selection(items: list[dict], n_items: int, seed: str) -> list[dict]:
     by = collections.defaultdict(list)
     for it in items:
         by[tier_of(it), it["gold"].get("cohort", "ordinary")].append(it)
@@ -102,6 +107,94 @@ def assemble(items: list[dict], n_items: int, seed: str) -> list[dict]:
             for _ in range(n - have[t]):
                 out.append(take_patient(left, counts, lambda it: h01(tag, it["case_id"])))
     return out
+
+
+def _receipt_population(it):
+    """Registered eligibility and dealt kind, independent of any reader result."""
+    from haenv.world.protocols.scoring import expected
+    _, kind, eligible = expected(_blk(it), it["case_id"])
+    return (eligible["wrong_scale"], eligible["missing_zero"]), kind
+
+
+def assemble(items: list[dict], n_items: int, seed: str) -> list[dict]:
+    """Keep clinical populations while stratifying the coupled M5 composition.
+
+    A small clinical cell can otherwise concentrate the hash-dealt receipt errors.
+    Preserve the original selector's tier x cohort x eligibility counts, then
+    round registered error expectations across their full eligible populations.
+    Both nested sizes are allocated together, even for an N50 request. Minimize
+    changes to the original clinical selection; the existing hash breaks ties.
+    No reader predictions, correctness measurements or gate allowances enter.
+    """
+    from haenv.p2.reading import config, enabled
+    if not enabled() or not items or not all(
+            it["gold"].get("composition") in ("core", "anchor") and
+            _blk(it).get("rules_delivery") == "library" for it in items):
+        return _clinical_selection(items, n_items, seed)
+    import numpy as np
+    from scipy.optimize import Bounds, LinearConstraint, milp
+    from scipy.sparse import coo_matrix
+    from haenv.world.protocols.scoring import table as scoring_table
+
+    ordered = sorted(items, key=lambda it: it["case_id"])
+    width = len(ordered)
+    # The same complete allocation underlies either requested nested prefix.
+    sizes = sorted(set(PS.nest_chain(PS.pool_n(n_items))) | {n_items})
+    original = {n: _clinical_selection(ordered, n, seed) for n in sizes}
+    cell = lambda it: (tier_of(it), it["gold"].get("cohort", "ordinary"))
+    populations = [_receipt_population(it) for it in ordered]
+    index = {it["case_id"]: i for i, it in enumerate(ordered)}
+    objective, constraints, lower, upper = [], [], [], []
+    def constrain(row, lo, hi):
+        constraints.append(row); lower.append(lo); upper.append(hi)
+    for z, n in enumerate(sizes):
+        offset = z * width
+        old = {it["case_id"] for it in original[n]}
+        # The sum of all tie costs is < 1: an extra replacement always costs more.
+        objective.extend(int(it["case_id"] not in old) +
+                         h01(PS.seeded("p2pick", seed), it["case_id"]) / (width * len(sizes) + 1)
+                         for it in ordered)
+        target = collections.Counter((cell(it), populations[index[it["case_id"]]][0])
+                                     for it in original[n])
+        keys = set(target) | {(cell(it), pop) for it, (pop, _) in zip(ordered, populations)}
+        for key in sorted(keys):
+            constrain({offset+i: 1 for i, (it, (pop, _)) in enumerate(zip(ordered, populations))
+                       if (cell(it), pop) == key}, target[key], target[key])
+        core_n = round(n * config()["coverage"]["published_core_share"])
+        constrain({offset+i: 1 for i, it in enumerate(ordered)
+                   if it["gold"]["composition"] == "core"}, core_n, core_n)
+        for k, name in enumerate(("wrong_scale", "missing_zero")):
+            eligible_n = sum(populations[index[it["case_id"]]][0][k] for it in original[n])
+            error_n = round(eligible_n * scoring_table()["rates"][name]["value"])
+            constrain({offset+i: 1 for i, (_, kind) in enumerate(populations) if kind == name},
+                      error_n, error_n)
+        if z:
+            for i in range(width):
+                constrain({offset-width+i: 1, offset+i: -1}, -np.inf, 0)
+    rr, cc, vv = [], [], []
+    for r, row in enumerate(constraints):
+        for c, v in row.items():
+            rr.append(r); cc.append(c); vv.append(v)
+    matrix = coo_matrix((vv, (rr, cc)), shape=(len(constraints), len(objective))).tocsc()
+    solved = milp(np.array(objective), integrality=np.ones(len(objective)), bounds=Bounds(0, 1),
+                  constraints=LinearConstraint(matrix, lower, upper), options={"mip_rel_gap": 0})
+    if not solved.success:
+        raise SystemExit(f"[pack] P2 clinical/receipt/composition supply short: {solved.message}")
+    from haenv.world.validation.shared_audit import take_patient
+    out, counts = [], collections.Counter()
+    for z, n in enumerate(sizes):
+        used = {it["case_id"] for it in out}
+        by = collections.defaultdict(list)
+        for i, it in enumerate(ordered):
+            if solved.x[z*width+i] > .5 and it["case_id"] not in used:
+                by[cell(it)].append(it)
+        for key in sorted(by):
+            left = by[key]
+            while left:
+                out.append(take_patient(left, counts, lambda it: h01(PS.seeded("p2pick", seed), it["case_id"])))
+        if n == n_items:
+            return out
+    raise AssertionError("requested P2 size absent from nested allocation")
 
 
 def rows(items: list[dict], ctx=None) -> list[dict]:
@@ -131,7 +224,8 @@ def rows(items: list[dict], ctx=None) -> list[dict]:
 def rule_reader(blk: dict) -> str:
     """The pseudo-model that applies the printed rules and answers the most urgent acceptable member
     (any member scores 0)."""
-    return R.assess(blk)["set"][0]
+    from haenv.p2.clinical_rules import assess_visible
+    return assess_visible(blk)["set"][0]
 
 
 def last_day_reader(blk: dict) -> str:
@@ -151,8 +245,15 @@ def offline_oracle(block: dict) -> dict:
     urgent = screen.get("urgent_symptoms")
     if urgent is None:
         urgent = [k for k in R.R0_KEYS if screen.get(k)]
+    if 'tick_note' in screen:
+        from haenv.p2.narrative import reported
+        facts = reported(block)
+        urgent = list(set(urgent) | (facts & set(R.R0_KEYS)))
+        screen = {**screen, **{k: bool(screen.get(k) or k in facts) for k in (R.HTN_SYMPTOM, R.HYPO_HELP,
+                    "suspected_infection_today", "head_injury_today", "systemically_unwell_today")}}
     home = block["home_check_today"]
-    prior_rows = block.get("clinical_history_record") or ()
+    from haenv.p2.narrative import records
+    prior_rows = records(block)
     scale2 = any(r.get("blood_gas_confirmed") is True and r.get("clinical_scale") == 2
                  and r.get("target_spo2") == [88, 92] for r in prior_rows)
     parts = []
@@ -182,7 +283,7 @@ def offline_oracle(block: dict) -> dict:
     vital3 = (named["rr"] == 3 or (named["hr"] == 3 and not slow)
               or (named["sbp"] == 3 and home["systolic_bp_mmHg"] <= 90)
               or home["temperature_c"] < th["hypothermia_temp_lt"])
-    prior = {r.get("condition") for r in block.get("clinical_history_record") or () if is_text(r.get("conclusion"), "hist.recorded")}
+    prior = {r.get("condition") for r in prior_rows if is_text(r.get("conclusion"), "hist.recorded")}
     hf = "heart_failure" in block["background"]["known_conditions"] or "heart_failure" in prior
     headache = screen.get(R.HTN_SYMPTOM)
     if headache is None:
@@ -200,6 +301,11 @@ def offline_oracle(block: dict) -> dict:
     usual = [x["usual_systolic_bp_mmHg"] for x in prior_rows
              if x.get("baseline_assessed") is True and x.get("day", T + 1) < T
              and isinstance(x.get("usual_systolic_bp_mmHg"), (int, float))]
+    if not usual:
+        from statistics import median
+        earlier = [x for x in block["home_bp_log"] if int(x["day"]) < T]
+        if len({x["day"] for x in earlier}) >= 2:
+            usual = [median(x["systolic_mmHg"] for x in earlier)]
     relative = bool(screen.get("suspected_infection_today") is True and usual
                     and min(usual) - home["systolic_bp_mmHg"] > th["sepsis_sbp_drop_gt"])
     medium = th["ng253_medium"]
@@ -218,7 +324,9 @@ def offline_oracle(block: dict) -> dict:
                 severe >= th["htn_readings_ge"] and hf,
                 severe >= th["htn_readings_ge"],
                 hf and gain is not None and round(gain, 2) > th["hf_gain_kg_gt"],
-                alerts >= th["af_alerts_ge"] and "atrial_fibrillation" not in prior and "atrial_fibrillation" not in block["background"]["known_conditions"],
+                alerts >= th["af_alerts_ge"] and (("atrial_fibrillation" not in prior
+                                                   and "atrial_fibrillation" not in block["background"]["known_conditions"])
+                                                  or any(screen.get(k) is True for k in (R.DIZZY, R.MILD))),
                 baseline and total == 1 and named["hr"] == 1 and home["heart_rate_bpm"] <= 50
                 and screen.get("rate_medication_changed_recently") is False
                 and not screen.get(R.DIZZY) and not urgent,
@@ -230,6 +338,13 @@ def offline_oracle(block: dict) -> dict:
     least = max(accepted, key=DISPOSITIONS.index)
     if l2 == 1 and least in single["when_floor"]:
         accepted = list(single["set"])
+    if rule["id"] == "R14_nothing" and accepted == ["watchful_waiting"] and hf and gain is not None:
+        limit = th["hf_gain_kg_gt"]
+        if limit / 2 < round(gain, 2) <= limit and any(
+                is_text(x.get("medication_name"), "drug.furosemide") and x.get("discharge_day") is not None
+                and x.get("dose_change_day") == x["discharge_day"] < T
+                and x.get("previous_dose_mg", 0) > x.get("current_dose_mg", 0) for x in prior_rows):
+            accepted.append("routine_followup")
     return {"rule": rule["id"], "set": accepted}
 
 

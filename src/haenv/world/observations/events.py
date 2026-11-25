@@ -1260,6 +1260,12 @@ def inject(raw, cs, premise, driver: str, drop: set[str] | None = None,
     # evidence.
     _injector_view = {r["name"]: _copy.deepcopy(raw.longitudinal_data.get(r["name"]) or [])
                       for r in stream_rows if r.get("kind") == "daily_metric"}
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        from haenv.world.truth import events as truth_events
+        from haenv.world.observations.events_streams import baseline_temperature
+        truth_events.prepare(raw, injected["event_schedule"], baseline_temp=baseline_temperature(f, plans))
+        truth_events.apply_streams(raw)
     physio_report = _apply_physio_if_enabled(raw, cs.case_id, injected["event_schedule"])
     # The panel follows the final streams: TC from same-day LDL/TG, declared
     # screening items shown on the stream that carries them.
@@ -1365,6 +1371,11 @@ def declares_on_streams(raw) -> bool:
 
 def _render_findings_if_enabled(raw, *, normal_before_day: int | None = None) -> list[dict]:
     """Render the findings panel if the switch is on; `[]` when off."""
+    from haenv.world.truth import coupling_enabled
+    truth_plan = None
+    if coupling_enabled():
+        from haenv.world.truth.plan import build_plan
+        truth_plan = build_plan(raw, first_symptom_day=normal_before_day)
     if not FINDINGS_ENABLED[0]:
         return []
     try:
@@ -1382,6 +1393,9 @@ def _render_findings_if_enabled(raw, *, normal_before_day: int | None = None) ->
         if prof is None:
             log.warning("[findings] %s has no findings profile; rendered as all-normal (missing content, not a design choice)", sid)
             prof = {"findings": ()}
+        if truth_plan:
+            prof = {**prof, "findings": [f for f in prof.get("findings") or ()
+                                        if f["id"] not in truth_plan["unexpressed"]]}
         T = int((raw.prediction_context or {}).get("prediction_time_T") or 84)
         from haenv.world.observations.findings_render import render_routine_panel
         # Sex selects sex-specific reference ranges (`SEX_REF`).
@@ -1396,6 +1410,9 @@ def _render_findings_if_enabled(raw, *, normal_before_day: int | None = None) ->
         entries = render_routine_panel(str(raw.case_id), prof, vocab, T,
                                        sex=_sex, ts_signals=_ts,
                                        normal_before_day=normal_before_day)
+        if truth_plan:
+            from haenv.world.truth.channels import panel
+            entries = panel(raw, entries)
         # Only current screening observations are provided free. Requested history
         # reports share these exact values but retain their own dated evidence.
         insufficient = bool((raw.adjudication.get("ddx") or {}).get("insufficient"))
@@ -1408,8 +1425,12 @@ def _render_findings_if_enabled(raw, *, normal_before_day: int | None = None) ->
                 fid = finding["id"]
                 if finding["role"] != "screening":
                     continue
-                result = clinical_result_series(str(raw.case_id), sid, fid, T, vocab, prof,
-                                                dict(raw.user_profile or {}))
+                if truth_plan and truth_plan["observables"].get(fid, {}).get("kind") == "course":
+                    from haenv.world.truth.renal import result as renal_result
+                    result = renal_result(raw, fid, T)
+                else:
+                    result = clinical_result_series(str(raw.case_id), sid, fid, T, vocab, prof,
+                                                    dict(raw.user_profile or {}))
                 if result is None:
                     continue
                 entries = [e for e in entries if not str(e["evidence_id"]).startswith(f"EV-{raw.case_id}-L{fid}")]
@@ -1448,8 +1469,9 @@ def _apply_physio_if_enabled(raw, case_id: str, schedule: list[dict]) -> dict | 
     # copy and only the value range on the observation. It is verifier-only:
     # never in `injected`, `raw` or `manifest["injected"]`.
     clean_ld = _copy.deepcopy(raw.longitudinal_data)
+    from haenv.world.truth.events import event_plan_of
     new_ld, summary = _pa.apply_physio(case_id, raw.longitudinal_data, streams,
-                                       events=schedule, kernels=kernels)
+                                       events=schedule, kernels=kernels, event_truth=event_plan_of(raw))
     _round_to_declared_digits(new_ld)
     raw.longitudinal_data = new_ld
     covered = sum(1 for r in schedule

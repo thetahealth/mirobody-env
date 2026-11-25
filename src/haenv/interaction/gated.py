@@ -552,6 +552,7 @@ def _base_run_gated(raw, T: int, solver, budget: float = DEFAULT_BUDGET,
                                     "max_rounds": max_rounds, "menu": tr.menu,
                                     "n_withheld": len(withheld)})
     revealed_ctx: dict[str, list] = {}
+    last_purchase_start = 0
     _call_no = 0
     out = None
     for r in range(1, max_rounds + 1):
@@ -565,12 +566,15 @@ def _base_run_gated(raw, T: int, solver, budget: float = DEFAULT_BUDGET,
                                 "truncated_last_round": list(tr.truncated_targets),
                                 "unavailable_results": dict(tr.unavailable_results),
                                 "round": r, "max_rounds": max_rounds}
+        if (getattr(solver, "_gq", None) or {}).get("pending"):
+            solver.gated_context["last_purchases"] = tr.calls[last_purchase_start:]
         # The leak gate runs every round: menu text and synthesized readings are produced
         # after `build_instance`.
         if trace is not None:
             trace.append("step/start", {}, step=r)
             # Only target names; kind and price come from the `case/start` menu.
             _gc = dict(solver.gated_context)
+            _gc.pop("last_purchases", None)
             _gc["menu"] = [str(i["target"]) for i in (_gc.get("menu") or [])]
             trace.append("request/header", {
                 "gated_context": _gc,
@@ -618,6 +622,7 @@ def _base_run_gated(raw, T: int, solver, budget: float = DEFAULT_BUDGET,
         has_answer = bool(d.get("differential") or d.get("forecast") or d.get("drivers"))
         if not qs and not has_answer:
             tr.protocol_errors += 1
+        last_purchase_start = len(tr.calls)
         for q in (qs or []):
             if not isinstance(q, dict):
                 tr.protocol_errors += 1
@@ -707,7 +712,9 @@ def _base_run_gated(raw, T: int, solver, budget: float = DEFAULT_BUDGET,
                 trace.append("step/end", {"reason": "committed",
                                           "spent": tr.spent}, step=r)
             break
-        if gk.spent >= budget:                          # budget exhausted -> forced convergence (T3 will record this)
+        # Native query mode needs one read-only turn to deliver its last purchases.
+        pending_replies = (getattr(solver, "_gq", None) or {}).get("pending")
+        if gk.spent >= budget and not pending_replies:  # budget exhausted -> forced convergence (T3 will record this)
             log.info("[gated] %s budget exhausted (%.1f/%.1f), truncated", raw.case_id, gk.spent, budget)
             if trace is not None:
                 trace.append("step/end", {"reason": "budget_exhausted",

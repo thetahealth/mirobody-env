@@ -183,10 +183,16 @@ def event_offsets(
     `superpose.saturate`. Events attach to kernels by `topic`; an event without
     a registered `(topic, indicator)` kernel contributes nothing."""
     contribs: list[float] = []
+    from haenv.world.truth import coupling_enabled
+    coupled = coupling_enabled()
     for ev in events:
         topic = ev.get("topic")
         if not topic:
             continue
+        if coupled:
+            from haenv.world.truth.events import replaced_kernel
+            if replaced_kernel(str(topic), indicator):
+                continue
         p = kreg.kernels.get((str(topic), indicator))
         if p is None:
             continue
@@ -207,6 +213,7 @@ def apply_physio(
     strict_unknown: bool = True,
     events: Sequence[Mapping[str, Any]] | None = None,
     kernels: "kernel.PhysioRegistry | None" = None,
+    event_truth: dict | None = None,
 ) -> tuple[dict[str, Any], audit.AuditSummary]:
     """Add correlated noise and event footprints to one case's streams and
     project them into bounds; returns `(new longitudinal_data, AuditSummary)`.
@@ -245,6 +252,7 @@ def apply_physio(
 
     all_days = sorted({d for pts in prepared.values() for d, _ in pts})
     prev: dict[str, float] = {}
+    prev_day: dict[str, int] = {}
     new_vals: dict[str, dict[int, float]] = {n: {} for n in prepared}
 
     # Noise per day sequence via an AR(1) recursion (`correlated_noise_series`).
@@ -280,9 +288,17 @@ def apply_physio(
             # added in the transform domain, which keeps log/logit outputs in range.
             proposal = bounds.from_transform(
                 bounds.to_transform(base + delta, spec) + eps[n], spec)
-            y = bounds.project(proposal, prev.get(n), spec, report)
+            previous = prev.get(n)
+            if event_truth and previous is not None and n in ("body_temp", "resting_hr", "weight"):
+                from haenv.world.truth.events import increment, drug_vitals
+                # The step bound constrains measurement variation around the planned truth.
+                # A sourced episode/dose step must not be erased by that noise safeguard.
+                previous += (increment(event_truth, n, day) + drug_vitals(event_truth, n, day)
+                             - increment(event_truth, n, prev_day[n]) - drug_vitals(event_truth, n, prev_day[n]))
+            y = bounds.project(proposal, previous, spec, report)
             new_vals[n][day] = y
             prev[n] = y
+            prev_day[n] = day
 
     for name, pts in prepared.items():
         out[name] = [{"ts": d, "value": round(new_vals[name][d], 4)} for d, _ in pts]

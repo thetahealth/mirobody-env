@@ -239,6 +239,72 @@ def ckd_record(raw, case_id: str) -> dict:
             "stage": "G3b" if egfr >= 30 else "G4", "cr0": round(cr_for_egfr(egfr, age, sex), 2)}
 
 
+def background_cr(raw, case_id, value, day):
+    """Constrain only the no-CKD set point, before drugs, acute effects or measurement."""
+    from haenv.world.truth import coupling_enabled, plan_of
+    if not coupling_enabled():
+        return value
+    from haenv.world.truth import panels
+    from haenv.world.truth.registry import effects
+    from haenv.world.truth.derived import cr_at_egfr
+    from haenv.world.truth.plan import constrain
+    from haenv.world.labworld import analyte
+    # Use the same demographic realization as the panel/eGFR channel; a saved
+    # case plan, when present, supplies its already realized age and sex.
+    from types import SimpleNamespace
+    per = panels.person(SimpleNamespace(case_id=case_id, user_profile=raw.user_profile,
+                                       latent_premise=raw.latent_premise,
+                                       prediction_context=raw.prediction_context))
+    if panels.has_condition(per["hay"], "ckd") or "CKD" in (raw.user_profile or {}).get("known_conditions", []):
+        return value
+    saved = plan_of(raw) or {}
+    age = float(saved.get("age_years", per["age_T"])) - (per["T"] - day) / 365.25
+    sex = saved.get("sex", per["sex"])
+    row = next(r for r in effects()["background_constraints"] if r["observable"] == "Cr")
+    a = analyte("creatinine")
+    return constrain({"constraints": {"Cr": {"limit": cr_at_egfr(row["egfr_limit"], age, sex)}}},
+                     "Cr", value, int(a["ndigits"]), float(a["range"][0]))
+
+
+def background_truth(raw, case_id, an, base, ctx, *, origin=None):
+    """One finite producer source; pack overlays and measurements have other owners."""
+    from haenv.world.truth import coupling_enabled
+    if not coupling_enabled():
+        return lambda day: base
+    from haenv.world.truth.dated import snapshot, snapshot_p4, SourceUnavailable
+    try:
+        source = (snapshot(raw, case_id, an, ctx) if origin is None else
+                  snapshot_p4(raw, case_id, an, ctx, origin))
+    except SourceUnavailable as e:
+        raise Unrealizable(str(e)) from e
+    def at(day):
+        try:
+            return source(day)
+        except SourceUnavailable as e:
+            raise Unrealizable(str(e)) from e
+    at.source = source.source
+    return at
+
+
+def preserve_observed_aliases(raw, item):
+    """A duplicate view of a collection must keep the immutable measured value.
+
+    A candidate with independent noise or a scenario change on that collection
+    refuses; editing the old input would conceal the contradiction.
+    """
+    if "background_source" not in item:
+        return
+    from haenv.world.truth.dated import NAMES
+    stream = NAMES[item["analyte"]][1]
+    points = (raw.longitudinal_data or {}).get(stream) or []
+    for record in item.get("records", []) + item.get("verification_records", []):
+        for q in points:
+            if (int(q["ts"]) == record["day"] and
+                    q.get("time", _clock(str(raw.case_id), int(q["ts"]))) == record["time"] and
+                    float(q["value"]) != float(record["printed"])):
+                raise Unrealizable(f"immutable observation alias disagrees for {stream} on day {record['day']}")
+
+
 def _base(case_id: str, analyte: str, raw, ctx) -> float:
     from haenv.world.labworld import analyte as A
     from haenv.world.labworld import z
@@ -253,20 +319,77 @@ def _base(case_id: str, analyte: str, raw, ctx) -> float:
             return min(max(1.59 * float(a1c["base"]) - 2.59 - 0.6, 4.6), 14.0)
     else:
         co = a["baseline"]["M" if str(up.get("sex")) == "M" else "F"]
+        from haenv.world.truth import coupling_enabled
+        if analyte in ("potassium", "creatinine") and coupling_enabled():
+            # B3 (F6): NHANES centre by sex, EFLM CVG spread (`registry/biological_variation.yaml`)
+            from haenv.world.truth import variation as V
+            value = V.person_baseline(case_id, analyte, str(up.get("sex") or ""))
+            return background_cr(raw, case_id, value, int(raw.prediction_context["prediction_time_T"])) if analyte == "creatinine" else value
     return float(co["median"]) * math.exp(float(co["sd_log"]) * z("p4base", case_id, analyte))
+
+
+def legacy_baseline_origin(raw, case_id, an, ctx, ckd=None):
+    """The registered legacy producer owns parameters independently of sources."""
+    import copy
+    from haenv.world.truth import coupling_enabled
+    base = float(ckd["cr0"]) if ckd else _base(case_id, an, raw, ctx)
+    draw = base
+    if not ckd and an in ("potassium", "creatinine") and coupling_enabled():
+        from haenv.world.truth import variation as V
+        draw = V.person_baseline(case_id, an, str((raw.user_profile or {}).get("sex") or ""))
+    components = {}
+    if an == "fasting_glucose":
+        e = _tables()["effects"]
+        T = int(raw.prediction_context["prediction_time_T"])
+        primary = ((raw.latent_premise or {}).get("world_medication") or {}).get("primary") or {}
+        glp1 = (_drug(raw) in (_tables()["render"].get("glp1_class") or ()) and
+                not (primary.get("overlay") and primary.get("drug") == _drug(raw)))
+        components["glucose"] = {"producer": "haenv.world.labworld.truth:fg_log",
+            "provenance": "labworld.yaml:effects; original default response, never fitted",
+            "drug": _drug(raw), "horizon": T,
+            "kappa": float(e["glp1_on_fasting_glucose"]["kappa_default"]) if glp1 else 0.0,
+            "beta": float(e["weight_on_fasting_glucose"]["beta"]),
+            "tau": float(e["glp1_on_fasting_glucose"]["tau_days"]),
+            "smooth_days": int(e["weight_on_fasting_glucose"]["smooth_days"]),
+            "dose_pts": copy.deepcopy(_visible_dose(raw, T)),
+            "weight_pts": copy.deepcopy([q for q in ((ctx or {}).get("wpts") or
+                (raw.longitudinal_data or {}).get("weight") or []) if int(q["ts"]) <= T])}
+    provenance = ("labworld.yaml:comorbidities.CKD;ckd_record" if ckd else
+        "biological_variation.yaml:person_baseline;haenv.world.truth.variation:person_baseline"
+        if an in ("potassium", "creatinine") and coupling_enabled() else
+        "haenv.p4.realize:_base;ctx.clinical.HbA1c.base"
+        if an == "fasting_glucose" and (((ctx or {}).get("clinical") or {}).get("HbA1c") or {}).get("base") else
+        f"labworld.yaml:analytes.{an}.baseline;p4base")
+    return {"owner": "P4", "producer": "haenv.p4.realize:legacy_baseline_origin",
+            "case_id": str(case_id), "analyte": an, "parameter": base, "draw": draw,
+            "provenance": provenance,
+            "comorbidity": ckd, "components": components}
+
+
+def _legacy_background(raw, case_id, an, cls, base, ctx, *, clinical=False, origin=None):
+    from haenv.world.truth import coupling_enabled
+    if not coupling_enabled():
+        return None
+    from haenv.p4.diversity import existing_medicines
+    if cls == "true_change" and not clinical:
+        raise Unrealizable("legacy target-fitted physical cause reconciliation unsupported")
+    if an == "creatinine" and existing_medicines(raw) & {"enalapril", "lisinopril", "ramipril", "perindopril"}:
+        raise Unrealizable("existing clinical ACEI course reconciliation unsupported; source retained")
+    return background_truth(raw, case_id, an, base, ctx, origin=origin)
 
 
 class _World:
     """The truth model of one item (fixed per realization)."""
 
     def __init__(self, analyte, base, dose_pts, wpts, kappa=0.0, A=0.0, events=(), initial_on=False,
-                 glp1=True):
+                 glp1=True, background=None):
         e = _tables()["effects"]
         self.analyte, self.base = analyte, base
         self.dose_pts, self.wpts = dose_pts, wpts
         self.kappa, self.A = kappa, A
         self.events, self.initial_on = list(events), initial_on
         self.glp1 = glp1
+        self.background = background
         self.tau_g = float(e["glp1_on_fasting_glucose"]["tau_days"])
         self.beta = float(e["weight_on_fasting_glucose"]["beta"])
         self.smooth = int(e["weight_on_fasting_glucose"]["smooth_days"])
@@ -274,6 +397,12 @@ class _World:
 
     def log_truth(self, day: int) -> float:
         from haenv.world.labworld import truth as TR
+        if self.background is not None:
+            value = math.log(self.background(day))
+            # The saved background producer already owns weight and GLP-1 effects.
+            if self.analyte == "fasting_glucose":
+                return value
+            return value + self.A * TR.acei_on(day, self.events, self.tau_a, self.initial_on)
         if self.analyte == "fasting_glucose":
             return TR.fg_log(day, base=self.base, kappa=(self.kappa if self.glp1 else 0.0), beta=self.beta,
                              tau=self.tau_g, dose_pts=self.dose_pts, weight_pts=self.wpts,
@@ -399,7 +528,12 @@ def _realize_one(raw, case_id: str, plan: dict, ctx: dict | None) -> dict:
     glp1 = drug in (tb["render"].get("glp1_class") or ())
     wpts = [q for q in (ctx.get("wpts") or (raw.longitudinal_data or {}).get("weight") or []) if int(q["ts"]) <= T]
     ckd = ckd_record(raw, case_id) if ckd_item else None
-    base = float(ckd["cr0"]) if ckd else _base(case_id, an, raw, ctx)
+    origin = legacy_baseline_origin(raw, case_id, an, ctx, ckd)
+    base = origin["parameter"]
+    background = _legacy_background(raw, case_id, an, cls, base, ctx, origin=origin)
+    def make_world(*args, **kwargs):
+        return _World(*args, **kwargs, background=background)
+
     eff = tb["effects"]
     k_lo, k_hi = (float(x) for x in eff["glp1_on_fasting_glucose"]["kappa"])
     k_def = float(eff["glp1_on_fasting_glucose"]["kappa_default"])
@@ -440,7 +574,7 @@ def _realize_one(raw, case_id: str, plan: dict, ctx: dict | None) -> dict:
                 if near and abs(sum(d for _, d in near)) > 1e-9:
                     _rej(f"{cls}:{an}:glp1_net_step_near_window")
                     continue
-                world = _World(an, base, dose_vis, wpts, kappa=k_def, glp1=glp1)
+                world = make_world(an, base, dose_vis, wpts, kappa=k_def, glp1=glp1)
             else:
                 world = None            # solved per attempt below
         else:
@@ -461,7 +595,7 @@ def _realize_one(raw, case_id: str, plan: dict, ctx: dict | None) -> dict:
             elif not initial_on:
                 initial_on = True
             events = list(bg_ev)
-            world = _World(an, base, dose_vis, wpts, A=(a_lo + a_hi) / 2, events=events, initial_on=initial_on)
+            world = make_world(an, base, dose_vis, wpts, A=(a_lo + a_hi) / 2, events=events, initial_on=initial_on)
         # ---- decoys realizable on this interval (substitute in pool order when not) ----
         from haenv.world.labworld.perturb import decoys_for
         dec_plan = list(plan.get("decoys") or ())
@@ -504,9 +638,9 @@ def _realize_one(raw, case_id: str, plan: dict, ctx: dict | None) -> dict:
                         if k_lo <= kap <= k_hi:
                             cause = ("glp1_dose_change", {"kappa": round(kap, 6),
                                                           "steps": [list(x) for x in steps_win]})
-                            world = _World(an, base, dose_vis, wpts, kappa=kap, glp1=glp1)
+                            world = make_world(an, base, dose_vis, wpts, kappa=kap, glp1=glp1)
                     if cause is None and abs(W) >= 0.04 and beta * W * D > 0:
-                        world = _World(an, base, dose_vis, wpts, kappa=k_def, glp1=glp1)
+                        world = make_world(an, base, dose_vis, wpts, kappa=k_def, glp1=glp1)
                         dtrue = world.log_truth(T) - world.log_truth(t0)
                         if (abs(dtrue) >= R / 2 and abs(dtrue) >= abs(D) / 2 and abs(D - dtrue) <= 2.5 * sig
                                 and abs(beta * W) > abs(dtrue - beta * W)):
@@ -532,7 +666,7 @@ def _realize_one(raw, case_id: str, plan: dict, ctx: dict | None) -> dict:
                     if not (a_lo <= Aval <= a_hi):
                         _rej("true:acei_A")
                         continue
-                    world = _World(an, base, dose_vis, wpts, A=Aval, events=ev, initial_on=init)
+                    world = make_world(an, base, dose_vis, wpts, A=Aval, events=ev, initial_on=init)
                     events, initial_on = ev, init
                     cause = ("acei_start_or_stop", {"A": round(Aval, 6), "event": ev[0]})
                 dtrue = world.log_truth(T) - world.log_truth(t0)
@@ -636,6 +770,9 @@ def _realize_one(raw, case_id: str, plan: dict, ctx: dict | None) -> dict:
                     "base": round(base, 4), "drug": drug, "glp1_class": glp1,
                     "dlog_weight": round(W, 6), "gap_index": j, "attempt": attempt, "g4": g,
                     **({"comorbidity": ckd} if ckd else {})}
+            if background is not None:
+                item["background_source"] = background.source
+                item["actual_response"] = {"version": 1, "A": world.A}
             item["true_change_pct"] = true_change_pct(r0, r1)
             item["factor"] = item["cause"] if cls != "analytic_biological_noise" else None
             _place_context(item, case_id, steps_win, bool(item["acei"]["initial_on"]))
@@ -646,6 +783,7 @@ def _realize_one(raw, case_id: str, plan: dict, ctx: dict | None) -> dict:
             if bad:
                 _rej(f"{cls}:{an}:background:{bad[0][:40]}")
                 continue
+            preserve_observed_aliases(raw, item)
             return item
         reasons.append(f"gap{j}: no admissible draw")
     raise Unrealizable("; ".join(reasons[-2:]) or "no interval")
@@ -675,7 +813,12 @@ def _realize_clinical(raw, case_id, plan, ctx):
     T = int(raw.prediction_context["prediction_time_T"])
     ctx = ctx or {}
     ckd = ckd_record(raw, case_id) if plan.get("comorbidity") == "CKD" else None
-    base = float(ckd["cr0"]) if ckd else _base(case_id, an, raw, ctx)
+    origin = legacy_baseline_origin(raw, case_id, an, ctx, ckd)
+    base = origin["parameter"]
+    background = _legacy_background(raw, case_id, an, cls, base, ctx, clinical=True, origin=origin)
+    def make_world(*args, **kwargs):
+        return _World(*args, **kwargs, background=background)
+
     s0, s1, sh = _draw_cvs(an, cls, sign, case_id, bool(ckd))
     R, band = rcv95(s0, s1), change_band(an)
     doses, weights = _visible_dose(raw, T), ctx.get("wpts") or []
@@ -741,7 +884,7 @@ def _realize_clinical(raw, case_id, plan, ctx):
             meal_day = T if sign > 0 else t0
             magnitude = lo + (hi - lo) * u01("p4-clinical-bias", case_id, meal_day, 0)
         for attempt in range(1):
-            world = _World(an, base, doses, weights, A=response, events=events, initial_on=initial_on)
+            world = make_world(an, base, doses, weights, A=response, events=events, initial_on=initial_on)
             e0 = clinical_error(case_id, t0, "jaffe" if s0 == cv_total(an, "jaffe") else None)
             if abs(e0) > 3 * s0 or abs(e1) > 3 * s1:
                 continue
@@ -776,12 +919,16 @@ def _realize_clinical(raw, case_id, plan, ctx):
                     "base": round(base, 4), "drug": _drug(raw), "glp1_class": False, "dlog_weight": 0.0,
                     "gap_index": j, "attempt": attempt, "g4": g,
                     **({"comorbidity": ckd} if ckd else {})}
+            if background is not None:
+                item["background_source"] = background.source
+                item["actual_response"] = {"version": 1, "A": world.A}
             item["true_change_pct"] = true_change_pct(r0, r1)
             item["factor"] = item["cause"] if cls != "analytic_biological_noise" else None
             _place_context(item, case_id, [], initial_on)
             item["next_step"] = next_step(item)[0]
             if gold_block_consistent(item) or visible_class({"prediction_context": {"followup_p4": render_block(item, raw, case_id)}})[0] != cls:
                 continue
+            preserve_observed_aliases(raw, item)
             return item
     raise Unrealizable("no unambiguous clinical-source realization")
 

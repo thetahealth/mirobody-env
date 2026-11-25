@@ -21,6 +21,7 @@ from haenv_kernel.latent import DISEASE_SIGNAL_DOMAIN
 from haenv_kernel.latent import allowed_noise_classes
 from haenv_kernel.latent import derive_noise_plan
 from haenv_kernel.latent import drug_pkpd
+from haenv_kernel.latent import event_weight_delta
 from haenv_kernel.noise import inject as inject_noise
 
 log = logging.getLogger("harness.synth")
@@ -80,7 +81,9 @@ def _pkpd_conflicts(raw: RawCase, p: LatentPremise) -> list[dict]:
         for sig in raw.longitudinal_data:
             if sig in prim:
                 pre = [x for x in raw.longitudinal_data[sig] if x["ts"] < first]
-                if len(pre) >= 2 and abs(pre[-1]["value"] - pre[0]["value"]) > prim[sig]["max_weekly_delta"]:
+                allowance = (event_weight_delta(raw, pre[0]["ts"], pre[-1]["ts"])
+                             if sig == "weight" and len(pre) >= 2 else 0.0)
+                if len(pre) >= 2 and abs(pre[-1]["value"] - pre[0]["value"]) > prim[sig]["max_weekly_delta"] + allowance:
                     out.append({"kind": "effect_before_drug_start", "detail": f"{sig} moved before day{first}"})
     return out
 
@@ -144,13 +147,17 @@ def premise_conflicts(raw: RawCase, p: LatentPremise, original_case: dict | None
                 c.append({"kind": "value_out_of_physio_range",
                           "detail": f"{sig}={pt['value']}@{pt['ts']} ∉ {dom['range']}"})
         # Weekly slope outside noise windows must stay <= max_weekly_delta (5% tolerance).
+        # A sourced HF transition instead has the exact base-plus-saved-effect bound.
         clean = [pt for pt in pts if not _in_noise(pt["ts"])]
         for a, b in zip(clean, clean[1:]):
             wk = max(1e-6, (b["ts"] - a["ts"]) / 7.0)
-            if abs(b["value"] - a["value"]) / wk > dom["max_weekly_delta"] * 1.05:
+            allowance = event_weight_delta(raw, a["ts"], b["ts"]) / wk if sig == "weight" else 0.0
+            limit = (dom["max_weekly_delta"] + allowance if allowance
+                     else dom["max_weekly_delta"] * 1.05)
+            if abs(b["value"] - a["value"]) / wk > limit:
                 c.append({"kind": "weekly_delta_exceeds_physio",
                           "detail": f"{sig} {a['value']}→{b['value']} over {b['ts']-a['ts']}d "
-                                    f"> {dom['max_weekly_delta']}/wk"})
+                                    f"> {dom['max_weekly_delta'] + allowance}/wk"})
 
     allowed = allowed_noise_classes(p)
     for rp in raw.reversal_points:

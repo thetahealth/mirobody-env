@@ -6,24 +6,11 @@ import math
 from haenv.i18n.text import text_of
 from haenv.p4.textmatch import is_text, same_field
 from haenv.p4.features import method_family
+from haenv.p4.records import comparison_reports as comparison
 
 
 def applies(block):
     return any("platform" in r for r in block.get("report") or [])
-
-
-def comparison(block):
-    an, T = block["analyte"], int(block.get("comparison_draw_day", block["today"]))
-    rows = [r for r in block.get("report") or [] if r.get("analyte") == an]
-    now = [r for r in rows if int(r["day"]) == T]
-    past = [r for r in rows if int(r["day"]) < T]
-    if len(now) != 1 or not past:
-        raise ValueError("same-analyte comparison reports are incomplete")
-    day = max(int(r["day"]) for r in past)
-    previous = [r for r in past if int(r["day"]) == day]
-    if len(previous) != 1:
-        raise ValueError("ambiguous prior report")
-    return previous[0], now[0]
 
 
 def _matching_notice(block, report, exposure):
@@ -78,11 +65,11 @@ def variation_evidence(block):
     verification_R = rcv95(cv_total(block["analyte"]), cv_total(block["analyte"]))
     return {"observed_log_change": observed, "corrected_log_change": corrected, "rcv_log": R,
             "correction_records": refs, "current_records": [r1],
-            "verification_records": checks,
+            "verification_records": checks, "normalized_verifications": normalized,
             "verified_log_change": verified, "verification_rcv_log": verification_R}
 
 
-def significance_violations(block, cls, cause):
+def significance_violations(block, cls, cause, *, source_bias=None, affected_day=None):
     """Prospective admission constraints, rechecked by the emission audit."""
     v = variation_evidence(block)
     if len(v["verification_records"]) != 2:
@@ -90,6 +77,8 @@ def significance_violations(block, cls, cause):
     if cls == "analytic_biological_noise":
         return []  # Board retains its original noise admission distribution.
     bad = []
+    if abs(v["observed_log_change"]) < v["rcv_log"]:
+        bad.append("observed non-noise change is below paired RCV")
     if cls == "true_change":
         if (v["corrected_log_change"] * v["observed_log_change"] <= 0 or
                 v["verified_log_change"] * v["observed_log_change"] <= 0):
@@ -97,10 +86,31 @@ def significance_violations(block, cls, cause):
     else:
         if abs(v["verified_log_change"]) > v["verification_rcv_log"]:
             bad.append("independent standardized observations do not return within paired RCV")
+        if source_bias is not None:
+            reports = comparison(block)
+            side = next(i for i, report in enumerate(reports) if int(report["day"]) == affected_day)
+            affected = float(reports[side]["value"])
+            unaffected = float(reports[1 - side]["value"])
+            clean = v["normalized_verifications"][side]
+            shift = math.log(clean / affected)
+            if shift * source_bias >= 0 or abs(shift) < abs(source_bias) / 2:
+                bad.append("standardized check does not reverse the named interference by at least half its effect")
+            if abs(math.log(clean / unaffected)) > v["rcv_log"]:
+                bad.append("standardized check and unaffected report differ by more than paired RCV")
         if cause in ("platform_calibration", "reagent_lot", "jaffe_enzymatic_switch") and abs(v["corrected_log_change"]) > v["rcv_log"]:
             bad.append("applicable numeric method correction does not return within paired RCV")
     return bad
 
+
+def visible_significance(item, block):
+    from haenv.p4.gold import acting, point_bias
+    cls, cause = item["class"], item.get("cause")
+    if cls not in ("preanalytical", "method_difference"):
+        return significance_violations(block, cls, cause)
+    affected = next(r for r in item["records"] if r["day"] in (item["t0"], item["t1"])
+                    and any(p["factor"] == cause for p in acting(r)))
+    return significance_violations(block, cls, cause, source_bias=point_bias(affected),
+                                   affected_day=int(affected["day"]))
 
 def read_class(block):
     from haenv.p4.diversity import table
@@ -204,8 +214,13 @@ def read_class(block):
             if key in ("thyroxine_adherence", "fibrate_adherence") and T - day < params["treatment_settling_days"]:
                 continue
             action = row.get("course_action")
-            more = any(is_text(action, k) for k in ("p4.action.start", "p4.action.start_regular", "p4.action.new_onset"))
-            less = any(is_text(action, k) for k in ("p4.action.stop_regular", "p4.action.stopped_by_doctor", "p4.action.recovered"))
+            if key == "alcohol_change":
+                history = row.get("supporting_record")
+                more = is_text(action, "p4.action.alcohol_increased") and is_text(history, "p4.alcohol.increased_history")
+                less = is_text(action, "p4.action.alcohol_stopped") and is_text(history, "p4.alcohol.stopped_history")
+            else:
+                more = any(is_text(action, k) for k in ("p4.action.start", "p4.action.start_regular", "p4.action.new_onset"))
+                less = any(is_text(action, k) for k in ("p4.action.stop_regular", "p4.action.stopped_by_doctor", "p4.action.recovered"))
             if not (more or less):
                 continue
             direction = int(rule["sign"]) * (1 if more else -1)
@@ -232,6 +247,8 @@ def answer(block):
              [{"acts": True}] if cls in ("preanalytical", "method_difference") and i == (0 if side < 0 else 1) else []}
             for i, r in enumerate((r0, r1))]
     gold = {"class": cls, "cause": fac, "t0": r0["day"], "t1": r1["day"], "records": rows, "acei": {"events": []}}
+    if cls in ("preanalytical", "method_difference"):
+        gold["verification_records"] = variation_evidence(block)["verification_records"]
     from haenv.p4.gold import ingested_interference
     if ingested_interference(fac):
         from haenv.p4.diversity import table

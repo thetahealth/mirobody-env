@@ -417,8 +417,7 @@ entries:
   runtime.interaction.query.tools.module.2: First day (inclusive); omit for no lower bound
   runtime.interaction.query.tools.module.3: Last day (inclusive); omit for up to today
   runtime.m2.ask.acute_triage: "\n\nIn addition to the fields required above, add:\n  \"urgency\": \"\U0001F534\
-    |\U0001F7E0|\U0001F7E1|\U0001F7E2\"   (\U0001F534 emergency department immediately · \U0001F7E0 within\
-    \ days · \U0001F7E1 within weeks · \U0001F7E2 routine follow-up)"
+    |\U0001F7E0|\U0001F7E1|\U0001F7E2\"   (\U0001F534 emergency department immediately · \U0001F7E0 prompt assessment (same or next day when indicated) · \U0001F7E1 within weeks · \U0001F7E2 routine follow-up)"
   runtime.m2.ask.chronic_med_adjustment: "\n\nIn addition to the fields required above, add:\n  \"treatment_plan\"\
     : {\"target_drug\": \"generic drug name or registered English ID\", \"direction\": \"investigate_first|uptitrate|keep|downtitrate\"\
     , \"reason\": \"...\"}\n  Review all medication and records to identify the drug requiring assessment\
@@ -556,8 +555,9 @@ entries:
 
     `switch` do not increase this drug further; switch to or add another drug ·
 
-    `check_adherence_or_adverse_effect` check adherence, adverse effects or other causes first; do not
-    change the dose yet
+    `check_adherence_or_adverse_effect` keep the current dose and first check adherence, adverse effects
+    or other causes, including whether a current symptom is caused by this drug; do not change the dose
+    until that is done
 
     (select dose reduction for adverse effects already attributable to this drug''s dose).
 
@@ -624,9 +624,9 @@ entries:
     \ includes a new blood draw after appropriate washout, or interpretation using a verified unaffected\
     \ method. no_action means no additional intervention for this historical difference; routine follow-up\
     \ continues. If ingested interference affected only the previous reading and today's reading is standard,\
-    \ treat it as a distortion of the previous reading; no_action is acceptable. If it affected today's\
-    \ reading, no_action is acceptable when the exposure has ended and subsequent clean results are available;\
-    \ ongoing exposure requires verification.\n\nMedical boundary (mandatory): do not independently prescribe,\
+    \ treat it as a distortion of the previous reading; no_action is acceptable. If collection, intake or method interference affected\
+    \ the assessed draw and a clean standardized retest of that draw is documented, both no_action and\
+    \ repeat_standardized are accepted. If verification is still needed, choose repeat_standardized.\n\nMedical boundary (mandatory): do not independently prescribe,\
     \ stop medication or change doses.\n\npre-T data (JSON):\n{payload}\n\nOutput only one JSON object (no\
     \ additional text/markdown), schema:\n{{\"change_source\":\"true_change|analytic_biological_noise|preanalytical|method_difference\"\
     ,\n\"factor\":\"glp1_dose_change|weight_change|acei_start_or_stop|postprandial_labelled_fasting|delayed_processing|meat_meal|poc_meter|jaffe_enzymatic_switch|infusion_sampling|hemolysis|edta_contamination|cold_delayed_separation|nonfasting|glucose_glycolysis|recent_exercise|sampling_time|platform_calibration|reagent_lot|biotin_tsh|dehydration|thiazide|gastrointestinal_loss|glucocorticoid|acute_illness|thyroiditis|thyroxine_adherence|hepatotoxic_drug|alcohol_change|statin_myopathy|muscle_injury|fibrate_adherence|null\"\
@@ -707,8 +707,9 @@ entries:
 
     `switch` do not increase this drug further; switch to or add another drug ·
 
-    `check_adherence_or_adverse_effect` check adherence, adverse effects or other causes first; do not
-    change the dose yet
+    `check_adherence_or_adverse_effect` keep the current dose and first check adherence, adverse effects
+    or other causes, including whether a current symptom is caused by this drug; do not change the dose
+    until that is done
 
     (select dose reduction for adverse effects already attributable to this drug''s dose).
 
@@ -738,8 +739,8 @@ entries:
     investigations to repeat or purchase, an explanation for the patient and follow-up arrangements. State
     explicitly if no additional investigations are needed.'
   runtime.protocol_question.p4: "You are interpreting follow-up laboratory tests. Follow this clinic's protocols.\
-    \ See the header for today's date and visit type.\nAssess the change from the previous to the current\
-    \ reading:\n① `change_source`, choose one of four sources:\n   true_change: a sustained change in the\
+    \ Use the report dates named in the header. Today is the review date.\nAssess the change from the previous\
+    \ report to the assessed report:\n① `change_source`, choose one of four sources:\n   true_change: a sustained change in the\
     \ level of the measurand within the patient or in the clinical course, supported by timing, direction\
     \ and course records. Do not treat assay interference as a pharmacological effect within the patient.\n\
     \   analytic_biological_noise: analytical imprecision and random within-person variation. Use when the\
@@ -764,9 +765,9 @@ entries:
     \ a new blood draw after appropriate washout, or interpretation using a verified unaffected method.\
     \ no_action means no additional intervention for this historical difference; routine follow-up continues.\
     \ If ingested interference affected only the previous reading and today's reading is standard, treat\
-    \ it as a distortion of the previous reading; no_action is acceptable. If it affected today's reading,\
-    \ no_action is acceptable when the exposure has ended and subsequent clean results are available; ongoing\
-    \ exposure requires verification.\n\nMedical boundary (mandatory): do not independently prescribe, stop\
+    \ it as a distortion of the previous reading; no_action is acceptable. If collection, intake or method interference affected the assessed draw\
+    \ and a clean standardized retest of that draw is documented, both no_action and repeat_standardized\
+    \ are accepted. If verification is still needed, choose repeat_standardized.\n\nMedical boundary (mandatory): do not independently prescribe, stop\
     \ medication or change doses.\n\npre-T data (JSON):\n{payload}\n\nOutput only one JSON object (no additional\
     \ text/markdown), schema:\n{{\"change_source\":\"true_change|analytic_biological_noise|preanalytical|method_difference\"\
     ,\n\"factor\":\"glp1_dose_change|weight_change|acei_start_or_stop|postprandial_labelled_fasting|delayed_processing|meat_meal|poc_meter|jaffe_enzymatic_switch|infusion_sampling|hemolysis|edta_contamination|cold_delayed_separation|nonfasting|glucose_glycolysis|recent_exercise|sampling_time|platform_calibration|reagent_lot|biotin_tsh|dehydration|thiazide|gastrointestinal_loss|glucocorticoid|acute_illness|thyroiditis|thyroxine_adherence|hepatotoxic_drug|alcohol_change|statin_myopathy|muscle_injury|fibrate_adherence|null\"\

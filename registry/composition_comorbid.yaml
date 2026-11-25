@@ -556,10 +556,10 @@ pairs:
     threads:
     - 甲状腺线
     - 肾上腺皮质线
-    # Thyrotoxicosis speeds cortisol clearance; untreated primary adrenal insufficiency with it
-    # risks adrenal crisis (Endocrine Society 2016 PAI guideline, not checked against full text).
-    urgency: 🔴
-    urgency_why: 甲状腺毒症加速皮质醇清除,未治疗的原发性肾上腺皮质功能减退可被诱发肾上腺危象,须当日评估与糖皮质激素替代(Endocrine Society 2016 PAI 指南,未核原文)
+    # Concurrent thyrotoxicosis calls for prompt assessment of adrenal insufficiency.
+    # Crisis requires patient-level evidence of acute deterioration (NICE NG243 1.6–1.7).
+    urgency: 🟠
+    urgency_why: 甲状腺毒症合并肾上腺皮质功能减退需当日评估；危象按实际严重度判断。https://www.nice.org.uk/guidance/ng243/chapter/recommendations
   HD-COM-73:
     composition_v2: true
     pair:

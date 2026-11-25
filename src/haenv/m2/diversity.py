@@ -48,12 +48,18 @@ def incidental_records(raw, cid):
     from haenv.resources.registry import load_findings
     from haenv.world.observations.findings_render import _band
     from haenv.world.observations.findings_render import _ndigits
-    from haenv.m2.core import _sex_spec
-    policy = rules()["incidental"]
+    from haenv.m2.core import _sex_spec, components
     from haenv.m2.confirmation import plan_of
+    config = rules()
+    policy = config["incidental"]
     confirmation = plan_of(raw)
     matched = "|".join(confirmation["pair"]) if confirmation else cid
     f = rng.pick(policy["factors"], matched, "m2-diversity", "factor")
+    ddx = raw.adjudication["ddx"]
+    thyroid = config["presentations"]["groups"]["thyroid"]["components"]
+    if f["id"] == "illness_tsh" and not ddx.get("insufficient") and set(components(ddx["spec_id"])) & set(thyroid):
+        # A normal fasting repeat can also conflict with concurrent glycaemic gold.
+        f = next(factor for factor in policy["factors"] if factor["id"] == "exercise_alt")
     active = rng.unit(matched, "m2-diversity", "role") < policy["acting_share"]["value"]
     T = int(raw.prediction_context["prediction_time_T"])
     day = T - round(_sample(cid, "draw-day", policy["day_before_T"]))

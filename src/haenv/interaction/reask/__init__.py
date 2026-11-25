@@ -264,7 +264,7 @@ class Batch:
     def environment_items(self, question, model, targets):
         """Use the environment's own purchase path for results absent from the archive."""
         from haenv.interaction import gated
-        from haenv.interaction.query.gated import _purchase_result
+        from haenv.interaction.query.gated import _order_addresses, _purchase_result
         from haenv.interaction.query.tools import RecordStore
         from haenv.m2 import hooks
         from haenv.m2.query import ADAPTER
@@ -284,9 +284,13 @@ class Batch:
                 self.n += 1
                 out = ConstantDdxSolver().solve(payload)
                 if self.n == 1:
-                    menu = {i["target"]: i.get("kind") for i in self.gated_context.get("menu", [])}
-                    out._raw_text = json.dumps({"queries": [{"kind": menu.get(t, "test"), "target": t}
-                                                          for t in targets], "commit": False}, ensure_ascii=False)
+                    menu = _order_addresses(self.gated_context.get("menu", []))
+                    queries = []
+                    for target in targets:
+                        item = menu.get(target)
+                        queries.append({"kind": str(item["kind"]), "target": str(item["target"])} if item else
+                                       {"kind": "test", "target": target})
+                    out._raw_text = json.dumps({"queries": queries, "commit": False}, ensure_ascii=False)
                     out._raw = {}
                 return out
 
@@ -298,12 +302,14 @@ class Batch:
                     observations[call_targets[data["call_id"]]] = data["observation"]
 
         T = int(raw.prediction_context["prediction_time_T"])
-        gated.run_gated(raw, T, Buyer(), budget=1e9, trace=Trace())
+        _, trace = gated.run_gated(raw, T, Buyer(), budget=1e9, trace=Trace())
         lean, _ = gated.withhold_signals(self.payloads[question][0])
         lean.longitudinal_data.update(observations)
         store = RecordStore(lean, T, ADAPTER, max_points=self.store(question, model).max_points)
-        return [{"name": PURCHASE, "arguments": {"target": t}, "content": _purchase_result(t, store, {}),
-                 "src": "env_purchase"} for t in targets]
+        gc = {"budget": trace.budget, "unavailable_results": trace.unavailable_results}
+        return [{"name": PURCHASE, "arguments": {"target": target},
+                 "content": _purchase_result(receipt, store, gc), "src": "env_purchase"}
+                for target, receipt in zip(targets, trace.calls, strict=True)]
 
 
 def build_unit(batch, question, model, repeat, source_items, *, arms=tuple(ARMS),

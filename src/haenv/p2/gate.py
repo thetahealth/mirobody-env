@@ -53,20 +53,40 @@ def _recompute(g: dict, raw) -> list[str]:
     blk = (_get(raw, "prediction_context") or {}).get(BLOCK)
     if not isinstance(blk, dict):
         return []
-    invalid = measurement_conflicts(blk)
+    invalid = measurement_conflicts(blk) + inert_weight_conflicts(blk, g["tier"])
     if invalid:
         return invalid
+    from haenv.p2.clinical_rules import assess_visible
     a = R.assess(blk)
+    visible = assess_visible(blk)
     out = []
     if a["rule"] != g.get("rule") or a["set"] != g.get("set"):
-        out.append(f"rule reader on the shown block = {a['rule']} {a['set']}, gold = {g.get('rule')} {g.get('set')}")
+        out.append(f"clinical assessment = {a['rule']} {a['set']}, gold = {g.get('rule')} {g.get('set')}")
+    if visible["rule"] != g.get("rule") or visible["set"] != g.get("set"):
+        out.append(f"visible protocol = {visible['rule']} {visible['set']}, gold = {g.get('rule')} {g.get('set')}")
     want = R.table()["tiers"][g["tier"]]["rule"]
     if a["rule"] != want:
         out.append(f"tier {g['tier']} plans {want}, block fires {a['rule']}")
     return out
 
 
-def leak_hits(block: dict) -> list[str]:
+def inert_weight_conflicts(block, tier):
+    if tier not in ("hf_stable", "hf_reduced_stable"):
+        return []
+    from haenv.p2 import rules as R
+    from haenv.p2.clinical_rules import moderate_postdischarge_gain
+    limit = R.table()["thresholds"]["hf_gain_kg_gt"]
+    if not moderate_postdischarge_gain(block, R.readings(block)):
+        limit /= 2
+    T = block["today_day"]
+    recent = sorted((r["day"], r["kg"]) for r in block["morning_weight"] if T - 7 <= r["day"] <= T)
+    if any(round(kg - prior_kg, 2) > limit for i, (_, kg) in enumerate(recent)
+           for _, prior_kg in recent[:i]):
+        return [f"non-trigger HF weight gain exceeds {limit:g} kg in the recent series"]
+    return []
+
+
+def leak_hits(block: dict, *, measured_contract: bool = False) -> list[str]:
     from haenv.p2 import render as RD
     from haenv.p2 import rules as R
     out = []
@@ -91,6 +111,8 @@ def leak_hits(block: dict) -> list[str]:
                     pass
         if not ck.get(k) and any(s in msg for s in candidates):
             out.append(f"message names {k} but the checklist says no")
+    from haenv.p2.statement_contracts import violations
+    out.extend(violations(block, required=measured_contract))
     return out
 
 
@@ -186,7 +208,8 @@ def measurement_conflicts(block: dict) -> list[str]:
         R.checklist_of(block)
         T = int(block["today_day"])
         c = block["home_check_today"]
-        for row in block.get("clinical_history_record") or ():
+        from haenv.p2.narrative import records
+        for row in records(block):
             if "usual_systolic_bp_mmHg" in row:
                 if (not row.get("source") or row.get("baseline_assessed") is not True
                         or not isinstance(row.get("day"), int) or row["day"] >= T
@@ -194,7 +217,7 @@ def measurement_conflicts(block: dict) -> list[str]:
                     out.append("usual blood pressure lacks a dated assessed source")
         if c.get("on_oxygen") is not False:
             from haenv.p2.history import scale2
-            if c.get("on_oxygen") is not True or not scale2(block.get("clinical_history_record")):
+            if c.get("on_oxygen") is not True or not scale2(records(block)):
                 out.append("oxygen status missing or no registered oxygen target")
         for name, key, expected in (
             ("wearable_daily", "day", list(range(T - WINDOW + 1, T + 1))),
@@ -211,12 +234,20 @@ def measurement_conflicts(block: dict) -> list[str]:
         known = set(block["background"]["known_conditions"])
         diabetic = bool(known & {"T2D", "T1D", "type2_diabetes"})
         cg = block["cgm_nightly"]
-        if [int(r["night_of_day"]) for r in cg] != (list(range(T - 7, T)) if diabetic else []):
+        nights = [int(r["night_of_day"]) for r in cg]
+        # The printed last 7 nights, optionally preceded by contiguous older nights that the rules
+        # never read (`p2_reading.yaml` margin.cgm_older_nights; core CGM wearers).
+        from haenv.p2.reading import config as reading_config
+        oldest = T - reading_config()["margin"]["cgm_older_nights"][0]
+        if (nights != list(range(nights[0], T)) or not oldest <= nights[0] <= T - 7) if diabetic and nights \
+                else nights != ([] if not diabetic else list(range(T - 7, T))):
             out.append("cgm_nightly: incomplete or incompatible with diabetes background")
         for r in cg:
             if (r["min_mmol_L"] < R.table()["thresholds"]["hypo_level1_mmol"]) != (r["minutes_below_3_9"] > 0):
                 out.append("cgm minimum and duration below threshold disagree")
         R.readings(block)
+        from haenv.p2.reading import measurement_conflicts as repeat_conflicts
+        out.extend(repeat_conflicts(block))
     except (KeyError, TypeError, ValueError, IndexError) as exc:
         out.append(f"incomplete measurements: {exc}")
     return out
@@ -224,8 +255,11 @@ def measurement_conflicts(block: dict) -> list[str]:
 
 def _extra(g: dict, raw) -> list[tuple[str, str]]:
     blk = (_get(raw, "prediction_context") or {}).get(BLOCK) or {}
+    from haenv.p2.statement_contracts import violations
+    statement_errors = violations(blk) if blk and (plan_of(raw) or {}).get('statement_contract') else []
     return (ledger_red_flags(g, raw) + checklist_vs_ledger(g, raw) + world_in_window(g, raw) + record_vs_world(g, raw)
             + record_obesity_vs_weight(g, raw)
+            + [('statement_contract', x) for x in statement_errors]
             + [("measurement_consistency", x) for x in measurement_conflicts(blk)])
 
 

@@ -98,8 +98,46 @@ def finalize(raw, case_id, pack, *, derive_workup=True):
             'protocols': protocols, 'acceptable_management': accepted,
             'required_checks': deepcopy(checks), 'check_alternatives': deepcopy(alternatives),
             'decision_facts': facts, 'visible_facts': deepcopy(block)}
-    data['facts_sha256'] = hashlib.sha256(json.dumps(data, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    data['facts_sha256'] = digest(data)
     adj['open_management'] = data
+
+
+def digest(data):
+    """sha256 of a snapshot as the Q pipeline reads it back (`rubric.verify_snapshot`).
+
+    The verifier hashes the saved snapshot: JSON object keys are text there, so a day or
+    dose key (`weight_series[330]`, `drug_effect_bpm_by_dose_mg[2.5]`) sorts as text, and
+    every message is its source (`identity.source`) whatever the current language. Hashing
+    the in-memory numeric keys gave a receipt the verifier could not reproduce.
+    """
+    from haenv.i18n.identity import source
+    return hashlib.sha256(json.dumps(source(_saved_keys(data)), ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+
+def _saved_keys(value):
+    """`value` with the object keys JSON writes (`330` -> `"330"`, `2.5` -> `"2.5"`); messages are kept."""
+    if isinstance(value, dict):
+        return {(k if isinstance(k, str) else next(iter(json.loads(json.dumps({k: None}))))): _saved_keys(v)
+                for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_saved_keys(v) for v in value]
+    return value
+
+
+def refresh(raw):
+    """Re-take a P2/P3/P4 snapshot whose solver view changed after the case hook.
+
+    `build_case` adds record-only rows to the visible block after `Stage.CASE` took the
+    snapshot (`world.truth.soc.record_notes`: recent acute use, record-only patent
+    medicines, the P2 `background` section), so the snapshot showed the rubric an older
+    question. M2 is refreshed by `world.truth.regimens.finalize_m2_record_facts`.
+    """
+    adj, pc = raw.adjudication or {}, raw.prediction_context or {}
+    snapshot = adj.get('open_management')
+    pack = next((p for p, key in BLOCKS.items() if p != 'm2' and isinstance(pc.get(key), dict)), None)
+    if not snapshot or pack is None or snapshot.get('visible_facts') == pc[BLOCKS[pack]]:
+        return
+    finalize(raw, str(raw.case_id), pack)
 
 
 def render_for(next_call, solver, payload):

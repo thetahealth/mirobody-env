@@ -1,0 +1,18 @@
+entries:
+  p2.reading.protocol: >-
+    Calculate NEWS2 from the latest complete contemporaneous observation set, using
+    the documented SpO2 scale. Compare the time and inputs of an automatic receipt
+    with the actual measurements; an earlier receipt is not a score for a later repeat.
+    The intake checklist records the patient's ticks. A qualified urgent symptom
+    reported anywhere today in the patient narrative or device event notes counts
+    even when it was not ticked. A documented low-glucose episode needing another
+    person's assistance also counts when reported in those notes. The same applies to
+    the report of head contact, systemic unwellness, suspected infection or severe
+    headache/visual disturbance. Device records can contain imported clinical
+    excerpts: match each excerpt to its dated archive index before using its
+    diagnosis, oxygen authorization, prescription dates or baseline assessment.
+  p2.reading.tick_note: The answers below record the patient's original ticks; read today's statement and device event notes as well.
+  p2.reading.infection: Today I have new symptoms that may be an infection.
+  p2.reading.head: Today I hit my head when I stumbled; I stayed awake and have not vomited.
+  p2.reading.unwell: Today I feel newly unwell all over, with chills and a sore throat.
+  p2.reading.excerpt: Imported clinical excerpt; match the archive index and original record date.

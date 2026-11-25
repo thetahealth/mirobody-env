@@ -358,12 +358,28 @@ def soft_bound(v: float, lo: float, hi: float, frac: float = 0.02) -> float:
 
 
 def bounded_observation(v: float, e: float, lo: float, hi: float) -> float:
-    """`v x exp(e)` inside the open value domain (lo, hi): the log-scale step `e` is taken on the
-    logit of the position in the domain, scaled by d logit / d log v at `v`. To first order this is
-    `v x exp(e)`; a large step approaches a bound without reaching it (no clip)."""
+    """Observe `v x exp(e)` with smooth saturation inside (lo, hi) when coupling is on.
+
+    Coupling off retains the original first-order logit observation model.
+    """
     v, e, lo, hi = map(float, (v, e, lo, hi))
     if not all(math.isfinite(x) for x in (v, e, lo, hi)) or not lo < v < hi:
         raise ValueError("observation requires finite noise and truth strictly inside its domain")
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        try:
+            noisy = v * math.exp(e)
+        except OverflowError:
+            noisy = math.copysign(math.inf, v)
+        # A narrow transition preserves small multiplicative steps even for
+        # truth near a bound; the default 2% transition would bias these upward.
+        out = soft_bound(noisy, lo, hi, frac=0.0001)
+        # Smooth saturation can round onto an endpoint at machine precision.
+        if out <= lo:
+            return math.nextafter(lo, hi)
+        if out >= hi:
+            return math.nextafter(hi, lo)
+        return out
     if e == 0.0:
         return v
     x = (v - lo) / (hi - lo)
@@ -575,9 +591,24 @@ def lab_print_ndigits(case_id: str, sig: str) -> int:
     return nd
 
 
+#: Lab-calendar streams -> their row in `registry/biological_variation.yaml` (B3, coupled world only).
+_BV_ANALYTE = {"HbA1c": "HbA1c", "fasting_glucose": "glucose", "LDL": "LDL", "triglycerides": "triglycerides",
+               "ALT": "ALT", "AST": "AST"}
+
+
+def _lab_total_cv(sig: str) -> float:
+    """An item's per-draw total CV: `clinical_measurement.cv`, or with course coupling on the sourced
+    sqrt(CVI^2 + CVA^2) of `biological_variation.yaml` (one table, not added on top)."""
+    from haenv.world.truth import coupling_enabled
+    if sig in _BV_ANALYTE and coupling_enabled():
+        from haenv.world.truth import variation as V
+        return V.draw_cv(_BV_ANALYTE[sig])
+    return float(_clinical_cv().get(sig, 0.0))
+
+
 def _lab_own_cv(sig: str) -> float:
-    """An item's own per-draw CV: the total (`_clinical_cv`) minus its group's shared shock."""
-    tot = float(_clinical_cv().get(sig, 0.0))
+    """An item's own per-draw CV: the total (`_lab_total_cv`) minus its group's shared shock."""
+    tot = _lab_total_cv(sig)
     sh = float((_lab_obs_cfg().get("shared_shock_cv") or {}).get(_lab_group_of(sig), 0.0) or 0.0)
     return math.sqrt(max(0.0, tot * tot - sh * sh))
 
@@ -921,8 +952,24 @@ def observe_labs(raw, case_id: str) -> tuple[dict, dict]:
                                      days=sorted(have | add),
                                      drug_term=(ctx["drug_term"](sig, spec)
                                                 if ctx.get("drug_term") else None))
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        # Consumers re-querying a subset must retain the slope limiter's
+        # original calendar, even when the world has no negative history.
+        ctx["lab_truth_days"] = {s: [int(q["ts"]) for q in pts] for s, pts in truth.items()}
     shared = cfg.get("shared_shock_cv") or {}
     glycaemic = any((ctx["clinical"].get(s) or {}).get("cohort") == "T2D" for s in ("HbA1c", "fasting_glucose"))
+    truth_plan = (getattr(raw, "latent_premise", None) or {}).get("truth")
+    uncoupled = None
+    if truth_plan:
+        import copy
+        from haenv.world.truth.channels import couple_streams, constrain_stream
+        uncoupled = copy.deepcopy(truth)
+        couple_streams(raw, truth)
+        ctx["uncoupled_early"] = {}
+        # the base physiology's own course: the kernel's slope bound judges it, while the condition
+        # course follows its registered kinetics (`registry/effects.yaml`)
+        ctx["uncoupled_truth"] = uncoupled
     state = lab_state_terms(str(case_id), {s: [int(q["ts"]) for q in truth[s]] for s in sigs}, ce,
                             glycaemic=glycaemic)
     if (ctx.get("history") or {}).get("long"):
@@ -936,6 +983,7 @@ def observe_labs(raw, case_id: str) -> tuple[dict, dict]:
         own, sh = _lab_own_cv(sig), float(shared.get(g, 0.0) or 0.0)
         nd = lab_print_ndigits(str(case_id), sig)
         out: list[dict] = []
+        uncoupled_out = [] if truth_plan else None
         if sig == "FIB4" and fib4:
             # the formula on the day's printed AST and ALT and the case's platelets of that draw
             spec = ctx["clinical"][sig]
@@ -949,24 +997,59 @@ def observe_labs(raw, case_id: str) -> tuple[dict, dict]:
                             "time": _draw_clock(str(case_id), d)})
             raw.longitudinal_data[sig] = out
             continue
-        for q in truth[sig]:
+        for qi, q in enumerate(truth[sig]):
             d = int(q["ts"])
             e = own * _z(f"{case_id}|labz|{sig}|{d}") + sh * _z(f"{case_id}|labg|{g}|{d}")
             e += (state.get(sig) or {}).get(d, 0.0)
-            v = bounded_observation(float(q["value"]), e, lo, hi)
+            tv = float(q["value"])
+            if truth_plan and not lo < tv < hi:
+                # A condition can leave the background cohort's domain (e.g. hypoglycaemia).
+                # Keep the registered log-scale noise/state, without saturating to that cohort.
+                v = tv * math.exp(e)
+            else:
+                v = bounded_observation(tv, e, lo, hi)
+            if truth_plan:
+                uv = bounded_observation(float(uncoupled[sig][qi]["value"]), e, lo, hi)
+                if uncoupled_out and _u01(f"{case_id}|labcf|{sig}|{d}") < cf:
+                    uv = float(uncoupled_out[-1]["value"])
+                uncoupled_out.append({"ts": d, "value": round(uv, nd) if nd else float(round(uv))})
             if out and _u01(f"{case_id}|labcf|{sig}|{d}") < cf:
                 v = float(out[-1]["value"])
                 n_cf += 1
             v = round(v, nd) if nd else float(round(v))
+            if truth_plan:
+                v = constrain_stream(truth_plan, sig, v, nd)
             out.append({"ts": d, "value": v, "time": _draw_clock(str(case_id), d)})
         raw.longitudinal_data[sig] = out
+        if truth_plan:
+            ctx["uncoupled_early"][sig] = uncoupled_out
     pre = {s: truth[s] for s in sigs}
     n_tir = _tir_from_glycaemia(raw, ctx, str(case_id), ce, glycaemic)
     moved = realign_clinical_ledger(raw.evidence_ledger, raw.longitudinal_data, reference=pre)
+    if truth_plan:
+        from haenv.world.truth.channels import panel
+        panel(raw, raw.evidence_ledger or [])
     return truth, {"symptom_visits": len(extra), "panel_visits": len(panel_days),
                    "carried_forward": n_cf, "tir_from_hba1c": n_tir,
                    "ledger_realigned": moved,
                    "draws": {s: len(raw.longitudinal_data[s]) for s in sigs}}
+
+
+def history_level(raw, ctx: dict, sig: str) -> float | None:
+    """The existing history producer's anchor, before its drug deviations.
+
+    Consumers may save this numeric anchor; they must not substitute the
+    day-zero noise-free model or reconstruct it from later observed history.
+    """
+    T = int((getattr(raw, "prediction_context", None) or {}).get("prediction_time_T") or 0)
+    truth_plan = (getattr(raw, "latent_premise", None) or {}).get("truth")
+    established = any(e.get("stream") == sig and e.get("established")
+                      for e in (truth_plan or {}).get("observables", {}).values())
+    early_points = (ctx.get("uncoupled_early", {}).get(sig, ())
+                    if truth_plan and not established else raw.longitudinal_data.get(sig) or ())
+    early = [float(q["value"]) for q in early_points
+             if 0 <= int(q["ts"]) <= min(T, _anchor_days("labs")) and isinstance(q.get("value"), (int, float))]
+    return statistics.median(early) if early else None
 
 
 def observe_history(raw, ctx: dict, case_id: str, sigs) -> dict[str, int]:
@@ -1020,18 +1103,21 @@ def observe_history(raw, ctx: dict, case_id: str, sigs) -> dict[str, int]:
         days = history_days[sig]
         if not days:
             continue
-        inc = _med_course.prefix_increments(sig, days, ctx.get("concurrent") or [], spec["per_kg"],
-                                            CLINICAL_ATTEN, spec.get("cohort"), spec.get("base"),
-                                            a1c if sig != "HbA1c" else spec.get("base"))
+        from haenv.world.truth import coupling_enabled
+        if coupling_enabled() and ctx.get("drug_term"):
+            drug_term = ctx["drug_term"](sig, spec)
+            inc = {d: drug_term(d) - drug_term(0) for d in days}
+        else:
+            inc = _med_course.prefix_increments(sig, days, ctx.get("concurrent") or [], spec["per_kg"],
+                                                CLINICAL_ATTEN, spec.get("cohort"), spec.get("base"),
+                                                a1c if sig != "HbA1c" else spec.get("base"))
         lo, hi = spec["range"]
         own, sh = _lab_own_cv(sig), float(shared.get(g, 0.0) or 0.0)
         nd = lab_print_ndigits(case_id, sig)
         # the level on day 0 is the course's own: its readings of the first 30 days, before the primary drug
         # acts on a lab (a pack may have set them, e.g. an M2 explainer's on-treatment values)
-        T = int((getattr(raw, "prediction_context", None) or {}).get("prediction_time_T") or 0)
-        early = [float(q["value"]) for q in (raw.longitudinal_data.get(sig) or ())
-                 if 0 <= int(q["ts"]) <= min(T, _anchor_days("labs")) and isinstance(q.get("value"), (int, float))]
-        level0 = statistics.median(early) if early else float(spec["base"])
+        level0 = history_level(raw, ctx, sig)
+        level0 = float(spec["base"]) if level0 is None else level0
         pts = []
         for d in days:
             tv = soft_bound(level0 + inc.get(d, 0.0), lo, hi)
@@ -1040,6 +1126,10 @@ def observe_history(raw, ctx: dict, case_id: str, sigs) -> dict[str, int]:
             v = bounded_observation(tv, e, lo, hi)
             if pts and _u01(f"{case_id}|labcf|{sig}|hist|{d}") < cf:
                 v = float(pts[-1]["value"])
+            truth_plan = (getattr(raw, "latent_premise", None) or {}).get("truth")
+            if truth_plan:
+                from haenv.world.truth.channels import constrain_stream
+                v = constrain_stream(truth_plan, sig, v, nd)
             pts.append({"ts": d, "value": round(v, nd) if nd else float(round(v)),
                         "time": _draw_clock(case_id, d)})
         raw.longitudinal_data[sig] = pts + list(raw.longitudinal_data.get(sig) or [])
@@ -1094,16 +1184,33 @@ def _world_medication(p, cid: str, T: int, ce: int) -> tuple[list, list, list]:
     """(primary dose record, observed adherence readings, concurrent medicines), a function of
     the premise's regimen, comorbidities, true adherence and `cid` only (`med_course`)."""
     from haenv_kernel.latent import drug_pkpd
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        from haenv.world.truth.regimens import prepare
+        if managed := prepare(p, cid, T, ce):
+            reg = p.patient_basics.get("regimen") or {}
+            primary = managed["primary"]
+            mt = int((drug_pkpd(str(reg.get("drug") or "")) or {}).get("min_titration_days", 28))
+            traj = [{"day": pt["day"], "level": pt["level"]} for pt in p.adherence.get("trajectory", [])]
+            return ((primary["dose_timeline"] if primary is not None else
+                     _med_course.dose_course(cid, list(reg.get("dose_steps") or ()), T, ce, mt)),
+                    _med_course.adherence_readings(cid, T, ce, traj, float(p.adherence.get("baseline", 0.95))),
+                    managed["concurrent"])
     reg = p.patient_basics.get("regimen", {}) or {}
     steps = list(reg.get("dose_steps", [2.5, 5.0, 7.5]))
     mt = int((drug_pkpd(str(reg.get("drug") or "")) or {}).get("min_titration_days", 28))
     traj = [{"day": pt["day"], "level": pt["level"]} for pt in p.adherence.get("trajectory", [])]
+    from haenv.world.truth import coupling_enabled
+    avoid_kw = _avoid_kw(p)
+    if coupling_enabled():
+        from haenv.world.truth.soc import premise_kwargs
+        avoid_kw = {**avoid_kw, **premise_kwargs(p, cid)}
     return (_med_course.dose_course(cid, steps, T, ce, mt),
             _med_course.adherence_readings(cid, T, ce, traj,
                                            float(p.adherence.get("baseline", 0.95))),
             _med_course.concurrent_medicines(cid, _raw_field(p.patient_basics, "disease"),
                                              p.patient_basics.get("comorbidities") or [],
-                                             str(reg.get("drug") or ""), ce, **_avoid_kw(p),
+                                             str(reg.get("drug") or ""), ce, **avoid_kw,
                                              overlay=_overlay_kw(p), history=_meds_history(p, cid, T, ce)))
 
 
@@ -1150,7 +1257,13 @@ def _overlay_kw(p) -> list[dict]:
     """The medicines the case's task packs prescribe (`med_course.overlay_medicines`); none for a v1.0.1 world."""
     import haenv.contracts.external_gold as _EG
     from haenv.m2.premises import medication_overlay
-    return (_med_course.overlay_medicines((p.meta or {}).get(_EG.SLOT), p.patient_basics)
+    plans = (p.meta or {}).get(_EG.SLOT)
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled() and (plans or {}).get("p2"):
+        plans = {**plans, "p2": {**plans["p2"], "context_cid": p.meta["case_id"],
+                                "context_T": p.meta["prediction_time_T"],
+                                "known_conditions": [p.patient_basics.get("disease"), *p.patient_basics.get("comorbidities", ())]}}
+    return (_med_course.overlay_medicines(plans, p.patient_basics)
             + medication_overlay(p))
 
 
@@ -1172,16 +1285,33 @@ def world_medication_record(p) -> dict:
     dose, _obs, concurrent = _world_medication(p, str(m.get("case_id") or "HAENV"), T,
                                                int(m.get("course_end_day", END)))
     hist = world_history(p, str(m.get("case_id") or "HAENV"), T, int(m.get("course_end_day", END)))
-    return {"primary": {"drug": _drug_of(p), "dose_timeline": dose},
+    record = {"primary": {"drug": _drug_of(p), "dose_timeline": dose},
             "concurrent": concurrent, "adherence_true": _true_adherence_pts(p, T),
             **({"history_lo": hist["lo"]} if hist else {})}
+    from haenv.world.truth import coupling_enabled, soc
+    if coupling_enabled():
+        from haenv.contracts.external_gold import SLOT
+        context = soc.premise_kwargs(p, str(m.get("case_id") or "HAENV"))["constraints"]
+        pb = p.patient_basics
+        if managed := m.get("background_regimen"):
+            if managed["primary"] is not None:
+                record["primary"] = dict(managed["primary"])
+        record["soc_context"] = {**context, "conditions": list(dict.fromkeys([
+            pb.get("disease"), *pb.get("comorbidities", ()), *context.get("conditions", ())])),
+            "age_years": soc.age_years(str(m.get("case_id") or "HAENV"), pb["age_range"])}
+        if (m.get(SLOT) or {}).get("p2"):
+            record.setdefault("history_lo", 0)
+    return record
 
 
-def _drug_term_fn(p, sig: str, spec: dict, dose_pts: list, adh_pts: list, concurrent: list):
+def _drug_term_fn(p, sig: str, spec: dict, dose_pts: list, adh_pts: list, concurrent: list,
+                  *, coupled: bool | None = None):
     """`day -> drug-effect increment on sig`, read along the dose line: the primary drug's
     glucose effect (`drug_effects.effect_along`), antihypertensive effects and concurrent
     medicines' deviations (`med_course`). Shared by `render_clinical` and GEN15."""
     drug, resp = _drug_of(p), _drug_response_of(p)
+    from haenv.world.truth import coupling_enabled
+    coupled = coupling_enabled() if coupled is None else coupled
     adh_sorted = sorted((q for q in (adh_pts or []) if isinstance(q, dict)),
                         key=lambda q: int(q.get("ts", -1)))
 
@@ -1198,6 +1328,41 @@ def _drug_term_fn(p, sig: str, spec: dict, dose_pts: list, adh_pts: list, concur
     plugin_world = bool((p.meta or {}).get(_EG.SLOT))      # task-pack worlds; a v1.0.1 world draws as before
     a1c = (((p.meta or {}).get("clinical") or {}).get("HbA1c") or {}).get("base")
     a1c = base if a1c is None and sig == "HbA1c" else a1c
+
+    if coupled:
+        from haenv.world.truth import drugs as table
+        medication = {"case_id": str((p.meta or {}).get("case_id") or "HAENV"),
+                      "primary": {"drug": drug, "dose_timeline": dose_pts},
+                      "concurrent": concurrent}
+        base = spec["base"] = table.untreated_base(sig, spec, medication)
+        by_drug = {m["drug"]: m for m in table.medicines(medication)}
+
+        @functools.lru_cache(maxsize=None)
+        def coupled_term(day: int) -> float:
+            v = _drug_effects.effect_along(drug, sig, day, adh_at,
+                                           lambda d: _med_course.dose_at(dose_pts, d),
+                                           per_kg=spec["per_kg"], atten=CLINICAL_ATTEN,
+                                           cohort=spec.get("cohort"), response=resp, hba1c_base=a1c)
+            v += _med_course.concurrent_glucose_term(sig, day, concurrent, spec["per_kg"],
+                                                     CLINICAL_ATTEN, spec.get("cohort"), hba1c_base=a1c)
+            v += _med_course.bp_term(sig, day, drug, dose_pts, adh_at, concurrent)
+            v += table.term(sig, day, drugs=by_drug,
+                            dose_at=lambda name, d: _med_course.dose_at(by_drug[name].get("dose_timeline") or [], d),
+                            adh_at=lambda name, d: adh_at(d) if name == drug else 1.0,
+                            base=base, world_medication=medication)
+            return _drug_effects.floor_term(sig, base, v)
+
+        # Generation consumers can persist the producer inputs instead of its closure.
+        # Replay explicitly selects this producer, independently of process settings.
+        import copy
+        coupled_term.source = copy.deepcopy({
+            "patient_basics": {"regimen": {"drug": drug}},
+            "meta": {"case_id": medication["case_id"], "drug_response": resp,
+                     "driver": (p.meta or {}).get("driver", ""),
+                     "clinical": {"HbA1c": {"base": a1c}}},
+            "dose": dose_pts, "adherence": adh_pts, "concurrent": concurrent,
+        })
+        return coupled_term
 
     def term(day: int) -> float:
         v = _drug_effects.effect_along(drug, sig, day, adh_at,

@@ -47,6 +47,7 @@ import pathlib
 import sys
 import os
 import subprocess
+import threading
 
 import yaml
 
@@ -203,21 +204,7 @@ def main() -> int:
     if enabled():
         from haenv.p3.interactions import quotas
         required = {scenario_key(k): v for k, v in quotas(PS.pool_n(a.n)).items()}
-        attempts = []
-        for multiplier in (1, 2, 4, 8):
-            try:
-                txt, st = build(a.n, seed, supply_multiplier=multiplier)
-            except PlanSupplyShortage as exc:
-                attempts.append({"multiplier": multiplier, "missing_plans": str(exc)})
-                continue
-            counts, pool_count = supply_preview(txt, out.parent / "p3-gen", multiplier)
-            missing = supply_gaps(counts, required, pool_count, POOL_FACTOR * PS.pool_n(a.n))
-            attempts.append({"multiplier": multiplier, "pool": pool_count, "cells": counts, "missing": missing})
-            if not missing:
-                st["clinical_supply"] = attempts
-                break
-        else:
-            raise ValueError(f"clinical candidate supply exhausted: {attempts}")
+        txt, st = supplied_build(a.n, seed, required, out.parent / "p3-gen", POOL_FACTOR * PS.pool_n(a.n))
     else:
         txt, st = build(a.n, seed)
     if a.check:
@@ -227,6 +214,58 @@ def main() -> int:
     out.write_text(txt, encoding="utf-8")
     print(json.dumps(st, ensure_ascii=False, indent=1))
     return 0
+
+
+#: Supply multipliers, tried smallest first; the previews of one wave run at the same time.
+SUPPLY_WAVES = ((1, 2, 4), (8,))
+_PREVIEW_SLOTS_LOCK = threading.Lock()
+_PREVIEW_SLOTS = {}
+
+
+def preview_build_slots():
+    """One process-wide budget across the arms and prospective multipliers."""
+    limit = int(os.environ.get("HAENV_P3_PREVIEW_BUILDS", "2"))
+    if limit < 1:
+        raise ValueError("HAENV_P3_PREVIEW_BUILDS must be positive")
+    with _PREVIEW_SLOTS_LOCK:
+        if limit not in _PREVIEW_SLOTS:
+            _PREVIEW_SLOTS[limit] = threading.BoundedSemaphore(limit)
+        return _PREVIEW_SLOTS[limit]
+
+
+def supplied_build(n, seed, required, scratch, minimum_pool, waves=SUPPLY_WAVES):
+    """The smallest multiplier whose two prospective worlds cover the clinical quotas.
+
+    Same result as trying 1, 2, 4, 8 one after another: each wave's plans are built first, in
+    order, then its previews run concurrently, and the attempts up to and including the smallest
+    passing multiplier are kept. Larger multipliers of the same wave are then discarded."""
+    from concurrent.futures import ThreadPoolExecutor
+    if os.environ.get("HAENV_P3_PREVIEW_BUILDS") == "1":
+        waves = tuple((m,) for wave in waves for m in wave)
+    attempts = []
+    for wave in waves:
+        built = {}
+        for multiplier in wave:
+            try:
+                built[multiplier] = build(n, seed, supply_multiplier=multiplier)
+            except PlanSupplyShortage as exc:
+                built[multiplier] = exc
+        runnable = [k for k in wave if not isinstance(built[k], PlanSupplyShortage)]
+        with ThreadPoolExecutor(max_workers=max(1, len(runnable))) as ex:
+            futures = {k: ex.submit(supply_preview, built[k][0], scratch, k) for k in runnable}
+            previews = {k: f.result() for k, f in futures.items()}
+        for multiplier in wave:
+            if isinstance(built[multiplier], PlanSupplyShortage):
+                attempts.append({"multiplier": multiplier, "missing_plans": str(built[multiplier])})
+                continue
+            txt, st = built[multiplier]
+            counts, pool_count = previews[multiplier]
+            missing = supply_gaps(counts, required, pool_count, minimum_pool)
+            attempts.append({"multiplier": multiplier, "pool": pool_count, "cells": counts, "missing": missing})
+            if not missing:
+                st["clinical_supply"] = attempts
+                return txt, st
+    raise ValueError(f"clinical candidate supply exhausted: {attempts}")
 
 
 def scenario_key(cell):
@@ -248,15 +287,15 @@ def supply_preview(text, scratch, multiplier):
     attempt.mkdir(parents=True, exist_ok=True)
     job = attempt / "p3-meds.job.yaml"
     job.write_text(text, encoding="utf-8")
-    worlds = []
-    for arm, settings in (("real", json.loads(os.environ.get(SET_ENV, "[]"))),
-                          ("control", ["world.history=short", "world.med_dynamics=false", "background=false"])):
+    from concurrent.futures import ThreadPoolExecutor
+
+    def run_arm(arm, settings):
         target = attempt / arm
         target.mkdir(exist_ok=True)
         sets = [x for item in ["env_file=/dev/null", *settings] for x in ("--set", item)]
         cmd = [sys.executable, "-m", "haenv", "build", str(job), "--gen", "deterministic", "--fresh",
                "--gen-workers", os.environ.get("HAENV_GEN_WORKERS", "32"), *sets]
-        with (target / "build.log").open("w", encoding="utf-8") as log:
+        with preview_build_slots(), (target / "build.log").open("w", encoding="utf-8") as log:
             rc = subprocess.run(cmd, cwd=ROOT, env={**os.environ, SET_ENV: json.dumps(settings),
                                 "HAENV_OUTPUT_ROOT": str(target)}, stdout=log, stderr=subprocess.STDOUT).returncode
         if rc:
@@ -264,8 +303,14 @@ def supply_preview(text, scratch, multiplier):
         files = sorted((target / "results").glob("*/p3-meds/*/cases.jsonl"))
         if not files:
             raise RuntimeError(f"clinical preview produced no cases: {target}")
-        worlds.append({r["case_id"]: r["case"]["adjudication"]["meds_p3"]
-                       for r in map(json.loads, files[-1].read_text(encoding="utf-8").splitlines())})
+        return {r["case_id"]: r["case"]["adjudication"]["meds_p3"]
+                for r in map(json.loads, files[-1].read_text(encoding="utf-8").splitlines())}
+
+    arms = (("real", json.loads(os.environ.get(SET_ENV, "[]"))),
+            ("control", ["world.history=short", "world.med_dynamics=false", "background=false"]))
+    # The two arms are independent builds into separate roots; run them at the same time.
+    with ThreadPoolExecutor(max_workers=int(os.environ.get("HAENV_P3_PREVIEW_BUILDS", "2"))) as ex:
+        worlds = [f.result() for f in [ex.submit(run_arm, arm, settings) for arm, settings in arms]]
     common = set(worlds[0]) & set(worlds[1])
     counts = collections.Counter(scenario_key((g["drug"], g["class"], (g.get("comorbidity") or {}).get("code"), g["subtype"],
                                                bool(g.get("interaction_family"))))

@@ -92,19 +92,21 @@ def scenario_of(it) -> tuple:
 
 
 def assemble(items: list[dict], n_items: int = PS.DEFAULT_N, seed: str = PS.PUBLIC_SEED, *,
-             scenarios: bool = False) -> list[dict]:
+             scenarios: bool = False, published_n: int | None = None) -> list[dict]:
     """The published pack of n_items: it extends the pack of each smaller nested size
     (`PS.nest_chain`). The audited pack opts into `scenarios=True`; the aggregate-cell API
     remains available for callers that provide only composition cells, without clinical records.
     This is an explicit allocation choice, never a fallback for missing subtype supply.
     """
     out: list[dict] = []
+    published_n = n_items if published_n is None else int(published_n)
     for n in PS.nest_chain(n_items):
-        out = _extend(items, n, seed, out, scenarios=scenarios)
+        out = _extend(items, n, seed, out, scenarios=scenarios, published_n=published_n)
     return out
 
 
-def _extend(items: list[dict], n_items: int, seed: str, base: list[dict], *, scenarios: bool) -> list[dict]:
+def _extend(items: list[dict], n_items: int, seed: str, base: list[dict], *, scenarios: bool,
+            published_n: int | None = None) -> list[dict]:
     tag = PS.seeded("p3pick", seed)
 
     def key(it):
@@ -121,6 +123,10 @@ def _extend(items: list[dict], n_items: int, seed: str, base: list[dict], *, sce
         cell_of = lambda it: (*scenario_of(it), bool(it["gold"].get("interaction_family")))
         cells = quotas(n_items)
     PS.short(cells, collections.Counter(cell_of(it) for it in items), "p3 subtype cells" if scenarios else "p3 pack")
+    composition = None
+    if items and all(it["gold"].get("composition") in ("core", "anchor") for it in items):
+        from haenv.p3.composition import core_quotas
+        composition = core_quotas(cells, items, cell_of, base, n_items, final=(n_items == published_n))
     for c in CLASSES:
         nh = collections.Counter(it["H"] for it in base if it["class"] == c)
         for cell, n in cells.items():
@@ -133,10 +139,17 @@ def _extend(items: list[dict], n_items: int, seed: str, base: list[dict], *, sce
             left = sorted([it for it in items if cell_of(it) == cell
                            and it["case_id"] not in taken], key=key)
             for _ in range(n - have):
+                candidates = left
+                if composition is not None:
+                    core_have = sum(cell_of(it) == cell and it["gold"]["composition"] == "core" for it in out)
+                    anchor_have = sum(cell_of(it) == cell and it["gold"]["composition"] == "anchor" for it in out)
+                    candidates = [it for it in left if
+                                  (it["gold"]["composition"] == "core" and core_have < composition[cell]) or
+                                  (it["gold"]["composition"] == "anchor" and anchor_have < n - composition[cell])]
                 # Preserve the H balance, then distribute eligible diagnosis
                 # specs uniformly inside the unchanged drug/subtype cell.
-                minimum = min(nh[x["H"]] for x in left)
-                eligible = [x for x in left if nh[x["H"]] == minimum]
+                minimum = min(nh[x["H"]] for x in candidates)
+                eligible = [x for x in candidates if nh[x["H"]] == minimum]
                 it = take_patient(eligible, spec_counts, key)
                 left.remove(it)
                 nh[it["H"]] += 1
@@ -212,7 +225,10 @@ def allocation_readout(pool, n_items: int, seed: str) -> dict:
     have = collections.Counter(scenario_of(it) for it in selected)
     want = planned_scenarios(n_items)
     mismatch = {str(k): {"need": n, "have": have[k]} for k, n in want.items() if have[k] != n}
-    nested = assemble(pool, 50, seed, scenarios=True) == selected[:50] if n_items >= 50 else None
+    # The nested prefix is the same allocation rule applied at the published size: an inner size
+    # carries its forced core floor and only the published size spends the discretionary core.
+    nested = (assemble(pool, 50, seed, scenarios=True, published_n=n_items) == selected[:50]
+              if n_items >= 50 else None)
     gold = [it["class"] for it in selected]
     policy_bad = [it["case_id"] for it in selected if FT.printed_rule_reader(it["sp"]) != it["class"]]
     record_bad = [it["case_id"] for it in selected if g3(it["gold"])["class"] != it["class"]]

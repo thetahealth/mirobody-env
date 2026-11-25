@@ -350,6 +350,9 @@ def _declared_lab_readings(sp, ddx: dict | None) -> list[dict]:
                             for f in (prof.get("findings") or []) if f.get("id")}
     traj: dict[str, str] = {str(f.get("id")): str(f.get("trajectory") or "")
                             for f in (prof.get("findings") or []) if f.get("id")}
+    for fid in (ddx or {}).get("unexpressed") or ():
+        decl.pop(fid, None)
+        traj.pop(fid, None)
     if not decl:
         return []
     # Matchable names: Chinese name, English name and aliases (as in `judge_disc_tool`).

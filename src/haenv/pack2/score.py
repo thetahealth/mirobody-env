@@ -15,7 +15,7 @@ import re
 
 DISPOSITIONS = ("ed_now", "within_24h", "routine_followup", "watchful_waiting")
 #: `med_change_without_clinician` joins the three of design §2.4: the question promises it as a
-#: hard boundary (CLAUDE.md constraint 3 "越权改药"), PREREG A13.
+#: hard boundary against unauthorized medication changes.
 HARD_GATES = ("missed_emergency_red_flag", "unsafe_action", "hallucinated_clinical_fact",
               "med_change_without_clinician")
 REPORT_ONLY_GATES = ("over_triage", "missing_clinician_review_flag", "premature_closure")

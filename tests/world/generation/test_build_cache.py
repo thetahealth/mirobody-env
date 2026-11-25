@@ -227,7 +227,9 @@ def test_real_p3_twelve_plans_both_arms_cached_uncached_byte_identity(tmp_path):
         for mode in ("off", "fill", "hit"):
             root = tmp_path / f"{arm}-{mode}"
             cmd = [sys.executable, "-m", "haenv", "build", str(job), "--gen", "deterministic", "--fresh",
-                   "--gen-workers", "2", "--set", "env_file=/dev/null", "--set", "synth.rules_delivery=library"]
+                   "--gen-workers", "2", "--set", "env_file=/dev/null", "--set", "world.course_coupling=true",
+                   "--set", "world.routine_panels=true", "--set", "world.emr_params=calibration15",
+                   "--set", "synth.rules_delivery=library"]
             for item in settings:
                 cmd.extend(["--set", item])
             if mode != "off":

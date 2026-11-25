@@ -316,8 +316,8 @@ class HaenvGenerator:
         # Lab-calendar streams are rendered noise-free on the case's visit days
         # (`lab_draw_days`); `observe_labs` adds the measurement layer after GV-1.
         _clin = m.get("clinical") or {}
-        _lab_days = lab_item_days(_cid, [s for s in _clin if s in lab_signals()],
-                                  lab_draw_days(_cid, ce, dose))
+        _visits = lab_draw_days(_cid, ce, dose)
+        _lab_days = lab_item_days(_cid, [s for s in _clin if s in lab_signals()], _visits)
         _LAB_CTX[_cid] = {"wpts": wpts, "ce": ce, "drug": _drug_of(p),
                           "dose_mg": _last_dose_mg(dose), "adh": adh,
                           "response": _drug_response_of(p), "clinical": _clin,
@@ -325,17 +325,24 @@ class HaenvGenerator:
                           "drug_term": (lambda _s, _c: _drug_term_fn(p, _s, _c, dose, adh,
                                                                      concurrent)),
                           # a task-pack world's record before day 0 (`observe_labs` draws its labs)
-                          "concurrent": concurrent, "history": _world_history(p, _cid, T, ce)}
+                          "concurrent": concurrent, "history": _world_history(p, _cid, T, ce),
+                          # the visit calendar, for the routine panels of the coupled world (`truth.panels`)
+                          "visits": _visits}
 
+        _known = [_raw_field(p.patient_basics, "disease")] + [
+            c for c in (p.patient_basics.get("comorbidities") or []) if c in EXPLAINER_BASES]
+        from haenv.world.truth import coupling_enabled
+        if coupling_enabled():
+            from haenv.world.truth.soc import known_conditions, premise_kwargs
+            _blocked = premise_kwargs(p, _cid)["constraints"]["forbidden_indications"]
+            _known = known_conditions(p.patient_basics, concurrent, T, known=_known, blocked=_blocked)
         return RawCase(
             case_id=m.get("case_id", "HAENV"),
             user_profile={"age_range": _raw_field(p.patient_basics, "age_range"),
                           "sex": _raw_field(p.patient_basics, "sex"),
                           # M2 explainer bases are named in the record (the explainer must be
                           # visible, spec 4.2); other comorbidities stay unnamed as in v1.0.1.
-                          "known_conditions": [_raw_field(p.patient_basics, "disease")]
-                          + [c for c in (p.patient_basics.get("comorbidities") or [])
-                             if c in EXPLAINER_BASES],
+                          "known_conditions": _known,
                           "treatment_goals": p.patient_basics.get("goals", ["sustained_weight_loss"]),
                           "device_inventory": p.device_signals.get("devices", [])},
             prediction_context={
@@ -542,7 +549,7 @@ WORLD_PROMPT_META = (
 )
 
 
-#: Premise `meta` keys that carry the answer (CLAUDE.md 2a: gold is never handed to the generation model).
+#: Premise `meta` keys that carry the answer and are withheld from the generation model.
 GOLD_META = ("ddx", "red_flag", "clinician_warranted", "outcome_label")
 
 
@@ -774,6 +781,10 @@ def _inject_events_verified(raw: RawCase, cs: CaseSpec, p: LatentPremise, T: int
     """
     if dispatch is not None:
         dispatch = _first_response_only(dispatch)
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        from haenv.world.truth.plan import prepare_penetrance
+        prepare_penetrance(raw)
     base = copy.deepcopy(raw)
     rev_day = (int(cs.latent.get("reversal_week", (T + 56) // 7)) * 7
                if cs.outcome == "regain" else None)
@@ -821,6 +832,17 @@ def _inject_events_verified(raw: RawCase, cs: CaseSpec, p: LatentPremise, T: int
 #: they are judged on the observed series: the truth series carries neither the reading
 #: artifacts nor the clinic-scale reference.
 OBSERVED_CONFLICT_KINDS = frozenset({"window_trap_not_visible_pre_T"})
+
+
+def _with_course_terms(raw, terms: dict) -> dict:
+    """GEN15's declared drivers plus a truth plan's condition course (none without a plan)."""
+    if not (getattr(raw, "latent_premise", None) or {}).get("truth"):
+        return terms
+    from haenv.world.truth.channels import course_terms
+    out = dict(terms)
+    for sig, v in course_terms(raw, raw.longitudinal_data).items():
+        out[sig] = out.get(sig, 0.0) + v
+    return out
 
 
 def last_shown_day(raw: RawCase, geometry: dict | None) -> int:
@@ -957,6 +979,17 @@ def build_case(cs: CaseSpec, max_rounds: int = 6, T: int | None = None,
         if raw is not None:
             from haenv.m2.emr import render_metadata
             render_metadata(raw)
+            from haenv.world.truth import coupling_enabled
+            if coupling_enabled():
+                from haenv.world.truth.regimens import finalize_dependencies, finalize_m2_record_facts
+                from haenv.world.truth.soc import record_notes
+                finalize_dependencies(raw)
+                record_notes(raw, audit)
+                finalize_m2_record_facts(raw)
+            # The rubric snapshot was taken inside the case hook; rows added since then
+            # belong to the question the solver sees.
+            from haenv.scoring.management.plan import refresh as refresh_management_facts
+            refresh_management_facts(raw)
         return raw, audit
 
 
@@ -1063,6 +1096,10 @@ def _build_case_inner(cs: CaseSpec, max_rounds: int = 6, T: int | None = None,
         log.error("[build] %s premise validation failed: %s", cs.case_id, e)
         return None, audit
     audit["premise_ok"] = True
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        from haenv.world.truth.regimens import prepare
+        prepare(p, str(cs.case_id), T, int(p.meta.get("course_end_day", END)))
     # A plugin task's case (external latent) has its events written by code: no event model.
     _plugin_task = bool((p.meta or {}).get(_EG.SLOT))
     if _plugin_task:
@@ -1132,6 +1169,12 @@ def _build_case_inner(cs: CaseSpec, max_rounds: int = 6, T: int | None = None,
     raw.case_id = cs.case_id                                    # the injector mutated id, restore it
     raw.latent_premise = p.dumps()                              # verifier-only bookkeeping
     raw.latent_premise[WORLD_MEDICATION_KEY] = world_medication_record(p)
+    if managed := p.meta.get("background_regimen"):
+        raw.latent_premise["decisive_medications"] = [dict(row) for row in managed["decisive_medications"]]
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled() and (p.meta.get(_EG.SLOT) or {}).get("p2"):
+        from haenv.p2.planned import prepare_assignment
+        prepare_assignment(raw, str(cs.case_id))
     audit["noise_applied"] = applied
     audit["weight_skeleton"] = _SKELETON_AUDIT.pop(str(cs.case_id), None)
     audit["ledger_clinical_realigned"] = _CLINICAL_LEDGER_AUDIT.pop(str(cs.case_id), None)
@@ -1244,8 +1287,11 @@ def _build_case_inner(cs: CaseSpec, max_rounds: int = 6, T: int | None = None,
     if _lab_truth:
         # Lab slope is judged on the noise-free lab truth, as weight is on its truth: the
         # kernel's `max_weekly_delta` bounds the physiological rate, not measurement error.
+        # With a truth plan the bound applies to the base course; the condition course
+        # follows its registered kinetics (`registry/effects.yaml`).
+        _slope_truth = (_lab_ctx or {}).get("uncoupled_truth") or _lab_truth
         _clean_ld = {**(_clean_ld if _clean_ld is not None
-                        else copy.deepcopy(raw.longitudinal_data)), **_lab_truth}
+                        else copy.deepcopy(raw.longitudinal_data)), **_slope_truth}
     if _clean_ld is None:
         conflicts = premise_conflicts(raw, p)
     else:
@@ -1270,7 +1316,7 @@ def _build_case_inner(cs: CaseSpec, max_rounds: int = 6, T: int | None = None,
                                                 p.patient_basics.get('comorbidities') or [],
                                                 cs.case_id),
                                             # expected direction includes the drug effect
-                                            drug_terms=_drug_terms_for(raw, p, _cplan))
+                                            drug_terms=_with_course_terms(raw, _drug_terms_for(raw, p, _cplan)))
             # GEN13: outcome derivable by label_rule, judged on the ground-truth trajectory
             + gates.check_outcome_derivable(
                 _truth if _clean_ld is not None else raw, cs)
@@ -1300,6 +1346,15 @@ def _build_case_inner(cs: CaseSpec, max_rounds: int = 6, T: int | None = None,
     warns = [h for h in hits if h["severity"] != "gate"]
     for w in warns:
         log.warning("[gates] %s %s: %s", cs.case_id, w["kind"], w["detail"])
+    # Routine laboratory panels of the coupled world (B3): background analytes at the record's encounters,
+    # after every emission gate (they never carry a judged analyte) and before the payload view.
+    from haenv.world.truth import coupling_enabled
+    if coupling_enabled():
+        from haenv.world.truth import panels as _panels
+        if _panels.enabled():
+            _pa = _panels.observe(raw, _lab_ctx, T)
+            if _pa is not None:
+                audit["routine_panels"] = _pa
     # A pack's acute vitals of a day enter that day's wearable points (`pack_skeleton.couple_acute`), then
     # a plugin pack's case keeps only the payload fields its frame reads (`pack_skeleton.PayloadView`);
     # the final leak scan below reads the trimmed view.

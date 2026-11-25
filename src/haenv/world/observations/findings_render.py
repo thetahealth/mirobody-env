@@ -560,6 +560,9 @@ def _specialty_items(case_id: str, prof: dict, inc: dict) -> list[tuple[str, int
     keep: list[tuple[str, int]] = []
     for fid, n in _SPECIALTY_SCREEN:
         c, d = SPECIALTY_COVERAGE[fid], share.get(fid, 0.0)
+        if fid != "ANA":  # Suppressed cohorts prevent a complete pooled ANA refit.
+            from haenv.world.truth.params import emr
+            c = emr(f"haenv/world/observations/findings_render.py:SPECIALTY_COVERAGE.{fid}", c)
         q = max(0.0, (c - d) / (1.0 - d)) if d < 1.0 else 1.0
         if fid in prof or fid in inc or fid in suspected or rng.unit(case_id, "panel-sp", fid) < q:
             keep.append((fid, n))
@@ -1152,7 +1155,7 @@ def align_panel_to_streams(raw, normal_before_day: int | None = None) -> list[st
     except ImportError:                            # kernel not on the path
         _dom = {}
     _insufficient = bool(((getattr(raw, "adjudication", None) or {}).get("ddx") or {}).get("insufficient"))
-    if onset <= T and not _insufficient:
+    if onset <= T and not _insufficient and not (getattr(raw, "latent_premise", None) or {}).get("truth"):
         for p in (prof.get("findings") or ()):
             fid, d = p.get("id"), p.get("direction")
             s = _PANEL_TO_TS.get(fid)

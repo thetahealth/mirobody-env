@@ -36,6 +36,10 @@ from haenv.scoring.management.plan import install as _install_management_plan
 
 _install_management_plan()
 
+from haenv.world.truth.m2_results import install_results as _install_truth_results
+
+_install_truth_results()
+
 from haenv.m2.confirmation import install_results as _install_confirmation_results
 
 _install_confirmation_results()

@@ -375,6 +375,9 @@ def v3(ladder_rows, batch, *, gated=None) -> dict:
         sys.path.insert(0, str(ROOT / "tools"))
         from tools.testing import m2_stub_ladder as L
         out["Z3"] = L.gates(ladder_rows, boot=0)["Z3"]
+        missing = sorted(set(L.Z3_FRAME_GATED) - set(out["Z3"]["frame_stubs"]))
+        if missing:
+            out["Z3"].update({"pass": None, "missing_frame_stubs": missing})
     else:
         out["Z3"] = {"pass": None, "why": "no stub rows on the formal case set"}
     out["leak"] = leak_channels(pathlib.Path(batch), gated=gated) if batch else {"pass": None, "why": "no batch"}

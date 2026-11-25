@@ -23,6 +23,7 @@ from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 import gc
+from hashlib import sha256
 from http.client import HTTPConnection
 import json
 import os
@@ -124,6 +125,32 @@ def _worker_init():
 
 
 _RAW_CACHE = {}
+OFFLINE_FIXTURE = Path(__file__).resolve().parents[2] / 'benchmarks/results/1.3.1/http-replay.json'
+OFFLINE_DRIFT = OFFLINE_FIXTURE.with_name('http-replay-drift.json')
+
+
+def _json_sha256(value):
+    data = json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+    return sha256(data.encode('utf-8')).hexdigest()
+
+
+def check_stored_drift(registry, observed):
+    """Match each registered call and both payload digests, and reject stale entries."""
+    registered = {}
+    for row in registry:
+        index = row['index']
+        if index in registered or not row['changes']:
+            raise ValueError(f'Duplicate or undocumented historical HTTP difference at index {index}')
+        registered[index] = {k: v for k, v in row.items() if k != 'changes'}
+    reproduced = set()
+    unexpected = []
+    for row in observed:
+        index = row['index']
+        if registered.get(index) == row:
+            reproduced.add(index)
+        else:
+            unexpected.append(row)
+    return len(reproduced), unexpected, sorted(registered.keys() - reproduced)
 
 
 def purchase_call(call):
@@ -134,7 +161,7 @@ def purchase_call(call):
             and isinstance(args['target'], str))
 
 
-def replay_response(task):
+def replay_response(task, *, record_stored_diffs=False):
     """Replay one response in order over a real loopback socket; no state crosses responses."""
     from haenv.app.artifacts.store import load_cases
     batch, pack, payload, trace, model, pk, case = task
@@ -150,6 +177,7 @@ def replay_response(task):
     counts, failures, diffs = Counter(), [], []
     identical = 0
     stored_diffs = 0
+    stored_differences = []
     stored = [m['content'] for m in trace.get('messages', []) if m.get('role') == 'tool']
     calls = list(trace.get('calls', []))
     pending = 0
@@ -182,6 +210,10 @@ def replay_response(task):
                           'call': calls[index], 'expected': str(expected)[:1500], 'actual': str(got)[:1500]})
         if index < len(stored) and stored[index] != expected:
             stored_diffs += 1
+            if record_stored_diffs:
+                stored_differences.append({'index': index, 'call_sha256': _json_sha256(calls[index]),
+                                           'stored_sha256': _json_sha256(stored[index]),
+                                           'current_sha256': _json_sha256(expected)})
 
     with FHIRServer(('127.0.0.1', 0), remote) as server:
         thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': 0.01}, daemon=True)
@@ -240,7 +272,8 @@ def replay_response(task):
             thread.join()
     return {'calls': len(calls), 'identical': identical, 'differing': len(calls) - identical,
             'pending_purchases_replayed': pending,
-            'stored_differing': stored_diffs, 'resources': dict(counts), 'validation_failures': len(failures),
+            'stored_differing': stored_diffs, 'stored_differences': stored_differences,
+            'resources': dict(counts), 'validation_failures': len(failures),
             'failure_examples': failures[:3], 'diffs': diffs}
 
 
@@ -263,8 +296,10 @@ def main(argv=None):
     gc.disable()
     offline = tempfile.TemporaryDirectory(prefix='haenv-http-replay-') if args.offline else None
     if args.offline:
-        fixture = Path(__file__).resolve().parents[2] / 'benchmarks/results/1.3.1/http-replay.json'
-        data = json.loads(fixture.read_text())
+        data = json.loads(OFFLINE_FIXTURE.read_text(encoding='utf-8'))
+        drift = json.loads(OFFLINE_DRIFT.read_text(encoding='utf-8'))
+        if drift['session'] != {key: data[key] for key in ('pack', 'model', 'repeat', 'question')}:
+            raise ValueError('Historical HTTP differences belong to a different stored session')
         batch = Path(offline.name)
         (batch / 'cases.jsonl').write_text(json.dumps(data['case'], ensure_ascii=False) + '\n')
         tasks = [(str(batch), data['pack'], data['payload'], data['trace'], data['model'], data['repeat'], data['question'])]
@@ -285,8 +320,9 @@ def main(argv=None):
     gc.freeze()
     gc.enable()
     context = multiprocessing.get_context('fork' if 'fork' in multiprocessing.get_all_start_methods() else 'spawn')
+    observed = []
     with ProcessPoolExecutor(max_workers=args.workers, initializer=_worker_init, mp_context=context) as pool:
-        pending = {pool.submit(replay_response, task): task for task in tasks}
+        pending = {pool.submit(replay_response, task, record_stored_diffs=args.offline): task for task in tasks}
         for n, future in enumerate(as_completed(pending), 1):
             try:
                 result = future.result()
@@ -297,6 +333,7 @@ def main(argv=None):
             for key in ('calls', 'identical', 'differing', 'stored_differing', 'validation_failures',
                         'pending_purchases_replayed'):
                 summary[key] += result[key]
+            observed.extend(result['stored_differences'])
             summary['resources'].update(result['resources'])
             if result['diffs'] and not summary['diffs']:
                 print('First difference: ' + json.dumps(result['diffs'][0], ensure_ascii=False), flush=True)
@@ -305,6 +342,12 @@ def main(argv=None):
             if n % 100 == 0:
                 print(f"{n}/{len(tasks)} responses; {summary['calls']} calls; "
                       f"{summary['differing']} differing; {summary['validation_failures']} validation failures", flush=True)
+    stored_mismatch = bool(summary['stored_differing'])
+    if args.offline:
+        registered, unexpected, stale = check_stored_drift(drift['rows'], observed)
+        summary.update(registered_stored_differing=registered,
+                       unregistered_stored_differences=unexpected, stale_stored_differences=stale)
+        stored_mismatch = bool(unexpected or stale)
     summary['resources'] = dict(sorted(summary['resources'].items()))
     summary['elapsed_seconds'] = round(time.monotonic() - start, 2)
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -312,7 +355,7 @@ def main(argv=None):
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     if offline:
         offline.cleanup()
-    return int(bool(summary['differing'] or summary['stored_differing'] or summary['validation_failures']
+    return int(bool(summary['differing'] or stored_mismatch or summary['validation_failures']
                     or missing or summary['worker_errors']))
 
 

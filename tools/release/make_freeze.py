@@ -5,7 +5,8 @@
 
 A generated pack built in one language is declared as `--generated-pack <job>@<lang>=<batch>`;
 its receipt is keyed `<job>@<lang>`, so the zh and en builds of one job are recorded side by side,
-and the batch's recorded language must match. `<batch>` may also be the batch directory itself
+and the batch's recorded language must match. Append `#<arm>` after the language to record
+several arms of the same job and language. `<batch>` may also be the batch directory itself
 (`.../results/<task_type>/<job>/<stamp>`), for builds that live outside the output root; only the
 stamp is recorded. `--inherit-packs` carries the published `packs` of the previous anchor over
 unchanged (like `--segments-only`) while the generated packs are given fresh.
@@ -30,6 +31,7 @@ _tool_bootstrap(__file__)
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -103,6 +105,7 @@ from haenv.provenance.declarations import (
     PACK2_JUDGING,
     P4_JUDGING,
     P4_WORLD,
+    RL_JUDGING,
     P3_JUDGING,
     PROTOCOL_WORLD,
     P3_WORLD,
@@ -260,9 +263,8 @@ def main() -> int:
     ap.add_argument("--pack", action="append", default=[],
                     metavar="JOB=BATCH", help="repeatable; JOB=batch timestamp")
     ap.add_argument("--generated-pack", action="append", default=[],
-                    metavar="JOB[@LANG]=BATCH", help="record an audited generation-pipeline output separately from published Q packs; "
-                                                    "`@LANG` keys the receipt by language (zh and en of one job side by side) and BATCH "
-                                                    "may be the batch directory")
+                    metavar="JOB[@LANG[#ARM]]=BATCH", help="record an audited generation-pipeline output separately from published Q packs; "
+                                                          "the optional language and arm identify parallel receipts; BATCH may be the batch directory")
     ap.add_argument("--inherit-packs", action="store_true",
                     help="carry the published `packs` of the previous anchor over unchanged while the generated packs are given "
                          "fresh; must be combined with --supersedes and --why, and excludes --pack")
@@ -350,7 +352,11 @@ def main() -> int:
     from haenv import i18n as _i18n
     for spec, generated in [(s, False) for s in args.pack] + [(s, True) for s in args.generated_pack]:
         key, _, batch = spec.partition("=")
-        job, _, lang = key.partition("@")
+        job_lang, arm_sep, arm = key.partition("#")
+        job, _, lang = job_lang.partition("@")
+        if arm_sep and (not generated or not lang or not re.fullmatch(r"[a-z][a-z0-9_-]*", arm)):
+            print(f"🔴 `{spec}`: an arm must be a lowercase identifier after the language on `--generated-pack`")
+            return 2
         if lang:
             if not generated:
                 print(f"🔴 `{spec}`: a language suffix applies to `--generated-pack` only")
@@ -361,6 +367,8 @@ def main() -> int:
                 print(f"🔴 `{spec}`: {_e}")
                 return 2
             key = f"{job}@{lang}"
+            if arm:
+                key += f"#{arm}"
         if key in pack_types or key in packs:
             print(f"🔴 Pack {key!r} is declared more than once")
             return 2
@@ -402,6 +410,8 @@ def main() -> int:
                       "generation_source": source}
         if receipt_lang:
             target[key] = {"job": job, "language": receipt_lang, **target[key]}
+        if arm:
+            target[key]["arm"] = arm
     if missing:
         for m in missing:
             print(f"🔴 Batch does not exist: {m}")

@@ -49,6 +49,7 @@ def drugs_for(disease: str) -> tuple[tuple[str, tuple[float, ...]], ...]:
     out = tuple((d, tuple(float(x) for x in (spec or {}).get("dose_steps") or ()))
                 for d, spec in pairs.items()
                 if indication_of(disease, d) in ALLOWED_INDICATIONS
+                and (spec or {}).get("sampling") != "standard_of_care"
                 and (spec or {}).get("dose_steps"))
     return out or DRUGS
 

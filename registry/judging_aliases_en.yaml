@@ -6,7 +6,7 @@
 # names[<Chinese gold name>] next to that name. Leak scanning and generation never read this file.
 source: registry/i18n/en/lexicon
 generator: tools/i18n/gen_judging_aliases.py
-lexicon_sha16: 803a4876906c5229
+lexicon_sha16: e3bb05beffe054f2
 names:
   1型: type 1
   3c型糖尿病: type 3c diabetes mellitus

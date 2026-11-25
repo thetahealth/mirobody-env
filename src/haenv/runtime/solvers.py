@@ -771,14 +771,17 @@ def solver_for_spec(name: str, spec: dict, env: dict, timeout: int, retries: int
     by batch runs and tooling. An unregistered backend returns None.
     """
     backend = spec.get("backend", "openrouter")
-    # Google-family models (by `vendor`, not by name) must connect directly: an
-    # OpenAI-compatible relay drops `thought_signature`, and requests with tools then fail with 400.
-    if str(spec.get("vendor") or "").lower() == "google" and backend != "google":
+    # Default-deny Google relays: old compatibility gateways drop signatures.
+    # An explicit route opt-in is allowed with our query tool-call extra_content
+    # round trip; it does not claim the gateway itself preserves those fields.
+    google_compat = backend == 'relay' and spec.get('google_openai_compat') is True
+    if str(spec.get("vendor") or "").lower() == "google" and backend != "google" and not google_compat:
         raise ValueError(
             f"config.models[{name}]: vendor=google but backend={backend!r}. "
             f"Google-family models must connect directly (`backend: google`): an "
             f"OpenAI-compatible relay drops `thought_signature`, and requests with tools "
-            f"fail with HTTP 400. Matched on `vendor`, not on the model name.")
+            f"fail with HTTP 400. A reviewed relay compatibility route requires "
+            f"google_openai_compat: true. Matched on `vendor`, not on the model name.")
     _ensure_backends_registered()
     bdef = BACKENDS.get(backend)
     if bdef is None:

@@ -1,5 +1,12 @@
 # Pack 4 follow-up records, patient speech and wording variants.
 entries:
+  p4.protocol.comparison_pair: Compare the assessed draw and the previous draw named in the question, checking the analyte, unit and specimen. Today is the review date. Standardized retests verify the named draws. When dates are not both named, use the latest completed comparable routine report before the assessed draw as the previous report. Use older reports to review the course and pretreatment baseline.
+  p4.action.alcohol_increased: increased alcohol intake
+  p4.action.alcohol_stopped: stopped drinking alcohol
+  p4.alcohol.increased_history: Alcohol intake increased and remained higher for several weeks.
+  p4.alcohol.stopped_history: The patient stopped drinking alcohol and remained abstinent for several weeks.
+  p4.followup.case.assessed_draw_verified: A collection, intake or method interference affected the assessed draw and a clean standardized retest of that draw is already documented
+  p4.followup.case.assessed_draw_unverified: A collection, intake or method interference affected the assessed draw and a clean standardized retest is still needed
   p4.procedure.report_fields: The report records the actual collection site, collection time window, tube,
     separation time, storage temperature and haemolysis index. Check these against the method document
     for the analyte.
@@ -203,8 +210,9 @@ entries:
     washout, or interpretation using a verified unaffected method. no_action means no additional intervention
     for this historical difference; routine follow-up continues. If ingested interference affected only
     the previous reading and today's reading is standard, treat it as a distortion of the previous reading;
-    no_action is acceptable. If it affected today's reading, no_action is acceptable when the exposure has
-    ended and subsequent clean results are available; ongoing exposure requires verification.
+    no_action is acceptable. If collection, intake or method interference affected the
+    assessed draw and a clean standardized retest of that draw is documented, both no_action and
+    repeat_standardized are accepted. If verification is still needed, choose repeat_standardized.
   p4.notice.commutable_comparison.2: Patient specimens were tested concurrently under both sets of assay
     conditions. The comparison values apply only to the listed dates, platforms and lots.
   p4.notice.commutable_comparison.3: Parallel patient-sample results are recorded here. Verify the applicable

@@ -80,7 +80,7 @@ def medication_rows(rows):
     return sorted(out, key=lambda r: (r["day"], _drug_sort(r.get("drug", ""))))
 
 
-def source_block(legacy, current_medications, patient_quote):
+def source_block(legacy, current_medications, patient_quote, *, reconciliation=None):
     """One outpatient-note stream; old chemistry and prescribing leave its prose."""
     from haenv.world.labworld.meds import drug
     from haenv.p3.policy import identify_drug as parse_drug
@@ -96,7 +96,11 @@ def source_block(legacy, current_medications, patient_quote):
                 _line("rx", L("p3.emr.rx.see_record") if has_rx else r["prescription"])]
         if not has_rx:
             text.append(_line("record", r["change"]))
-        if not is_one(r["reading"], "p3.reading.not_measured", "p3.reading.not_due"):
+        if day == int(b["today"]) and b.get("control_measurements"):
+            from haenv.p3.measurement_render import source_rows
+            dest = home if drug(key).get("self_measured") else labs
+            dest.extend(source_rows(b))
+        elif not is_one(r["reading"], "p3.reading.not_measured", "p3.reading.not_due"):
             dest = home if drug(key).get("self_measured") else labs
             dest.append({"day": day, "test": b["control_axis"], "result": r["reading"]})
         else:
@@ -129,12 +133,25 @@ def source_block(legacy, current_medications, patient_quote):
                 if r.get(fld):
                     text.append(_line(label, r[fld]))
             for p in r.get("prescriptions") or ():
+                # A complete canonical LT4 course can expose the same actual
+                # prescription in both its archive note and clinic view.
+                # Keep the note, and emit the identical dated fact once.
+                if key == 'levothyroxine' and parse_drug(r.get('drug')) == key and any(
+                        int(v['day']) == int(p['day']) and parse_drug(v['drug']) == key
+                        and prescription_dose(v['prescription']) == float(p['dose_mg'])
+                        for v in prescriptions):
+                    continue
                 prescriptions.append({"day": int(p["day"]), "drug": r["drug"],
                                       "prescription": T("p3.rx.daily_unit", name=_short(r["drug"]), dose=f"{p['dose_mg']:g}", unit=unit)})
             old_labs = r.get("labs") or [{"day": day, **{k: r[k] for k in LABS if k in r}}]
             for p in old_labs:
                 for fld, (name, lab_unit) in LABS.items():
                     if fld in p:
+                        if key == 'levothyroxine' and fld == 'tsh_mIU_L' and any(
+                                int(v['day']) == int(p['day']) and is_text(v['test'],
+                                    getattr(b['control_axis'], 'key', b['control_axis']))
+                                and number(v['result']) == float(p[fld]) for v in labs):
+                            continue
                         labs.append({"day": int(p["day"]), "test": name, "result": T("p3.lab.result", value=p[fld], unit=lab_unit)})
             if "dose_mg" in r:
                 prescriptions.append({"day": day, "drug": r["drug"],
@@ -161,6 +178,9 @@ def source_block(legacy, current_medications, patient_quote):
     else:
         # Printed delivery is retained as a source document for offline controls.
         out["clinic_documents"] = b["clinic_protocol"]
+    if reconciliation is not None:
+        from haenv.p3.dose_reconciliation import project
+        project(reconciliation, out)
     return out
 
 
@@ -206,11 +226,17 @@ def clinical_view(b):
     key = candidates[0]
     name, ax = drug(key)["display"], axis(drug(key)["axis"])["display"]
     T_ = max(int(r["day"]) for r in visits)
+    from haenv.p3.textread import number
+    samples = [p for p in b["lab_results"] + (b.get("home_measurements") or [])
+               if p.get("review_day") == T_ and (is_text(p["test"], getattr(ax, "key", ax))
+                   or (drug(key)["axis"] == "home_sbp" and is_text(p["test"], "p3.measurement.bp.test")))]
     rows = []
     for r in visits:
         day = int(r["day"])
         results = [p["result"] for p in b["lab_results"] + (b.get("home_measurements") or [])
                    if int(p["day"]) == day and is_text(p["test"], getattr(ax, "key", ax))]
+        if day == T_ and samples:
+            results = [samples[-1]["result"]]
         prescription = _field(r["text"], "rx")
         change = _field(r["text"], "record")
         if is_text(prescription, "p3.emr.rx.see_record"):
@@ -219,6 +245,10 @@ def clinical_view(b):
             if len(matches) != 1:
                 raise ValueError("dated prescription missing or ambiguous")
             prescription, change = matches[0]["prescription"], matches[0]["event"]
+            if slots(change, "p3.dose.event_reference") is not None:
+                change = _field(r["text"], "record")
+                if change is None:
+                    raise ValueError("dated medication change history missing")
         row = {"day": day, "reading": results[0] if len(results) == 1 else _field(r["text"], "exam"),
                "prescription": prescription, "change": change}
         renal = [p["result"] for p in b["lab_results"] if int(p["day"]) == day and is_text(p["test"], "p3.lab.renal_panel")]
@@ -238,6 +268,9 @@ def clinical_view(b):
            "other_medications": [r for r in b.get("prescription_record") or [] if parse_drug(r.get("drug")) != key],
            "adverse_event_record": [],
            **({"administration_record": b["administration_record"]} if b.get("administration_record") else {})}
+    if samples:
+        out["control_measurements"] = [{**{k: v for k, v in p.items() if k not in ("result", "review_day", "test")},
+                                        "value": number(p["result"])} for p in samples]
     documented = slots(reviews[0]["text"], "p3.review.documented_only")
     if documented is not None:
         out["documented_course_only"] = True
@@ -288,9 +321,19 @@ def clinical_view(b):
         if _field(text, "management"):
             old.update(secondary_cause=_field(text, "workup"), dechallenge=_field(text, "management"),
                        rechallenge=_field(text, "followup"))
-            old["dose_mg"] = old["prescriptions"][-1]["dose_mg"]
-            old["ck_uln"] = next(p["ck_uln"] for p in old["labs"] if p["day"] == day)
+            if old_key == "atorvastatin":
+                old["dose_mg"] = old["prescriptions"][-1]["dose_mg"]
+                old["ck_uln"] = next(p["ck_uln"] for p in old["labs"] if p["day"] == day)
         out["adverse_event_record"].append(old)
+    from haenv.p3.dose_read import reconcile
+    reconciled = reconcile(b, key)
+    if reconciled:
+        out.update(reconciled)
+        # A documentation correction restores the actual course represented by
+        # the dated event; the uncorrected prescription remains in its source.
+        latest = max((r for r in out["visits"] if int(r["day"]) < T_), key=lambda r: int(r["day"]))
+        latest["prescription"] = T("p3.rx.daily_unit", name=L(f"drug.{key}"),
+                                  dose=format(reconciled["reconciled_dose"], "g"), unit=drug(key)["unit"].split("/")[0])
     return out
 
 
@@ -312,7 +355,9 @@ def finalize(raw):
         raise ValueError("P3 needs a recorded patient utterance")
     quote = utterances[-1]["symptom"]
     g.update(record_format="emr", current_medications=medications, patient_quote=quote)
-    raw.prediction_context[BLOCK] = source_block(render_block(g), medications, quote)
+    raw.prediction_context[BLOCK] = source_block(render_block(g), medications, quote, reconciliation=g)
+    from haenv.p3.composition import tag
+    tag(g)
     for manifest in (g.get("history_dependency") or {}, g.get("look_alike") or {}):
         for ref in manifest.get("records") or []:
             if ref["section"] == "adverse_event_record":

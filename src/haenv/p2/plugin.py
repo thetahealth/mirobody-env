@@ -78,7 +78,10 @@ def pack():
         base_labels=(), answers_action=False,
         # the item is read off the triage block; world streams are background only and the
         # quantities the block shows are removed in its window (`hooks.OVERLAP_STREAMS`)
-        view=PayloadView(streams=("HbA1c",)))
+        view=PayloadView(streams=("HbA1c",),
+                         # routine panels of the coupled world (B3/F1), only where the panel layer shows them
+                         panel_streams=("creatinine", "potassium", "eGFR", "ALT", "AST", "LDL", "triglycerides",
+                                        "fasting_glucose", "HbA1c", "TSH", "FT4")))
 
 
 def register() -> list:

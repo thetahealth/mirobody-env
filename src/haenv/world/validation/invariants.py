@@ -26,7 +26,9 @@ from haenv.i18n.identity import source
 from haenv import data_root as _dr   # resource root: source tree = repo root, wheel = haenv/_data
 
 ROOT = _dr()
-PACK_BLOCK = {"p2": "triage_p2", "p3": "meds_p3", "p4": "followup_p4", "m2": "m2_frame"}
+PACK_BLOCK = {"p2": "triage_p2", "p3": "meds_p3", "p4": "followup_p4", "m2": "m2_frame",
+              # rl (red-line pairs): loaded for its own pool; no shared gate lists rl (it is not in ALL)
+              "rl": "redline_rl"}
 
 # ----------------------------------------------------------------------------------------- loading
 
@@ -53,13 +55,20 @@ def load(batch, pack: str, purchases=None) -> list[dict]:
             buys[r["case_id"]] = r
     out = []
     ids = set()
+    symptom_sources = {}
+    if (batch / "audit.jsonl").is_file():
+        for line in (batch / "audit.jsonl").read_text(encoding="utf-8").splitlines():
+            row = json.loads(line)
+            symptom_sources[row["case_id"]] = row.get("symptom_source") or {}
     for line in open(batch / "cases.jsonl", encoding="utf-8"):
         r = json.loads(line)
         if r["case_id"] in ids:
             raise ValueError(f"duplicate case: {r['case_id']}")
         ids.add(r["case_id"])
         out.append({"case_id": r["case_id"], "pack": pack, "case": restore(r["case"], messages.get(r["case_id"])), "sp": restore(pays.get(r["case_id"]), messages.get(r["case_id"])),
-                    "buy": buys.get(r["case_id"])})
+                    "buy": buys.get(r["case_id"]),
+                    "manifest": (r.get("question") or {}).get("injected_manifest") or {},
+                    "symptom_source": symptom_sources.get(r["case_id"], {})})
     if not ids or set(pays) != ids or any(not it["sp"] for it in out):
         raise ValueError("invariant pool needs nonempty cases and complete, matching payloads")
     if pack == "m2" and (set(buys) != ids or any(
@@ -115,6 +124,15 @@ def record_conditions(it) -> set[str]:
 #: world drug id -> the names the visible text uses (registry/labworld.yaml:drugs, haenv/p2/render.py:MEDS,
 #: haenv/world/observations/events.py:DRUG_ZH, p3 registry names); the M2 scene prints the id itself
 DRUG_NAMES = {
+    'aspirin': ('阿司匹林', 'aspirin'),
+    'clopidogrel': ('氯吡格雷', 'clopidogrel'),
+    'apixaban': ('阿哌沙班', 'apixaban'),
+    'dabigatran': ('达比加群酯', 'dabigatran etexilate'),
+    'rivaroxaban': ('利伐沙班', 'rivaroxaban'),
+    'warfarin': ('华法林', 'warfarin'),
+    'spironolactone': ('螺内酯', 'spironolactone'),
+    'sitagliptin': ('西格列汀', 'sitagliptin'),
+    'isosorbide_mononitrate': ('单硝酸异山梨酯', 'isosorbide mononitrate'),
     "semaglutide": ("司美格鲁肽", "semaglutide"), "liraglutide": ("利拉鲁肽", "liraglutide"),
     "dulaglutide": ("度拉糖肽", "dulaglutide"), "tirzepatide": ("替尔泊肽", "tirzepatide"),
     "metformin": ("二甲双胍", "metformin"), "amlodipine": ("氨氯地平", "amlodipine"),
@@ -323,12 +341,35 @@ def c1(it):
     return [f"record:{c}" for c in sorted(record_conditions(it)) if c not in w]
 
 
+@gate(id="p2_planned_conditions", cls="①", packs=("p2",),
+      control="remove a planned AF/HF diagnosis from the finalized comorbidities",
+      statement="Assignment-time AF/HF conditions equal the finalized world comorbidities.")
+def p2_planned_conditions(it):
+    """Read saved assignment state, independent of the current coupling switch."""
+    latent = it["case"].get("latent_premise") or {}
+    if "p2_planned_conditions" not in latent:
+        # Coupling-off cases have neither snapshot. A coupled assignment must
+        # carry the explicit planning snapshot even when it planned no AF/HF.
+        if "soc_context" in (latent.get("world_medication") or {}):
+            return ["missing assignment-time p2_planned_conditions"]
+        return []
+    tracked = {"atrial_fibrillation", "heart_failure"}
+    planned = set(latent["p2_planned_conditions"]) & tracked
+    finalized = set((latent.get("patient_basics") or {}).get("comorbidities") or ()) & tracked
+    if planned == finalized:
+        return []
+    return [f"planned AF/HF {sorted(planned)} != finalized AF/HF {sorted(finalized)}; "
+            f"missing {sorted(planned - finalized)}, unexpected {sorted(finalized - planned)}"]
+
+
 #: drug -> the visible streams it acts on (registry/drug_effects.yaml direction table, by class)
 DRUG_ACTS = {d: ("HbA1c", "fasting_glucose", "CGM_TIR", "weight") for d in
              ("semaglutide", "liraglutide", "dulaglutide", "tirzepatide")}
 DRUG_ACTS.update({"metformin": ("HbA1c", "fasting_glucose", "CGM_TIR"), "atorvastatin": ("LDL",),
                   "amlodipine": ("systolic_bp", "diastolic_bp"), "losartan": ("systolic_bp", "diastolic_bp"),
                   "enalapril": ("systolic_bp", "diastolic_bp", "creatinine"), "levothyroxine": ("TSH",)})
+DRUG_ACTS.update({drug: () for drug in ("aspirin", "clopidogrel", "apixaban", "dabigatran", "rivaroxaban",
+                                      "warfarin", "spironolactone", "sitagliptin", "isosorbide_mononitrate")})
 
 
 @gate(id="C2", cls="①", packs=ALL, control="drop the active world drug from the visible medication text",
@@ -553,14 +594,21 @@ def c6(it):
 CRITICAL = {"K": (2.5, 6.5), "Na": (120, 160), "fasting_glucose": (2.8, 25.0)}
 
 
+def critical_labs(it) -> list[dict]:
+    """The readable or purchasable values (`labs`) outside `CRITICAL` on days T-3..T, the values C7 checks.
+    The M2 generator refuses emission on the same reading (`tools/generation/m2_gen_job.py:critical_unflagged`)."""
+    T = T_of(it)
+    return [x for x in labs(it) if x["an"] in CRITICAL and x["v"] is not None and T - 3 <= x["day"] <= T
+            and not (CRITICAL[x["an"]][0] <= x["v"] <= CRITICAL[x["an"]][1])]
+
+
 @gate(id="C7", cls="①", packs=("m2", "p2"), control="set a purchased K to 2.2 in a 🟡 case",
       statement="A readable or purchasable critical lab value on day T (K <2.5/>6.5, Na <120/>160, glucose "
                 "<2.8/>25 mmol/L) comes with urgency 🔴 (M2) or a disposition set reaching ed_now/within_24h (P2).",
       gold_risk="high: the clinically right escalation is scored as over-triage")
 def c7(it):
-    T, out = T_of(it), []
-    crit = [x for x in labs(it) if x["an"] in CRITICAL and x["v"] is not None and T - 3 <= x["day"] <= T
-            and not (CRITICAL[x["an"]][0] <= x["v"] <= CRITICAL[x["an"]][1])]
+    out = []
+    crit = critical_labs(it)
     if not crit:
         return out
     ddx = source((it["case"].get("adjudication") or {}).get("ddx") or {})
@@ -1392,6 +1440,64 @@ def m2_imaging(it):
     return out
 
 
+@gate(id="M2_key_direction", cls="①", packs=("m2",), evidence_kind="screening",
+      control="make every complete path of a gold line read against its declaration",
+      statement="Each gold line has a complete non-exclusion evidence path in the full purchase record.",
+      source="registry/condition_findings.yaml; registry/clinical_expansion.yaml#evidence_paths")
+def m2_key_direction(it):
+    from haenv.m2 import core, evidence
+    ddx = source((it["case"].get("adjudication") or {}).get("ddx") or {})
+    T = T_of(it)
+    pc = source(it["sp"].get("prediction_context") or {})
+    results = source((it.get("buy") or {}).get("results") or {})
+    points = [p for result in results.values() for p in result.get("observation") or ()]
+    out = []
+    for thread in core.threads_of(ddx):
+        profile = core._profiles().get(thread["component"]) or {}
+        directions = {r["id"]: r.get("direction") for r in profile.get("findings") or ()}
+
+        def reads(key):
+            fid = key.removeprefix("archive:")
+            direction = directions.get(fid, "high")
+            if direction in ("normal", "negative"):
+                return True
+            if key.startswith("archive:"):
+                rows = [row.get("observation") for row in pc.get("archived_laboratory_record") or ()
+                        if row.get("finding") == fid]
+                archived = [p for row in rows for p in (row if isinstance(row, list) else [row]) if isinstance(p, dict)]
+                return core._reads_direction(archived, direction)
+            return core._reads_direction([p for p in points if p.get("finding_id") == fid
+                                          and int(p.get("ts", -1)) == T], direction)
+
+        paths = evidence.paths_of(thread)
+        if paths and not any(path and all(reads(key) for key in path) for path in paths):
+            wrong = sorted({key for path in paths for key in path if not reads(key)})
+            out.append(f"{thread['name']}: keys read otherwise: {', '.join(wrong)}")
+    return out
+
+
+@gate(id="M2_line_symptoms", cls="①", packs=("m2",), evidence_kind="screening",
+      control="remove a component's real visible symptoms from the manifest",
+      statement="Every component of a unified/comorbidity gold owns a visible real symptom.",
+      source="registry/conditions_unified.yaml; registry/composition_comorbid.yaml")
+def m2_line_symptoms(it):
+    from haenv.m2 import core
+    ddx = source((it["case"].get("adjudication") or {}).get("ddx") or {})
+    comps = core.components(str(ddx.get("spec_id") or ""))
+    if ddx.get("insufficient") or ddx.get("join_gold") not in ("unified", "comorbidity") or len(comps) < 2:
+        return []
+    manifest = it.get("manifest") or (it.get("question") or {}).get("injected_manifest") or {}
+    real = set(manifest.get("real_symptom_evidence_ids") or ())
+    sources = it.get("symptom_source") or {}
+    owners = set()
+    for row in it["sp"].get("evidence_ledger") or ():
+        eid = row.get("evidence_id")
+        if eid in real and int(row.get("source_timestamp", 10**9)) <= T_of(it):
+            text = sources.get(eid, source(row.get("symptom") or ""))
+            owners.add(core.symptom_owner(text, comps))
+    return [f"{comp}: no visible real symptom" for comp in comps if comp not in owners]
+
+
 @gate(id="M2_urgency", cls="①", packs=("m2",), scope="pack", control="raise the same LADA line and beta-hydroxybutyrate reading to red without a critical value",
       statement="A component with identical key readings has the same urgency when it determines case urgency; companion-line and critical-value escalations are explicit.",
       source="registry/composition_comorbid.yaml; registry/condition_findings.yaml", gold_risk="high: urgency depends on case composition rather than current severity")
@@ -1413,6 +1519,10 @@ def m2_urgency(items):
         readings = {x["an"]: x["v"] for x in labs(it) if x["ch"] == "buy" and x["day"] == T_of(it)}
         if readings.get("K") is not None and readings["K"] < 2.5:
             continue  # C7 checks the independent critical-value escalation
+        if C.HYPOTENSION_URGENCY_SPECS.intersection(comps):
+            if any(p.get("ts") == T_of(it) and float(p["value"]) <= 90
+                   for p in it["buy"]["world_ld"].get("systolic_bp", ())):
+                continue  # Same-day severe hypotension independently raises triage.
         ceiling = max([reg[c]["urgency"] for c in comps] + ([cfg["urgency"]] if cfg.get("urgency") else []), key=URGENCY_ORDER.index)
         if URGENCY_ORDER.index(ddx["urgency"]) > URGENCY_ORDER.index(ceiling):
             out.append(f"{it['case_id']}: urgency exceeds component/interaction ceiling {ceiling}")
@@ -1463,7 +1573,7 @@ def system_score_rates(items):
 
 
 
-FAIL_CLOSED = ('C1', 'C3', 'C4', 'C7', 'C11', 'V2', 'V3', 'V7', 'R1', 'R2', 'diversity', 'evidence_location', 'history_timing', 'history_twin', 'history_source_distribution', 'look_alike_source_distribution', 'p4_magnitude_overlap', 'p3_symptom_status', 'M2_f2', 'M2_workup', 'M2_menu', 'M2_imaging', 'M2_urgency', 'protocol_distribution', 'system_score_receipt', 'system_score_rates')
+FAIL_CLOSED = ('C1', 'p2_planned_conditions', 'C3', 'C4', 'C7', 'C11', 'V2', 'V3', 'V7', 'R1', 'R2', 'diversity', 'evidence_location', 'history_timing', 'history_twin', 'history_source_distribution', 'look_alike_source_distribution', 'p4_magnitude_overlap', 'p3_symptom_status', 'M2_f2', 'M2_workup', 'M2_menu', 'M2_imaging', 'M2_urgency', 'protocol_distribution', 'system_score_receipt', 'system_score_rates')
 
 
 def refusals(rep: dict) -> list[str]:

@@ -386,6 +386,9 @@ def m2_menu_for(orig, sp, withheld: dict, case_id: str = "", m2_case: bool = Fal
     if not (is_m2_framed(sp) or m2_case):
         return items
     from haenv_kernel.gatekeeper import COST                     # kernel
+    # The priced PSG/AHI test already reports AHI. Its legacy decoy shares the
+    # same clinical label but cannot return a result.
+    items = [item for item in items if item["target"] != "psg_ahi"]
     have = {str(i["target"]) for i in items}
     for t, k in m2_extra_items().items():
         if t not in have:
@@ -1659,6 +1662,9 @@ def f2_today(raw, stream: str, T: int) -> float | None:
 #: when potassium levels are <2.5 mEq/L" and is treated with intravenous potassium "with close follow-up,
 #: continuous ECG monitoring" (Kardalas E et al., Endocr Connect 2018;7(4):R135-R146, PMC5881435).
 CRITICAL_LOW = {"K": 2.5}
+# These lines require urgent clinical assessment. Current severe hypotension is
+# a separate emergency finding (NICE NG111 1.1.9 and NG243 1.6).
+HYPOTENSION_URGENCY_SPECS = {"HD-UNI-11", "HD-UNI-15", "JD-ADDISON"}
 
 
 def critical_reading(raw, T: int) -> dict | None:
@@ -1667,6 +1673,13 @@ def critical_reading(raw, T: int) -> dict | None:
         got = visible_today(raw, fid, T)
         if got and got[0] < lim:
             return {"finding": fid, "today": got[0], "day": got[1], "limit": lim, "urgency": "🔴"}
+    from haenv.world.overlay import spec_id_of
+    sid, _ = spec_id_of(raw)
+    if HYPOTENSION_URGENCY_SPECS.intersection({sid, *components(sid)}):
+        got = visible_today(raw, "systolic_bp", T)
+        if got and got[1] == int(T) and got[0] <= 90:
+            return {"finding": "systolic_bp", "today": got[0], "day": got[1],
+                    "limit": 90, "comparison": "le", "urgency": "🔴"}
     return None
 
 
@@ -2126,7 +2139,7 @@ def scene_text(frame: str, raw: dict, latent: dict, case_id: str) -> str:
 M2_FRAME_ASKS: dict[str, str] = {
     "acute_triage": (
         "\n\n除上面要求的字段外,另加一个字段:"
-        '\n  "urgency": "🔴|🟠|🟡|🟢"   (🔴 立即急诊 · 🟠 数日内 · 🟡 数周内 · 🟢 常规随访)'),
+        '\n  "urgency": "🔴|🟠|🟡|🟢"   (🔴 立即急诊 · 🟠 当日或次日评估 / 数日内评估（视病情） · 🟡 数周内 · 🟢 常规随访)'),
     "chronic_med_adjustment": (
         "\n\n除上面要求的字段外,另加一个字段:"
         '\n  "treatment_plan": {"target_drug": "药物通用名或登记英文 ID", "direction": "investigate_first|uptitrate|keep|downtitrate", "reason": "..."}'

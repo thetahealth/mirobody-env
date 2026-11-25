@@ -21,6 +21,19 @@ _NEG_CUES = ("不像", "不支持", "不考虑", "暂不", "不要", "不宜", "
              "no evidence", "doubt")
 
 
+# Inline descriptors can interrupt the name of the diagnosis. Keep the disease
+# assertion and leave uncertain or negative descriptors for the normal matcher.
+_AUTOIMMUNE_DIABETES = re.compile(
+    r"(?<!non-)(?<!non )(?<!not )(?<!no )\bautoimmune"
+    r"(?:\s+\((?:gad(?:[- ]antibody)?[- ]positive|ia-2[- ]positive)"
+    r"(?:\s*[,;]\s*(?:insulinopenic|insulin[- ]deficient|ketosis[- ]prone))*\))?"
+    r"(?:\s+(?:insulinopenic|insulin[- ]deficient))?\s+diabetes\b", re.I)
+
+
+def _normalize_diagnosis_text(text: str) -> str:
+    return _AUTOIMMUNE_DIABETES.sub("autoimmune diabetes", text)
+
+
 #: Pending-exclusion phrasing: "X 待排除", "需排除 X", "需进一步分型并排除 X",
 #: "X needs to be ruled out". The candidate is still on the differential, so the
 #: "排除"/"rule out" inside these phrases does not negate it.
@@ -64,6 +77,11 @@ def _negated(text: str, at: int, span: int) -> bool:
     out of the text before the cues are read, so another cue in the same window
     still negates.
     """
+    diagnosis = text[at:at + span].lower()
+    if "autoimmune diabetes" in diagnosis and re.search(
+            r"\b(?:(?:no|not|without)\s+(?:latent\s+)?|non[- ])$",
+            text[max(0, at - 24):at], re.I):
+        return True
     win = (text[max(0, at - 10):at] + " " + text[at + span:at + span + 12]).lower()
     if any(k in win for k in _NEG_EXEMPT):
         return False
@@ -126,7 +144,7 @@ def _alias_spans(text: str, names):
 def alias_mentioned(text: str, names) -> bool:
     """True if the text mentions the gold diagnosis (asserted or negated),
     ignoring exclusion words."""
-    for _ in _alias_spans(text, names):
+    for _ in _alias_spans(_normalize_diagnosis_text(str(text or "")), names):
         return True
     return False
 
@@ -134,7 +152,7 @@ def alias_mentioned(text: str, names) -> bool:
 def alias_hit_asserted(text: str, names) -> bool:
     """True if at least one valid occurrence is not negated. Judging side only;
     leak scanning does not use this filter."""
-    t = str(text or "")
+    t = _normalize_diagnosis_text(str(text or ""))
     names = list(names or ())
     concept = _qualified_concept(t, names)
     if concept is not None:
@@ -228,7 +246,7 @@ def _qualified_concept(text, names):
     """Registered gold concepts require every qualifier, within one candidate.
 
     Qualifier terms cannot be borrowed from another diagnosis or a discussion of
-    future risk. Numbers alone do not assert a course. A hedged core or qualifier
+    future risk. A declared suffix can also qualify a core diagnosis. A hedged core or qualifier
     (`_hedged`) is not stated. Unknown concepts retain the existing
     alias/exclusion/negation matcher.
     """
@@ -236,9 +254,16 @@ def _qualified_concept(text, names):
     for entry in _concepts():
         if not anchors.intersection(str(a).casefold() for a in entry["anchors"]):
             continue
-        if not any(not _hedged(text, hit.start(), hit.end(), qualifier=False)
-                   for hit in _asserted_terms(text, entry["core"])):
-            return False
+        core_hits = [hit for hit in _asserted_terms(text, entry["core"])
+                     if not _hedged(text, hit.start(), hit.end(), qualifier=False)]
+        fallback = None if entry.get("fallback_to_aliases") else False
+        if not core_hits:
+            return fallback
+        suffix = entry.get("accepted_suffix")
+        rejected = entry.get("reject_staged_if")
+        if (suffix and not (rejected and re.search(rejected, text, re.I))
+                and any(re.match(suffix, text[hit.end():], re.I) for hit in core_hits)):
+            return True
         for terms in entry.get("required", []):
             found = False
             for hit in _asserted_terms(text, terms):
@@ -259,6 +284,6 @@ def _qualified_concept(text, names):
                 found = True
                 break
             if not found:
-                return False
+                return fallback
         return True
     return None

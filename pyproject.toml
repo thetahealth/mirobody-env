@@ -2,7 +2,7 @@
 
 [project]
 name = "haenv"
-version = "1.4.1.dev0"
+version = "1.6.0"
 description = "A health-agent evaluation harness: author cases with hidden control variables, run models, get a report"
 requires-python = ">=3.10"
 dependencies = ["pyyaml>=6.0", "pydantic>=2.6"]
@@ -38,12 +38,16 @@ pack2 = "haenv.pack2.plugin:judges"
 [project.entry-points."haenv.p2"]
 p2 = "haenv.p2.plugin:judges"
 
+[project.entry-points."haenv.rl"]
+rl = "haenv.rl.plugin:judges"
+
 [project.entry-points."haenv.pack_readouts"]
 pack2 = "haenv.pack2.readout:pack"
 p2 = "haenv.p2.readout:pack"
 p3 = "haenv.p3.readout:pack"
 p4 = "haenv.p4.readout:pack"
 m2 = "haenv.m2.readout:pack"
+rl = "haenv.rl.readout:pack"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
