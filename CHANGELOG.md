@@ -30,6 +30,7 @@ aggregation rules and task weights (see `LICENSE-DATA`, ATTRIBUTION).
 
 ### Fixed
 
+- Fix demo page verification across supported Python versions.
 - Clarify the diagnosis answer format and matching, add missing medication history, anchor
   lab-case history to the case timeline, and refine red-line judging for timely escalation and
   false alarms.

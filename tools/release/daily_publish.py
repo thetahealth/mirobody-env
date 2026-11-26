@@ -27,8 +27,9 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 GITHUB = "git@github.com:thetahealth/mirobody-env.git"
-#: The released public 1.4.0 commit, the pack-equivalence reference.
-BASELINE = "7a5b29b8743bcd839a90e33e9e0e5b06875e0544"
+#: The released public commit used as the pack-equivalence reference.
+BASELINE = "8dca0a79342f5df965e82f5a718d1400d53ddc7a"
+BASELINE_VERSION = "1.6.0"
 ARTIFACTS = ("cases.jsonl", "payloads.jsonl", "audit.jsonl", "message_sources.jsonl")
 FINGERPRINT_PROBE = """
 import json
@@ -515,13 +516,12 @@ def execute(a, work):
         "status": "checks pending", "source": source_sha, "tree": tree, "parent": parent,
         "message": message, "files": git("diff", "--name-status", parent, tree).splitlines()
     }, indent=2) + "\n")
-    # The pack-equivalence reference is the released 1.4.0 commit. It equals GitHub main only on
-    # the first publication; afterwards it must be an ancestor of it.
+    # After the first daily update, the released commit must be an ancestor of GitHub main.
     baseline_sha = resolve(BASELINE if a.baseline is None else a.baseline)
     if baseline_sha != parent and not is_ancestor(baseline_sha, parent):
         raise Refused("pack baseline is not the released commit or an ancestor of GitHub main")
-    if not git("show", f"{baseline_sha}:pyproject.toml").count('version = "1.4.0"'):
-        raise Refused("pack baseline must be the 1.4.0 release")
+    if f'version = "{BASELINE_VERSION}"' not in git("show", f"{baseline_sha}:pyproject.toml").splitlines():
+        raise Refused(f"pack baseline must be the {BASELINE_VERSION} release")
     archive(baseline_sha, work / "baseline")
     baseline = work / "baseline"
     for version in ("3.10", "3.12"):
@@ -531,7 +531,7 @@ def execute(a, work):
         base_python = setup(baseline, version, env, logs)
         before, after = fingerprints(baseline, base_python, env), fingerprints(export, python, env)
         if before != after:
-            raise Refused(f"1.4.0 semantic fingerprints changed on Python {version}: {before} != {after}")
+            raise Refused(f"{BASELINE_VERSION} semantic fingerprints changed on Python {version}: {before} != {after}")
         (logs / f"fingerprints-{version}.json").write_text(json.dumps(after, indent=2) + "\n")
     # Both interpreter suites finish before the expensive identity gate. The
     # default pack rebuild compares old/new code in one Python 3.12 environment.
@@ -602,7 +602,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--source", default="public/next")
     ap.add_argument("--github-main", help="expected last GitHub main ref (checked against remote)")
-    ap.add_argument("--baseline", help="public 1.4.0 commit (defaults to the released baseline)")
+    ap.add_argument("--baseline", help=f"public {BASELINE_VERSION} commit (defaults to the released baseline)")
     ap.add_argument("--github-url", default=GITHUB)
     ap.add_argument("--gitlab-url", help="defaults to origin's URL")
     ap.add_argument("--scratch", type=Path, required=True)

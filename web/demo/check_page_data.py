@@ -8,6 +8,7 @@ layer (`wnoise`) are themselves the current output of production code. This scri
 the same functions the export uses (no second implementation), and compares them with both
 `data.json` and the block inlined in `index.html`. The random-layer tables include the
 extra case ids of the "parallel futures" fan (`fan_personas`).
+Only persona drug-response coefficients allow a few ULP of drift across Python versions.
 
     python web/demo/check_page_data.py     # 0 = current · 1 = stale · 2 = missing input
 
@@ -21,6 +22,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import math
 import pathlib
 import re
 import sys
@@ -68,6 +70,26 @@ def _golden_diff(want: dict, have: dict) -> list[str]:
     return bad
 
 
+def _response_close(want: float, have: object) -> bool:
+    # Python 3.14 changed NormalDist.cdf from erf to erfc. Allow a few ULP
+    # for its near-unit response multipliers, with no absolute tolerance.
+    return type(have) is float and math.isclose(want, have, rel_tol=1e-15, abs_tol=0)
+
+
+def _persona_matches(want: dict, have: object) -> bool:
+    if not isinstance(have, dict):
+        return False
+    w, h = want["response"], have.get("response")
+    if not isinstance(h, dict) or not _response_close(w["low"], h.get("low")):
+        return False
+    wd, hd = w["by_drug"], h.get("by_drug")
+    if not isinstance(hd, dict) or wd.keys() != hd.keys():
+        return False
+    if not all(_response_close(wd[k], hd[k]) for k in wd):
+        return False
+    return want == {**have, "response": {**h, "low": w["low"], "by_drug": wd}}
+
+
 def main() -> int:
     for p in (DATA, PAGE, HERE / "page_data.py"):
         if not p.is_file():
@@ -86,10 +108,12 @@ def main() -> int:
         g = have.get("golden")
         if not g:
             bad.append(f"{name}: no golden section")
-        else:
-            bad += [f"{name}: {b}" for b in _golden_diff(want["golden"], g)]
+        elif g != want["golden"]:
+            details = _golden_diff(want["golden"], g) or ["golden section differs"]
+            bad += [f"{name}: {b}" for b in details]
         k = have.get("kernel") or {}
-        diff = sorted(c for c in set(want["kernel"]) | set(k) if want["kernel"].get(c) != k.get(c))
+        diff = sorted(want["kernel"].keys() ^ k.keys() |
+                      {c for c in want["kernel"].keys() & k.keys() if want["kernel"][c] != k[c]})
         if diff:
             bad.append(f"{name}: kernel constants differ: {diff}")
         rel = (have.get("provenance") or {}).get("release")
@@ -99,7 +123,13 @@ def main() -> int:
             bad.append(f"{name}: the weight observation layer (wnoise) differs")
         for sec in ("personas", "fan_personas"):
             p = have.get(sec) or {}
-            diff = sorted(c for c in set(want[sec]) | set(p) if want[sec].get(c) != p.get(c))
+            expected = want[sec]
+            if sec == "personas":
+                changed = {c for c in expected.keys() & p.keys()
+                           if not _persona_matches(expected[c], p[c])}
+            else:
+                changed = {c for c in expected.keys() & p.keys() if expected[c] != p[c]}
+            diff = sorted(expected.keys() ^ p.keys() | changed)
             if diff:
                 bad.append(f"{name}: {sec} random-layer tables differ for {diff}")
     if bad:

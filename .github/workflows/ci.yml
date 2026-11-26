@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.10", "3.12", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,6 +33,9 @@ jobs:
 
       - name: Compile on this interpreter
         run: python -m compileall -q src/haenv src/haenv_kernel src/verifier_core
+
+      - name: Page data matches production code
+        run: python web/demo/check_page_data.py
 
       - name: Negative-control self-checks (every deliberately broken input must be caught)
         run: |
@@ -100,13 +103,13 @@ jobs:
           test "$N" -eq 0
 
   tests:
-    # The unit tests and the world-layer contract tests under tests/, installed from the
-    # `test` dependency group of pyproject.toml. Offline, zero model calls.
+    # The unit tests and the world-layer contract tests under tests/, with the
+    # repository's dependency groups installed. Offline, zero model calls.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.10", "3.12", "3.14"]
     env:
       UV_PYTHON: ${{ matrix.python-version }}
     steps:
@@ -119,7 +122,7 @@ jobs:
         run: python -m pip install -q --upgrade pip uv
 
       - name: Unit tests
-        run: uv run --group test pytest -q -n auto --dist worksteal
+        run: uv run --all-groups python -m pytest -q -n auto --dist worksteal
 
       - name: World-layer contract tests
-        run: uv run --group test pytest -q -m world
+        run: uv run --all-groups python -m pytest -q -m world

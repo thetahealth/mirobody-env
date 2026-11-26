@@ -63,6 +63,13 @@ A built batch keeps its language: resuming, `run` and `report` follow it, and a 
 build of one pack share case IDs, gold answers and `world_sha`. Compare scores within one
 language. Batches without a recorded language, such as all 1.3.x batches, are read as Chinese.
 
+### Reproducing the 1.6 packs
+
+The shipped 1.6 pack files read back identically on every supported Python version.
+Byte-for-byte regeneration requires Python 3.12 or newer. The change to floating-point
+`sum()` in Python 3.12 affects the last digit in four P3 cases per language and the
+one-decimal rounding of a monthly weight in seven red-line pack cases per batch on Python 3.10.
+
 ## 2. What can be reproduced for free
 
 Saved reports and receipts can be replayed without new model calls. Explicit legacy

@@ -8,7 +8,8 @@
 # for point with golden vectors from `src/haenv/world/generation/build.py`. Two checks gate every publish:
 #
 #   1. `check_page_data.py` recomputes the golden vectors, kernel constants and random-layer
-#      tables with production code and requires the page data to match them exactly;
+#      tables with production code, with a few ULP of tolerance for persona drug-response
+#      coefficients and exact matches for the other checked data;
 #   2. `gen_check.mjs` requires the browser generator to reproduce those golden vectors.
 #
 # `render_check.mjs` then renders the page in jsdom and moves every control, and

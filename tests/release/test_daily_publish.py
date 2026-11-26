@@ -15,15 +15,15 @@ from tools.release import daily_publish as D
 
 @pytest.mark.parametrize("suffix", ["", ","])
 def test_readme_allows_only_one_bibtex_version(suffix):
-    old = "# Example\n\n  version = {1.4.0}" + suffix + "\n"
-    D.readme_version_only(old, old.replace("1.4.0", "1.4.1.dev0"))
+    old = "# Example\n\n  version = {1.6.0}" + suffix + "\n"
+    D.readme_version_only(old, old.replace("1.6.0", "1.6.1.dev0"))
     for new in (old + "New paragraph\n", old.replace("Example", "Changed"), old.replace("version", "release")):
         with pytest.raises(D.Refused, match="README"):
             D.readme_version_only(old, new)
 
 
 def test_message_contains_only_new_unreleased_bullets():
-    old = "## [Unreleased]\n\n- Earlier change.\n\n## [1.4.0]\n- Released.\n"
+    old = "## [Unreleased]\n\n- Earlier change.\n\n## [1.6.0]\n- Released.\n"
     new = old.replace("- Earlier change.", "- Earlier change.\n- New change.")
     assert D.commit_message("2026-11-17", old, new) == "chore: daily update 2026-11-17\n\n- New change.\n"
     with pytest.raises(D.Refused, match="no CHANGELOG"):
@@ -58,19 +58,19 @@ def daily_repo(tmp_path, monkeypatch):
     D.git("init", "-q")
     D.git("config", "user.name", "Test")
     D.git("config", "user.email", "test@example.com")
-    readme = "# Example\n\n  version = {1.4.0}\n"
+    readme = "# Example\n\n  version = {1.6.0}\n"
     for name in ("README.md", "README.zh-CN.md"):
         (repo / name).write_text(readme)
-    (repo / "pyproject.toml").write_text('[project]\nname = "example"\nversion = "1.4.0"\n')
-    (repo / "CHANGELOG.md").write_text("## [1.4.0]\n\n- Released.\n")
+    (repo / "pyproject.toml").write_text('[project]\nname = "example"\nversion = "1.6.0"\n')
+    (repo / "CHANGELOG.md").write_text("## [1.6.0]\n\n- Released.\n")
     D.git("add", ".")
     D.git("commit", "-qm", "release")
     baseline = D.resolve("HEAD")
     gitlab = baseline  # GitLab main is an ancestor of the source branch.
     for name in ("README.md", "README.zh-CN.md", "pyproject.toml"):
         p = repo / name
-        p.write_text(p.read_text().replace("1.4.0", "1.4.1.dev0"))
-    (repo / "CHANGELOG.md").write_text("## [Unreleased]\n\n- New feature.\n\n## [1.4.0]\n")
+        p.write_text(p.read_text().replace("1.6.0", "1.6.1.dev0"))
+    (repo / "CHANGELOG.md").write_text("## [Unreleased]\n\n- New feature.\n\n## [1.6.0]\n")
     exporter = repo / "tools/release" / ("make_" + "public_tree.py")
     exporter.parent.mkdir(parents=True)
     exporter.write_text("import pathlib, shutil, sys\n"
@@ -397,7 +397,7 @@ def test_missing_operator_identity_is_refused_before_commit(daily_repo, monkeypa
 
 
 def test_later_daily_update_uses_the_released_commit_as_pack_baseline(daily_repo, monkeypatch):
-    """After the first daily commit, GitHub main is no longer 1.4.0; the reference is a fixed commit."""
+    """After the first daily commit, GitHub main is no longer 1.6.0; the reference is a fixed commit."""
     repo, scratch, args, calls = daily_repo
     work = scratch / "run"
     work.mkdir()
